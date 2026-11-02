@@ -55,7 +55,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   changes between sessions and once went stale mid-session, so regenerate the
   file before every Maven run. No mirror is needed.
 - Maven Central answered 429 (rate limit) once; the rerun passed.
-- CI: `mvn verify` on JDK 21 plus a `spotless:check` job; runs are skipped for
+- Maven Wrapper added 2026-11-02 (the user's choice over apt, a tarball in
+  `~/.local`, or Docker) when the user's own machine had no Maven: one pinned
+  Maven everywhere, CI included. That machine also had only JRE packages
+  (`openjdk-21-jre`), which fails as "release version 21 not supported"; the fix
+  is `openjdk-21-jdk-headless`. Its default `java` is 25, so set
+  `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`.
+- CI: `./mvnw verify` on JDK 21 plus a `spotless:check` job; runs are skipped for
   docs-only changes. Dependabot opens weekly PRs for Maven and Actions. As of
   2026-11-02: JUnit 6.1.3, `actions/checkout@v7`, `actions/setup-java@v6`. The
   first runs on `main` passed (2026-11-02).

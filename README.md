@@ -36,7 +36,7 @@ The tool contract shared with gorefactor is in
 ## Build and test
 
 ```sh
-mvn verify
+./mvnw verify
 ```
 
 ## Layout

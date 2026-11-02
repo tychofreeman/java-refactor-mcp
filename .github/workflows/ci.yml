@@ -84,8 +84,8 @@ jobs:
           cache: maven
 
       # Compiles with -Xlint:all -Werror and runs the golden tests.
-      - name: mvn verify
-        run: mvn -B verify
+      - name: Maven verify (wrapper)
+        run: ./mvnw -B verify
 
   lint:
     name: Lint (formatting)
@@ -102,6 +102,6 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Fails if any Java file differs from google-java-format output. Fix locally with: mvn spotless:apply
+      # Fails if any Java file differs from google-java-format output. Fix locally with: ./mvnw spotless:apply
       - name: Check formatting
-        run: mvn -B spotless:check
+        run: ./mvnw -B spotless:check
