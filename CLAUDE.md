@@ -15,9 +15,14 @@ decided and what is open before starting work.
 ## Build and test
 
 ```sh
-mvn verify          # compile, run unit and golden tests
+mvn verify          # compile (-Xlint:all -Werror), run unit and golden tests, check formatting
 mvn -q test         # quieter, tests only
+mvn spotless:apply  # format sources (google-java-format, GOOGLE style); run before committing
 ```
+
+CI (`.github/workflows/ci.yml`) runs `mvn verify` on JDK 21 and `mvn spotless:check`
+on every push to `main` and every pull request. Dependabot (`.github/dependabot.yml`)
+opens weekly PRs for Maven dependencies and GitHub Actions versions.
 
 - JDK 21, Maven 3.9+.
 - Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,

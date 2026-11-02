@@ -27,6 +27,12 @@ Keep entries to what the next session needs: decisions, surprises, what to try n
   refused name clash, refused edit that would break compilation.
 - Not built yet: the MCP server wiring (`mcp-core` 2.1.0 is on the classpath, not
   used), fields and other kinds of rename, and build-tool classpath loading.
+- CI added: `.github/workflows/ci.yml` (`mvn verify` on JDK 21, plus a `spotless:check`
+  lint job) and `.github/dependabot.yml` (weekly, Maven and GitHub Actions). The
+  pom gained Spotless (google-java-format 2.0.0, GOOGLE style, checked in verify),
+  `-Xlint:all -Werror` (with `serial` off), and pinned compiler 3.16.0 and
+  surefire 3.6.1. The existing sources were reformatted with `spotless:apply`.
+  Not yet seen running on GitHub; check the first Actions run.
 - Maven Central answered 429 (rate limit) on one run; the rerun passed. Not a
   permanent problem, but the build can need a retry.
 - The proxy port in `~/.m2/settings.xml` went stale mid-session (46609 vs the old
