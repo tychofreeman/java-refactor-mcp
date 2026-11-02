@@ -1,0 +1,1 @@
+added j() to A.Inner in com/example/A.java, lines 13-15

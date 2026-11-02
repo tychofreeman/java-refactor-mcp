@@ -16,9 +16,10 @@ helps Claude do that during real feature work, and by whether working through
 the tools costs fewer tokens than editing by hand. Once the server runs, aim for
 about 95% of coding through the tools, this project's own code included.
 
-Current state: early. The MCP server (`Server`, STDIO) exposes two tools:
-`inspect` (read-only) and `rename_local` (locals and parameters, behind the
-type-check gate `TypeCheck`). Check the roadmap and open questions in
+Current state: early. The MCP server (`Server`, STDIO; tools defined in
+`Tools`) exposes `inspect` (read-only), `rename_local`, and four edits:
+`create_file`, `replace_text`, `add_declaration`, `replace_declaration`. Every
+change goes through the type-check gate (`Gate`, `TypeCheck`). Check the roadmap and open questions in
 `docs/design.md` before starting work.
 
 ## How we work
@@ -91,16 +92,21 @@ tools are the build from when it started: after changing the server, test the
 change with `./mvnw test`, not by calling the tool, and restart Claude Code
 after the change is merged to use it.
 
-1. **Load both schemas at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local`.
+1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration`.
 2. **Read Java through `inspect`:** the file without method bodies, then the
    line ranges you will change. Avoid Read or `cat` of whole `.java` files;
    each result is sent again on every later turn.
 3. **Rename locals and parameters with `rename_local`,** by `file`, `line` and
    `name`; it finds every use and type-checks.
-4. **Read refusals; they say what to send.** A refusal changes nothing.
+4. **Write through the edits:** `create_file` for new files (tests, fixtures),
+   `add_declaration` for new members (by `type`, `after`/`before`),
+   `replace_declaration` for a whole method, field or type by name (empty
+   content deletes), `replace_text` for a few lines, literals, comments and
+   non-Java files. Imports are not handled yet: add them with `replace_text`.
+5. **Read refusals; they say what to send.** A refusal changes nothing.
 
-Every other edit is by hand for now: log it in `docs/friction-log.md`, naming
-the tool that would have done it.
+Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,
+naming the tool or composition that would have done it.
 
 ## Build and test
 

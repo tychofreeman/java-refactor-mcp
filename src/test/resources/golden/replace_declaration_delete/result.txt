@@ -1,0 +1,1 @@
+deleted A.b() from com/example/A.java (was lines 8-11)

@@ -1,0 +1,7 @@
+package com.example;
+
+public class B {
+  int b() {
+    return new Missing().a() + 1;
+  }
+}
