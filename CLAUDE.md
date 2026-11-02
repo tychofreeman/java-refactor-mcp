@@ -99,10 +99,6 @@ after the change is merged to use it.
    `name`; it finds every use and type-checks.
 4. **Read refusals; they say what to send.** A refusal changes nothing.
 
-The type check is weaker on this repo than on a project with a classpath:
-the server gets no source roots or classpath yet (roadmap #7), so JDT and MCP
-types do not resolve and their errors are in the "before" counts.
-
 Every other edit is by hand for now: log it in `docs/friction-log.md`, naming
 the tool that would have done it.
 

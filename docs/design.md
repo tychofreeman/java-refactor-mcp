@@ -59,10 +59,15 @@ tool contract and the A/B harness is planned once a second language exists.
    Still open: the after-edit type check (re-parse the edited sources and compare
    problems), timing on large projects, and deriving the classpath from Maven and
    Gradle.
-2. **Project loading.** Options: read the Maven and Gradle models through the
-   build tool (as JavaLens does), or parse `pom.xml` and the classpath directly.
-   Start with a plain classpath passed in by the caller; add build-tool loading
-   later.
+2. ~~**Project loading.**~~ Decided 2026-11-02 (roadmap #7): a `pom.xml` at the
+   root means source roots `src/main/java` and `src/test/java`, and the test
+   classpath from Maven itself (`maven-dependency-plugin:3.11.0:build-classpath`,
+   pinned, run by the project's `./mvnw` or `mvn`, its output kept off stdout).
+   Not chosen: parsing `pom.xml` by hand (no transitive dependencies) and
+   embedding Maven Resolver (a large dependency for one call). No build file, or
+   Maven failing, falls back to the root as the one source root with no
+   classpath, and says so on stderr. Still open: Gradle, multi-module builds,
+   non-standard source directories, and reloading when `pom.xml` changes.
 3. **Undo.** Keep original file contents in memory for the life of the server
    session, or write backups under the workspace. Decide with the `batch`
    design.
@@ -109,8 +114,8 @@ friction log; reorder when this repo's own log says otherwise.
 
 | Order | # | Item | Status | Evidence |
 |---|---|------|--------|----------|
-| 1 | 7 | Source roots (main and test) and the classpath, from Maven first (Gradle later) | Next | The gate cannot resolve JDT or MCP types on this repo, so it cannot yet stand behind edits. TS spike: a rename that loaded one project missed three test files |
-| 2 | 19 | First edits: `create_file`, `replace_text` (any file), `add_declaration` (a member into a type, replacing a stub of it), `replace_declaration` (by `Type.member`, empty content deletes) | Planned | gorefactor's share of edits through the tools went from 10-20% (Oct 17) to 80-99% the day its edits came (cost history). All three of this repo's friction entries are hand edits these cover |
+| 1 | 7 | Source roots (main and test) and the classpath, from Maven first (Gradle later) | Done | The gate cannot resolve JDT or MCP types on this repo, so it cannot yet stand behind edits. TS spike: a rename that loaded one project missed three test files |
+| 2 | 19 | First edits: `create_file`, `replace_text` (any file), `add_declaration` (a member into a type, replacing a stub of it), `replace_declaration` (by `Type.member`, empty content deletes) | Next | gorefactor's share of edits through the tools went from 10-20% (Oct 17) to 80-99% the day its edits came (cost history). All three of this repo's friction entries are hand edits these cover |
 | 3 | 20 | Imports added and removed by every edit, not by a tool | Planned | 52 gorefactor entries mention imports; "2026-10-20: imports fixed after every edit". The TypeScript port did the same |
 | 4 | 8 | Undo, and `batch` with check `"end"`, lines translated through earlier steps, and `$prev.*` references | Planned | Oct 19 in gorefactor: 99-100% through the tools and input tokens per step from 0.5-1.8M to 170-190k. "2026-10-18: a batch checked at its end" ("hit four times"). Open questions 3 and 4 |
 | 5 | 21 | Stubs from usage (`create_from_usage`): a test written first gets compiling stubs | Planned | "2026-10-17: adding `remove_parameter`" ("A red test blocks every refactoring"); first in TypeScript's gap list (item 41), second in item 43. CLAUDE.md's TDD order needs it |

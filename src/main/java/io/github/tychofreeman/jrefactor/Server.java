@@ -95,10 +95,19 @@ public final class Server {
    */
   public static void main(String[] args) throws InterruptedException {
     Path root = Path.of(args.length > 0 ? args[0] : "").toAbsolutePath();
+    SourceProject project = SourceProject.load(root);
+    System.err.println(
+        "jrefactor: serving "
+            + project.root()
+            + " with "
+            + project.sourceRoots().size()
+            + " source root(s) and "
+            + project.classpath().size()
+            + " classpath entries");
     CountDownLatch inputEnded = new CountDownLatch(1);
     McpSyncServer server =
         start(
-            SourceProject.of(root),
+            project,
             endingWith(
                 System.in,
                 () -> {
