@@ -20,8 +20,13 @@ mvn -q test         # quieter, tests only
 ```
 
 - JDK 21, Maven 3.9+.
-- The pom's JDT and MCP SDK versions are marked UNVERIFIED. The first task in a
-  session that can reach Maven Central is to confirm them, then remove the note.
+- Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,
+  MCP SDK 2.1.0, JUnit 5.14.4. Bump them in `pom.xml` and note the change in
+  `docs/session-notes.md`.
+- In the agent sandbox, Maven needs `~/.m2/settings.xml` with the egress proxy and
+  a `central` mirror at `https://repo1.maven.org/maven2`; the default
+  `repo.maven.apache.org` does not resolve there. Run with
+  `mvn -s ~/.m2/settings.xml verify` if the default settings fail.
 
 ## Working rules
 

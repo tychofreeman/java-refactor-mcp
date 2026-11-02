@@ -51,8 +51,8 @@ tool contract and the A/B harness is planned once a second language exists.
    design.
 4. **Batching.** Mirror gorefactor's `batch` with `$prev.*` references. Confirm
    that line-following through edits works the same way with JDT's positions.
-5. **Versions.** The pom's JDT and MCP SDK versions were not verified: the build
-   sandbox could not reach Maven Central. Confirm first.
+5. ~~**Versions.**~~ Resolved 2026-11-02: JDT Core 3.47.0, MCP SDK 2.1.0 and JUnit
+   5.14.4 resolve from Maven Central and `mvn verify` passes on the scaffold.
 
 ## First milestone (proposed)
 
