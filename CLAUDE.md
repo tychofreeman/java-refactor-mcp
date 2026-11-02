@@ -43,9 +43,9 @@ once CI is green (see the session notes). When
 the user says "do X, then Y", do them in order, each in its own PR. Before
 pushing, run what CI runs (`.github/workflows/ci.yml`):
 
-    mvn verify   # compiles with -Xlint:all -Werror, runs the tests, checks Spotless
+    ./mvnw verify   # compiles with -Xlint:all -Werror, runs the tests, checks Spotless
 
-Hand edits are not formatted, so run `mvn spotless:apply` first if `verify`
+Hand edits are not formatted, so run `./mvnw spotless:apply` first if `verify`
 reports formatting.
 
 Each PR also updates the docs it affects (see "Documentation to keep in sync"):
@@ -85,16 +85,19 @@ hand edits, refusals, reads and large writes.
 ## Build and test
 
 ```sh
-mvn verify          # compile (-Xlint:all -Werror), run unit and golden tests, check formatting
-mvn -q test         # quieter, tests only
-mvn spotless:apply  # format sources (google-java-format, GOOGLE style); run before committing
+./mvnw verify          # compile (-Xlint:all -Werror), run unit and golden tests, check formatting
+./mvnw -q test         # quieter, tests only
+./mvnw spotless:apply  # format sources (google-java-format, GOOGLE style); run before committing
 ```
 
-CI (`.github/workflows/ci.yml`) runs `mvn verify` on JDK 21 and `mvn spotless:check`
+CI (`.github/workflows/ci.yml`) runs `./mvnw verify` on JDK 21 and `./mvnw spotless:check`
 on every push to `main` and every pull request. Dependabot (`.github/dependabot.yml`)
 opens weekly PRs for Maven dependencies and GitHub Actions versions.
 
-- JDK 21, Maven 3.9+.
+- JDK 21 (a full JDK with `javac`, not only the JRE). Maven comes from the
+  wrapper: `./mvnw` downloads the Maven pinned in `.mvn/wrapper/maven-wrapper.properties`
+  (3.9.16, with its SHA-256) into `~/.m2/wrapper` on first run. Set `JAVA_HOME`
+  to the JDK 21 if the default `java` is another version.
 - Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,
   MCP SDK 2.1.0, JUnit 6.1.3 (Dependabot, merged 2026-11-02). Bump them in
   `pom.xml` and note the change in `docs/session-notes.md`.
