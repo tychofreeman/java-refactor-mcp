@@ -23,10 +23,10 @@ mvn -q test         # quieter, tests only
 - Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,
   MCP SDK 2.1.0, JUnit 5.14.4. Bump them in `pom.xml` and note the change in
   `docs/session-notes.md`.
-- In the agent sandbox, Maven needs `~/.m2/settings.xml` with the egress proxy and
-  a `central` mirror at `https://repo1.maven.org/maven2`; the default
-  `repo.maven.apache.org` does not resolve there. Run with
-  `mvn -s ~/.m2/settings.xml verify` if the default settings fail.
+- In the agent sandbox, Maven does not use the egress proxy by itself, so it fails
+  to resolve `repo.maven.apache.org` by name. Fix: a `~/.m2/settings.xml` with an
+  active `https` proxy at the host and port in `$HTTPS_PROXY` (the port changes
+  between sessions, so regenerate the file each time). No mirror is needed.
 
 ## Working rules
 
