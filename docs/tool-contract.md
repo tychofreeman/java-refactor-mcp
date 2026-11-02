@@ -48,6 +48,22 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
 - Not yet: gorefactor's no-argument overview, `function`, `targets`, `names`
   and `uses`.
 
+## `rename_local` (built)
+
+Java's name for a narrower `rename`: local variables and parameters only, and
+uses within the method (or initializer, or field) that declares them.
+
+- Arguments as gorefactor's `rename`: `file`, `line` (the declaration or any
+  use), `name` (the current name), `new_name`; `column` (1-based) only when the
+  name is on the line with two meanings. gorefactor's `function` in place of
+  `line` is not built.
+- Result: `renamed <name> to <new_name> in <file>: <n> occurrences, lines a, b`.
+- Refused: the name not on the line (with the line's text); a field, or a name
+  that is not a variable; two variables of that name on the line (with their
+  columns); a `column` not on `name`; an invalid new name; a new name another
+  variable in the method uses; an edit that would add compile errors (rolled
+  back, with the errors).
+
 Refusals come back as an error result whose text starts `refused: `. Other
 failures start `engine error (not a refusal; ...)`.
 

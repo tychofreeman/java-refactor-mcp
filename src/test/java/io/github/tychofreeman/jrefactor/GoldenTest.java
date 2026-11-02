@@ -79,8 +79,9 @@ class GoldenTest {
             project,
             args.getProperty("file"),
             Integer.parseInt(args.getProperty("line")),
-            Integer.parseInt(args.getProperty("column")),
-            args.getProperty("newName"));
+            args.getProperty("name"),
+            Integer.parseInt(args.getProperty("column", "0")),
+            args.getProperty("new_name"));
         yield null;
       }
       case "inspect" ->

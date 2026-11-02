@@ -50,6 +50,32 @@ public final class Server {
   // before checkArgs, without naming the arguments to use.
   private static final Set<String> INSPECT_ARGS = Set.of("file", "start_line", "end_line");
 
+  private static final String RENAME_LOCAL_DESCRIPTION =
+      """
+      Rename a local variable or parameter and every use of it in the method that declares it.
+      Identify it by file, line (its declaration or any use) and its current name; column only       when the name is on the line twice with different meanings.
+      Applies the edit, then type-checks the project: an edit that adds compile errors is       rolled back and refused. Returns the lines changed.
+      Refuses, saying why: a field (not built yet), a name that is not a variable, a new name       that is not a valid Java name or that another variable in the method already uses.\
+      """;
+
+  private static final String RENAME_LOCAL_SCHEMA =
+      """
+      {
+        "type": "object",
+        "properties": {
+          "file":     {"type": "string",  "description": "Java file path relative to the project root."},
+          "line":     {"type": "integer", "description": "1-based line of the declaration or any use."},
+          "name":     {"type": "string",  "description": "The variable's current name."},
+          "column":   {"type": "integer", "description": "Optional 1-based column of the name, only to tell two meanings apart."},
+          "new_name": {"type": "string",  "description": "The new name; a valid Java name."}
+        },
+        "required": ["file", "line", "name", "new_name"]
+      }\
+      """;
+
+  private static final Set<String> RENAME_LOCAL_ARGS =
+      Set.of("file", "line", "name", "column", "new_name");
+
   private Server() {}
 
   /** Serves the project at {@code args[0]} (default: the working directory) on stdin and stdout. */
@@ -71,6 +97,12 @@ public final class Server {
         .serverInfo(NAME, VERSION)
         .capabilities(ServerCapabilities.builder().tools(false).build())
         .toolCall(inspect, (exchange, request) -> inspect(project, request.arguments()))
+        .toolCall(
+            Tool.builder("rename_local", json, RENAME_LOCAL_SCHEMA)
+                .description(RENAME_LOCAL_DESCRIPTION)
+                .annotations(new ToolAnnotations(null, false, false, false, false, null))
+                .build(),
+            (exchange, request) -> renameLocal(project, request.arguments()))
         .build();
   }
 
@@ -89,6 +121,42 @@ public final class Server {
       return Inspect.lines(
           project, file, start == null ? 1 : start, end == null ? Integer.MAX_VALUE : end);
     });
+  }
+
+  private static CallToolResult renameLocal(SourceProject project, Map<String, Object> args) {
+    return answer(() -> {
+      checkArgs("rename_local", args, RENAME_LOCAL_ARGS);
+      String file = required(args, "file");
+      String name = required(args, "name");
+      String newName = required(args, "new_name");
+      Integer line = integer(args, "line");
+      if (line == null) {
+        throw new Refusal("rename_local needs line: the 1-based line of a use or declaration.");
+      }
+      Integer column = integer(args, "column");
+      RenameLocal.Result result =
+          RenameLocal.run(project, file, line, name, column == null ? 0 : column, newName);
+      StringBuilder lines = new StringBuilder();
+      for (int l : result.lines()) {
+        lines.append(lines.isEmpty() ? "" : ", ").append(l);
+      }
+      return "renamed %s to %s in %s: %d occurrences, line%s %s"
+          .formatted(
+              name,
+              newName,
+              result.file(),
+              result.occurrences(),
+              result.lines().size() == 1 ? "" : "s",
+              lines);
+    });
+  }
+
+  private static String required(Map<String, Object> args, String key) {
+    String value = string(args, key);
+    if (value == null || value.isEmpty()) {
+      throw new Refusal(key + " is required.");
+    }
+    return value;
   }
 
   /** A tool body that returns its text, or refuses. */

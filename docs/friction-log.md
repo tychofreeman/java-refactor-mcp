@@ -31,3 +31,16 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: none new. The gap is the whole edit tool set, which the roadmap already
   orders: `rename_local` through the server (#6), then building this project
   through its own tools (#13).
+
+## 2026-11-02: `rename_local` through the server, by hand
+- Task: roadmap #6 (`docs/sessions/rename-local-tool.md`).
+- Tool: none; this session's Claude Code has no java-refactor-mcp connected
+  (no `.mcp.json` yet).
+- What happened: two changes to existing Java that tools would have done:
+  adding `name` to `RenameLocal.run` and its caller (add_parameter), and moving
+  the column lookup out of `run` into `atColumn` (extract_function). The rest
+  was new behavior. `inspect` existed, but was not callable from this session.
+- Cost: not measured (roadmap #18).
+- Idea: `.mcp.json` running this checkout's jar (roadmap #13), so the next item
+  can read with `inspect` and rename with `rename_local`. Then add_parameter and
+  extract_function are the edit tools this item would have used.

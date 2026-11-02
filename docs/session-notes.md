@@ -37,7 +37,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - The MCP server runs (roadmap #5, 2026-11-02): `Server` over STDIO, one
   project root per process, one tool, `inspect`. Claude Code lists and calls it
   (`claude -p --mcp-config` probe with Haiku, $0.0008).
-- Next: wire `rename_local` into the server (roadmap #6).
+- `rename_local` is a tool too (roadmap #6, 2026-11-02), addressed by `name` and
+  `line` as gorefactor's `rename` is; `column` only for two meanings on one line.
+  A Haiku probe renamed a constructor parameter through it with no column.
+- Next: `.mcp.json` running this checkout, so sessions here use `inspect` and
+  `rename_local` on this project's own code (roadmap #13).
 - The SDK (2.1.0) was checked with `javap` against the jars, not from memory:
   `Tool.builder()` is deprecated in favor of `Tool.builder(name, mapper, schema)`,
   and the SDK validates arguments against the input schema itself.
