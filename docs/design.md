@@ -103,6 +103,7 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | After 5; in gorefactor a hook changed reading where instructions did not |
 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | From gorefactor's tool budget |
+| 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Planned | After 5; gorefactor's `cmd/session-log` and `refactor-tokens -log`; the `whats-next` skill uses it |
 
 ## Gate: how the type check works
 
