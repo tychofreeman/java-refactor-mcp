@@ -89,7 +89,7 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 1 | JDT spike: headless bindings | Done | `spikes/jdt-headless/`; open question 1 |
 | 2 | Type-check gate | Done | `TypeCheck`; see "Gate" below |
 | 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
-| 4 | CI: tests, formatting, compiler lint; Dependabot | Done, first run pending | `.github/`; pom Spotless and `-Xlint:all -Werror` |
+| 4 | CI: tests, formatting, compiler lint; Dependabot | Done | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
 | 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Next | Check `mcp-core` 2.1.0's API against its jar first |
 | 6 | Wire `rename_local` into the server, same refusal wording | Planned | After 5 |
 | 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
@@ -98,6 +98,11 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit |
 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs items 5 and 6 |
 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
+| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Planned | After 6; from gorefactor |
+| 14 | Golden cases also undo each applied step and compare with `in/`; compare incremental state with a fresh load once there is any | Planned | After 8; from gorefactor, where it caught reloader bugs |
+| 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | After 5; in gorefactor a hook changed reading where instructions did not |
+| 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
+| 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | From gorefactor's tool budget |
 
 ## Gate: how the type check works
 

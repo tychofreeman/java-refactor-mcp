@@ -1,45 +1,50 @@
 # Session notes
 
-What past sessions learned. Append a short dated entry when a session ends.
-Keep entries to what the next session needs: decisions, surprises, what to try next.
+What sessions working on this project have learned that the code, the README and
+the other docs do not record: the user's preferences, why past choices were made,
+and where the work stands. Every session reads this (CLAUDE.md imports it). When
+you learn something a later session would need, add it here in the same PR as the
+work, and correct or remove what has become wrong. Keep it short: facts, with the
+reason, not a diary. The roadmap is in `docs/design.md`.
 
-## 2026-11-02: scaffold
+## Working with the user
 
-- Created the project: Maven, JDK 21, `pom.xml` with JDT Core and the MCP Java SDK.
-- The build sandbox could not reach Maven Central at first (`repo1.maven.org`
-  returned 403 from the egress proxy). After the egress settings were changed,
-  Maven Central resolved. The pom's versions were checked against it:
-  JDT Core 3.47.0, MCP SDK 2.1.0 and JUnit 5.14.4. `mvn verify` passes on the
-  scaffold (no tests yet).
-- Sandbox Maven needs `~/.m2/settings.xml` with an active `https` proxy set to the
-  host and port in `$HTTPS_PROXY`. Without it Maven fails with "Name or service not
-  known" for `repo.maven.apache.org`, even when `curl` reaches it through the proxy.
-  The proxy port changes between sessions, so regenerate the file each session.
-  No mirror is needed. (A `repo1.maven.org` mirror was tried first; it was unnecessary.)
-- JDT spike done (`spikes/jdt-headless/`): bindings resolve headless against a
-  source path and a classpath, with no workspace and no OSGi start. Design open
-  question 1 is answered. Next: the after-edit type check, then the first tool.
-- Built the first refactoring, `rename_local` (Java-specific name; gorefactor's
-  `rename` covers more). Layers: `SourceProject` (root and classpath), `Jdt`
-  (headless parse), `TypeCheck` (project-wide compile-error counts before and
-  after, the gate every refactoring uses), `Refusal`, `Positions` (1-based to
-  offset), `RenameLocal`. Four golden cases pass: basic rename, refused field,
-  refused name clash, refused edit that would break compilation.
-- Not built yet: the MCP server wiring (`mcp-core` 2.1.0 is on the classpath, not
-  used), fields and other kinds of rename, and build-tool classpath loading.
-- CI added: `.github/workflows/ci.yml` (`mvn verify` on JDK 21, plus a `spotless:check`
-  lint job) and `.github/dependabot.yml` (weekly, Maven and GitHub Actions). The
-  pom gained Spotless (google-java-format 2.0.0, GOOGLE style, checked in verify),
-  `-Xlint:all -Werror` (with `serial` off), and pinned compiler 3.16.0 and
-  surefire 3.6.1. The existing sources were reformatted with `spotless:apply`.
-  Not yet seen running on GitHub; check the first Actions run.
-- Maven Central answered 429 (rate limit) on one run; the rerun passed. Not a
-  permanent problem, but the build can need a retry.
-- The proxy port in `~/.m2/settings.xml` went stale mid-session (46609 vs the old
-  43251). Regenerate it from `$HTTPS_PROXY` before every Maven run.
-- Chose JDT Core headless over JavaLens (which returns edits instead of applying
-  them). Reasons are in `docs/design.md`.
-- Next: the JDT spike in `docs/design.md`, open question 1.
-- Merged two Dependabot PRs, both with green CI: JUnit 5.14.4 to 6.1.3 (`pom.xml`)
-  and the actions group (checkout v5 to v7, setup-java v5 to v6). CLAUDE.md's pinned
-  versions were updated to match.
+- One item per branch and PR; the user merges. Adopted from gorefactor on
+  2026-11-02, after the first items had been committed straight to `main`.
+- Development standards follow gorefactor's (`CLAUDE.md` there, and its
+  `docs/how-this-project-was-built.md`). The user asked for the same standards
+  here (2026-11-02), including the same goal: about 95% of coding through the
+  tools, judged by token cost against editing by hand.
+
+## Where the work stands
+
+- Built: the type-check gate and `rename_local` (locals and parameters). Layers:
+  `SourceProject` (root and classpath), `Jdt` (headless parse), `TypeCheck`
+  (project-wide compile-error counts before and after, the gate every
+  refactoring uses), `Refusal`, `Positions` (1-based to offset), `RenameLocal`.
+  Four golden cases.
+- Next: the MCP server over STDIO (roadmap #5). `mcp-core` 2.1.0 is on the
+  classpath but unused; check its API against the jar first.
+- `rename_local` is a Java-specific name; gorefactor's `rename` covers more
+  kinds of declaration.
+
+## Why past choices were made
+
+- JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
+  and this project applies them itself, as gorefactor does. Details in
+  `docs/design.md`.
+- The JDT spike (`spikes/jdt-headless/`) showed bindings resolve with no
+  workspace and no OSGi start, against a source path and a classpath.
+
+## Build environment
+
+- Sandbox Maven needs `~/.m2/settings.xml` with an active `https` proxy at the
+  host and port in `$HTTPS_PROXY`; without it Maven fails with "Name or service
+  not known" for `repo.maven.apache.org`, even when `curl` reaches it. The port
+  changes between sessions and once went stale mid-session, so regenerate the
+  file before every Maven run. No mirror is needed.
+- Maven Central answered 429 (rate limit) once; the rerun passed.
+- CI: `mvn verify` on JDK 21 plus a `spotless:check` job; runs are skipped for
+  docs-only changes. Dependabot opens weekly PRs for Maven and Actions. As of
+  2026-11-02: JUnit 6.1.3, `actions/checkout@v7`, `actions/setup-java@v6`. The
+  first runs on `main` passed (2026-11-02).
