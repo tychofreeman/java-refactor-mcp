@@ -1,0 +1,18 @@
+[
+  {
+    "tool": "replace_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "name": "A.b",
+      "content": "int b(int x, int y) {\n  return x + y;\n}\n"
+    }
+  },
+  {
+    "tool": "replace_text",
+    "args": {
+      "file": "com/example/A.java",
+      "old": "b(1)",
+      "new": "b(1, 2)"
+    }
+  }
+]

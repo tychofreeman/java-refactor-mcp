@@ -1,0 +1,4 @@
+batch of 2 steps:
+1. replaced A.b(int) in com/example/A.java, lines 4-6
+2. replaced 1 occurrence in com/example/A.java, line 9
+checked at the end: no new compile errors

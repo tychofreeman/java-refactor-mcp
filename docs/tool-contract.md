@@ -108,14 +108,29 @@ in the same turn only if it is sent after it.
 Refusals come back as an error result whose text starts `refused: `. Other
 failures start `engine error (not a refusal; ...)`.
 
-## `batch`
+## `batch` (built)
 
-- Takes a list of steps. Each step is a tool call with its arguments.
-- Later steps may refer to earlier steps' new positions: `$prev.end`,
-  `$helper.start`. Lines are followed through each step's edits.
-- If the result does not type-check, the batch is rolled back. A retry with
-  check set to `"end"` checks only at the end of the batch.
-- Undo of a batch is one operation.
+- `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
+  alone; `check`: `"each"` (default) or `"end"`.
+- Line arguments (`line`, `start_line`, `end_line`) are as read before the
+  batch; the batch moves them past earlier steps' edits. A line an earlier step
+  rewrote with a different line count is refused, naming the step.
+- `"$prev.start"`, `"$prev.end"`, `"$2.end"`, `"$id.start+1"` name the first or
+  last non-blank line an earlier step changed in that step's file.
+- A refused step leaves nothing changed; the refusal says `step k of n (tool)
+  refused: ...`, and suggests check `"end"` when the step failed the type check.
+  With `"end"` the gate runs once after the last step.
+- Result: `batch of n steps:` then each step's result, numbered; with `"end"`, a
+  last line `checked at the end: no new compile errors`.
+- `batch` and `undo` cannot be steps.
+
+## `undo` (built)
+
+- Reverts the last change made through the tools in this server session: one
+  call, or a whole batch. Call again to step back further.
+- Kept in memory per server process (open question 3: not on disk).
+- Refused when a file it would restore changed since; nothing is undone.
+- Result: `undid <tool>: restored a, b; removed c`.
 
 ## Results
 

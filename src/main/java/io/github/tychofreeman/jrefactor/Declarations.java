@@ -455,25 +455,43 @@ final class Declarations {
     return members;
   }
 
-  /** The lines of {@code d} in {@code content}, re-indented to {@code indent}. */
+  /**
+   * The lines of {@code d} in {@code content}, re-indented to {@code indent}. The common
+   * indentation comes from the lines after the first: content copied from a file often has its
+   * first line at column 0 and the rest at the file's indentation, and the first line is then taken
+   * to be at that indentation too.
+   */
   private static String reindent(String content, BodyDeclaration d, String indent) {
     int start = lineStart(content, d.getStartPosition());
     int end = lineEnd(content, end(d));
     String[] lines = content.substring(start, end).replaceAll("\n$", "").split("\n", -1);
     int common = Integer.MAX_VALUE;
-    for (String line : lines) {
-      if (!line.isBlank()) {
-        common = Math.min(common, line.length() - line.stripLeading().length());
+    for (int i = 1; i < lines.length; i++) {
+      if (!lines[i].isBlank()) {
+        common = Math.min(common, leadingSpaces(lines[i]));
       }
+    }
+    int first = leadingSpaces(lines[0]);
+    if (common == Integer.MAX_VALUE) {
+      common = first;
     }
     StringBuilder out = new StringBuilder();
     for (int i = 0; i < lines.length; i++) {
       out.append(i == 0 ? "" : "\n");
-      if (!lines[i].isBlank()) {
-        out.append(indent).append(lines[i].substring(common));
+      if (lines[i].isBlank()) {
+        continue;
+      }
+      if (i == 0 && first < common) {
+        out.append(indent).append(lines[0].stripLeading());
+      } else {
+        out.append(indent).append(lines[i].substring(Math.min(common, leadingSpaces(lines[i]))));
       }
     }
     return out.toString();
+  }
+
+  private static int leadingSpaces(String line) {
+    return line.length() - line.stripLeading().length();
   }
 
   /** The indentation of {@code type}'s members: that of its first member, else one step in. */

@@ -1,0 +1,19 @@
+[
+  {
+    "tool": "replace_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "name": "A.c",
+      "content": "int c() {\n  int total = b(1) * 2;\n  int other = 0;\n  return total + other;\n}\n"
+    }
+  },
+  {
+    "tool": "rename_local",
+    "args": {
+      "file": "com/example/A.java",
+      "line": 9,
+      "name": "total",
+      "new_name": "sum"
+    }
+  }
+]

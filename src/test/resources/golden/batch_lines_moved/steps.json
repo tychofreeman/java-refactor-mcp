@@ -1,0 +1,19 @@
+[
+  {
+    "tool": "add_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "before": "c",
+      "content": "int e() {\n  return 5;\n}\n"
+    }
+  },
+  {
+    "tool": "rename_local",
+    "args": {
+      "file": "com/example/A.java",
+      "line": 9,
+      "name": "total",
+      "new_name": "sum"
+    }
+  }
+]

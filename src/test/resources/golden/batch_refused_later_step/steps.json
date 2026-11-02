@@ -1,0 +1,17 @@
+[
+  {
+    "tool": "add_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "content": "int d() {\n  return 4;\n}\n"
+    }
+  },
+  {
+    "tool": "replace_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "name": "A.zz",
+      "content": "int zz() {\n  return 0;\n}\n"
+    }
+  }
+]
