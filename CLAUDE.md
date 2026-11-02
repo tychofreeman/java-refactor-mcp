@@ -76,6 +76,11 @@ claude.ai Project) do not reach sessions on other machines.
 
 @docs/session-notes.md
 
+When the user asks "what's next?", the `whats-next` skill
+(`.claude/skills/whats-next`) offers the next items, and keeps a record of the
+chosen one in `docs/sessions/<branch>.md`: the plan before code, and notes of
+hand edits, refusals, reads and large writes.
+
 ## Build and test
 
 ```sh

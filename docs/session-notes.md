@@ -15,6 +15,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `docs/how-this-project-was-built.md`). The user asked for the same standards
   here (2026-11-02), including the same goal: about 95% of coding through the
   tools, judged by token cost against editing by hand.
+- "What's next?" runs the `whats-next` skill, ported from gorefactor on
+  2026-11-02. In gorefactor the user chose a record per item in
+  `docs/sessions/` so they can judge whether a session used the tools or worked
+  around them. Here it has no session-log hook yet (roadmap #18), so the notes
+  are the whole record.
 
 ## Where the work stands
 
