@@ -35,11 +35,11 @@ final class Jdt {
     parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);
     parser.setCompilerOptions(options);
-    parser.setEnvironment(
-        project.classpath().toArray(String[]::new),
-        new String[] {project.root().toString()},
-        new String[] {"UTF-8"},
-        true);
+    String[] sourcepath =
+        project.sourceRoots().stream().map(java.nio.file.Path::toString).toArray(String[]::new);
+    String[] encodings = new String[sourcepath.length];
+    java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws
+    parser.setEnvironment(project.classpath().toArray(String[]::new), sourcepath, encodings, true);
     return (CompilationUnit) parser.createAST(null);
   }
 }

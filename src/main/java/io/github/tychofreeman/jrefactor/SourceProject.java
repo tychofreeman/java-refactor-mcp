@@ -4,36 +4,65 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * A Java source tree the server works on: every {@code .java} file under {@code root} is a source
- * file, and {@code root} is also the source path for resolving types.
- *
- * <p>{@code classpath} holds library jars given by the caller. Maven and Gradle loading is not
- * built yet (see docs/design.md).
+ * A Java project the server works on. Tool arguments name files relative to {@code root}; the
+ * {@code .java} files under {@code sourceRoots} are what the gate checks and where types are found,
+ * and {@code classpath} holds the library jars and class directories.
  */
-public record SourceProject(Path root, List<String> classpath) {
+public record SourceProject(Path root, List<Path> sourceRoots, List<String> classpath) {
 
   public SourceProject {
     root = root.toAbsolutePath().normalize();
+    sourceRoots = sourceRoots.stream().map(p -> p.toAbsolutePath().normalize()).toList();
     classpath = List.copyOf(classpath);
   }
 
+  /** A project whose root is its one source root, with no classpath. */
   public static SourceProject of(Path root) {
-    return new SourceProject(root, List.of());
+    return new SourceProject(root, List.of(root), List.of());
   }
 
-  /** All {@code .java} files under the root, sorted. */
-  public List<Path> javaFiles() throws IOException {
-    try (Stream<Path> files = Files.walk(root)) {
-      return files
-          .filter(Files::isRegularFile)
-          .filter(p -> p.getFileName().toString().endsWith(".java"))
-          .sorted()
-          .toList();
+  /**
+   * The project at {@code root} as its build describes it: for Maven ({@code pom.xml}), {@code
+   * src/main/java} and {@code src/test/java} and the test classpath. Anything else is {@link #of}.
+   */
+  public static SourceProject load(Path root) {
+    Path dir = root.toAbsolutePath().normalize();
+    if (!MavenBuild.isMaven(dir)) {
+      return of(dir);
     }
+    List<Path> roots = MavenBuild.sourceRoots(dir);
+    if (roots.isEmpty()) {
+      return of(dir);
+    }
+    List<String> classpath;
+    try {
+      classpath = MavenBuild.classpath(dir);
+    } catch (IOException e) {
+      System.err.println(
+          "jrefactor: no classpath from Maven, so library types will not resolve: "
+              + e.getMessage());
+      classpath = List.of();
+    }
+    return new SourceProject(dir, roots, classpath);
+  }
+
+  /** All {@code .java} files under the source roots, sorted. */
+  public List<Path> javaFiles() throws IOException {
+    List<Path> all = new ArrayList<>();
+    for (Path sourceRoot : sourceRoots) {
+      try (Stream<Path> files = Files.walk(sourceRoot)) {
+        files
+            .filter(Files::isRegularFile)
+            .filter(p -> p.getFileName().toString().endsWith(".java"))
+            .forEach(all::add);
+      }
+    }
+    return all.stream().sorted().toList();
   }
 
   /** Path relative to the root, with forward slashes. */

@@ -53,3 +53,18 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Edit. The launcher, `.mcp.json` and docs are not Java.
 - Cost: not measured (roadmap #18).
 - Idea: none; from the next session on, `inspect` and `rename_local` are there.
+
+## 2026-11-02: source roots and the classpath, reads through `inspect`
+- Task: roadmap #7 (`docs/sessions/source-roots-classpath.md`).
+- Tool: `inspect` for every read of this repo's Java; no edit tools exist.
+- What happened: edits to existing code by hand: a `sourceRoots` component on
+  `SourceProject` and its uses (add_field, replace_expression), `Jdt.parse`'s
+  environment (replace_statements), `Server.main` calling `load`
+  (replace_expression). New code (`MavenBuild`, `load`, the test) by Write.
+  Also: `rename_local`'s description, as a model sees it, has runs of spaces
+  ("only       when"), because a text block's `\` continuation keeps the next
+  line's indentation.
+- Cost: not measured (roadmap #18).
+- Idea: roadmap #19's edits cover each of these. The description needs its
+  continuation lines unindented, and a test that no description has a run of
+  spaces.

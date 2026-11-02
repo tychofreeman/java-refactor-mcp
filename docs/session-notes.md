@@ -48,6 +48,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   read but not run, so the read that finds the end waits until no tool call is
   running and nothing was written for a second. Exiting at once lost every
   reply of a piped script; never exiting leaves a JVM behind a crashed client.
+- Maven projects load from their build (roadmap #7, 2026-11-02): source roots
+  `src/main/java` and `src/test/java`, and the test classpath from
+  `dependency:build-classpath`. This repo now type-checks with zero errors in
+  the gate (`SourceProjectTest.thisRepoTypeChecksClean`); loading it costs a
+  Maven run, about 3 s, at each server start. JDT's `setEnvironment` needs one
+  encoding per source path entry, or it throws `IllegalArgumentException`.
+- The user asked for roadmap positions 1-8 in order, one PR each (2026-11-02):
+  #7, #19, #20, #8, #21, #22, #23, #18.
 - The roadmap's open items are ordered by gorefactor's evidence (the user asked,
   2026-11-02, after items had been ordered only by what unblocks what): source
   roots and classpath (#7), then the first edit tools, imports, undo and batch,
