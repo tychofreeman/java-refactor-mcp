@@ -1,16 +1,12 @@
 name: CI
 
+# The workflow always runs, so every required check gets reported. A first job decides
+# whether the change touches code; the build and lint jobs are skipped (which counts as
+# passing for required checks) when it does not.
 on:
   push:
     branches: [main]
-    # Docs-only changes do not run CI. Keep this list in step with what counts as docs.
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
   pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -21,8 +17,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # "Code" means any file that is not Markdown and not under docs/.
+      # Manual runs and anything we cannot diff run everything.
+      - id: filter
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          zero=0000000000000000000000000000000000000000
+          case "$EVENT" in
+            pull_request)
+              base="$PR_BASE"; head="$PR_HEAD"; range="$base...$head" ;;
+            push)
+              base="$PUSH_BEFORE"; head="$PUSH_SHA"; range="$base $head" ;;
+            *)
+              echo "code=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          if [ -z "$base" ] || [ "$base" = "$zero" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          code=false
+          if [ "$EVENT" = "pull_request" ]; then
+            files=$(git diff --name-only "$base...$head")
+          else
+            files=$(git diff --name-only "$base" "$head")
+          fi
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              *.md|docs/*) ;;
+              *) code=true; break ;;
+            esac
+          done <<< "$files"
+          echo "Changed files:"; echo "$files"; echo "code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build-and-test:
     name: Build and test (JDK 21)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,6 +89,8 @@ jobs:
 
   lint:
     name: Lint (formatting)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
