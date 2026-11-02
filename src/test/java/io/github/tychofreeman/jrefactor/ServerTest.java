@@ -186,6 +186,42 @@ class ServerTest {
     assertEquals(before, Files.readString(project.resolve("com/example/Totals.java")));
   }
 
+  /** Two edits sent without waiting for the first both land: the server runs one call at a time. */
+  @Test
+  void editsSentTogetherBothApply() throws IOException {
+    for (int id : new int[] {11, 12}) {
+      String name = id == 11 ? "eleven" : "twelve";
+      send(
+          Map.of(
+              "jsonrpc",
+              "2.0",
+              "id",
+              id,
+              "method",
+              "tools/call",
+              "params",
+              Map.of(
+                  "name",
+                  "add_declaration",
+                  "arguments",
+                  Map.of(
+                      "file",
+                      "com/example/Totals.java",
+                      "content",
+                      "int " + name + "() {\n  return " + id + ";\n}\n"))));
+    }
+    int answered = 0;
+    while (answered < 2) {
+      Map<String, Object> message = asMap(json.readValue(fromServer.readLine(), Map.class));
+      if (message.containsKey("id")) {
+        assertEquals(false, result(message).get("isError"), () -> message.toString());
+        answered++;
+      }
+    }
+    String text = Files.readString(project.resolve("com/example/Totals.java"));
+    assertTrue(text.contains("int eleven()") && text.contains("int twelve()"), text);
+  }
+
   private Map<String, Object> call(int id, Map<String, Object> arguments) throws IOException {
     return call(id, "inspect", arguments);
   }

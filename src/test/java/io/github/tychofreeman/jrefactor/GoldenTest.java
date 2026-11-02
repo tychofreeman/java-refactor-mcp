@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,6 +106,12 @@ class GoldenTest {
   }
 
   private static Object value(String text) {
+    if (text.startsWith("[") && text.endsWith("]")) {
+      return Arrays.stream(text.substring(1, text.length() - 1).split(","))
+          .map(String::strip)
+          .filter(s -> !s.isEmpty())
+          .toList();
+    }
     if (text.matches("-?\\d+")) {
       return Integer.valueOf(text);
     }

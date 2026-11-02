@@ -1,0 +1,1 @@
+added names() to A in com/example/A.java, lines 11-13; imported java.util.ArrayList, java.util.List

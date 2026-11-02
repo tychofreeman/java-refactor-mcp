@@ -1,0 +1,1 @@
+replaced A.size() in com/example/A.java, lines 4-6; removed import java.util.Map

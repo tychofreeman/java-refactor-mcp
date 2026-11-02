@@ -1,0 +1,2 @@
+List<Integer> a() {
+    return List.of(1);

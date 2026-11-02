@@ -82,3 +82,23 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: extract_function (#23); a move of declarations between files is not on
   the roadmap; log it again when it recurs before adding it.
+
+## 2026-11-02: imports, the first item built through the edit tools
+- Task: roadmap #20 (`docs/sessions/imports-in-edits.md`).
+- Tool: `inspect`, `create_file`, `replace_text`, `add_declaration`,
+  `replace_declaration` for every change to Java; golden fixtures by shell.
+- What happened:
+  - Four refusals for a missing import (`Arrays`, `List`, `ONE_AT_A_TIME`
+    declared after its use, and the signature change below), each answered with
+    another tool call first: the gap this item closes, except the last.
+  - Changing `Edits.write`'s signature and its caller: each alone was refused
+    (the other did not compile). Composed as add the new overload
+    (add_declaration), move the caller (replace_text), delete the old one
+    (replace_declaration with empty content). Three calls where batch with check
+    "end" would be one (roadmap #8).
+  - `add_declaration`/`replace_declaration` refuse unparseable content without
+    saying where; `create_file` names the lines. Cost one blind retry.
+  - One `replace_text` `old` did not match text that `inspect` showed; a shorter
+    `old` from the same lines matched. Cause not found.
+- Cost: not measured (roadmap #18).
+- Idea: batch (#8, next); line numbers in the members-do-not-parse refusal.

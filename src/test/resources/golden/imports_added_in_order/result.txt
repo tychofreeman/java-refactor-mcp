@@ -1,0 +1,1 @@
+added counts() to A in com/example/A.java, lines 9-11; imported java.util.Map
