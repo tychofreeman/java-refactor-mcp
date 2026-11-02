@@ -92,27 +92,42 @@ final class Edits {
     }
 
     StringBuilder out = new StringBuilder();
-    List<String> ranges = new ArrayList<>();
+    List<int[]> spans = new ArrayList<>();
     int from = 0;
     for (int i : at) {
       out.append(text, from, i);
       int first = lineOf(out, out.length());
       out.append(replacement);
-      int last = lineOf(out, Math.max(out.length() - 1, 0));
-      ranges.add(first == last || replacement.isEmpty() ? "" + first : first + "-" + last);
+      int last = replacement.isEmpty() ? first : lineOf(out, Math.max(out.length() - 1, 0));
+      spans.add(new int[] {first, last});
       from = i + old.length();
     }
     out.append(text, from, text.length());
 
-    write(project, path, rel, out.toString(), "replacing old in " + rel);
+    Imports.Fixed fixed =
+        write(
+            project,
+            path,
+            rel,
+            text,
+            out.toString(),
+            args.list("imports"),
+            "replacing old in " + rel);
+    List<String> ranges = new ArrayList<>();
+    for (int[] span : spans) {
+      int first = span[0] + fixed.lineShift();
+      int last = span[1] + fixed.lineShift();
+      ranges.add(first == last ? "" + first : first + "-" + last);
+    }
     boolean one = ranges.size() == 1 && !ranges.get(0).contains("-");
-    return "replaced %d occurrence%s in %s, %s %s"
+    return "replaced %d occurrence%s in %s, %s %s%s"
         .formatted(
             at.size(),
             at.size() == 1 ? "" : "s",
             rel,
             one ? "line" : "lines",
-            String.join(", ", ranges));
+            String.join(", ", ranges),
+            fixed.said());
   }
 
   /** The path of an existing file, or a refusal. */
@@ -124,16 +139,27 @@ final class Edits {
     return path;
   }
 
-  /** Writes a file, under the gate when it is Java. */
-  private static void write(SourceProject project, Path path, String rel, String text, String what)
+  /**
+   * Writes a file, under the gate when it is Java, after fixing its imports against {@code before}.
+   */
+  private static Imports.Fixed write(
+      SourceProject project,
+      Path path,
+      String rel,
+      String before,
+      String text,
+      List<String> chosen,
+      String what)
       throws Exception {
-    if (rel.endsWith(".java")) {
-      parses(text, "the result");
-      Gate.applyOrRefuse(
-          project, Map.of(path, text), what, "Nothing was changed; adjust and retry.");
-    } else {
+    if (!rel.endsWith(".java")) {
       Files.writeString(path, text);
+      return new Imports.Fixed(text, 0, List.of());
     }
+    parses(text, "the result");
+    Imports.Fixed fixed = Imports.fix(project, path, before, text, chosen);
+    Gate.applyOrRefuse(
+        project, Map.of(path, fixed.text()), what, "Nothing was changed; adjust and retry.");
+    return fixed;
   }
 
   /** The 1-based line of {@code offset} in {@code text}. */

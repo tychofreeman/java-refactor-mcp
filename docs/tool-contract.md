@@ -68,8 +68,22 @@ uses within the method (or initializer, or field) that declares them.
 
 Edits change behavior on purpose and are held to the same gate: a `.java` file
 must parse, and the project must type-check no worse after, or nothing changes.
-Results name the file and lines and never echo content. Imports are not added
-or removed yet (roadmap #20).
+Results name the file and lines and never echo content.
+
+Imports (roadmap #20): `replace_text`, `add_declaration` and `replace_declaration`
+on a `.java` file add an import for each simple type name the edit left
+unresolved when one class has that name (this project's sources, the classpath,
+the JDK; `java.awt`, `javax.swing`, `sun.*`, `com.sun.*`, `jdk.*` only when
+nothing else has it), in order among the file's imports, and remove single-type
+imports the edit left unused (an import already unused stays). A name with
+several candidates is refused with them; the optional `imports` argument (fully
+qualified names) chooses. Results end with `; imported a.B, c.D` and `; removed
+import e.F`, and their line numbers count the import lines. `create_file`
+content is a whole file and keeps its own imports.
+
+The server runs one call at a time: calls sent together in one turn run in the
+order they arrive, so a call that needs an earlier one's result can follow it
+in the same turn only if it is sent after it.
 
 - `create_file`: `file`, `content`, `overwrite`. A `.java` file must declare the
   package its directory implies under a source root. Result: `created <file>

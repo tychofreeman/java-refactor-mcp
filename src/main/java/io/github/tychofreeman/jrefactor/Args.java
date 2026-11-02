@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -64,6 +65,18 @@ final class Args {
       return Boolean.TRUE.equals(value);
     }
     throw new Refusal(key + " must be true or false; got " + value + ".");
+  }
+
+  /** A list of strings; empty when not given. */
+  List<String> list(String key) {
+    Object value = values.get(key);
+    if (value == null) {
+      return List.of();
+    }
+    if (value instanceof List<?> items && items.stream().allMatch(i -> i instanceof String)) {
+      return items.stream().map(i -> (String) i).toList();
+    }
+    throw new Refusal(key + " must be a list of strings; got " + value + ".");
   }
 
   boolean has(String key) {

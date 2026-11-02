@@ -25,6 +25,12 @@ public final class Server {
   static final String NAME = "java-refactor-mcp";
   static final String VERSION = "0.1.0";
 
+  /**
+   * Held while a tool runs. The SDK can run calls sent together at the same time; two edits of one
+   * file would each read it before the other wrote, and the second would undo the first.
+   */
+  private static final Object ONE_AT_A_TIME = new Object();
+
   /** Tool calls running now; the server does not exit at the end of input while one is. */
   private static final AtomicInteger CALLS = new AtomicInteger();
 
@@ -168,7 +174,11 @@ public final class Server {
   private static CallToolResult answer(Body body) {
     CALLS.incrementAndGet();
     try {
-      return CallToolResult.builder().addTextContent(body.run()).isError(false).build();
+      String text;
+      synchronized (ONE_AT_A_TIME) {
+        text = body.run();
+      }
+      return CallToolResult.builder().addTextContent(text).isError(false).build();
     } catch (Refusal refusal) {
       return CallToolResult.builder()
           .addTextContent("refused: " + refusal.getMessage())

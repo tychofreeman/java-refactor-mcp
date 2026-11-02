@@ -116,7 +116,8 @@ final class Tools {
           literals, comments, a few lines of code, and files that are not Java (pom.xml, \
           fixtures, docs).
           old must be as in the file and occur once, or set all_occurrences. In a .java file the \
-          project must type-check no worse after, or nothing changes.\
+          project must type-check no worse after, or nothing changes. Imports the new text needs \
+          are added and those it leaves unused removed; imports chooses an ambiguous name.\
           """,
           """
           {
@@ -125,12 +126,13 @@ final class Tools {
               "file":            {"type": "string",  "description": "Path relative to the project root."},
               "old":             {"type": "string",  "description": "Text as it is in the file."},
               "new":             {"type": "string",  "description": "The text to put in its place."},
-              "all_occurrences": {"type": "boolean", "description": "Replace every occurrence, not only one."}
+              "all_occurrences": {"type": "boolean", "description": "Replace every occurrence, not only one."},
+              "imports":         {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
             },
             "required": ["file", "old", "new"]
           }\
           """,
-          Set.of("file", "old", "new", "all_occurrences"),
+          Set.of("file", "old", "new", "all_occurrences", "imports"),
           false,
           (project, args) -> Edits.replaceText(project, args));
 
@@ -147,7 +149,8 @@ final class Tools {
           A method with the same name and parameter types whose body is only \
           throw new UnsupportedOperationException("not implemented") is a stub, and is replaced \
           rather than added again.
-          Imports are not added yet: add a new import with replace_text.\
+          Imports the members need are added, and those they no longer use are removed; when a \
+          name could be several classes, the call is refused with them, and imports chooses.\
           """,
           """
           {
@@ -157,12 +160,13 @@ final class Tools {
               "content": {"type": "string", "description": "Java member declarations."},
               "type":    {"type": "string", "description": "Optional: the type to add to, as Outer or Outer.Inner."},
               "after":   {"type": "string", "description": "Optional: put them just after this member (a name)."},
-              "before":  {"type": "string", "description": "Optional: put them just before this member."}
+              "before":  {"type": "string", "description": "Optional: put them just before this member."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
             },
             "required": ["file", "content"]
           }\
           """,
-          Set.of("file", "content", "type", "after", "before"),
+          Set.of("file", "content", "type", "after", "before", "imports"),
           false,
           (project, args) -> Declarations.add(project, args));
 
@@ -177,7 +181,8 @@ final class Tools {
           several overloads, add its parameter types: Cart.add(int, String).
           The old Javadoc stays unless content has its own. Callers a new signature or a \
           deletion breaks are refused.
-          Imports are not added or removed yet: change them with replace_text.\
+          Imports content needs are added, and those only the old declaration used are \
+          removed; when a name could be several classes, imports chooses.\
           """,
           """
           {
@@ -185,12 +190,13 @@ final class Tools {
             "properties": {
               "file":    {"type": "string", "description": "Java file path relative to the project root."},
               "name":    {"type": "string", "description": "Type, Type.member or member; with (parameter types) for an overload."},
-              "content": {"type": "string", "description": "The new declaration; empty to delete it."}
+              "content": {"type": "string", "description": "The new declaration; empty to delete it."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
             },
             "required": ["file", "name", "content"]
           }\
           """,
-          Set.of("file", "name", "content"),
+          Set.of("file", "name", "content", "imports"),
           false,
           (project, args) -> Declarations.replace(project, args));
 

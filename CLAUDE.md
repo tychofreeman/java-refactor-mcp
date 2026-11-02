@@ -102,7 +102,10 @@ after the change is merged to use it.
    `add_declaration` for new members (by `type`, `after`/`before`),
    `replace_declaration` for a whole method, field or type by name (empty
    content deletes), `replace_text` for a few lines, literals, comments and
-   non-Java files. Imports are not handled yet: add them with `replace_text`.
+   non-Java files. Imports are added and removed for you; pass `imports` when a
+   refusal says a name is ambiguous.
+   A signature change and its callers cannot change in one call yet (batch is
+   roadmap #8): add the new overload, move the callers, delete the old one.
 5. **Read refusals; they say what to send.** A refusal changes nothing.
 
 Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,

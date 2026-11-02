@@ -58,6 +58,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `replace_text`, `add_declaration` (replaces "not implemented" stubs),
   `replace_declaration`. Tool definitions live in `Tools.ALL`; `GoldenTest` calls
   them the same way the server does, with `<arg>.txt` files for long arguments.
+- Edits fix imports (roadmap #20, 2026-11-02): `Imports.fix` runs before the
+  gate in `replace_text`, `add_declaration` and `replace_declaration`. The class
+  index (JDK through `jrt:/`, classpath jars) is built once per server and
+  classpath, the sources each call; a server start plus two import-fixing edits
+  took 2.2 s.
+- The server runs one tool call at a time (`Server.ONE_AT_A_TIME`, 2026-11-02).
+  Before that, two edits sent together ran at once and the second undid the
+  first (found by a piped probe; `ServerTest.editsSentTogetherBothApply`).
 - Writing Java through a Python script: use raw strings. In a plain Python
   string a backslash before a newline joins the lines, which is how
   `rename_local`'s description got its runs of spaces. The Edit tool avoids it.

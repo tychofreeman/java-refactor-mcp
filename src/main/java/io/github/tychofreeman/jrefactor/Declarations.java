@@ -97,23 +97,29 @@ final class Declarations {
 
     changes.sort(Comparator.comparingInt(Change::start));
     StringBuilder out = new StringBuilder();
-    List<String> said = new ArrayList<>();
+    List<Integer> blockStarts = new ArrayList<>();
     int from = 0;
     for (Change c : changes) {
       out.append(text, from, c.start());
-      int blockStart = out.length() + c.blockAt();
+      blockStarts.add(out.length() + c.blockAt());
       out.append(c.text());
-      said.add(c.said() + ", " + range(out, blockStart, c.blockLength()));
       from = c.end();
     }
     out.append(text, from, text.length());
 
+    Imports.Fixed fixed = Imports.fix(project, path, text, out.toString(), args.list("imports"));
     Gate.applyOrRefuse(
         project,
-        Map.of(path, out.toString()),
+        Map.of(path, fixed.text()),
         "adding to " + where,
-        "Declare what the new members use first, or add an import with replace_text.");
-    return String.join("; ", said);
+        "Declare what the new members use first.");
+    List<String> said = new ArrayList<>();
+    for (int i = 0; i < changes.size(); i++) {
+      Change c = changes.get(i);
+      said.add(
+          c.said() + ", " + range(out, blockStarts.get(i), c.blockLength(), fixed.lineShift()));
+    }
+    return String.join("; ", said) + fixed.said();
   }
 
   static String replace(SourceProject project, Args args) throws Exception {
@@ -140,13 +146,14 @@ final class Declarations {
         end++;
       }
       String out = text.substring(0, start) + text.substring(end);
+      Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
       Gate.applyOrRefuse(
           project,
-          Map.of(path, out),
+          Map.of(path, fixed.text()),
           "deleting " + target.label(),
           "Remove or change its uses first.");
-      return "deleted %s from %s (was lines %d-%d)"
-          .formatted(target.label(), rel, firstLine, lastLine);
+      return "deleted %s from %s (was lines %d-%d)%s"
+          .formatted(target.label(), rel, firstLine, lastLine, fixed.said());
     }
 
     List<BodyDeclaration> replacement = members(content);
@@ -167,13 +174,18 @@ final class Declarations {
       blocks.append(blocks.isEmpty() ? "" : "\n\n").append(reindent(content, d, indent));
     }
     String out = text.substring(0, start) + blocks + "\n" + text.substring(end);
+    Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
     Gate.applyOrRefuse(
         project,
-        Map.of(path, out),
+        Map.of(path, fixed.text()),
         "replacing " + target.label(),
         "Change its uses in the same way first, or keep the old signature.");
-    return "replaced %s in %s, %s"
-        .formatted(target.label(), rel, range(out, start, blocks.length()));
+    return "replaced %s in %s, %s%s"
+        .formatted(
+            target.label(),
+            rel,
+            range(out, start, blocks.length(), fixed.lineShift()),
+            fixed.said());
   }
 
   /** A declaration found by name, and how to say which one ("A.b(int)"). */
@@ -511,11 +523,12 @@ final class Declarations {
   }
 
   /**
-   * "lines a-b" (or "line a"): where {@code length} characters at {@code at} are in {@code text}.
+   * "lines a-b" (or "line a"): where {@code length} characters at {@code at} in {@code text} are,
+   * moved by {@code lineShift} lines.
    */
-  private static String range(CharSequence text, int at, int length) {
-    int first = Edits.lineOf(text, at);
-    int last = Edits.lineOf(text, at + Math.max(length - 1, 0));
+  private static String range(CharSequence text, int at, int length, int lineShift) {
+    int first = Edits.lineOf(text, at) + lineShift;
+    int last = Edits.lineOf(text, at + Math.max(length - 1, 0)) + lineShift;
     return first == last ? "line " + first : "lines " + first + "-" + last;
   }
 
