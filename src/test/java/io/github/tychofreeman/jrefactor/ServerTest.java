@@ -13,19 +13,28 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Drives the server over in-process pipes, as Claude Code would over stdin and stdout. */
 @Timeout(30)
 class ServerTest {
 
-  private static final Path PROJECT = Path.of("src/test/resources/golden/inspect_outline/in");
+  /** Golden inputs copied into one project per test, so a rename cannot change them. */
+  private static final List<Path> INPUTS =
+      List.of(
+          Path.of("src/test/resources/golden/inspect_outline/in"),
+          Path.of("src/test/resources/golden/rename_local_basic/in"));
+
+  @TempDir Path project;
 
   private final McpJsonMapper json = McpJsonDefaults.getMapper();
   private OutputStream toServer;
@@ -34,13 +43,22 @@ class ServerTest {
 
   @BeforeEach
   void start() throws IOException {
+    for (Path input : INPUTS) {
+      try (Stream<Path> files = Files.walk(input)) {
+        for (Path src : files.filter(Files::isRegularFile).toList()) {
+          Path dst = project.resolve(input.relativize(src).toString());
+          Files.createDirectories(dst.getParent());
+          Files.copy(src, dst);
+        }
+      }
+    }
     PipedOutputStream clientOut = new PipedOutputStream();
     PipedInputStream serverIn = new PipedInputStream(clientOut, 1 << 16);
     PipedOutputStream serverOut = new PipedOutputStream();
     PipedInputStream clientIn = new PipedInputStream(serverOut, 1 << 16);
     toServer = clientOut;
     fromServer = new BufferedReader(new InputStreamReader(clientIn, StandardCharsets.UTF_8));
-    server = Server.start(SourceProject.of(PROJECT), serverIn, serverOut);
+    server = Server.start(SourceProject.of(project), serverIn, serverOut);
 
     Map<String, Object> init =
         request(
@@ -97,8 +115,52 @@ class ServerTest {
         text(result));
   }
 
+  @Test
+  void renameLocalAppliesAndListsTheLines() throws IOException {
+    Map<String, Object> result =
+        result(
+            call(
+                6,
+                "rename_local",
+                Map.of(
+                    "file", "com/example/Totals.java",
+                    "line", 5,
+                    "name", "total",
+                    "new_name", "runningSum")));
+    assertEquals(false, result.get("isError"), () -> text(result));
+    assertEquals(
+        "renamed total to runningSum in com/example/Totals.java: 3 occurrences, lines 5, 7, 10",
+        text(result));
+    assertTrue(
+        Files.readString(project.resolve("com/example/Totals.java")).contains("runningSum += v;"));
+  }
+
+  @Test
+  void renameLocalRefusalChangesNothing() throws IOException {
+    String before = Files.readString(project.resolve("com/example/Totals.java"));
+    Map<String, Object> result =
+        result(
+            call(
+                7,
+                "rename_local",
+                Map.of(
+                    "file", "com/example/Totals.java",
+                    "line", 5,
+                    "name", "total",
+                    "new_name", "label")));
+    assertEquals(true, result.get("isError"));
+    assertTrue(text(result).startsWith("refused: "), text(result));
+    assertTrue(text(result).contains("already a variable"), text(result));
+    assertEquals(before, Files.readString(project.resolve("com/example/Totals.java")));
+  }
+
   private Map<String, Object> call(int id, Map<String, Object> arguments) throws IOException {
-    return request(id, "tools/call", Map.of("name", "inspect", "arguments", arguments));
+    return call(id, "inspect", arguments);
+  }
+
+  private Map<String, Object> call(int id, String tool, Map<String, Object> arguments)
+      throws IOException {
+    return request(id, "tools/call", Map.of("name", tool, "arguments", arguments));
   }
 
   private Map<String, Object> request(int id, String method, Map<String, Object> params)

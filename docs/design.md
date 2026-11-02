@@ -81,7 +81,7 @@ tool contract and the A/B harness is planned once a second language exists.
    not built.
 3. ~~Start the MCP server over STDIO with one tool~~ Done (roadmap #5): `inspect`
    lists and answers from Claude Code.
-4. Wire `rename_local` into the server, with the same refusal messages.
+4. ~~Wire `rename_local` into the server~~ Done (roadmap #6).
 5. Run the A/B harness on a small Java task set against a stock baseline.
 
 ## Roadmap
@@ -96,14 +96,14 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
 | 4 | CI: tests, formatting, compiler lint; Dependabot | Done | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
 | 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Done | `Server`, `Inspect`; record in `docs/sessions/mcp-server-inspect.md` |
-| 6 | Wire `rename_local` into the server, same refusal wording | Next | |
+| 6 | Wire `rename_local` into the server, same refusal wording | Done | Addressed by name as in gorefactor's `rename`; record in `docs/sessions/rename-local-tool.md` |
 | 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
 | 8 | Undo and `batch`, with `$prev.*` references | Open | Open questions 3 and 4 |
 | 9 | Field rename, and other kinds of rename | Planned | Crosses files; needs an approach for references across the project |
 | 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit |
 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs items 5 and 6 |
 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
-| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Planned | After 6; from gorefactor |
+| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Next | From gorefactor |
 | 14 | Golden cases also undo each applied step and compare with `in/`; compare incremental state with a fresh load once there is any | Planned | After 8; from gorefactor, where it caught reloader bugs |
 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | After 5; in gorefactor a hook changed reading where instructions did not |
 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |

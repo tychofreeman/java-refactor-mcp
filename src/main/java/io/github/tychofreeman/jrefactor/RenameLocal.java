@@ -34,10 +34,11 @@ public final class RenameLocal {
   /**
    * @param relFile path relative to the project root
    * @param line 1-based line of any use of the variable, or its declaration
+   * @param name the variable's current name
    * @param column 1-based column where the name starts
    */
   public static Result run(
-      SourceProject project, String relFile, int line, int column, String newName)
+      SourceProject project, String relFile, int line, String name, int column, String newName)
       throws IOException {
     Path file = project.root().resolve(relFile).normalize();
     if (!file.startsWith(project.root())
@@ -57,22 +58,14 @@ public final class RenameLocal {
     }
 
     String source = Files.readString(file);
-    int offset = Positions.offset(source, line, column);
     CompilationUnit cu = Jdt.parse(project, file, source);
+    SimpleName at =
+        column > 0
+            ? atColumn(cu, source, line, name, column)
+            : byName(cu, source, relFile, line, name);
+    String oldName = at.getIdentifier();
 
-    ASTNode covering = NodeFinder.perform(cu, offset, 0);
-    if (!(covering instanceof SimpleName name)) {
-      throw new Refusal(
-          "line "
-              + line
-              + ", column "
-              + column
-              + " is not on a name. "
-              + "Put the position on the variable's name, at a use or at its declaration.");
-    }
-    String oldName = name.getIdentifier();
-
-    if (!(name.resolveBinding() instanceof IVariableBinding variable)) {
+    if (!(at.resolveBinding() instanceof IVariableBinding variable)) {
       throw new Refusal(
           "'"
               + oldName
@@ -130,6 +123,102 @@ public final class RenameLocal {
       lines.add(cu.getLineNumber(occurrence.getStartPosition()));
     }
     return new Result(project.relative(file), found.occurrences().size(), new ArrayList<>(lines));
+  }
+
+  /** The name {@code name} that starts at {@code line}, {@code column}. */
+  private static SimpleName atColumn(
+      CompilationUnit cu, String source, int line, String name, int column) {
+    ASTNode covering = NodeFinder.perform(cu, Positions.offset(source, line, column), 0);
+    if (!(covering instanceof SimpleName at) || !at.getIdentifier().equals(name)) {
+      throw new Refusal(
+          "line "
+              + line
+              + ", column "
+              + column
+              + " is not on '"
+              + name
+              + "'. Put the position on the variable's name, at a use or at its declaration,"
+              + " or leave column out.");
+    }
+    return at;
+  }
+
+  /**
+   * The first occurrence of {@code name} on {@code line} that is a local variable or parameter,
+   * when every such occurrence on the line is the same variable.
+   */
+  private static SimpleName byName(
+      CompilationUnit cu, String source, String relFile, int line, String name) {
+    List<String> lines = source.lines().toList();
+    if (line < 1 || line > lines.size()) {
+      throw new Refusal(
+          "line " + line + " is outside " + relFile + ", which has " + lines.size() + " lines.");
+    }
+    List<SimpleName> onLine = new ArrayList<>();
+    cu.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(SimpleName node) {
+            if (node.getIdentifier().equals(name)
+                && cu.getLineNumber(node.getStartPosition()) == line) {
+              onLine.add(node);
+            }
+            return true;
+          }
+        });
+    onLine.sort(Comparator.comparingInt(ASTNode::getStartPosition));
+
+    List<SimpleName> firstOfEach = new ArrayList<>();
+    List<IVariableBinding> variables = new ArrayList<>();
+    for (SimpleName node : onLine) {
+      if (node.resolveBinding() instanceof IVariableBinding v
+          && !v.isField()
+          && variables.stream().noneMatch(v::isEqualTo)) {
+        variables.add(v);
+        firstOfEach.add(node);
+      }
+    }
+    if (firstOfEach.size() == 1) {
+      return firstOfEach.get(0);
+    }
+    if (firstOfEach.size() > 1) {
+      List<String> columns = new ArrayList<>();
+      for (SimpleName node : firstOfEach) {
+        columns.add(String.valueOf(cu.getColumnNumber(node.getStartPosition()) + 1));
+      }
+      String last = columns.remove(columns.size() - 1);
+      throw new Refusal(
+          "'"
+              + name
+              + "' on line "
+              + line
+              + " names "
+              + firstOfEach.size()
+              + " different variables, at columns "
+              + String.join(", ", columns)
+              + " and "
+              + last
+              + ". Pass column to choose one.");
+    }
+    if (onLine.isEmpty()) {
+      throw new Refusal(
+          "'"
+              + name
+              + "' is not on line "
+              + line
+              + " of "
+              + relFile
+              + ". That line is: "
+              + lines.get(line - 1).strip()
+              + "\nGive a line where the variable is declared or used.");
+    }
+    IBinding binding = onLine.get(0).resolveBinding();
+    String what =
+        binding instanceof IVariableBinding
+            ? "a field. rename_local only renames local variables and parameters; renaming"
+                + " fields is not built yet."
+            : "not a variable. rename_local only renames local variables and parameters.";
+    throw new Refusal("'" + name + "' on line " + line + " is " + what);
   }
 
   /** The method, initializer or field the variable is declared in; the compilation unit if none. */

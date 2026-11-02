@@ -16,9 +16,9 @@ helps Claude do that during real feature work, and by whether working through
 the tools costs fewer tokens than editing by hand. Once the server runs, aim for
 about 95% of coding through the tools, this project's own code included.
 
-Current state: early. The MCP server (`Server`, STDIO) exposes one read-only
-tool, `inspect`. The type-check gate (`TypeCheck`) and `rename_local` (locals and
-parameters, with golden cases) exist as library code, not yet as tools. Check the roadmap and open questions in
+Current state: early. The MCP server (`Server`, STDIO) exposes two tools:
+`inspect` (read-only) and `rename_local` (locals and parameters, behind the
+type-check gate `TypeCheck`). Check the roadmap and open questions in
 `docs/design.md` before starting work.
 
 ## How we work
