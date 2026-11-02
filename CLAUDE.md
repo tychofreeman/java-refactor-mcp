@@ -9,8 +9,10 @@ refactorings using Eclipse JDT Core, for Claude to call during feature work.
 Companion to gorefactor (`tychofreeman/go-refactor-mcp`). Keep Java-specific
 decisions here; keep the shared tool contract in `docs/tool-contract.md`.
 
-Current state: scaffold. No tools exist yet. Check `docs/design.md` for what is
-decided and what is open before starting work.
+Current state: early. The type-check gate (`TypeCheck`) and `rename_local`
+(locals and parameters, with golden cases) exist as library code; no MCP server
+yet, so nothing is exposed as a tool. Check the roadmap and open questions in
+`docs/design.md` before starting work.
 
 ## Build and test
 

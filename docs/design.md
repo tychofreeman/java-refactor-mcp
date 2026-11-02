@@ -89,7 +89,7 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 1 | JDT spike: headless bindings | Done | `spikes/jdt-headless/`; open question 1 |
 | 2 | Type-check gate | Done | `TypeCheck`; see "Gate" below |
 | 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
-| 4 | CI: tests, formatting, compiler lint; Dependabot | Done, first run pending | `.github/`; pom Spotless and `-Xlint:all -Werror` |
+| 4 | CI: tests, formatting, compiler lint; Dependabot | Done | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
 | 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Next | Check `mcp-core` 2.1.0's API against its jar first |
 | 6 | Wire `rename_local` into the server, same refusal wording | Planned | After 5 |
 | 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
