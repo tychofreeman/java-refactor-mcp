@@ -48,9 +48,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   read but not run, so the read that finds the end waits until no tool call is
   running and nothing was written for a second. Exiting at once lost every
   reply of a piped script; never exiting leaves a JVM behind a crashed client.
-- Next: pick with "what's next?". Candidates the work points at: source roots
-  and classpath from the build (#7; the gate on this repo cannot resolve JDT or
-  MCP types), the read guard (#15), the session log (#18).
+- The roadmap's open items are ordered by gorefactor's evidence (the user asked,
+  2026-11-02, after items had been ordered only by what unblocks what): source
+  roots and classpath (#7), then the first edit tools, imports, undo and batch,
+  stubs, signature changes. The reasons are under "Why this order" in
+  `docs/design.md`.
 - The SDK (2.1.0) was checked with `javap` against the jars, not from memory:
   `Tool.builder()` is deprecated in favor of `Tool.builder(name, mapper, schema)`,
   and the SDK validates arguments against the input schema itself.

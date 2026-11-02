@@ -86,29 +86,69 @@ tool contract and the A/B harness is planned once a second language exists.
 
 ## Roadmap
 
-Ordered by what unblocks the next step. Status as of 2026-11-02. When a tool
-or item is done, change its status here and in `docs/session-notes.md`.
+Item numbers are stable (records and notes refer to them); the order of the
+open items is the order of the second table. Status as of 2026-11-02. When an
+item is done, change its status here and in `docs/session-notes.md`.
 
-| # | Item | Status | Notes |
-|---|------|--------|-------|
-| 1 | JDT spike: headless bindings | Done | `spikes/jdt-headless/`; open question 1 |
-| 2 | Type-check gate | Done | `TypeCheck`; see "Gate" below |
-| 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
-| 4 | CI: tests, formatting, compiler lint; Dependabot | Done | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
-| 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Done | `Server`, `Inspect`; record in `docs/sessions/mcp-server-inspect.md` |
-| 6 | Wire `rename_local` into the server, same refusal wording | Done | Addressed by name as in gorefactor's `rename`; record in `docs/sessions/rename-local-tool.md` |
-| 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
-| 8 | Undo and `batch`, with `$prev.*` references | Open | Open questions 3 and 4 |
-| 9 | Field rename, and other kinds of rename | Planned | Crosses files; needs an approach for references across the project |
-| 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit. First point (2026-11-02): a `rename_local` on 390 files, no classpath, took about 5 s |
-| 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs items 5 and 6 |
-| 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
-| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Done | `bin/jrefactor-mcp`; record in `docs/sessions/mcp-json-self.md` |
-| 14 | Golden cases also undo each applied step and compare with `in/`; compare incremental state with a fresh load once there is any | Planned | After 8; from gorefactor, where it caught reloader bugs |
-| 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | After 5; in gorefactor a hook changed reading where instructions did not |
-| 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
-| 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | From gorefactor's tool budget |
-| 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Planned | After 5; gorefactor's `cmd/session-log` and `refactor-tokens -log`; the `whats-next` skill uses it |
+### Done
+
+| # | Item | Notes |
+|---|------|-------|
+| 1 | JDT spike: headless bindings | `spikes/jdt-headless/`; open question 1 |
+| 2 | Type-check gate | `TypeCheck`; see "Gate" below |
+| 3 | `rename_local` (locals and parameters) | Four golden cases |
+| 4 | CI: tests, formatting, compiler lint; Dependabot | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
+| 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | `Server`, `Inspect`; record in `docs/sessions/mcp-server-inspect.md` |
+| 6 | Wire `rename_local` into the server, same refusal wording | Addressed by name as in gorefactor's `rename`; record in `docs/sessions/rename-local-tool.md` |
+| 13 | Build this project through its own tools: `.mcp.json` running this checkout | `bin/jrefactor-mcp`; record in `docs/sessions/mcp-json-self.md` |
+
+### Open, in order
+
+Ordered by gorefactor's evidence (see "Why this order" below) and this repo's
+friction log; reorder when this repo's own log says otherwise.
+
+| Order | # | Item | Status | Evidence |
+|---|---|------|--------|----------|
+| 1 | 7 | Source roots (main and test) and the classpath, from Maven first (Gradle later) | Next | The gate cannot resolve JDT or MCP types on this repo, so it cannot yet stand behind edits. TS spike: a rename that loaded one project missed three test files |
+| 2 | 19 | First edits: `create_file`, `replace_text` (any file), `add_declaration` (a member into a type, replacing a stub of it), `replace_declaration` (by `Type.member`, empty content deletes) | Planned | gorefactor's share of edits through the tools went from 10-20% (Oct 17) to 80-99% the day its edits came (cost history). All three of this repo's friction entries are hand edits these cover |
+| 3 | 20 | Imports added and removed by every edit, not by a tool | Planned | 52 gorefactor entries mention imports; "2026-10-20: imports fixed after every edit". The TypeScript port did the same |
+| 4 | 8 | Undo, and `batch` with check `"end"`, lines translated through earlier steps, and `$prev.*` references | Planned | Oct 19 in gorefactor: 99-100% through the tools and input tokens per step from 0.5-1.8M to 170-190k. "2026-10-18: a batch checked at its end" ("hit four times"). Open questions 3 and 4 |
+| 5 | 21 | Stubs from usage (`create_from_usage`): a test written first gets compiling stubs | Planned | "2026-10-17: adding `remove_parameter`" ("A red test blocks every refactoring"); first in TypeScript's gap list (item 41), second in item 43. CLAUDE.md's TDD order needs it |
+| 6 | 22 | Signature changes: `add_parameter`, `remove_parameter`, `move_parameter`, across overrides and interface implementations | Planned | gorefactor roadmap item 1, "the most common by-hand step"; "2026-10-20: signature tools change interface families". This repo's log names `add_parameter` (2026-11-02) |
+| 7 | 23 | `extract_function` (Java: extract method) | Planned | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
+| 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Planned | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
+| 9 | 24 | Results that do not echo what the model sent; locations, not diffs | Planned | gorefactor's cost history: smaller results were "the largest single win". Build into each edit as it comes; this item audits them once there are several |
+| 10 | 9 | Field, method and type rename across files; `rename_local` also updates Javadoc `@param` | Planned | 20 gorefactor entries on renames leaving doc comments stale ("Seven renames, seven stale doc comments") |
+| 11 | 10 | Measure gate cost on a large project; cache or narrow the reparse | Open | First point (2026-11-02): a `rename_local` on 390 files took about 5 s. In gorefactor, reloads that stopped compiling the module took a 13-step batch from 546 s to 21 s |
+| 12 | 14 | Golden cases also undo each applied step and compare with `in/`; incremental state compared with a fresh load | Planned | After 8; in gorefactor this caught reloader bugs |
+| 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed |
+| 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
+| 15 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | gorefactor's tool budget |
+| 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
+| 17 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
+
+### Why this order
+
+From a survey of gorefactor's `docs/friction-log.md` (434 entries, 15 Oct to
+2 Nov), its cost history, roadmap and TypeScript notes, checked on 2026-11-02:
+
+- The log's counts are mentions, not gaps: after Oct 19 most entries say the
+  work went through the tools, so a tool built early is mentioned because it
+  was used. The order follows what changed the share of edits made through the
+  tools and the cost per step (cost history, section 5), and the entries that
+  name a gap, not raw counts.
+- Edits first, then batching: the two jumps in the share of work done through
+  the tools came the day the edit tools came (Oct 18) and the day batch, check
+  `"end"` and references came (Oct 19).
+- Loading before edits: the TypeScript spike's first finding was that a rename
+  over one loaded project missed test files, and was caught only by the gate.
+  This repo's gate cannot resolve its own dependencies yet.
+- Mechanisms over guidance: smaller results, checked arguments, suggested
+  ranges and stubs helped fresh models; more tools, longer descriptions, a
+  coaching tip and the read guard did not.
+- Gaps that were compositions of existing tools (moving a field, the 34 calls
+  of `set`) are listed in gorefactor's `docs/derivations.md`; check there before
+  adding a tool.
 
 ## Gate: how the type check works
 
