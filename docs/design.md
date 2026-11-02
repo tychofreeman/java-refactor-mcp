@@ -100,10 +100,10 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
 | 8 | Undo and `batch`, with `$prev.*` references | Open | Open questions 3 and 4 |
 | 9 | Field rename, and other kinds of rename | Planned | Crosses files; needs an approach for references across the project |
-| 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit |
+| 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit. First point (2026-11-02): a `rename_local` on 390 files, no classpath, took about 5 s |
 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs items 5 and 6 |
 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
-| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Next | From gorefactor |
+| 13 | Build this project through its own tools: `.mcp.json` running this checkout; hand edits logged | Done | `bin/jrefactor-mcp`; record in `docs/sessions/mcp-json-self.md` |
 | 14 | Golden cases also undo each applied step and compare with `in/`; compare incremental state with a fresh load once there is any | Planned | After 8; from gorefactor, where it caught reloader bugs |
 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | After 5; in gorefactor a hook changed reading where instructions did not |
 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |

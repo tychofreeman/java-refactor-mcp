@@ -9,6 +9,9 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
 import io.modelcontextprotocol.spec.McpSchema.Tool;
 import io.modelcontextprotocol.spec.McpSchema.ToolAnnotations;
+import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
@@ -16,6 +19,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** The MCP server: the project's tools over STDIO. */
 public final class Server {
@@ -76,13 +81,103 @@ public final class Server {
   private static final Set<String> RENAME_LOCAL_ARGS =
       Set.of("file", "line", "name", "column", "new_name");
 
+  /** Tool calls running now; the server does not exit at the end of input while one is. */
+  private static final AtomicInteger CALLS = new AtomicInteger();
+
+  private static final long QUIET_BEFORE_EXIT_NANOS = 1_000_000_000L;
+  private static volatile long lastOutput;
+
   private Server() {}
 
-  /** Serves the project at {@code args[0]} (default: the working directory) on stdin and stdout. */
+  /**
+   * Serves the project at {@code args[0]} (default: the working directory) on stdin and stdout, and
+   * exits when stdin ends, so a client that goes away leaves no server running.
+   */
   public static void main(String[] args) throws InterruptedException {
     Path root = Path.of(args.length > 0 ? args[0] : "").toAbsolutePath();
-    start(SourceProject.of(root), System.in, System.out);
-    new CountDownLatch(1).await();
+    CountDownLatch inputEnded = new CountDownLatch(1);
+    McpSyncServer server =
+        start(
+            SourceProject.of(root),
+            endingWith(
+                System.in,
+                () -> {
+                  awaitQuiet();
+                  inputEnded.countDown();
+                }),
+            new FilterOutputStream(System.out) {
+              @Override
+              public void write(int b) throws IOException {
+                lastOutput = System.nanoTime();
+                out.write(b);
+              }
+
+              @Override
+              public void write(byte[] b, int off, int len) throws IOException {
+                lastOutput = System.nanoTime();
+                out.write(b, off, len);
+              }
+            });
+    inputEnded.await();
+    server.closeGracefully();
+    System.exit(0);
+  }
+
+  /**
+   * Waits until no tool call is running and nothing has been written for a second. Called from the
+   * read that finds the end of input, before it returns: the SDK closes the session when it sees
+   * the end, and would drop requests it has read but not yet run.
+   */
+  private static void awaitQuiet() {
+    lastOutput = System.nanoTime();
+    try {
+      while (CALLS.get() > 0 || System.nanoTime() - lastOutput < QUIET_BEFORE_EXIT_NANOS) {
+        Thread.sleep(50);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /**
+   * {@code in}, calling {@code onEnd} once, when a read finds its end or fails, before it returns.
+   */
+  static InputStream endingWith(InputStream in, Runnable onEnd) {
+    AtomicBoolean ended = new AtomicBoolean();
+    return new FilterInputStream(in) {
+      @Override
+      public int read() throws IOException {
+        return check(() -> super.read());
+      }
+
+      @Override
+      public int read(byte[] b, int off, int len) throws IOException {
+        return check(() -> super.read(b, off, len));
+      }
+
+      private int check(IoRead read) throws IOException {
+        try {
+          int n = read.run();
+          if (n < 0) {
+            end();
+          }
+          return n;
+        } catch (IOException | RuntimeException e) {
+          end();
+          throw e;
+        }
+      }
+
+      private void end() {
+        if (ended.compareAndSet(false, true)) {
+          onEnd.run();
+        }
+      }
+    };
+  }
+
+  private interface IoRead {
+    int run() throws IOException;
   }
 
   /** Serves {@code project} on {@code in} and {@code out} until the input closes. */
@@ -168,6 +263,7 @@ public final class Server {
    * Runs {@code body}: its text, a refusal's reason, or an engine error, which is not a refusal.
    */
   private static CallToolResult answer(Body body) {
+    CALLS.incrementAndGet();
     try {
       return CallToolResult.builder().addTextContent(body.run()).isError(false).build();
     } catch (Refusal refusal) {
@@ -180,6 +276,8 @@ public final class Server {
           .addTextContent("engine error (not a refusal; the call may be fine): " + e)
           .isError(true)
           .build();
+    } finally {
+      CALLS.decrementAndGet();
     }
   }
 

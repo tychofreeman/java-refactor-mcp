@@ -44,3 +44,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: `.mcp.json` running this checkout's jar (roadmap #13), so the next item
   can read with `inspect` and rename with `rename_local`. Then add_parameter and
   extract_function are the edit tools this item would have used.
+
+## 2026-11-02: `.mcp.json` for this checkout, by hand
+- Task: roadmap #13 (`docs/sessions/mcp-json-self.md`).
+- Tool: none in this session (it started before `.mcp.json` existed).
+- What happened: the change to existing Java was `Server.main` (the exit at the
+  end of input) and `answer` (counting calls); both new behavior, written by
+  Edit. The launcher, `.mcp.json` and docs are not Java.
+- Cost: not measured (roadmap #18).
+- Idea: none; from the next session on, `inspect` and `rename_local` are there.

@@ -7,7 +7,9 @@ import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
@@ -17,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +78,17 @@ class ServerTest {
   @AfterEach
   void stop() {
     server.close();
+  }
+
+  @Test
+  void endOfInputIsReportedOnce() throws IOException {
+    AtomicInteger ends = new AtomicInteger();
+    InputStream in =
+        Server.endingWith(
+            new ByteArrayInputStream("ab".getBytes(StandardCharsets.UTF_8)), ends::incrementAndGet);
+    assertEquals("ab", new String(in.readAllBytes(), StandardCharsets.UTF_8));
+    assertEquals(-1, in.read());
+    assertEquals(1, ends.get());
   }
 
   @Test
