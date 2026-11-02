@@ -16,6 +16,11 @@ Keep entries to what the next session needs: decisions, surprises, what to try n
   known" for `repo.maven.apache.org`, even when `curl` reaches it through the proxy.
   The proxy port changes between sessions, so regenerate the file each session.
   No mirror is needed. (A `repo1.maven.org` mirror was tried first; it was unnecessary.)
+- JDT spike done (`spikes/jdt-headless/`): bindings resolve headless against a
+  source path and a classpath, with no workspace and no OSGi start. Design open
+  question 1 is answered. Next: the after-edit type check, then the first tool.
+- The proxy port in `~/.m2/settings.xml` went stale mid-session (46609 vs the old
+  43251). Regenerate it from `$HTTPS_PROXY` before every Maven run.
 - Chose JDT Core headless over JavaLens (which returns edits instead of applying
   them). Reasons are in `docs/design.md`.
 - Next: the JDT spike in `docs/design.md`, open question 1.

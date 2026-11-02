@@ -36,12 +36,23 @@ tool contract and the A/B harness is planned once a second language exists.
 
 ## Open questions
 
-1. **Running JDT Core without OSGi.** JDT Core on Maven Central does not bring the
-   whole Eclipse platform. The plan is headless `ASTParser` with an explicit
-   classpath (`setEnvironment`) and `setResolveBindings(true)`. This is not yet
-   verified: check whether it needs `org.eclipse.core.runtime`/`resources` jars,
-   and whether bindings resolve across the project's classpath without a
-   workspace. A spike should answer this before any refactoring is written.
+1. ~~**Running JDT Core without OSGi.**~~ Answered by the spike in
+   `spikes/jdt-headless/` (2026-11-02). Headless `ASTParser` with
+   `setResolveBindings(true)`, `setBindingsRecovery(true)` and
+   `setEnvironment(classpath, sourcepath, encodings, true)` works with no
+   workspace and no OSGi runtime started:
+   - Types from other files on the source path resolve, as do JDK types.
+   - Library jars resolve only when on the classpath. Without them, the imports
+     and their uses are reported as problems and the calls come back unresolved.
+   - The unit still parses and the rest of its bindings resolve; missing types
+     are recovered, not fatal.
+   - No Eclipse platform warnings were printed.
+   - Caveat: `jdt.core` 3.47.0 pulls about 30 transitive jars (`org.eclipse.core.*`,
+     OSGi, equinox, jna). They are needed on the classpath, but the spike did not
+     test whether the whole set is required. Trim later if it matters.
+   Still open: the after-edit type check (re-parse the edited sources and compare
+   problems), timing on large projects, and deriving the classpath from Maven and
+   Gradle.
 2. **Project loading.** Options: read the Maven and Gradle models through the
    build tool (as JavaLens does), or parse `pom.xml` and the classpath directly.
    Start with a plain classpath passed in by the caller; add build-tool loading
