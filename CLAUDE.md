@@ -82,6 +82,30 @@ When the user asks "what's next?", the `whats-next` skill
 chosen one in `docs/sessions/<branch>.md`: the plan before code, and notes of
 hand edits, refusals, reads and large writes.
 
+## Using java-refactor-mcp
+
+`.mcp.json` starts `bin/jrefactor-mcp`, which serves this checkout with the
+server built from it, rebuilding the jar first when `pom.xml` or `src/main`
+changed. Claude Code asks once to approve the project's server. A session's
+tools are the build from when it started: after changing the server, test the
+change with `./mvnw test`, not by calling the tool, and restart Claude Code
+after the change is merged to use it.
+
+1. **Load both schemas at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local`.
+2. **Read Java through `inspect`:** the file without method bodies, then the
+   line ranges you will change. Avoid Read or `cat` of whole `.java` files;
+   each result is sent again on every later turn.
+3. **Rename locals and parameters with `rename_local`,** by `file`, `line` and
+   `name`; it finds every use and type-checks.
+4. **Read refusals; they say what to send.** A refusal changes nothing.
+
+The type check is weaker on this repo than on a project with a classpath:
+the server gets no source roots or classpath yet (roadmap #7), so JDT and MCP
+types do not resolve and their errors are in the "before" counts.
+
+Every other edit is by hand for now: log it in `docs/friction-log.md`, naming
+the tool that would have done it.
+
 ## Build and test
 
 ```sh

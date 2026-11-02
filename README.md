@@ -49,6 +49,16 @@ project, the directory given as its argument (default: the working directory):
 claude mcp add jrefactor -- java -jar /path/to/java-refactor-mcp/target/java-refactor-mcp.jar /path/to/project
 ```
 
+Or use the launcher, which builds the jar first when it is missing or stale
+(it needs a JDK: `JAVA_HOME`, or `javac` on `PATH`):
+
+```sh
+claude mcp add jrefactor -- /path/to/java-refactor-mcp/bin/jrefactor-mcp /path/to/project
+```
+
+In this repo, `.mcp.json` runs the launcher on the checkout itself. The server
+exits when its input ends, after answering the requests it has read.
+
 ## Layout
 
 ```

@@ -40,8 +40,17 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - `rename_local` is a tool too (roadmap #6, 2026-11-02), addressed by `name` and
   `line` as gorefactor's `rename` is; `column` only for two meanings on one line.
   A Haiku probe renamed a constructor parameter through it with no column.
-- Next: `.mcp.json` running this checkout, so sessions here use `inspect` and
-  `rename_local` on this project's own code (roadmap #13).
+- Sessions here have the tools (roadmap #13, 2026-11-02): `.mcp.json` runs
+  `bin/jrefactor-mcp`, which rebuilds a stale jar (about 4 s, output to stderr)
+  and serves this checkout. Restart Claude Code after merging a server change.
+- The server exits when stdin ends, but only after it is quiet: the SDK closes
+  the session as soon as it reads the end of input and drops requests it has
+  read but not run, so the read that finds the end waits until no tool call is
+  running and nothing was written for a second. Exiting at once lost every
+  reply of a piped script; never exiting leaves a JVM behind a crashed client.
+- Next: pick with "what's next?". Candidates the work points at: source roots
+  and classpath from the build (#7; the gate on this repo cannot resolve JDT or
+  MCP types), the read guard (#15), the session log (#18).
 - The SDK (2.1.0) was checked with `javap` against the jars, not from memory:
   `Tool.builder()` is deprecated in favor of `Tool.builder(name, mapper, schema)`,
   and the SDK validates arguments against the input schema itself.
