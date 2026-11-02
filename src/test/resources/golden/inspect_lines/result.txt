@@ -1,0 +1,22 @@
+com/example/Shapes.java  lines 24-44 of 44:
+24    public double total() {
+25      double sum = 0;
+26      for (double a : areas) {
+27        sum += a;
+28      }
+29      return sum;
+30    }
+31
+32    public int size() { return areas.size(); }
+33
+34    interface Shape {
+35      double area();
+36    }
+37
+38    record Square(double side) implements Shape {
+39      public double area() {
+40        double a = side * side;
+41        return a;
+42      }
+43    }
+44  }

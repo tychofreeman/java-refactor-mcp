@@ -19,9 +19,11 @@ import org.junit.jupiter.api.TestFactory;
 /**
  * Runs each directory under src/test/resources/golden as one case.
  *
- * <p>A case has {@code in/} (the project before), {@code args.properties} (the call), and either
- * {@code out/} (the project after) or {@code refused.txt} (a fragment the refusal message must
- * contain; the project must be unchanged afterwards).
+ * <p>A case has {@code in/} (the project before), {@code args.properties} (the call: {@code tool},
+ * default {@code rename_local}, and its arguments), and one of {@code out/} (the project after),
+ * {@code result.txt} (the text a query tool returns) or {@code refused.txt} (a fragment the refusal
+ * message must contain). With {@code result.txt} or {@code refused.txt} the project must be
+ * unchanged afterwards.
  */
 class GoldenTest {
 
@@ -47,25 +49,50 @@ class GoldenTest {
     try (Reader reader = Files.newBufferedReader(caseDir.resolve("args.properties"))) {
       args.load(reader);
     }
-    String file = args.getProperty("file");
-    int line = Integer.parseInt(args.getProperty("line"));
-    int column = Integer.parseInt(args.getProperty("column"));
-    String newName = args.getProperty("newName");
+    String tool = args.getProperty("tool", "rename_local");
     SourceProject project = SourceProject.of(work);
 
     Path refused = caseDir.resolve("refused.txt");
+    Path result = caseDir.resolve("result.txt");
     if (Files.exists(refused)) {
       String expected = Files.readString(refused).strip();
-      Refusal refusal =
-          assertThrows(Refusal.class, () -> RenameLocal.run(project, file, line, column, newName));
+      Refusal refusal = assertThrows(Refusal.class, () -> call(tool, project, args));
       assertTrue(
           refusal.getMessage().contains(expected),
           () -> "expected refusal containing '" + expected + "', got: " + refusal.getMessage());
       assertTreesEqual(caseDir.resolve("in"), work);
+    } else if (Files.exists(result)) {
+      assertEquals(Files.readString(result), call(tool, project, args));
+      assertTreesEqual(caseDir.resolve("in"), work);
     } else {
-      RenameLocal.run(project, file, line, column, newName);
+      call(tool, project, args);
       assertTreesEqual(caseDir.resolve("out"), work);
     }
+  }
+
+  /** Calls the tool a case names, returning its text for a query tool and null for an edit. */
+  private static String call(String tool, SourceProject project, Properties args)
+      throws IOException {
+    return switch (tool) {
+      case "rename_local" -> {
+        RenameLocal.run(
+            project,
+            args.getProperty("file"),
+            Integer.parseInt(args.getProperty("line")),
+            Integer.parseInt(args.getProperty("column")),
+            args.getProperty("newName"));
+        yield null;
+      }
+      case "inspect" ->
+          args.containsKey("start_line")
+              ? Inspect.lines(
+                  project,
+                  args.getProperty("file"),
+                  Integer.parseInt(args.getProperty("start_line")),
+                  Integer.parseInt(args.getProperty("end_line")))
+              : Inspect.file(project, args.getProperty("file"));
+      default -> throw new IllegalArgumentException("unknown tool in args.properties: " + tool);
+    };
   }
 
   /**

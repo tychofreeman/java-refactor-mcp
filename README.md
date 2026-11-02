@@ -4,8 +4,9 @@ An MCP server that gives Claude behavior-preserving refactorings for Java,
 built on Eclipse JDT Core. It is the Java counterpart to
 [go-refactor-mcp](https://github.com/tychofreeman/go-refactor-mcp) (gorefactor).
 
-**Status: scaffold only.** The project layout, Maven build and documentation
-exist. No tools are implemented yet.
+**Status: early.** The server runs over STDIO with one read-only tool,
+`inspect`. The type-check gate and `rename_local` exist as library code and are
+not yet exposed as tools. The roadmap is in [docs/design.md](docs/design.md).
 
 ## Goal
 
@@ -29,9 +30,9 @@ The tool contract shared with gorefactor is in
 
 ## Requirements
 
-- JDK 21 or later (`JAVA_HOME` set, or `java` on `PATH`)
-- Maven 3.9 or later
-- Network access to Maven Central for the first build
+- A JDK 21 (with `javac`; a JRE is not enough), as `JAVA_HOME` or `java` on `PATH`
+- Network access to Maven Central for the first build. Maven itself comes from
+  the wrapper (`./mvnw`), pinned to 3.9.16.
 
 ## Build and test
 
@@ -39,13 +40,22 @@ The tool contract shared with gorefactor is in
 ./mvnw verify
 ```
 
+## Running
+
+`./mvnw package` builds `target/java-refactor-mcp.jar`. The server serves one
+project, the directory given as its argument (default: the working directory):
+
+```sh
+claude mcp add jrefactor -- java -jar /path/to/java-refactor-mcp/target/java-refactor-mcp.jar /path/to/project
+```
+
 ## Layout
 
 ```
 pom.xml                      Maven build; JDT Core and MCP SDK dependencies
-src/main/java/.../jrefactor  server code (empty so far)
+src/main/java/.../jrefactor  server (Server), tools (Inspect, RenameLocal) and the gate (TypeCheck)
 src/test/java/.../jrefactor  unit and golden-case tests
-src/test/resources/golden    golden cases: in/, out/ and args per case
+src/test/resources/golden    golden cases: in/, args.properties, and out/, result.txt or refused.txt
 docs/                        design, tool contract, session notes, friction log
 CLAUDE.md                    instructions for Claude Code working in this repo
 ```

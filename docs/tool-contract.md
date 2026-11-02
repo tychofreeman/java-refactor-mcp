@@ -31,6 +31,26 @@ implemented or being implemented.
 Java names may differ where the Java language needs it (for example, `add_field`
 on a class, or `add_case` for a `switch`). Record any difference in this file.
 
+## `inspect` (built)
+
+Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
+
+- `file`: a header (`<file>  (package <pkg>, <n> lines)`), then every line
+  numbered, except that each method, constructor and initializer body with two
+  inner lines or more is replaced by `… lines a-b   [n lines]`. Bodies of
+  methods in nested types are elided the same way. gorefactor also reports each
+  body's complexity, nesting and side effects; not yet here.
+- `file` + `start_line`/`end_line`: those lines; `end_line` defaults to, and is
+  clamped to, the end of the file.
+- Refused: a path that is not a `.java` file under the root; a file that does
+  not exist (with the Java files in that directory); `start_line` past the end
+  (with the line count); an unknown argument (with the arguments it takes).
+- Not yet: gorefactor's no-argument overview, `function`, `targets`, `names`
+  and `uses`.
+
+Refusals come back as an error result whose text starts `refused: `. Other
+failures start `engine error (not a refusal; ...)`.
+
 ## `batch`
 
 - Takes a list of steps. Each step is a tool call with its arguments.
@@ -64,8 +84,5 @@ actionable. Avoid generic messages such as "unsupported".
 - Coaching tips inside results did not help and were removed. Do not add them.
 
 ## Open
-
-- Whether `inspect` returns JSON or text for the Java server. gorefactor's
-  choice should be copied unless measurements say otherwise.
 - Java-specific refusals (checked exceptions, overloads, generics) need their own
   wording once the first refactorings exist.
