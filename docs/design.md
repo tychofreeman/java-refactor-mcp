@@ -79,6 +79,26 @@ tool contract and the A/B harness is planned once a second language exists.
 4. Wire `rename_local` into the server, with the same refusal messages.
 5. Run the A/B harness on a small Java task set against a stock baseline.
 
+## Roadmap
+
+Ordered by what unblocks the next step. Status as of 2026-11-02. When a tool
+or item is done, change its status here and in `docs/session-notes.md`.
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 1 | JDT spike: headless bindings | Done | `spikes/jdt-headless/`; open question 1 |
+| 2 | Type-check gate | Done | `TypeCheck`; see "Gate" below |
+| 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
+| 4 | CI: tests, formatting, compiler lint; Dependabot | Done, first run pending | `.github/`; pom Spotless and `-Xlint:all -Werror` |
+| 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Next | Check `mcp-core` 2.1.0's API against its jar first |
+| 6 | Wire `rename_local` into the server, same refusal wording | Planned | After 5 |
+| 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
+| 8 | Undo and `batch`, with `$prev.*` references | Open | Open questions 3 and 4 |
+| 9 | Field rename, and other kinds of rename | Planned | Crosses files; needs an approach for references across the project |
+| 10 | Measure gate cost on a large project; cache or narrow the reparse if needed | Open | The gate reparses every file per edit |
+| 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs items 5 and 6 |
+| 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
+
 ## Gate: how the type check works
 
 Edits are written to disk, the whole project is parsed again, and the new
