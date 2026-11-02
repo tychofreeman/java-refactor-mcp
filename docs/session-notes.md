@@ -34,8 +34,17 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   (project-wide compile-error counts before and after, the gate every
   refactoring uses), `Refusal`, `Positions` (1-based to offset), `RenameLocal`.
   Four golden cases.
-- Next: the MCP server over STDIO (roadmap #5). `mcp-core` 2.1.0 is on the
-  classpath but unused; check its API against the jar first.
+- The MCP server runs (roadmap #5, 2026-11-02): `Server` over STDIO, one
+  project root per process, one tool, `inspect`. Claude Code lists and calls it
+  (`claude -p --mcp-config` probe with Haiku, $0.0008).
+- Next: wire `rename_local` into the server (roadmap #6).
+- The SDK (2.1.0) was checked with `javap` against the jars, not from memory:
+  `Tool.builder()` is deprecated in favor of `Tool.builder(name, mapper, schema)`,
+  and the SDK validates arguments against the input schema itself.
+- To test a server change from Claude Code without registering it, write a
+  `--mcp-config` JSON in the scratchpad and run `claude -p "<prompt>" --model
+  haiku --strict-mcp-config --mcp-config <file> --allowedTools mcp__<name>__<tool>`.
+  Put the prompt first: `--allowedTools` takes several values and swallows it.
 - `rename_local` is a Java-specific name; gorefactor's `rename` covers more
   kinds of declaration.
 

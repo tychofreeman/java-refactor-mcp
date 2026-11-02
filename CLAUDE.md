@@ -16,9 +16,9 @@ helps Claude do that during real feature work, and by whether working through
 the tools costs fewer tokens than editing by hand. Once the server runs, aim for
 about 95% of coding through the tools, this project's own code included.
 
-Current state: early. The type-check gate (`TypeCheck`) and `rename_local`
-(locals and parameters, with golden cases) exist as library code; no MCP server
-yet, so nothing is exposed as a tool. Check the roadmap and open questions in
+Current state: early. The MCP server (`Server`, STDIO) exposes one read-only
+tool, `inspect`. The type-check gate (`TypeCheck`) and `rename_local` (locals and
+parameters, with golden cases) exist as library code, not yet as tools. Check the roadmap and open questions in
 `docs/design.md` before starting work.
 
 ## How we work
@@ -89,6 +89,9 @@ hand edits, refusals, reads and large writes.
 ./mvnw -q test         # quieter, tests only
 ./mvnw spotless:apply  # format sources (google-java-format, GOOGLE style); run before committing
 ```
+
+`./mvnw package` (and `verify`) also builds `target/java-refactor-mcp.jar`, the
+server: `java -jar target/java-refactor-mcp.jar <project root>`.
 
 CI (`.github/workflows/ci.yml`) runs `./mvnw verify` on JDK 21 and `./mvnw spotless:check`
 on every push to `main` and every pull request. Dependabot (`.github/dependabot.yml`)

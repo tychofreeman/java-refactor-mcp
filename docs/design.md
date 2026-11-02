@@ -23,7 +23,13 @@ after, and rolls back on failure. This is the gorefactor model. JavaLens returns
 edits for the model to apply; that is the main reason this project does not
 extend it. See the conversation notes from 2026-11-02.
 
-**Decided: MCP over STDIO with the official Java SDK** (`io.modelcontextprotocol.sdk:mcp-core`).
+**Decided: MCP over STDIO with the official Java SDK.** The dependency is
+`io.modelcontextprotocol.sdk:mcp`, which is `mcp-core` plus its Jackson 3 JSON
+binding; `mcp-core` alone has no JSON mapper and fails at startup. The server is
+one shaded jar (`target/java-refactor-mcp.jar`) serving one project root.
+Tool schemas leave out `"additionalProperties": false`: with it the SDK refuses
+an unknown argument before the tool runs, without naming the arguments to use;
+the tool's own check names them.
 
 **Decided: 1-based lines** in every tool argument and result, matching gorefactor
 and `inspect`-style outlines.
@@ -73,9 +79,8 @@ tool contract and the A/B harness is planned once a second language exists.
    `RenameLocal` applies the edit, runs the gate, and rolls back with a refusal if
    the edit adds errors. Golden cases pass. Fields and other kinds of rename are
    not built.
-3. Start the MCP server over STDIO with one tool (`inspect`-equivalent: outline
-   with 1-based lines). Check that it lists and answers from Claude Code. **Next.**
-   Check `mcp-core` 2.1.0's API against its jar before writing it.
+3. ~~Start the MCP server over STDIO with one tool~~ Done (roadmap #5): `inspect`
+   lists and answers from Claude Code.
 4. Wire `rename_local` into the server, with the same refusal messages.
 5. Run the A/B harness on a small Java task set against a stock baseline.
 
@@ -90,8 +95,8 @@ or item is done, change its status here and in `docs/session-notes.md`.
 | 2 | Type-check gate | Done | `TypeCheck`; see "Gate" below |
 | 3 | `rename_local` (locals and parameters) | Done | Four golden cases |
 | 4 | CI: tests, formatting, compiler lint; Dependabot | Done | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
-| 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Next | Check `mcp-core` 2.1.0's API against its jar first |
-| 6 | Wire `rename_local` into the server, same refusal wording | Planned | After 5 |
+| 5 | MCP server over STDIO, one read-only tool (`inspect`-style outline, 1-based lines) | Done | `Server`, `Inspect`; record in `docs/sessions/mcp-server-inspect.md` |
+| 6 | Wire `rename_local` into the server, same refusal wording | Next | |
 | 7 | Project loading from Maven and Gradle (classpath from the build tool) | Open | Open question 2; today the caller passes jars |
 | 8 | Undo and `batch`, with `$prev.*` references | Open | Open questions 3 and 4 |
 | 9 | Field rename, and other kinds of rename | Planned | Crosses files; needs an approach for references across the project |
