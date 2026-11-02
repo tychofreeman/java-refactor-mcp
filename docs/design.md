@@ -68,11 +68,12 @@ tool contract and the A/B harness is planned once a second language exists.
    Maven failing, falls back to the root as the one source root with no
    classpath, and says so on stderr. Still open: Gradle, multi-module builds,
    non-standard source directories, and reloading when `pom.xml` changes.
-3. **Undo.** Keep original file contents in memory for the life of the server
-   session, or write backups under the workspace. Decide with the `batch`
-   design.
-4. **Batching.** Mirror gorefactor's `batch` with `$prev.*` references. Confirm
-   that line-following through edits works the same way with JDT's positions.
+3. ~~**Undo.**~~ Decided 2026-11-02 (roadmap #8), as gorefactor: in memory per
+   server process (`Journal`), one entry per top-level call or batch. Not chosen:
+   backups under the workspace (they would be written into the user's tree).
+4. ~~**Batching.**~~ Decided 2026-11-02 (roadmap #8), as gorefactor. Lines are
+   followed by a line diff of each step's file (common first and last lines), not
+   by JDT positions: every tool's writes are whole-file texts.
 5. ~~**Versions.**~~ Resolved 2026-11-02: JDT Core 3.47.0, MCP SDK 2.1.0 and JUnit
    5.14.4 resolve from Maven Central and `mvn verify` passes on the scaffold.
 
@@ -117,8 +118,8 @@ friction log; reorder when this repo's own log says otherwise.
 | 1 | 7 | Source roots (main and test) and the classpath, from Maven first (Gradle later) | Done | The gate cannot resolve JDT or MCP types on this repo, so it cannot yet stand behind edits. TS spike: a rename that loaded one project missed three test files |
 | 2 | 19 | First edits: `create_file`, `replace_text` (any file), `add_declaration` (a member into a type, replacing a stub of it), `replace_declaration` (by `Type.member`, empty content deletes) | Done | gorefactor's share of edits through the tools went from 10-20% (Oct 17) to 80-99% the day its edits came (cost history). All three of this repo's friction entries are hand edits these cover |
 | 3 | 20 | Imports added and removed by every edit, not by a tool | Done | 52 gorefactor entries mention imports; "2026-10-20: imports fixed after every edit". The TypeScript port did the same |
-| 4 | 8 | Undo, and `batch` with check `"end"`, lines translated through earlier steps, and `$prev.*` references | Next | Oct 19 in gorefactor: 99-100% through the tools and input tokens per step from 0.5-1.8M to 170-190k. "2026-10-18: a batch checked at its end" ("hit four times"). Open questions 3 and 4 |
-| 5 | 21 | Stubs from usage (`create_from_usage`): a test written first gets compiling stubs | Planned | "2026-10-17: adding `remove_parameter`" ("A red test blocks every refactoring"); first in TypeScript's gap list (item 41), second in item 43. CLAUDE.md's TDD order needs it |
+| 4 | 8 | Undo, and `batch` with check `"end"`, lines translated through earlier steps, and `$prev.*` references | Done | Oct 19 in gorefactor: 99-100% through the tools and input tokens per step from 0.5-1.8M to 170-190k. "2026-10-18: a batch checked at its end" ("hit four times"). Open questions 3 and 4 |
+| 5 | 21 | Stubs from usage (`create_from_usage`): a test written first gets compiling stubs | Next | "2026-10-17: adding `remove_parameter`" ("A red test blocks every refactoring"); first in TypeScript's gap list (item 41), second in item 43. CLAUDE.md's TDD order needs it |
 | 6 | 22 | Signature changes: `add_parameter`, `remove_parameter`, `move_parameter`, across overrides and interface implementations | Planned | gorefactor roadmap item 1, "the most common by-hand step"; "2026-10-20: signature tools change interface families". This repo's log names `add_parameter` (2026-11-02) |
 | 7 | 23 | `extract_function` (Java: extract method) | Planned | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
 | 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Planned | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |

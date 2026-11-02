@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.modelcontextprotocol.json.McpJsonDefaults;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -81,11 +82,7 @@ class GoldenTest {
    */
   private static String call(String tool, SourceProject project, Properties props, Path caseDir)
       throws Exception {
-    Tools.Def def =
-        Tools.ALL.stream()
-            .filter(d -> d.name().equals(tool))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("unknown tool: " + tool));
+    Tools.Def def = Tools.named(tool);
     Map<String, Object> values = new LinkedHashMap<>();
     for (String key : props.stringPropertyNames()) {
       if (!key.equals("tool")) {
@@ -97,12 +94,14 @@ class GoldenTest {
         String name = f.getFileName().toString();
         if (name.endsWith(".txt") && !name.equals("refused.txt") && !name.equals("result.txt")) {
           values.put(name.substring(0, name.length() - 4), Files.readString(f));
+        } else if (name.endsWith(".json")) {
+          values.put(
+              name.substring(0, name.length() - 5),
+              McpJsonDefaults.getMapper().readValue(Files.readString(f), Object.class));
         }
       }
     }
-    Args args = new Args(tool, values);
-    args.check(def.args());
-    return def.handler().run(project, args);
+    return Tools.call(def, project, values);
   }
 
   private static Object value(String text) {

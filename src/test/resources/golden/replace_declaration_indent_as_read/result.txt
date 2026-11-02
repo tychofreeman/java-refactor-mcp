@@ -1,0 +1,1 @@
+replaced A.b(int) in com/example/A.java, lines 4-6

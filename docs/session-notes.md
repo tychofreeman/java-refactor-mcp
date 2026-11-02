@@ -66,6 +66,15 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - The server runs one tool call at a time (`Server.ONE_AT_A_TIME`, 2026-11-02).
   Before that, two edits sent together ran at once and the second undid the
   first (found by a piped probe; `ServerTest.editsSentTogetherBothApply`).
+- `batch` and `undo` exist (roadmap #8, 2026-11-02). Every write goes through
+  `Gate` (`apply`, or `write` for non-Java) and is recorded by `Journal`; a
+  top-level call is `Tools.call`, which begins and commits the journal entry.
+  A Haiku probe chose `batch` with check `"end"` for a signature change and its
+  caller unprompted (6 turns, $0.004).
+- The client keeps tool descriptions from before a restart in its listing (seen
+  twice: after #19 and #20); the server's are current. Not this server's bug.
+- Two `replace_text` "old is not in" refusals (#20, #8) were the model reading
+  `inspect`'s two-space separator as indentation.
 - Writing Java through a Python script: use raw strings. In a plain Python
   string a backslash before a newline joins the lines, which is how
   `rename_local`'s description got its runs of spaces. The Edit tool avoids it.

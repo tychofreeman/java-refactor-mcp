@@ -18,8 +18,9 @@ about 95% of coding through the tools, this project's own code included.
 
 Current state: early. The MCP server (`Server`, STDIO; tools defined in
 `Tools`) exposes `inspect` (read-only), `rename_local`, and four edits:
-`create_file`, `replace_text`, `add_declaration`, `replace_declaration`. Every
-change goes through the type-check gate (`Gate`, `TypeCheck`). Check the roadmap and open questions in
+`create_file`, `replace_text`, `add_declaration`, `replace_declaration`; `batch`
+and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`)
+and is recorded in `Journal`. Check the roadmap and open questions in
 `docs/design.md` before starting work.
 
 ## How we work
@@ -92,9 +93,12 @@ tools are the build from when it started: after changing the server, test the
 change with `./mvnw test`, not by calling the tool, and restart Claude Code
 after the change is merged to use it.
 
-1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration`.
+1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__batch,mcp__jrefactor__undo`.
+   After a restart the client may list descriptions from before it; the server's
+   own are current (it accepts the arguments they name).
 2. **Read Java through `inspect`:** the file without method bodies, then the
-   line ranges you will change. Avoid Read or `cat` of whole `.java` files;
+   line ranges you will change. Each line is the number, two spaces, then the
+   code: do not count those two spaces as indentation in `old`. Avoid Read or `cat` of whole `.java` files;
    each result is sent again on every later turn.
 3. **Rename locals and parameters with `rename_local`,** by `file`, `line` and
    `name`; it finds every use and type-checks.
@@ -104,9 +108,10 @@ after the change is merged to use it.
    content deletes), `replace_text` for a few lines, literals, comments and
    non-Java files. Imports are added and removed for you; pass `imports` when a
    refusal says a name is ambiguous.
-   A signature change and its callers cannot change in one call yet (batch is
-   roadmap #8): add the new overload, move the callers, delete the old one.
-5. **Read refusals; they say what to send.** A refusal changes nothing.
+5. **Plan from one read, send one batch.** Dependent steps (a signature, then
+   its callers) go in one `batch` with check `"end"`; lines as you read them
+   before the batch. `undo` reverts the last call or batch.
+6. **Read refusals; they say what to send.** A refusal changes nothing.
 
 Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,
 naming the tool or composition that would have done it.

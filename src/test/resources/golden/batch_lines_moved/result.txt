@@ -1,0 +1,3 @@
+batch of 2 steps:
+1. added e() to A in com/example/A.java, lines 8-10
+2. renamed total to sum in com/example/A.java: 2 occurrences, lines 13, 14

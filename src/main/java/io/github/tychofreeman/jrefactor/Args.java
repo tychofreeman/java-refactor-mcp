@@ -1,5 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,6 +79,24 @@ final class Args {
       return items.stream().map(i -> (String) i).toList();
     }
     throw new Refusal(key + " must be a list of strings; got " + value + ".");
+  }
+
+  /** A list of JSON objects, as maps; empty when not given. */
+  List<Map<String, Object>> objects(String key) {
+    Object value = values.get(key);
+    if (value == null) {
+      return List.of();
+    }
+    if (value instanceof List<?> items && items.stream().allMatch(i -> i instanceof Map)) {
+      List<Map<String, Object>> maps = new ArrayList<>();
+      for (Object item : items) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        ((Map<?, ?>) item).forEach((k, v) -> map.put(String.valueOf(k), v));
+        maps.add(map);
+      }
+      return maps;
+    }
+    throw new Refusal(key + " must be a list of objects; got " + value + ".");
   }
 
   boolean has(String key) {

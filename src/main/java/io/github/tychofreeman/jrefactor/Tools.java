@@ -1,6 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -200,9 +201,62 @@ final class Tools {
           false,
           (project, args) -> Declarations.replace(project, args));
 
+  static final Def UNDO =
+      new Def(
+          "undo",
+          """
+          Undo the last change made through these tools in this session (one edit, refactoring \
+          or whole batch), restoring each file it wrote. Call it again to step further back.
+          Refuses when a file it would restore was changed since, by a tool or by hand.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {}
+          }\
+          """,
+          Set.of(),
+          false,
+          (project, args) -> Journal.undo(project));
+
+  static final Def BATCH =
+      new Def(
+          "batch",
+          """
+          Run several refactorings and edits in order as one change, planned from one read. Each \
+          step is {"tool": ..., "args": {...}, "id": optional}: a tool and the arguments it takes \
+          alone.
+          Give line numbers as in the code you read before the batch: the batch moves them past \
+          earlier steps. A line an earlier step rewrote cannot be given by number; name a line \
+          an earlier step changed instead: "$prev.start", "$prev.end", "$2.end", "$id.start+1".
+          If a step is refused, nothing changes and the result says which step and why. check \
+          "end" type-checks once, after the last step, so edits may pass through code that does \
+          not compile yet (a signature, then its callers). One undo reverts the whole batch.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "steps": {"type": "array", "description": "The steps, in order.", "items": {"type": "object", "properties": {"tool": {"type": "string"}, "args": {"type": "object"}, "id": {"type": "string"}}, "required": ["tool"]}},
+              "check": {"type": "string", "enum": ["each", "end"], "description": "Type-check after each step (default), or once at the end."}
+            },
+            "required": ["steps"]
+          }\
+          """,
+          Set.of("steps", "check"),
+          false,
+          (project, args) -> Batch.run(project, args));
+
   static final List<Def> ALL =
       List.of(
-          INSPECT, RENAME_LOCAL, CREATE_FILE, REPLACE_TEXT, ADD_DECLARATION, REPLACE_DECLARATION);
+          INSPECT,
+          RENAME_LOCAL,
+          CREATE_FILE,
+          REPLACE_TEXT,
+          ADD_DECLARATION,
+          REPLACE_DECLARATION,
+          BATCH,
+          UNDO);
 
   private static String inspect(SourceProject project, Args args) throws Exception {
     String file = args.required("file");
@@ -228,6 +282,35 @@ final class Tools {
         RenameLocal.run(project, file, line, name, column == null ? 0 : column, newName);
     return "renamed %s to %s in %s: %d occurrences, %s"
         .formatted(name, newName, result.file(), result.occurrences(), lines(result.lines()));
+  }
+
+  /** The tool named {@code name}, or a refusal listing the tools there are. */
+  static Def named(String name) {
+    for (Def def : ALL) {
+      if (def.name().equals(name)) {
+        return def;
+      }
+    }
+    List<String> names = ALL.stream().map(Def::name).toList();
+    throw new Refusal("No tool " + name + ". The tools are " + String.join(", ", names) + ".");
+  }
+
+  /**
+   * Runs one call of {@code def}: its arguments checked, then its handler, as one change in the
+   * journal, so {@code undo} can revert it; a call that fails leaves nothing changed.
+   */
+  static String call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
+    Args args = new Args(def.name(), values);
+    args.check(def.args());
+    Journal.begin(def.name());
+    try {
+      String text = def.handler().run(project, args);
+      Journal.commit(project);
+      return text;
+    } catch (Exception | Error e) {
+      Journal.abort();
+      throw e;
+    }
   }
 
   /** "line 4" or "lines 4, 7, 9". */

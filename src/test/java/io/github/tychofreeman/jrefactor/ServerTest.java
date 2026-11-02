@@ -222,6 +222,75 @@ class ServerTest {
     assertTrue(text.contains("int eleven()") && text.contains("int twelve()"), text);
   }
 
+  @Test
+  void undoRestoresTheLastEditThenHasNothingLeft() throws IOException {
+    Path totals = project.resolve("com/example/Totals.java");
+    String before = Files.readString(totals);
+    Map<String, Object> added =
+        result(
+            call(
+                20,
+                "add_declaration",
+                Map.of(
+                    "file",
+                    "com/example/Totals.java",
+                    "content",
+                    "int twenty() {\n  return 20;\n}\n")));
+    assertEquals(false, added.get("isError"), () -> text(added));
+
+    Map<String, Object> undone = result(call(21, "undo", Map.of()));
+    assertEquals(false, undone.get("isError"), () -> text(undone));
+    assertEquals("undid add_declaration: restored com/example/Totals.java", text(undone));
+    assertEquals(before, Files.readString(totals));
+
+    Map<String, Object> again = result(call(22, "undo", Map.of()));
+    assertEquals(true, again.get("isError"));
+    assertTrue(text(again).contains("Nothing to undo"), text(again));
+  }
+
+  @Test
+  void undoRefusesWhenTheFileChangedSince() throws IOException {
+    Path totals = project.resolve("com/example/Totals.java");
+    result(
+        call(
+            23,
+            "add_declaration",
+            Map.of("file", "com/example/Totals.java", "content", "int x() {\n  return 0;\n}\n")));
+    String handEdited = Files.readString(totals) + "// by hand\n";
+    Files.writeString(totals, handEdited);
+
+    Map<String, Object> undone = result(call(24, "undo", Map.of()));
+    assertEquals(true, undone.get("isError"));
+    assertTrue(
+        text(undone).contains("com/example/Totals.java changed after add_declaration"),
+        text(undone));
+    assertEquals(handEdited, Files.readString(totals));
+  }
+
+  @Test
+  void oneUndoRevertsAWholeBatch() throws IOException {
+    Path totals = project.resolve("com/example/Totals.java");
+    String before = Files.readString(totals);
+    Map<String, Object> step =
+        Map.of(
+            "tool",
+            "add_declaration",
+            "args",
+            Map.of("file", "com/example/Totals.java", "content", "int one() {\n  return 1;\n}\n"));
+    Map<String, Object> step2 =
+        Map.of(
+            "tool",
+            "add_declaration",
+            "args",
+            Map.of("file", "com/example/Totals.java", "content", "int two() {\n  return 2;\n}\n"));
+    Map<String, Object> batch = result(call(25, "batch", Map.of("steps", List.of(step, step2))));
+    assertEquals(false, batch.get("isError"), () -> text(batch));
+
+    Map<String, Object> undone = result(call(26, "undo", Map.of()));
+    assertEquals("undid batch: restored com/example/Totals.java", text(undone));
+    assertEquals(before, Files.readString(totals));
+  }
+
   private Map<String, Object> call(int id, Map<String, Object> arguments) throws IOException {
     return call(id, "inspect", arguments);
   }

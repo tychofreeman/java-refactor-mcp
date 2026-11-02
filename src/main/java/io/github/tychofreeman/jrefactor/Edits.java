@@ -45,8 +45,7 @@ final class Edits {
           (exists ? "replacing " : "creating ") + rel,
           "Declare what it uses first (add_declaration or create_file), then create it.");
     } else {
-      Files.createDirectories(path.getParent());
-      Files.writeString(path, content);
+      Gate.write(path, content);
     }
     long lines = content.lines().count();
     return (exists ? "replaced " : "created ")
@@ -152,7 +151,7 @@ final class Edits {
       String what)
       throws Exception {
     if (!rel.endsWith(".java")) {
-      Files.writeString(path, text);
+      Gate.write(path, text);
       return new Imports.Fixed(text, 0, List.of());
     }
     parses(text, "the result");

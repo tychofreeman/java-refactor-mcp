@@ -102,3 +102,26 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     `old` from the same lines matched. Cause not found.
 - Cost: not measured (roadmap #18).
 - Idea: batch (#8, next); line numbers in the members-do-not-parse refusal.
+
+## 2026-11-02: undo and batch, through the tools
+- Task: roadmap #8 (`docs/sessions/undo-and-batch.md`).
+- Tool: every change to Java through java-refactor-mcp; fixtures by shell.
+- What happened:
+  - Imports missed: `ArrayDeque`, used only in `computeIfAbsent(k, x -> new
+    ArrayDeque<>())`, was not imported by the edit, so the gate refused it.
+    Answered by adding the import with `replace_text` first. A bug in #20's
+    unresolved-name detection; follow-up.
+  - Ambiguous names (`Path`, `Pattern`) refused correctly, but the example in
+    the refusal (`as imports: [...]`) names the last candidate alphabetically
+    (`org.eclipse...`), not the likely one (`java.*`).
+  - A `replace_text` `old` copied from `inspect` with two spaces too many of
+    indentation: `inspect` prints the number, two spaces, then the code. The
+    cause of the unexplained mismatch in #20 too. gorefactor tolerates spacing
+    differences and names the nearest lines in the refusal.
+  - Twice, a use and its declaration sent in one turn with the use first: the
+    use was refused, the declaration applied. Calls run in the order sent.
+  - The probe found `replace_declaration` over-indenting content whose first
+    line was at column 0 and the rest as in the file; fixed here with a case.
+- Cost: not measured (roadmap #18).
+- Idea: the nearest lines in "old is not in", and spacing-tolerant matching;
+  the likely candidate first in an ambiguity refusal; the lambda import bug.

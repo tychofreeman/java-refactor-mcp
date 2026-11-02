@@ -1,0 +1,18 @@
+[
+  {
+    "tool": "add_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "content": "int f() {\n  int n = 6;\n  return n;\n}\n"
+    }
+  },
+  {
+    "tool": "rename_local",
+    "args": {
+      "file": "com/example/A.java",
+      "line": "$prev.start+1",
+      "name": "n",
+      "new_name": "six"
+    }
+  }
+]
