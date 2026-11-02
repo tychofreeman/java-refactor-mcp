@@ -40,3 +40,6 @@ Keep entries to what the next session needs: decisions, surprises, what to try n
 - Chose JDT Core headless over JavaLens (which returns edits instead of applying
   them). Reasons are in `docs/design.md`.
 - Next: the JDT spike in `docs/design.md`, open question 1.
+- Merged two Dependabot PRs, both with green CI: JUnit 5.14.4 to 6.1.3 (`pom.xml`)
+  and the actions group (checkout v5 to v7, setup-java v5 to v6). CLAUDE.md's pinned
+  versions were updated to match.

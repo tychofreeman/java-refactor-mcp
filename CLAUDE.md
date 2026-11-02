@@ -26,7 +26,7 @@ opens weekly PRs for Maven dependencies and GitHub Actions versions.
 
 - JDK 21, Maven 3.9+.
 - Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,
-  MCP SDK 2.1.0, JUnit 5.14.4. Bump them in `pom.xml` and note the change in
+  MCP SDK 2.1.0, JUnit 6.1.3 (Dependabot, merged 2026-11-02). Bump them in `pom.xml` and note the change in
   `docs/session-notes.md`.
 - In the agent sandbox, Maven does not use the egress proxy by itself, so it fails
   to resolve `repo.maven.apache.org` by name. Fix: a `~/.m2/settings.xml` with an
