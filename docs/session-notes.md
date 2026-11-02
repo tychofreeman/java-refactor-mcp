@@ -9,8 +9,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Working with the user
 
-- One item per branch and PR; the user merges. Adopted from gorefactor on
-  2026-11-02, after the first items had been committed straight to `main`.
+- One item per branch and PR. Adopted from gorefactor on 2026-11-02, after the
+  first items had been committed straight to `main`.
+- Claude merges its own PRs once CI is green and they are mergeable (the user,
+  2026-11-02); use merge commits, as earlier PRs did.
+- Stacked PRs: retarget the upper PR to `main` *before* merging the lower one
+  with `--delete-branch`. Deleting the base branch first closed #4, and a closed
+  PR whose base is gone cannot be reopened or retargeted until the branch is
+  pushed back (2026-11-02).
 - Development standards follow gorefactor's (`CLAUDE.md` there, and its
   `docs/how-this-project-was-built.md`). The user asked for the same standards
   here (2026-11-02), including the same goal: about 95% of coding through the

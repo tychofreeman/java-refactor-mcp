@@ -38,7 +38,8 @@ When a test is failing or does not compile, the next step is code that makes it
 pass, not a refactoring. If you find you need one, undo the test (or set it
 aside), refactor while green, and add the test again.
 
-One branch and one PR per item, never commits to `main`; the user merges. When
+One branch and one PR per item, never commits to `main`. Merge your own PR
+once CI is green (see the session notes). When
 the user says "do X, then Y", do them in order, each in its own PR. Before
 pushing, run what CI runs (`.github/workflows/ci.yml`):
 
