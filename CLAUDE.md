@@ -37,7 +37,8 @@ mvn -q test         # quieter, tests only
 - **Refusals are model-facing.** Each refusal names the reason and the fix the
   model should try next, in plain words. Refusal wording is part of the contract.
 - **Golden cases first.** Add `src/test/resources/golden/<case>/{in,out}` (plus
-  `args.json` or `refused.txt`) before or with the code that makes it pass.
+  `args.properties` or `refused.txt`) before or with the code that makes it pass.
+  `GoldenTest` runs every case; `refused.txt` holds a fragment the refusal must contain.
 - **No JDT UI or LTK.** Use JDT Core directly. Do not depend on the Eclipse
   workbench, OSGi runtime or a workspace on disk.
 - **Do not reprint the AST.** Edits are text edits against the original source,

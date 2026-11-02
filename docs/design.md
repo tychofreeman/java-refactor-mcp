@@ -67,9 +67,22 @@ tool contract and the A/B harness is planned once a second language exists.
 
 ## First milestone (proposed)
 
-1. JDT spike: parse one file with bindings resolved against a classpath,
-   without a workspace. Record what is needed.
-2. Start the MCP server over STDIO with one tool (`inspect`-equivalent: outline
-   with 1-based lines). Check that it lists and answers from Claude Code.
-3. Add `rename` with golden cases, type-check before and after, and rollback.
-4. Run the A/B harness on a small Java task set against a stock baseline.
+1. ~~JDT spike~~ Done (`spikes/jdt-headless/`).
+2. Type-check gate and first refactoring. **Done in code, 2026-11-02:**
+   `TypeCheck` counts compile errors across the project before and after an edit;
+   `RenameLocal` applies the edit, runs the gate, and rolls back with a refusal if
+   the edit adds errors. Golden cases pass. Fields and other kinds of rename are
+   not built.
+3. Start the MCP server over STDIO with one tool (`inspect`-equivalent: outline
+   with 1-based lines). Check that it lists and answers from Claude Code. **Next.**
+   Check `mcp-core` 2.1.0's API against its jar before writing it.
+4. Wire `rename_local` into the server, with the same refusal messages.
+5. Run the A/B harness on a small Java task set against a stock baseline.
+
+## Gate: how the type check works
+
+Edits are written to disk, the whole project is parsed again, and the new
+compile errors are compared with the old ones by file and message (not line,
+so moving code does not count). Any new error means the file is restored and the
+edit refused. The gate reparses every file on each call, which is slow on large
+projects; that is accepted until measured.

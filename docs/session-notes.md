@@ -19,6 +19,16 @@ Keep entries to what the next session needs: decisions, surprises, what to try n
 - JDT spike done (`spikes/jdt-headless/`): bindings resolve headless against a
   source path and a classpath, with no workspace and no OSGi start. Design open
   question 1 is answered. Next: the after-edit type check, then the first tool.
+- Built the first refactoring, `rename_local` (Java-specific name; gorefactor's
+  `rename` covers more). Layers: `SourceProject` (root and classpath), `Jdt`
+  (headless parse), `TypeCheck` (project-wide compile-error counts before and
+  after, the gate every refactoring uses), `Refusal`, `Positions` (1-based to
+  offset), `RenameLocal`. Four golden cases pass: basic rename, refused field,
+  refused name clash, refused edit that would break compilation.
+- Not built yet: the MCP server wiring (`mcp-core` 2.1.0 is on the classpath, not
+  used), fields and other kinds of rename, and build-tool classpath loading.
+- Maven Central answered 429 (rate limit) on one run; the rerun passed. Not a
+  permanent problem, but the build can need a retry.
 - The proxy port in `~/.m2/settings.xml` went stale mid-session (46609 vs the old
   43251). Regenerate it from `$HTTPS_PROXY` before every Maven run.
 - Chose JDT Core headless over JavaLens (which returns edits instead of applying
