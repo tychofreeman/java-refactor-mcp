@@ -91,6 +91,24 @@ class ServerTest {
     assertEquals(1, ends.get());
   }
 
+  /** A text block's line continuation once left runs of spaces in what a model reads. */
+  @Test
+  void descriptionsHaveNoRunsOfSpaces() throws IOException {
+    List<?> tools = (List<?>) result(request(9, "tools/list", Map.of())).get("tools");
+    for (Object tool : tools) {
+      String description = (String) ((Map<?, ?>) tool).get("description");
+      assertTrue(!description.contains("  "), () -> "runs of spaces in: " + description);
+    }
+  }
+
+  @Test
+  void listsEveryTool() throws IOException {
+    List<?> tools = (List<?>) result(request(10, "tools/list", Map.of())).get("tools");
+    assertEquals(
+        Tools.ALL.stream().map(Tools.Def::name).toList(),
+        tools.stream().map(t -> ((Map<?, ?>) t).get("name")).toList());
+  }
+
   @Test
   void listsInspectAsReadOnly() throws IOException {
     List<?> tools = (List<?>) result(request(2, "tools/list", Map.of())).get("tools");

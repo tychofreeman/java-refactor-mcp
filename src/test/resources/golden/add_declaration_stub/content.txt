@@ -1,0 +1,4 @@
+/** The total. */
+int total(int x) {
+  return x + 1;
+}

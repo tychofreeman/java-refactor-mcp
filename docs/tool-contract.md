@@ -64,6 +64,33 @@ uses within the method (or initializer, or field) that declares them.
   variable in the method uses; an edit that would add compile errors (rolled
   back, with the errors).
 
+## Edits (built)
+
+Edits change behavior on purpose and are held to the same gate: a `.java` file
+must parse, and the project must type-check no worse after, or nothing changes.
+Results name the file and lines and never echo content. Imports are not added
+or removed yet (roadmap #20).
+
+- `create_file`: `file`, `content`, `overwrite`. A `.java` file must declare the
+  package its directory implies under a source root. Result: `created <file>
+  (<n> lines)`.
+- `replace_text`: `file`, `old`, `new`, `all_occurrences`. `old` must occur once
+  unless `all_occurrences`; refused with the lines it occurs on. Result:
+  `replaced <n> occurrence(s) in <file>, line(s) ...`. gorefactor's `files`,
+  `function` and `append` are not built.
+- `add_declaration`: `file`, `content` (members), `type` (`Outer` or
+  `Outer.Inner`; default the file's only top-level type), `after` / `before` (a
+  member name). Members are re-indented to match. A method with the same name
+  and parameter types whose body is only `throw new
+  UnsupportedOperationException("not implemented")` is replaced. Result: `added
+  <members> to <type> in <file>, lines a-b` or `replaced the stub <m> ...`.
+- `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
+  `(parameter types)` for an overload), `content` (empty deletes, with the
+  Javadoc). The old Javadoc stays unless content has its own. Refused: several
+  members of that name (with their signatures), no such member (with the
+  members there), a field declared with others in one statement. gorefactor's
+  `line`/`column` addressing and `imports` are not built.
+
 Refusals come back as an error result whose text starts `refused: `. Other
 failures start `engine error (not a refusal; ...)`.
 

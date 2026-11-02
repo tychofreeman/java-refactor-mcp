@@ -65,6 +65,27 @@ public record SourceProject(Path root, List<Path> sourceRoots, List<String> clas
     return all.stream().sorted().toList();
   }
 
+  /** The path of {@code rel} under the root; refused if it leaves the root. */
+  public Path file(String rel) {
+    Path path = root.resolve(rel).normalize();
+    if (!path.startsWith(root) || path.equals(root)) {
+      throw new Refusal(
+          "file must be a path relative to the project root " + root + "; got " + rel + ".");
+    }
+    return path;
+  }
+
+  /** The package a {@code .java} file at {@code path} must declare, or null if no root holds it. */
+  public String packageOf(Path path) {
+    for (Path sourceRoot : sourceRoots) {
+      if (path.startsWith(sourceRoot)) {
+        Path dir = sourceRoot.relativize(path).getParent();
+        return dir == null ? "" : dir.toString().replace(File.separatorChar, '.');
+      }
+    }
+    return null;
+  }
+
   /** Path relative to the root, with forward slashes. */
   public String relative(Path file) {
     return root.relativize(file.toAbsolutePath().normalize())

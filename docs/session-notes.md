@@ -54,6 +54,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the gate (`SourceProjectTest.thisRepoTypeChecksClean`); loading it costs a
   Maven run, about 3 s, at each server start. JDT's `setEnvironment` needs one
   encoding per source path entry, or it throws `IllegalArgumentException`.
+- The first edit tools exist (roadmap #19, 2026-11-02): `create_file`,
+  `replace_text`, `add_declaration` (replaces "not implemented" stubs),
+  `replace_declaration`. Tool definitions live in `Tools.ALL`; `GoldenTest` calls
+  them the same way the server does, with `<arg>.txt` files for long arguments.
+- Writing Java through a Python script: use raw strings. In a plain Python
+  string a backslash before a newline joins the lines, which is how
+  `rename_local`'s description got its runs of spaces. The Edit tool avoids it.
 - The user asked for roadmap positions 1-8 in order, one PR each (2026-11-02):
   #7, #19, #20, #8, #21, #22, #23, #18.
 - The roadmap's open items are ordered by gorefactor's evidence (the user asked,
@@ -68,6 +75,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `--mcp-config` JSON in the scratchpad and run `claude -p "<prompt>" --model
   haiku --strict-mcp-config --mcp-config <file> --allowedTools mcp__<name>__<tool>`.
   Put the prompt first: `--allowedTools` takes several values and swallows it.
+  Redirect stdin (`< /dev/null`): otherwise it waits 3 s and prints a warning
+  into the output, which then does not parse as JSON (the cause of two "not
+  JSON" probe outputs, in #6 and #19).
 - `rename_local` is a Java-specific name; gorefactor's `rename` covers more
   kinds of declaration.
 

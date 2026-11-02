@@ -1,0 +1,4 @@
+/** B, now two. */
+int b() {
+  return 2;
+}

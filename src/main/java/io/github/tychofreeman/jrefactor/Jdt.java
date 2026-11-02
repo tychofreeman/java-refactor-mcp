@@ -16,6 +16,17 @@ final class Jdt {
 
   private Jdt() {}
 
+  /** Parses {@code source} without resolving anything: its problems are syntax errors only. */
+  static CompilationUnit parseSyntax(String source) {
+    Map<String, String> options = JavaCore.getOptions();
+    JavaCore.setComplianceOptions(SOURCE_LEVEL, options);
+    ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+    parser.setKind(ASTParser.K_COMPILATION_UNIT);
+    parser.setSource(source.toCharArray());
+    parser.setCompilerOptions(options);
+    return (CompilationUnit) parser.createAST(null);
+  }
+
   /**
    * Parses {@code source}, the text of {@code file} inside {@code project}. Types from other files
    * resolve from the project's source path; library types resolve only from the project's

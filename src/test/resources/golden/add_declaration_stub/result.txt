@@ -1,0 +1,1 @@
+replaced the stub total(int) in A in com/example/A.java, lines 4-7

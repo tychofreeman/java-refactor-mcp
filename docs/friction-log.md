@@ -68,3 +68,17 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: roadmap #19's edits cover each of these. The description needs its
   continuation lines unindented, and a test that no description has a run of
   spaces.
+
+## 2026-11-02: the first edit tools, built by hand
+- Task: roadmap #19 (`docs/sessions/first-edit-tools.md`).
+- Tool: `inspect` for reads of this repo's Java; the edit tools did not exist in
+  this session (it uses the build from when it started).
+- What happened: moves of existing code by hand: `Gate.apply` out of
+  `RenameLocal.run` (extract_function), `Server`'s tool constants, handlers and
+  argument helpers into `Tools` and `Args` (move_declaration), about 150 lines
+  written out again. Correction to the entry on source roots: the runs of spaces
+  in `rename_local`'s description came from writing the Java through a Python
+  string, not from text block continuations.
+- Cost: not measured (roadmap #18).
+- Idea: extract_function (#23); a move of declarations between files is not on
+  the roadmap; log it again when it recurs before adding it.

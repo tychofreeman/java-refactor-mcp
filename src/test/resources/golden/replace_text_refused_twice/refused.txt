@@ -1,0 +1,1 @@
+old occurs 2 times in com/example/A.java (lines 5, 9). Make old longer so it occurs once, or set all_occurrences

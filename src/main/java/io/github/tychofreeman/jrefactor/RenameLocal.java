@@ -95,18 +95,9 @@ public final class RenameLocal {
               + "). Choose another name.");
     }
 
-    Map<String, Integer> before = TypeCheck.errors(project);
-    String rewritten = apply(source, found.occurrences(), newName);
-    Files.writeString(file, rewritten);
-    List<String> introduced;
-    try {
-      introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
-    } catch (IOException | RuntimeException e) {
-      Files.writeString(file, source);
-      throw e;
-    }
+    List<String> introduced =
+        Gate.apply(project, Map.of(file, apply(source, found.occurrences(), newName)));
     if (!introduced.isEmpty()) {
-      Files.writeString(file, source);
       throw new Refusal(
           "renaming '"
               + oldName

@@ -1,0 +1,1 @@
+A has 2 members named b: b(), b(int). Name one with its parameter types, as b(int).

@@ -1,0 +1,1 @@
+declares package com.other, but com/example/B.java is in package com.example
