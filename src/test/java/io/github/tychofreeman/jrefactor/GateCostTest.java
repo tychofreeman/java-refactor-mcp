@@ -64,16 +64,19 @@ class GateCostTest {
     Map<String, Object> args = (Map<String, Object>) call.get("args");
     TypeCheck.errors(project);
 
+    int parses = TypeCheck.parses(project);
     long start = System.nanoTime();
     String result = Tools.call(Tools.named((String) call.get("tool")), project, args).render();
     long done = System.nanoTime();
+    int parsed = TypeCheck.parses(project) - parses;
     Journal.undo(project);
     long undone = System.nanoTime();
 
     System.out.printf(
-        "call cost: %s %d ms, undo %d ms; %s%n",
+        "call cost: %s %d ms, %d project parses, undo %d ms; %s%n",
         call.get("tool"),
         (done - start) / 1_000_000,
+        parsed,
         (undone - done) / 1_000_000,
         result.length() > 200 ? result.substring(0, 200) + "..." : result);
   }
