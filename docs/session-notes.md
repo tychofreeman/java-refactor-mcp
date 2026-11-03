@@ -166,6 +166,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
   `ThreadLocal` are gone. Golden `stubs_*` text is unchanged.
+- The session report counts by `Tools.Def.kind` (roadmap #45, 2026-11-03):
+  a new tool needs only its `Kind`, not a copy in `SessionReport`. Quoted
+  text and heredoc bodies are not read as redirects, and a shell write
+  counts lines of Java only when it writes a `.java` file. Records written
+  before this may count some reads as hand writes, and Markdown as Java.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

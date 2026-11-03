@@ -189,7 +189,7 @@ public final class Server {
       return CallToolResult.builder().addTextContent(text).isError(false).build();
     } catch (Refusal refusal) {
       return CallToolResult.builder()
-          .addTextContent("refused: " + refusal.getMessage())
+          .addTextContent(Refusal.PREFIX + refusal.getMessage())
           .isError(true)
           .build();
     } catch (Exception e) {
