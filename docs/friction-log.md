@@ -324,3 +324,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Edit tool; `replace_text` on those files would have made the same change.
   The same gap as the #36 and #37 entries above.
 
+## 2026-11-03: six server files edited by script for one refusal wording
+- Task: roadmap #26 (`docs/sessions/path-refusal-one-place.md`).
+- Tool: none used. `SourceProject`, `Extract`, `Signatures`, `Declarations`,
+  `Edits` and `Inspect` were changed by Python scripts that replaced anchor
+  text. `replace_text` on those files would have made the same edits.
+

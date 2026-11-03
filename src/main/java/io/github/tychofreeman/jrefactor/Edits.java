@@ -72,7 +72,7 @@ final class Edits {
     if (replacement == null) {
       throw new Refusal("replace_text needs new (it may be empty, to delete old).");
     }
-    Path path = existing(project, rel);
+    Path path = project.existingFile(rel);
     String text = Files.readString(path);
 
     List<Integer> at = new ArrayList<>();
@@ -145,15 +145,6 @@ final class Edits {
 
   /** A file as written: its fixed text, and the stubs its gate declared. */
   private record Written(Imports.Fixed fixed, Stubs.Declared declared) {}
-
-  /** The path of an existing file, or a refusal. */
-  private static Path existing(SourceProject project, String rel) {
-    Path path = project.file(rel);
-    if (!Files.isRegularFile(path)) {
-      throw new Refusal("No file " + rel + " in the project. Create it with create_file.");
-    }
-    return path;
-  }
 
   /**
    * Writes a file, under the gate when it is Java, after fixing its imports against {@code before}.

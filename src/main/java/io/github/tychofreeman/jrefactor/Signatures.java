@@ -213,10 +213,7 @@ final class Signatures {
 
     static Family of(SourceProject project, Args args) throws Exception {
       String rel = args.required("file");
-      Path path = project.file(rel);
-      if (!Files.isRegularFile(path)) {
-        throw new Refusal("No file " + rel + " in the project.");
-      }
+      Path path = project.javaFile(rel);
       Map<Path, Source> sources = new LinkedHashMap<>();
       List<Path> files = project.javaFiles();
       Map<Path, CompilationUnit> units = Jdt.parseAll(project, files);

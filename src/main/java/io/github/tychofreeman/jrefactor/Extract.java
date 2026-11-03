@@ -76,13 +76,7 @@ final class Extract {
     if (!SourceVersion.isName(name)) {
       throw new Refusal("name " + name + " is not a valid Java name.");
     }
-    if (!rel.endsWith(".java")) {
-      throw new Refusal(rel + " is not a .java file.");
-    }
-    Path path = project.file(rel);
-    if (!Files.isRegularFile(path)) {
-      throw new Refusal("No file " + rel + " in the project.");
-    }
+    Path path = project.javaFile(rel);
     String text = Files.readString(path);
     String[] lines = text.split("\n", -1);
     int count = text.endsWith("\n") ? lines.length - 1 : lines.length;

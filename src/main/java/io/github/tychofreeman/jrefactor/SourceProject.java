@@ -54,6 +54,56 @@ public record SourceProject(
     return new SourceProject(dir, roots, classpath, problem);
   }
 
+  /**
+   * The path of {@code rel}, a {@code .java} file that exists; otherwise a refusal says how to fix
+   * it.
+   */
+  public Path javaFile(String rel) throws IOException {
+    if (!rel.endsWith(".java")) {
+      throw new Refusal(rel + " is not a .java file.");
+    }
+    Path path = file(rel);
+    if (!Files.isRegularFile(path)) {
+      throw new Refusal(
+          "No file " + rel + " in the project. Create it with create_file." + javaFilesHint(rel));
+    }
+    return path;
+  }
+
+  /** The path of {@code rel}, which must exist, of any kind; otherwise a refusal says so. */
+  public Path existingFile(String rel) {
+    Path path = file(rel);
+    if (!Files.isRegularFile(path)) {
+      throw new Refusal("No file " + rel + " in the project. Create it with create_file.");
+    }
+    return path;
+  }
+
+  /** The Java files in the folder of {@code rel}, for a refusal that names the missing file. */
+  public String javaFilesHint(String rel) throws IOException {
+    String dir = parent(rel);
+    List<String> siblings = new ArrayList<>();
+    for (Path p : javaFiles()) {
+      String other = relative(p);
+      if (parent(other).equals(dir)) {
+        siblings.add(other.substring(dir.isEmpty() ? 0 : dir.length() + 1));
+      }
+    }
+    String where = dir.isEmpty() ? "the root" : dir;
+    return siblings.isEmpty()
+        ? " No Java files are in " + where + "."
+        : " Java files in "
+            + where
+            + ": "
+            + String.join(", ", siblings.stream().sorted().toList())
+            + ".";
+  }
+
+  private static String parent(String rel) {
+    int slash = rel.lastIndexOf('/');
+    return slash < 0 ? "" : rel.substring(0, slash);
+  }
+
   /** All {@code .java} files under the source roots, sorted. */
   public List<Path> javaFiles() throws IOException {
     List<Path> all = new ArrayList<>();
