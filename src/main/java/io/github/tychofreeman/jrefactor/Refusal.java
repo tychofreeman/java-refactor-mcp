@@ -6,6 +6,11 @@ package io.github.tychofreeman.jrefactor;
  */
 public class Refusal extends RuntimeException {
 
+  /**
+   * What the server writes before a refusal's message, and what {@link SessionReport} looks for.
+   */
+  static final String PREFIX = "refused: ";
+
   public Refusal(String message) {
     super(message);
   }

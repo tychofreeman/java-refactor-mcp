@@ -336,3 +336,14 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `Batch` and `Edits` were changed by Python scripts that replaced anchor text.
   `replace_text` would have made the same edits.
 
+
+## 2026-11-03: a stub assertFalse again, for a missing static import
+- Task: roadmap #45 (`docs/sessions/session-report-counts.md`).
+- Tool: `add_declaration` of three tests, one calling `assertFalse`, with
+  only `assertEquals` statically imported: it declared a stub
+  `SessionReportTest.assertFalse(boolean, String)`, as it did for
+  `assertEquals` in #9. Deleted with `replace_declaration`, import added with
+  `replace_text`, in one batch.
+- Idea: before declaring a stub method in a class, look for a static method
+  of that name in the classes the file already imports statically (here
+  `org.junit.jupiter.api.Assertions`), and import it instead.
