@@ -6,8 +6,9 @@ record says what the item was, the plan made before reading code, what
 happened as it happened, and what was measured, so the user can judge
 whether the work went through the tools or around them.
 
-There is no session-log hook yet (roadmap, "Session log"); until there
-is, the notes are the record. gorefactor's records (`docs/sessions/` in
+The session-log hook (roadmap #18) records each branch's tool calls when the
+hook is loaded; a session that started before `.claude/settings.json` existed
+has no log, and the notes are then the record. gorefactor's records (`docs/sessions/` in
 `tychofreeman/go-refactor-mcp`) show the full form, with measurements.
 
 ## Template
