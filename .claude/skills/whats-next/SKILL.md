@@ -55,9 +55,9 @@ Before reading any code for the item:
    outline of the classes involved, not their bodies); it is what the work
    is judged against, so write it before the bodies.
 
-There is no session-log hook here yet (roadmap, "Session log"), so
-nothing records the calls on its own. Until there is, the notes below are
-the only record; keep them complete.
+The session-log hook (`bin/session-log`, in `.claude/settings.json`)
+records every tool call of the branch in `.claude/session-log/<branch>.jsonl`.
+It cannot see why a call was made, so the notes below are still needed.
 
 ## 4. Work, and note what a log cannot see
 
@@ -93,10 +93,12 @@ record exists for.
 
 Before pushing:
 
-1. "Measured": with no session-log hook yet, write "not measured" and
-   count what you can from the notes: hand writes of Java, refusals,
-   `bulk:` writes. When the hook and a token counter exist, their report
-   goes here instead.
+1. "Measured": run `bin/session-report` (the log of the branch checked
+   out) and paste its list here: steps through java-refactor-mcp,
+   refusals, writes by hand and after a refusal, large writes, scratch
+   writes, calls with no result, reads. A session started before the
+   hook existed, or with no jar built, has no log: write "not measured"
+   and count from the notes. Token counts are not reported yet.
 2. Write "Assessment", a few lines, plainly, including what went badly:
    - **Through the tools or around them:** writes by hand, and for each,
      the tool or composition that fit, or the gap; refusals followed by

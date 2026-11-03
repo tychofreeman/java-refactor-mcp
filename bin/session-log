@@ -1,0 +1,11 @@
+#!/bin/sh
+# Claude Code hook (PreToolUse, PostToolUse, PostToolUseFailure; .claude/settings.json):
+# appends each tool call to .claude/session-log/<branch>.jsonl through SessionLog in the jar
+# bin/jrefactor-mcp builds. It never blocks a call: with no jar, or on any error, it logs
+# nothing and exits 0.
+here=$(cd "$(dirname "$0")/.." && pwd)
+jar="$here/target/java-refactor-mcp.jar"
+[ -f "$jar" ] || exit 0
+"${JAVA_HOME:+$JAVA_HOME/bin/}java" -XX:TieredStopAtLevel=1 -XX:+UseSerialGC \
+  -cp "$jar" io.github.tychofreeman.jrefactor.SessionLog >/dev/null 2>&1
+exit 0

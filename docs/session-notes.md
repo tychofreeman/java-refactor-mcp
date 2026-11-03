@@ -24,8 +24,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - "What's next?" runs the `whats-next` skill, ported from gorefactor on
   2026-11-02. In gorefactor the user chose a record per item in
   `docs/sessions/` so they can judge whether a session used the tools or worked
-  around them. Here it has no session-log hook yet (roadmap #18), so the notes
-  are the whole record.
+  around them. The session log (roadmap #18, 2026-11-03) is the measured part:
+  `bin/session-log` and `bin/session-report`.
 
 ## Where the work stands
 
@@ -104,6 +104,18 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
+- The session log (roadmap #18, 2026-11-03): `SessionLog` is the hook, run
+  from the jar by `bin/session-log` for PreToolUse, PostToolUse and
+  PostToolUseFailure; `SessionReport` reads the log. A refused MCP call
+  arrives as PostToolUseFailure with the text in `error`, not as
+  PostToolUse (found with a probe hook that appended its input); gorefactor
+  logs only PostToolUse, which works there because its refusals are not
+  error results. The hook costs about 0.2 s per event (two per call). It
+  logs nothing until the jar is built; hooks load when Claude Code starts,
+  so a session started before `.claude/settings.json` existed has no log.
+- `gh pr checks` right after `gh pr create` can say "no checks reported"
+  before CI registers, and `--watch` then returns at once: #22 was merged
+  that way before its run (which passed). Wait for the run to appear.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

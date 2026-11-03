@@ -11,3 +11,6 @@ target/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Session logs of bin/session-log (the whats-next skill)
+/.claude/session-log/
