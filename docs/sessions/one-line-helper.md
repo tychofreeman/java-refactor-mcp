@@ -49,15 +49,15 @@ about 4 hand writes (Lines, LinesTest, and two Python edit scripts).
 
 - **Through the tools or around them:** around. The six call-site edits were
   Python scripts, not `replace_text` or `batch`. The gap is real: the tool
-  exists and the server was not running in this session, so the edits could
-  not go through it. The friction log entry names `batch` with check "end".
+  exists, but no `mcp__jrefactor__` tool was in this session's tool list, so
+  the edits could not go through it. The friction log entry names `batch` with check "end".
 - **Large writes:** `Lines.java` is new behavior (the helper itself), not
   copied code. No large write moved existing code by hand.
 - **Did the plan hold?** Yes. Operations 1 to 5 were done in that order; the
-  compiler caught no missed call (the script's count assertions caught two
-  anchors that matched twice, and the fix was to replace both explicitly).
+  compiler caught no missed call, and the script's count assertions passed on
+  the first run.
 - **Reading:** `Declarations` and `Extract` bodies, to find the copies.
-- **One change that would have helped:** the server running in the session,
+- **One change that would have helped:** the server's tools in the session,
   with `batch` and check "end", so the six-file rename is one call. Recorded
   in the friction log, 2026-11-03 entry.
 
