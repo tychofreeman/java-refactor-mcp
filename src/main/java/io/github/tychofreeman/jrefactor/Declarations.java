@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
@@ -475,13 +473,7 @@ final class Declarations {
 
   /** {@code content} parsed as members of a type, or refused. */
   private static List<BodyDeclaration> members(String content) {
-    ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-    parser.setKind(ASTParser.K_CLASS_BODY_DECLARATIONS);
-    parser.setSource(content.toCharArray());
-    Map<String, String> options = org.eclipse.jdt.core.JavaCore.getOptions();
-    org.eclipse.jdt.core.JavaCore.setComplianceOptions(Jdt.SOURCE_LEVEL, options);
-    parser.setCompilerOptions(options);
-    ASTNode node = parser.createAST(null);
+    ASTNode node = Jdt.parseMembers(content);
     boolean[] broken = {false};
     node.accept(
         new ASTVisitor() {

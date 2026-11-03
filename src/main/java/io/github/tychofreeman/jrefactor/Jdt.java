@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FileASTRequestor;
@@ -22,13 +23,28 @@ final class Jdt {
 
   /** Parses {@code source} without resolving anything: its problems are syntax errors only. */
   static CompilationUnit parseSyntax(String source) {
+    return (CompilationUnit) syntaxParser(ASTParser.K_COMPILATION_UNIT, source).createAST(null);
+  }
+
+  /** {@code content} parsed as the members of a type, syntax only. */
+  static ASTNode parseMembers(String content) {
+    return syntaxParser(ASTParser.K_CLASS_BODY_DECLARATIONS, content).createAST(null);
+  }
+
+  /** A parser of {@code kind} for {@code source}, with the options every parser here uses. */
+  private static ASTParser syntaxParser(int kind, String source) {
+    ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+    parser.setKind(kind);
+    parser.setSource(source.toCharArray());
+    parser.setCompilerOptions(options());
+    return parser;
+  }
+
+  /** The compiler options for {@link #SOURCE_LEVEL}: the source level, compliance and target. */
+  private static Map<String, String> options() {
     Map<String, String> options = JavaCore.getOptions();
     JavaCore.setComplianceOptions(SOURCE_LEVEL, options);
-    ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-    parser.setKind(ASTParser.K_COMPILATION_UNIT);
-    parser.setSource(source.toCharArray());
-    parser.setCompilerOptions(options);
-    return (CompilationUnit) parser.createAST(null);
+    return options;
   }
 
   /**
@@ -87,16 +103,10 @@ final class Jdt {
    * A parser for Java 21 that resolves bindings against the project's source path and classpath.
    */
   private static ASTParser parser(SourceProject project) {
-    Map<String, String> options = JavaCore.getOptions();
-    JavaCore.setComplianceOptions(SOURCE_LEVEL, options);
-    options.put(JavaCore.COMPILER_SOURCE, SOURCE_LEVEL);
-    options.put(JavaCore.COMPILER_COMPLIANCE, SOURCE_LEVEL);
-    options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, SOURCE_LEVEL);
-
     ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
     parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);
-    parser.setCompilerOptions(options);
+    parser.setCompilerOptions(options());
     String[] sourcepath = project.sourceRoots().stream().map(Path::toString).toArray(String[]::new);
     String[] encodings = new String[sourcepath.length];
     java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws

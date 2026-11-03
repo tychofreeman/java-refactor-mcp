@@ -372,3 +372,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `replace_declaration` with empty content only deletes. A `move_type` tool
   (move a nested class or member to a new file, fixing references and
   imports) would have done it.
+
+## 2026-11-03: parser options moved into Jdt by hand
+- Task: review item 28 (`docs/sessions/one-parser-config.md`).
+- Tool: none used. `Jdt.java` and `Declarations.java` were changed with the
+  Edit tool; the java-refactor-mcp tools were not in this session's tool
+  list. `replace_text` would have made each edit.
