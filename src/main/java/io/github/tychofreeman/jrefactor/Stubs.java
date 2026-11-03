@@ -319,7 +319,9 @@ final class Stubs {
     /** Writes {@code stubs} into {@code file}, keeping its old text in {@code old}. */
     void write(Path file, List<Stub> stubs, Map<Path, String> old) throws IOException {
       String before = Files.exists(file) ? Files.readString(file) : null;
-      old.putIfAbsent(file, before);
+      if (!old.containsKey(file)) {
+        old.put(file, before); // putIfAbsent would replace a null: a file that did not exist
+      }
       String rel = project.relative(file);
       String text = before;
       Map<String, List<String>> byType = new LinkedHashMap<>();

@@ -88,7 +88,9 @@ final class Journal {
   static void wrote(Path file, String before, String after) {
     Open open = OPEN.get();
     if (open != null) {
-      open.before.putIfAbsent(file, before);
+      if (!open.before.containsKey(file)) {
+        open.before.put(file, before); // putIfAbsent would replace a null: a new file
+      }
       open.after.put(file, after);
     }
   }
