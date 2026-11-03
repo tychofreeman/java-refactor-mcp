@@ -101,6 +101,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   enclosing member is over "whenever it can be". The tool was registered first
   with a handler class that did not exist, and #19's stubs declared it. A
   Haiku probe did an extraction in one call (6 turns, $0.004).
+- Results audit (roadmap #24, 2026-11-03): no edit result repeats the input or
+  a diff; they report names and line ranges, 31-241 bytes in the golden
+  cases. Nothing was changed. The largest is a stub list, which grows with
+  the stubs declared (a follow-up in `docs/sessions/results-without-echo.md`).
+  The session log recorded nothing for this session: the hook loads only in
+  a session started after `.claude/settings.json` existed.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
