@@ -167,6 +167,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 42 | 49 | Misleading names: `Extract` maps each variable to "declared inside", so `used.get(r)` reads as "used"; `Stubs` `implicit` is set as `!created.contains(...)`, the inverse of its name | Open | Full code review 2026-11-03: reading, not run. Rename when next touched |
 | 43 | 50 | Process-global state cannot be isolated by tests: `Server` (`ONE_AT_A_TIME`, `CALLS`, `lastOutput`), `Imports.LIBRARIES` (never cleared), `Journal.DONE` (undo across projects) | Done | Full code review 2026-11-03: reading, not run. Overlaps #33 (static state); a `Session` object would hold these. Decide with #33 |
 | 44 | 51 | Performance: `Signatures.Family.of` parsed every file per call; it now parses only the files that contain the method's name (`add_parameter` 6.5 s to 2.9 s, Commons Math, one run each). Open: `Imports.toImport`, and the stub rounds, are not measured | Partly done | Full code review 2026-11-03. Record: `docs/sessions/reuse-gate-parse.md`. Reusing the gate's parse across calls was not taken: it keeps every AST between calls |
+| 45 | 52 | `move_type`: a static nested type to its own file, references, qualifications and private members following (the user chose a new tool over an option on `rename` or `replace_declaration`, and widening over refusing, 2026-11-03) | Done | Friction log 2026-11-03: `Extraction` (660 lines) split out by script. Record in `docs/sessions/move-type.md`; a trial move of `Signatures.Family` passed the gate and the tests |
 
 ### Why this order
 

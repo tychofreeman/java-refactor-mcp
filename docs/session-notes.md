@@ -211,6 +211,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   one class the file already has a single static import from with that
   static method, so stubs no longer declare `assertFalse` in a test class.
   Several such classes, or none, still leave it to the stubs.
+- `move_type` exists (roadmap #52, 2026-11-03): `MoveType` moves a static
+  nested type to its own file in the same package, every reference
+  following, the outer type's statics qualified and private members used
+  across the boundary widened (named in the result). The user chose a new
+  tool over an option on `rename` or `replace_declaration`, and widening
+  over refusing. A trial move of `Signatures.Family` (327 lines) through the
+  branch's jar passed the gate and every test; it was reverted, since the
+  split of `Signatures` (order 25) is its own item.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

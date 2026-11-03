@@ -31,6 +31,7 @@ implemented or being implemented.
 Java names may differ where the Java language needs it (for example, `add_field`
 on a class, or `add_case` for a `switch`). Record any difference in this file:
 `extract_method` (`extract_function`). `rename` has gorefactor's name.
+`move_type` has no gorefactor counterpart: Go has no nested types.
 
 ## `inspect` (built)
 
@@ -82,6 +83,40 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   with the same parameter types, or member type, or whose file exists; a field
   rename that a local of the new name would hide at an unqualified use; an
   edit that would add compile errors (rolled back, with the errors).
+
+## `move_type` (built)
+
+Arguments: `file` (the Java file that declares the type) and `name`
+(`Outer.Inner`, or deeper, as written in that file).
+
+Makes a static member type (a class declared `static`, or an interface, enum
+or record) top-level in its own file, `Inner.java` beside `file`, in the same
+package:
+
+- the declaration moves with its Javadoc, unindented, without `static`,
+  `private` or `protected`; the new file has the package line and the outer
+  file's imports that the moved text uses, and the outer file drops imports
+  only the moved text used;
+- every reference in the project follows: `Outer.Inner` becomes `Inner`, a
+  fully qualified `a.Outer.Inner` becomes `a.Inner`, `import a.Outer.Inner`
+  becomes `import a.Inner` (removed in the same package), and a file in another
+  package that wrote `Outer.Inner` gets `import a.Inner`;
+- inside the moved type, unqualified uses of the outer type's static methods,
+  static fields and other member types are qualified with `Outer.`;
+- a private member that the moved type uses from the outer file, or that the
+  outer file uses from the moved type, becomes package-private (the user's
+  choice, 2026-11-03, over refusing with their names).
+
+Result: `moved Shop.Line to com/example/Line.java (18 lines), with 3 references
+in 3 files: com/example/Receipt.java line 4; com/example/Shop.java line 7;
+com/example/report/Report.java line 3; widened Shop.label(String) and
+Line.price to package-private`. Lines are those of the files before the move.
+
+Refusals: a top-level type ("Shop is a top-level type already ... name it as
+Shop.Line"); a type not found; an inner (non-static) class ("Make it static
+first, passing what it uses from Shop, then move it"); a file of the new name
+that exists ("Rename Shop.Line first, then move it"); a move that adds compile
+errors, with them.
 
 ## Edits (built)
 

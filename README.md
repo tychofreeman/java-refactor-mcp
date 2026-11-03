@@ -5,8 +5,8 @@ built on Eclipse JDT Core. It is the Java counterpart to
 [go-refactor-mcp](https://github.com/tychofreeman/go-refactor-mcp) (gorefactor).
 
 **Status: early.** The server runs over STDIO with `inspect` (read-only),
-`rename` (locals, parameters, fields, methods and types, across files), the
-edits, signature changes, `extract_method`, `batch` and `undo`, each
+`rename` (locals, parameters, fields, methods and types, across files),
+`move_type` (a nested type to its own file), the edits, signature changes, `extract_method`, `batch` and `undo`, each
 type-checked before and after. The roadmap is in [docs/design.md](docs/design.md).
 
 ## Goal
