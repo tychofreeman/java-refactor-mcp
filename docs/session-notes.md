@@ -158,6 +158,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   (`TypeCheck`). `Server.Quiet` holds the call counter, the one-at-a-time lock and
   the last output, per started server. Two project objects over one folder share
   no undo history (`JournalTest.aProjectOpenedAgainHasNoHistory`).
+- Call costs on Commons Math 3.6.1 (roadmap #44, 2026-11-03, `docs/sessions/measure-call-cost.md`):
+  one whole-project parse is about 3.5 s; rename, replace_text and create_file each
+  make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `Signatures.Family.of`
+  parses every file before the gate. `GateCostTest.timesACall` prints the parse count.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
