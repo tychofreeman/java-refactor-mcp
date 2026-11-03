@@ -356,3 +356,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: before declaring a stub method in a class, look for a static method
   of that name in the classes the file already imports statically (here
   `org.junit.jupiter.api.Assertions`), and import it instead.
+
+## 2026-11-03: Family.of prefilter edited by hand
+- Task: roadmap order 44 (`docs/sessions/reuse-gate-parse.md`).
+- Tool: none used. `Signatures.java` (`Family.of`, a new `simpleName`) was
+  changed with the Edit tool; the java-refactor-mcp tools were not in this
+  session's tool list. `replace_text` would have made both edits.
