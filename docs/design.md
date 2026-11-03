@@ -40,6 +40,14 @@ JDK 21.
 **Decided: separate repos** for the Go and Java servers. A shared repo for the
 tool contract and the A/B harness is planned once a second language exists.
 
+**Decided 2026-11-03: stubs travel in the call's result, not a side channel.**
+An edit's declared stubs are returned in the result object of its call. Today
+`Stubs` collects them in a `ThreadLocal` and `Tools.call` appends them to the
+text, so a handler's output depends on state it does not return. The user chose
+the result object. Not chosen: keep the side channel (the option it beats),
+which needs no change to handlers but hides their output from tests and from
+any caller that is not `Tools.call`.
+
 ## Open questions
 
 1. ~~**Running JDT Core without OSGi.**~~ Answered by the spike in
@@ -133,6 +141,15 @@ friction log; reorder when this repo's own log says otherwise.
 | 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
 | 17 | 25 | `pull_up` and `push_down` for methods (and fields): move a member to a supertype or to its subtypes, with the type-check gate behind it | Open | The user asked, 2026-11-03; no friction entry yet, so it waits for one. Also worth a look for gorefactor (Go has embedding, not inheritance: the nearest is moving a method between a struct and the one it embeds) and the TypeScript port |
 | 18 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
+| 19 | 26 | Path refusal in one place: `SourceProject` returns a `.java` path or refuses, instead of five checks with different wording (`Declarations`, `Extract`, `Inspect`, `Signatures`, `Edits`) | Open | Code review 2026-11-03. Refusal wording is contract: golden `refused.txt` fragments must hold |
+| 20 | 27 | One line helper: `lineStart` and `lineEnd` (identical in `Declarations` and `Imports`), `Edits.lineOf`, and the "line N" / "lines N, M" text in `Tools`, `Inspect` and `SessionReport` | Open | Code review 2026-11-03 |
+| 21 | 28 | One ASTParser configuration: `Declarations.members` sets its own options and no environment; `Jdt` should own every parser | Open | Code review 2026-11-03. The options can drift from `Jdt`'s |
+| 22 | 29 | Name the two `ancestor` helpers apart: `Extract` starts at the parent, `Stubs` at the node itself | Open | Code review 2026-11-03. Same name, different meaning |
+| 23 | 30 | Stubs travel in the call's result object, not `Stubs.said()` and a `ThreadLocal` (decided 2026-11-03, see Decisions) | Open | Code review 2026-11-03. The user's request. Handlers' output depends on state they do not return |
+| 24 | 31 | The before/after type check goes through `Gate`: `Batch` and `Stubs` each re-implement it | Open | Code review 2026-11-03 |
+| 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Open | Code review 2026-11-03. No behavior change; no split without a change that needs it |
+| 26 | 33 | Static mutable state: `Journal.DONE`, `Imports.LIBRARIES`, `Server.CALLS`, `Stubs.DECLARED`; tests in one JVM can interfere | Open | Code review 2026-11-03. Safe in the server today: one call at a time |
+| 27 | 34 | One `ObjectMapper` shared by `SessionLog` and `SessionReport` | Open, low priority | Code review 2026-11-03. Minor |
 
 ### Why this order
 
