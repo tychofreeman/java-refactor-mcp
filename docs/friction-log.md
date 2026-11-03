@@ -404,6 +404,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   tool, and the golden case was copied with cp. `replace_text` would cover
   the source edits; `create_file` the golden files.
 
+## 2026-11-03: engine-error path and undo change made by hand
+- Task: roadmap order 35 (`docs/sessions/server-engine-error.md`).
+- Tool: none used. `Server.java`, `Tools.java`, `ServerTest.java` and
+  `JournalTest.java` were changed with the Edit tool; `replace_text` and
+  `add_declaration` would have covered the edits and the tests.
+
 ## 2026-11-03: create_file fixes imports in a file under no source root
 - Task: `move_type` golden cases (`docs/sessions/move-type.md`).
 - Tool: `create_file` of `src/test/resources/golden/move_type/out/com/example/Shop.java`

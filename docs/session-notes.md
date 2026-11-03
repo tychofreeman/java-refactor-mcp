@@ -29,6 +29,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- Engine errors name where they failed: `Server.answer` puts the first three frames
+  in the text and the trace on stderr; a failed undo is added to the failure as
+  suppressed, not thrown in its place (`Tools.abort`, roadmap order 35, 2026-11-03).
 - `rename` refuses a column below 1 (roadmap order 37, 2026-11-03): `Tools` passes
   the column as given (null when absent), and `Rename.run` takes an `Integer`.
 - The end-of-batch check is `Gate.checkedAtEnd` (roadmap order 24, 2026-11-03):

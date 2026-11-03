@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -327,6 +329,19 @@ class ServerTest {
 
   private static String text(Map<String, Object> result) {
     return (String) ((Map<?, ?>) ((List<?>) result.get("content")).get(0)).get("text");
+  }
+
+  @Test
+  void anEngineErrorSaysWhereItFailed() {
+    CallToolResult result =
+        Server.answer(
+            new Server.Quiet(),
+            () -> {
+              throw new IllegalStateException("boom");
+            });
+    String text = ((TextContent) result.content().get(0)).text();
+    assertTrue(text.contains("IllegalStateException: boom"), text);
+    assertTrue(text.contains("ServerTest."), text);
   }
 
   @SuppressWarnings("unchecked")
