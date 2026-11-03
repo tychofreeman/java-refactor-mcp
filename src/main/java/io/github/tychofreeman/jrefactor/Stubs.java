@@ -244,7 +244,7 @@ final class Stubs {
       }
       Path target = sourceOf(owner);
       String name = call.getName().getIdentifier();
-      if (target == null || owner.isInterface() || removed(target, label(owner), name)) {
+      if (target == null || owner.isInterface() || removed(target, Names.typeLabel(owner), name)) {
         return;
       }
       owner = owner.getErasure();
@@ -260,8 +260,8 @@ final class Stubs {
               + params
               + ")"
               + BODY;
-      String label = label(owner) + "." + name + "(" + String.join(", ", types) + ")";
-      want(target, new Stub(label(owner), label, label, code));
+      String label = Names.typeLabel(owner) + "." + name + "(" + String.join(", ", types) + ")";
+      want(target, new Stub(Names.typeLabel(owner), label, label, code));
     }
 
     private void constructor(CompilationUnit unit, ClassInstanceCreation creation)
@@ -276,7 +276,7 @@ final class Stubs {
       }
       owner = owner.getErasure();
       String simple = owner.getName();
-      String type = label(owner);
+      String type = Names.typeLabel(owner);
       if (removed(target, type, simple)) {
         return;
       }
@@ -520,7 +520,7 @@ final class Stubs {
         return typeName(b.getElementType()) + "[]".repeat(b.getDimensions());
       }
       ITypeBinding top = b.getErasure();
-      String name = label(top);
+      String name = Names.typeLabel(top);
       while (top.getDeclaringClass() != null) {
         top = top.getDeclaringClass();
       }
@@ -533,14 +533,6 @@ final class Stubs {
       }
       return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
     }
-  }
-
-  /** "Outer.Inner" for a nested type, the simple name for a top-level one. */
-  private static String label(ITypeBinding type) {
-    ITypeBinding t = type.getErasure();
-    return t.getDeclaringClass() == null
-        ? t.getName()
-        : label(t.getDeclaringClass()) + "." + t.getName();
   }
 
   /** "public " when {@code owner} is in another package than {@code unit}, else nothing. */

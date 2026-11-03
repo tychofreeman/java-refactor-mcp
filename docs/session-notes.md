@@ -29,6 +29,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
+  and `Extract.typeName` still differ on type variables and captures: a decision, not done.
 - `Edits.gated` fixes imports only for a file under a source root (roadmap order 47, 2026-11-03):
   `SourceProject.packageOf` is null elsewhere, and the gate counts errors only under a source root.
 - `Rename.gate` calls `Gate.applyOrRefuse` (roadmap order 33, 2026-11-03): a rename
