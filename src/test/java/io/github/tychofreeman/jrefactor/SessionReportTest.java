@@ -1,9 +1,12 @@
 package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -82,5 +85,47 @@ class SessionReportTest {
         - reads: Read java 1, inspect 1
         """,
         SessionReport.report(log));
+  }
+
+  @Test
+  void countsEveryRefactoringAndEditTheServerHas() {
+    int changes = 0;
+    for (Tools.Def def : Tools.ALL) {
+      if (!def.readOnly() && !def.name().equals("batch") && !def.name().equals("undo")) {
+        changes++;
+        call("PostToolUse", "mcp__jrefactor__" + def.name(), "{\"file\": \"a.txt\"}", "done");
+      }
+    }
+
+    String report = SessionReport.report(log);
+    int counted = 0;
+    Matcher m = Pattern.compile("(\\d+) (refactoring|edit) steps?").matcher(report);
+    while (m.find()) {
+      counted += Integer.parseInt(m.group(1));
+    }
+    assertEquals(changes, counted, report);
+  }
+
+  @Test
+  void aGrepWithAngleBracketsInItsPatternIsARead() {
+    call("PostToolUse", "Bash", "{\"command\": \"grep -n 'List<Path> x' src/A.java\"}", "");
+
+    assertEquals(
+        "- tool calls: 1\n- through jrefactor: 0 refactoring steps, 0 edit steps\n"
+            + "- refused by jrefactor: 0\n- by hand: 0\n- refused, then done by hand: 0\n"
+            + "- large writes (20 lines of Java or more in one call): 0\n"
+            + "- written to scratch files: 0\n- denied or failed (no result): 0\n"
+            + "- reads: Bash java 1\n",
+        SessionReport.report(log));
+  }
+
+  @Test
+  void aHeredocThatWritesMarkdownPutsInNoJava() {
+    String command = "cat > docs/a.md <<'EOF'\\n" + "see A.java\\n".repeat(25) + "EOF";
+    call("PostToolUse", "Bash", "{\"command\": \"" + command + "\"}", "");
+
+    String report = SessionReport.report(log);
+    assertTrue(report.contains("- by hand: 1\n"), report);
+    assertTrue(report.contains("in one call): 0\n"), report);
   }
 }

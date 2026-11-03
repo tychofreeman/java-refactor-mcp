@@ -40,8 +40,26 @@ final class Tools {
       String description,
       String schema,
       Set<String> args,
-      boolean readOnly,
-      Handler handler) {}
+      Kind kind,
+      Handler handler) {
+
+    /** Whether the tool changes nothing. */
+    boolean readOnly() {
+      return kind == Kind.READ;
+    }
+  }
+
+  /** What a tool does, for its annotations and for {@link SessionReport}'s counts. */
+  enum Kind {
+    /** Reads code and changes nothing. */
+    READ,
+    /** Changes code without changing what it does, everywhere it is used. */
+    REFACTORING,
+    /** Writes the text it is given. */
+    EDIT,
+    /** Runs or reverts other tools' changes. */
+    CONTROL
+  }
 
   static final Def INSPECT =
       new Def(
@@ -66,7 +84,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "start_line", "end_line"),
-          true,
+          Kind.READ,
           Tools::inspect);
 
   static final Def RENAME =
@@ -102,7 +120,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "line", "name", "column", "new_name"),
-          false,
+          Kind.REFACTORING,
           Tools::rename);
 
   static final Def CREATE_FILE =
@@ -129,7 +147,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "content", "overwrite"),
-          false,
+          Kind.EDIT,
           (project, args) -> Edits.createFile(project, args));
 
   static final Def REPLACE_TEXT =
@@ -158,7 +176,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "old", "new", "all_occurrences", "imports"),
-          false,
+          Kind.EDIT,
           (project, args) -> Edits.replaceText(project, args));
 
   static final Def ADD_DECLARATION =
@@ -195,7 +213,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "content", "type", "after", "before", "imports"),
-          false,
+          Kind.EDIT,
           (project, args) -> Declarations.add(project, args));
 
   static final Def REPLACE_DECLARATION =
@@ -225,7 +243,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "name", "content", "imports"),
-          false,
+          Kind.EDIT,
           (project, args) -> Declarations.replace(project, args));
 
   static final Def ADD_PARAMETER =
@@ -261,7 +279,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "name", "parameter", "type", "value", "before", "imports"),
-          false,
+          Kind.REFACTORING,
           (project, args) -> Signatures.addParameter(project, args));
 
   static final Def REMOVE_PARAMETER =
@@ -290,7 +308,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "name", "parameter"),
-          false,
+          Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, args));
 
   static final Def MOVE_PARAMETER =
@@ -319,7 +337,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "name", "parameter", "before"),
-          false,
+          Kind.REFACTORING,
           (project, args) -> Signatures.moveParameter(project, args));
 
   static final Def EXTRACT_METHOD =
@@ -353,7 +371,7 @@ final class Tools {
           }\
           """,
           Set.of("file", "start_line", "end_line", "name", "doc"),
-          false,
+          Kind.REFACTORING,
           (project, args) -> Extract.method(project, args));
 
   static final Def UNDO =
@@ -371,7 +389,7 @@ final class Tools {
           }\
           """,
           Set.of(),
-          false,
+          Kind.CONTROL,
           (project, args) -> Outcome.of(Journal.undo(project)));
 
   static final Def BATCH =
@@ -399,7 +417,7 @@ final class Tools {
           }\
           """,
           Set.of("steps", "check"),
-          false,
+          Kind.CONTROL,
           (project, args) -> Batch.run(project, args));
 
   static final List<Def> ALL =

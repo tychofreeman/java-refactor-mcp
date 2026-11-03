@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,13 +26,16 @@ final class SessionReport {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
-  private static final Set<String> REFACTORINGS =
-      Set.of("rename", "add_parameter", "remove_parameter", "move_parameter", "extract_method");
+  /** The server's tools by name. */
+  private static final Map<String, Tools.Kind> KINDS = kinds();
 
-  private static final Set<String> EDITS =
-      Set.of("create_file", "replace_text", "add_declaration", "replace_declaration");
-
-  private static final Set<String> OTHERS = Set.of("inspect", "batch", "undo");
+  private static Map<String, Tools.Kind> kinds() {
+    Map<String, Tools.Kind> out = new LinkedHashMap<>();
+    for (Tools.Def def : Tools.ALL) {
+      out.put(def.name(), def.kind());
+    }
+    return out;
+  }
 
   /** How many lines of Java written in one call make it a large write. */
   static final int LARGE_WRITE = 20;
@@ -50,6 +52,12 @@ final class SessionReport {
   /** Commands that read a Java file. */
   private static final Pattern READS =
       Pattern.compile("^\\s*(cat|head|tail|sed\\s+-n|grep|rg|less|awk)\\b.*\\.java\\b");
+
+  /** The start of a heredoc, with its delimiter (group 2). */
+  private static final Pattern HEREDOC = Pattern.compile("<<-?\\s*(['\"]?)(\\w+)\\1");
+
+  /** A quoted string in a command. */
+  private static final Pattern QUOTED = Pattern.compile("'[^']*'|\"(\\\\.|[^\"\\\\])*\"");
 
   public static void main(String[] args) throws Exception {
     List<Path> logs = new ArrayList<>();
@@ -128,16 +136,17 @@ final class SessionReport {
         continue;
       }
       if (ours != null) {
-        if (c.failed || result.startsWith("refused:")) {
+        if (c.failed || result.startsWith(Refusal.PREFIX)) {
           refusals++;
           pending.add(ours + " (" + result.lines().findFirst().orElse("") + ")");
           continue;
         }
         List<Map.Entry<String, JsonNode>> steps = steps(ours, input);
         for (Map.Entry<String, JsonNode> step : steps) {
-          if (REFACTORINGS.contains(step.getKey())) {
+          Tools.Kind kind = KINDS.get(step.getKey());
+          if (kind == Tools.Kind.REFACTORING) {
             refactorings++;
-          } else if (EDITS.contains(step.getKey())) {
+          } else if (kind == Tools.Kind.EDIT) {
             edits++;
           }
           String big = largeStep(step.getKey(), step.getValue());
@@ -203,9 +212,7 @@ final class SessionReport {
       return null;
     }
     String name = tool.substring(tool.lastIndexOf("__") + 2);
-    return REFACTORINGS.contains(name) || EDITS.contains(name) || OTHERS.contains(name)
-        ? name
-        : null;
+    return KINDS.containsKey(name) ? name : null;
   }
 
   /** A call's steps, by tool: a batch's, or the call itself. */
@@ -226,7 +233,7 @@ final class SessionReport {
    */
   private static String largeStep(String tool, JsonNode args) {
     String file = args.path("file").asString("");
-    if (!file.endsWith(".java") || !EDITS.contains(tool)) {
+    if (!file.endsWith(".java") || KINDS.get(tool) != Tools.Kind.EDIT) {
       return null;
     }
     String text = args.path(tool.equals("replace_text") ? "new" : "content").asString("");
@@ -254,13 +261,9 @@ final class SessionReport {
         return outside(cwd, path) ? null : Boolean.TRUE;
       }
       case "Bash" -> {
-        String command = input.path("command").asString("");
-        boolean inPlace = WRITES.matcher(command).find();
-        List<String> targets = new ArrayList<>();
-        Matcher m = REDIRECT.matcher(command);
-        while (m.find()) {
-          targets.add(m.group(1));
-        }
+        String shell = unquoted(input.path("command").asString(""));
+        boolean inPlace = WRITES.matcher(shell).find();
+        List<String> targets = targets(shell);
         if (!inPlace && targets.isEmpty()) {
           return false;
         }
@@ -279,7 +282,11 @@ final class SessionReport {
   private static int handLines(String tool, JsonNode input) {
     if (tool.equals("Bash")) {
       String command = input.path("command").asString("");
-      return command.contains(".java") ? (int) command.lines().count() : 0;
+      String shell = unquoted(command);
+      boolean java =
+          targets(shell).stream().anyMatch(t -> t.endsWith(".java"))
+              || (WRITES.matcher(shell).find() && shell.contains(".java"));
+      return java ? (int) command.lines().count() : 0;
     }
     if (!input.path("file_path").asString("").endsWith(".java")) {
       return 0;
@@ -290,6 +297,39 @@ final class SessionReport {
       n += lines(edit.path("new_string").asString(""));
     }
     return n;
+  }
+
+  /** The files a command redirects its output into. */
+  private static List<String> targets(String shell) {
+    List<String> out = new ArrayList<>();
+    Matcher m = REDIRECT.matcher(shell);
+    while (m.find()) {
+      out.add(m.group(1));
+    }
+    return out;
+  }
+
+  /**
+   * A command without its quoted text and heredoc bodies: what the shell runs, not the text it
+   * passes, so a {@code >} in a pattern or a script is not a redirect.
+   */
+  private static String unquoted(String command) {
+    StringBuilder out = new StringBuilder();
+    String delimiter = null;
+    for (String line : command.split("\n", -1)) {
+      if (delimiter != null) {
+        if (line.strip().equals(delimiter)) {
+          delimiter = null;
+        }
+        continue;
+      }
+      Matcher h = HEREDOC.matcher(line);
+      if (h.find()) {
+        delimiter = h.group(2);
+      }
+      out.append(QUOTED.matcher(line).replaceAll("''")).append('\n');
+    }
+    return out.toString();
   }
 
   private static String readKind(String tool, JsonNode input) {
