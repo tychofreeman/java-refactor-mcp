@@ -750,19 +750,11 @@ public final class Rename {
   private static Stubs.Declared gate(
       SourceProject project, Map<Path, String> texts, String oldName, String newName)
       throws IOException {
-    Stubs.Check check = Gate.apply(project, texts);
-    if (!check.introduced().isEmpty()) {
-      throw new Refusal(
-          "renaming '"
-              + oldName
-              + "' to '"
-              + newName
-              + "' would introduce compile errors, "
-              + "so nothing was changed:\n  "
-              + String.join("\n  ", check.introduced())
-              + "\nChoose a name that does not clash with a name the code already uses.");
-    }
-    return check.declared();
+    return Gate.applyOrRefuse(
+        project,
+        texts,
+        "renaming '" + oldName + "' to '" + newName + "'",
+        "Choose a name that does not clash with a name the code already uses.");
   }
 
   /** The distinct lines of {@code nodes}, in order. */
