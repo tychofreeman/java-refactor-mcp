@@ -1,0 +1,1 @@
+Shop is a top-level type already. move_type moves a nested type to its own file: name it as Shop.Line.

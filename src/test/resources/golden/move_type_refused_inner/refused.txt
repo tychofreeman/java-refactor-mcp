@@ -1,0 +1,1 @@
+Shop.Line is an inner class (not static), so it may use an instance of Shop. Make it static first, passing what it uses from Shop, then move it.
