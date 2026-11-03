@@ -29,6 +29,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Edits.gated` fixes imports only for a file under a source root (roadmap order 47, 2026-11-03):
+  `SourceProject.packageOf` is null elsewhere, and the gate counts errors only under a source root.
+- `Rename.gate` calls `Gate.applyOrRefuse` (roadmap order 33, 2026-11-03): a rename
+  that adds compile errors is refused with "would add", as every other edit says.
+  `MoveType` still says "would introduce" (open, see `docs/sessions/rename-on-gate.md`).
 - `Journal.put` and `Journal.restore` are the one writer of project files (roadmap
   order 40, 2026-11-03). `Gate` calls them; `Gate.put` and `Gate.restore` are gone.
 - Engine errors name where they failed: `Server.answer` puts the first three frames
