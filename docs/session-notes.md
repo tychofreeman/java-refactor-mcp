@@ -29,6 +29,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Jdt` owns every parser (review item 28, 2026-11-03): `Jdt.parseMembers` parses
+  class-body members for `Declarations`, and the compiler options come from one
+  function. `grep ASTParser` finds `Jdt` only; keep it that way.
 - `Extraction`, the nested class of `Extract`, is its own file (roadmap order 25,
   2026-11-03, `docs/sessions/split-extract.md`). Its helpers in `Extract` are
   package-private for it. `Signatures`, `Declarations` and `Tools` are still whole;
