@@ -27,6 +27,51 @@ final class Gate {
     }
   }
 
+  /** What a deferred body returned, and the stubs its end check declared. */
+  record Checked<T>(T result, Stubs.Declared declared) {}
+
+  /**
+   * Runs {@code body} deferred, then checks the project once, as a batch with check "end" does: the
+   * stubs it needs are declared, and when it still adds compile errors, its files are restored and
+   * {@code what} is refused with {@code fix}. Otherwise its writes are journaled.
+   */
+  static <T> Checked<T> checkedAtEnd(
+      SourceProject project, java.util.concurrent.Callable<T> body, String what, String fix)
+      throws Exception {
+    Map<String, Integer> before = TypeCheck.errors(project);
+    T result = deferred(project, body);
+    Map<Path, String> old = Journal.written(project);
+    Stubs.Check declaring = Stubs.declare(project, before, old);
+    if (!declaring.introduced().isEmpty()) {
+      restore(old);
+      throw refusal(project, declaring.introduced(), what, fix);
+    }
+    journal(project, old);
+    return new Checked<>(result, declaring.declared());
+  }
+
+  /**
+   * The refusal for an edit that adds {@code introduced} errors: "{@code what} would add compile
+   * errors, so nothing was changed", the errors, a note when Maven gave no classpath, then {@code
+   * fix}.
+   */
+  private static Refusal refusal(
+      SourceProject project, List<String> introduced, String what, String fix) {
+    boolean unresolved = introduced.stream().anyMatch(e -> e.contains("cannot be resolved"));
+    String missing =
+        unresolved && project.classpathProblem() != null
+            ? "\nMaven gave no classpath, so library types do not resolve: "
+                + project.classpathProblem()
+            : "";
+    return new Refusal(
+        what
+            + " would add compile errors, so nothing was changed:\n  "
+            + String.join("\n  ", introduced)
+            + missing
+            + "\n"
+            + fix);
+  }
+
   /**
    * Writes each file's new text; a null text deletes the file. Returns the compile errors the edit
    * would add, and the stubs it declared; when there are any errors, nothing is left changed.
@@ -70,20 +115,7 @@ final class Gate {
       SourceProject project, Map<Path, String> texts, String what, String fix) throws IOException {
     Stubs.Check check = apply(project, texts);
     if (!check.introduced().isEmpty()) {
-      boolean unresolved =
-          check.introduced().stream().anyMatch(e -> e.contains("cannot be resolved"));
-      String missing =
-          unresolved && project.classpathProblem() != null
-              ? "\nMaven gave no classpath, so library types do not resolve: "
-                  + project.classpathProblem()
-              : "";
-      throw new Refusal(
-          what
-              + " would add compile errors, so nothing was changed:\n  "
-              + String.join("\n  ", check.introduced())
-              + missing
-              + "\n"
-              + fix);
+      throw refusal(project, check.introduced(), what, fix);
     }
     return check.declared();
   }
