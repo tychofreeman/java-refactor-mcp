@@ -485,8 +485,7 @@ final class Tools {
     if (line == null) {
       throw new Refusal("rename needs line: the 1-based line of a use or declaration.");
     }
-    Integer column = args.integer("column");
-    return Rename.run(project, file, line, name, column == null ? 0 : column, newName);
+    return Rename.run(project, file, line, name, args.integer("column"), newName);
   }
 
   private static Outcome moveType(SourceProject project, Args args) throws Exception {

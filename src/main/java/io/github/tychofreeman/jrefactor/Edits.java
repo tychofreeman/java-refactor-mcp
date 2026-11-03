@@ -144,7 +144,25 @@ final class Edits {
   }
 
   /** A file as written: its fixed text, and the stubs its gate declared. */
-  private record Written(Imports.Fixed fixed, Stubs.Declared declared) {}
+  record Written(Imports.Fixed fixed, Stubs.Declared declared) {}
+
+  /**
+   * Fixes the imports of {@code after}, which replaces {@code before} in {@code path}, and applies
+   * it under the gate, refusing as {@link Gate#applyOrRefuse} does.
+   */
+  static Written gated(
+      SourceProject project,
+      Path path,
+      String before,
+      String after,
+      List<String> chosen,
+      String what,
+      String fix)
+      throws Exception {
+    Imports.Fixed fixed = Imports.fix(project, path, before, after, chosen);
+    Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
+    return new Written(fixed, declared);
+  }
 
   /**
    * Writes a file, under the gate when it is Java, after fixing its imports against {@code before}.
@@ -164,9 +182,7 @@ final class Edits {
       return new Written(new Imports.Fixed(text, 0, List.of()), Stubs.Declared.NONE);
     }
     parses(text, "the result");
-    Imports.Fixed fixed = Imports.fix(project, path, before, text, chosen);
-    Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
-    return new Written(fixed, declared);
+    return gated(project, path, before, text, chosen, what, fix);
   }
 
   /** {@code source} parsed, or refused with its first syntax errors and their lines. */

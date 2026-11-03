@@ -55,8 +55,14 @@ public final class Rename {
    * @return what was renamed, and the lines of each file it changed
    */
   public static Tools.Outcome run(
-      SourceProject project, String relFile, int line, String name, int column, String newName)
+      SourceProject project, String relFile, int line, String name, Integer column, String newName)
       throws IOException {
+    if (column != null && column < 1) {
+      throw new Refusal(
+          "column starts at 1; got "
+              + column
+              + ". Give the 1-based column of the name, or leave column out.");
+    }
     Path file = project.root().resolve(relFile).normalize();
     if (!file.startsWith(project.root())
         || !Files.isRegularFile(file)
@@ -78,7 +84,7 @@ public final class Rename {
     String source = Files.readString(file);
     CompilationUnit cu = Jdt.parse(project, file, source);
     SimpleName at =
-        column > 0
+        column != null
             ? atColumn(cu, source, line, query.simple(), column)
             : byName(cu, source, relFile, line, query);
     String oldName = at.getIdentifier();

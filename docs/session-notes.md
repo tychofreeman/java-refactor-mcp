@@ -29,6 +29,17 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `rename` refuses a column below 1 (roadmap order 37, 2026-11-03): `Tools` passes
+  the column as given (null when absent), and `Rename.run` takes an `Integer`.
+- The end-of-batch check is `Gate.checkedAtEnd` (roadmap order 24, 2026-11-03):
+  it counts, runs the body deferred, declares stubs, then refuses and restores or
+  journals. `Batch` calls it; `Gate.refusal` is the one refusal wording for both.
+- `Gate.deferred` restores the flag it found, so a nested deferred call (a batch
+  inside a batch) leaves the outer call deferred (roadmap order 41, 2026-11-03).
+- `Edits.gated` is the one place a single-file edit fixes imports and passes the
+  gate (roadmap order 32, 2026-11-03). `Declarations` (3), `Extraction` and
+  `Edits.write` use it; `Signatures` keeps its per-file loop. Add new single-file
+  edits through `gated`.
 - `Jdt` owns every parser (review item 28, 2026-11-03): `Jdt.parseMembers` parses
   class-body members for `Declarations`, and the compiler options come from one
   function. `grep ASTParser` finds `Jdt` only; keep it that way.

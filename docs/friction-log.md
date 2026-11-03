@@ -379,6 +379,31 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Edit tool; the java-refactor-mcp tools were not in this session's tool
   list. `replace_text` would have made each edit.
 
+## 2026-11-03: gated-edit call sites changed by hand
+- Task: roadmap order 32 (`docs/sessions/edit-pipeline.md`).
+- Tool: none used. `Edits.java`, `Declarations.java` and `Extraction.java`
+  were changed with the Edit tool; the java-refactor-mcp tools were not in
+  this session's tool list. `replace_text` would have made each edit, and a
+  `batch` of them with check "end" the whole change in one call.
+
+## 2026-11-03: Gate.deferred fix and its test made by hand
+- Task: roadmap order 41 (`docs/sessions/gate-deferred-nesting.md`).
+- Tool: none used. `Gate.java` and `GateTest.java` were changed with the Edit
+  tool; the java-refactor-mcp tools were not in this session's tool list.
+  `add_declaration` would have written the test and `replace_text` the fix.
+
+## 2026-11-03: end-of-batch check moved into Gate by hand
+- Task: roadmap order 24 (`docs/sessions/gate-before-after.md`).
+- Tool: none used. `Gate.java` and `Batch.java` were changed with the Edit
+  tool. A `move` of the check's steps into `Gate` has no tool; `replace_text`
+  would cover each edit.
+
+## 2026-11-03: rename column refusal and golden written by hand
+- Task: roadmap order 37 (`docs/sessions/refuse-column-below-one.md`).
+- Tool: none used. `Tools.java` and `Rename.java` were changed with the Edit
+  tool, and the golden case was copied with cp. `replace_text` would cover
+  the source edits; `create_file` the golden files.
+
 ## 2026-11-03: create_file fixes imports in a file under no source root
 - Task: `move_type` golden cases (`docs/sessions/move-type.md`).
 - Tool: `create_file` of `src/test/resources/golden/move_type/out/com/example/Shop.java`

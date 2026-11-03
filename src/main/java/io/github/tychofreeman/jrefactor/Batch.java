@@ -25,20 +25,14 @@ final class Batch {
       throw new Refusal("check must be \"each\" or \"end\"; got " + check + ".");
     }
     if (check.equals("end")) {
-      Map<String, Integer> before = TypeCheck.errors(project);
-      String said = Gate.deferred(project, () -> steps(project, steps, true));
-      Map<Path, String> old = Journal.written(project);
-      Stubs.Check declaring = Stubs.declare(project, before, old);
-      if (!declaring.introduced().isEmpty()) {
-        Gate.restore(old);
-        throw new Refusal(
-            "the batch would add compile errors, so nothing was changed:\n  "
-                + String.join("\n  ", declaring.introduced())
-                + "\nAdd the steps that fix them, or change the steps that cause them.");
-      }
-      Gate.journal(project, old);
+      Gate.Checked<String> checked =
+          Gate.checkedAtEnd(
+              project,
+              () -> steps(project, steps, true),
+              "the batch",
+              "Add the steps that fix them, or change the steps that cause them.");
       return new Tools.Outcome(
-          said + "\nchecked at the end: no new compile errors", declaring.declared());
+          checked.result() + "\nchecked at the end: no new compile errors", checked.declared());
     }
     return Tools.Outcome.of(steps(project, steps, false));
   }
