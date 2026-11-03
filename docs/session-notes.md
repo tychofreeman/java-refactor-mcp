@@ -147,6 +147,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   chose "keep serving, name the cause" over refusing to start. `SourceProject`
   has a `classpathProblem`; `Gate.applyOrRefuse` adds the reason to a refusal
   that says a name "cannot be resolved". Test: `GateTest`.
+- File refusals are one wording (roadmap #26, 2026-11-03): `SourceProject.javaFile`
+  (not a .java file; missing, with the Java files in its folder) and
+  `existingFile` (replace_text, any file). `Inspect` keeps "No Java file" (its
+  wording is in a golden and two tests). `Signatures` now refuses a non-Java
+  file by name, not as "not a Java file under a source root".
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its

@@ -1,0 +1,3 @@
+  int area() {
+    return 0;
+  }

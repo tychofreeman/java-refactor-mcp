@@ -157,27 +157,6 @@ public final class Inspect {
     if (Files.isRegularFile(path)) {
       return path;
     }
-    String dir = parent(file);
-    List<String> siblings = new ArrayList<>();
-    for (Path p : project.javaFiles()) {
-      String rel = project.relative(p);
-      if (parent(rel).equals(dir)) {
-        siblings.add(rel.substring(dir.isEmpty() ? 0 : dir.length() + 1));
-      }
-    }
-    String hint =
-        siblings.isEmpty()
-            ? " No Java files are in " + (dir.isEmpty() ? "the root" : dir) + "."
-            : " Java files in "
-                + (dir.isEmpty() ? "the root" : dir)
-                + ": "
-                + String.join(", ", siblings.stream().sorted().toList())
-                + ".";
-    throw new Refusal("No Java file " + file + " in the project." + hint);
-  }
-
-  private static String parent(String rel) {
-    int slash = rel.lastIndexOf('/');
-    return slash < 0 ? "" : rel.substring(0, slash);
+    throw new Refusal("No Java file " + file + " in the project." + project.javaFilesHint(file));
   }
 }

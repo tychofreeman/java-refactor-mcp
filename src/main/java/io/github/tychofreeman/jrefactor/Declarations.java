@@ -52,7 +52,7 @@ final class Declarations {
     if (after != null && before != null) {
       throw new Refusal("Give after or before, not both.");
     }
-    Path path = javaFile(project, rel);
+    Path path = project.javaFile(rel);
     String text = Files.readString(path);
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
@@ -152,7 +152,7 @@ final class Declarations {
     if (content == null) {
       throw new Refusal("replace_declaration needs content (empty, to delete the declaration).");
     }
-    Path path = javaFile(project, rel);
+    Path path = project.javaFile(rel);
     String text = Files.readString(path);
     CompilationUnit unit = Edits.parses(text, rel);
     Named target = find(unit, name, rel);
@@ -582,17 +582,6 @@ final class Declarations {
       }
     }
     return step == Integer.MAX_VALUE ? 0 : step;
-  }
-
-  private static Path javaFile(SourceProject project, String rel) {
-    if (!rel.endsWith(".java")) {
-      throw new Refusal(rel + " is not a .java file.");
-    }
-    Path path = project.file(rel);
-    if (!Files.isRegularFile(path)) {
-      throw new Refusal("No file " + rel + " in the project. Create it with create_file.");
-    }
-    return path;
   }
 
   /**
