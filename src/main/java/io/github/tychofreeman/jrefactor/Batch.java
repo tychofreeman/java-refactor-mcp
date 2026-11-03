@@ -27,13 +27,16 @@ final class Batch {
     if (check.equals("end")) {
       Map<String, Integer> before = TypeCheck.errors(project);
       String said = Gate.deferred(() -> steps(project, steps, true));
-      List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
+      Map<Path, String> old = Journal.written();
+      List<String> introduced = Stubs.declare(project, before, old);
       if (!introduced.isEmpty()) {
+        Gate.restore(old);
         throw new Refusal(
             "the batch would add compile errors, so nothing was changed:\n  "
                 + String.join("\n  ", introduced)
                 + "\nAdd the steps that fix them, or change the steps that cause them.");
       }
+      Gate.journal(old);
       return said + "\nchecked at the end: no new compile errors";
     }
     return steps(project, steps, false);

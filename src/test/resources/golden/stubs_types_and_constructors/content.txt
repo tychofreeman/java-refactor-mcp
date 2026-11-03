@@ -1,0 +1,6 @@
+void baskets() {
+  Cart cart = new Cart(2);
+  Basket basket = new Basket(cart);
+  long count = basket.count();
+  check(count);
+}

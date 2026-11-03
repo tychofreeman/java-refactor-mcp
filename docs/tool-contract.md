@@ -70,6 +70,27 @@ Edits change behavior on purpose and are held to the same gate: a `.java` file
 must parse, and the project must type-check no worse after, or nothing changes.
 Results name the file and lines and never echo content.
 
+Stubs (roadmap #21): before refusing, the gate (every edit, and a batch checked
+at its end) declares what the new code uses and nothing declares, then checks
+again, for up to five rounds (a new class, then its members):
+- a method of a project class: `x.m(a)` on x's type, `T.m(a)` static on T,
+  `m(a)` on the enclosing type (static in a static context). Parameters take
+  the arguments' types, and their names when they are variables or getters.
+  The result type comes from the use: void as a statement; boolean as a
+  condition; the type of what it is declared as, assigned to, returned as,
+  compared or combined with, or passed as (for `assert*`, the other
+  argument's); else Object;
+- a constructor of a project class, and `T() {}` beside it when T had only the
+  implicit one;
+- a class nothing declares, in the using file's package under the first source
+  root, as `public class T {}`.
+The body is `throw new UnsupportedOperationException("not implemented");`,
+which `add_declaration` replaces. Members are public only when the type is in
+another package. Not declared: methods of interfaces or library types, fields,
+and a method or constructor the edit removed. The result ends
+`; declared stubs Cart.total(), Cart.add(String, int) in com/example/Cart.java;
+class Basket in ...`.
+
 Imports (roadmap #20): `replace_text`, `add_declaration` and `replace_declaration`
 on a `.java` file add an import for each simple type name the edit left
 unresolved when one class has that name (this project's sources, the classpath,
