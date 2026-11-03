@@ -378,3 +378,14 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Jdt.java` and `Declarations.java` were changed with the
   Edit tool; the java-refactor-mcp tools were not in this session's tool
   list. `replace_text` would have made each edit.
+
+## 2026-11-03: create_file fixes imports in a file under no source root
+- Task: `move_type` golden cases (`docs/sessions/move-type.md`).
+- Tool: `create_file` of `src/test/resources/golden/move_type/out/com/example/Shop.java`
+  (expected output, under no source root) was refused: "Line could be
+  javax.sound.sampled.Line or org.eclipse.jface.text.Line". The `Line` it
+  meant is a sibling golden file that no parse can see. Passing `imports`
+  would have added an import the expected output must not have. Written by
+  heredoc instead.
+- Idea: fix imports (and type-check) only for `.java` files under a source
+  root, as the gate already counts errors only there.

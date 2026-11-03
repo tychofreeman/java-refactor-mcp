@@ -1,0 +1,1 @@
+com/example/Line.java already exists. Rename Shop.Line first, then move it.

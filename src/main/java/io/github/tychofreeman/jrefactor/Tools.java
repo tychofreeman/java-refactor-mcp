@@ -123,6 +123,35 @@ final class Tools {
           Kind.REFACTORING,
           Tools::rename);
 
+  static final Def MOVE_TYPE =
+      new Def(
+          "move_type",
+          """
+          Move a static nested type (class, interface, enum or record) to its own file, as a \
+          top-level type of the same package: Shop.Line in Shop.java becomes Line in Line.java. \
+          Every reference in the project follows (Shop.Line becomes Line, import a.Shop.Line \
+          becomes import a.Line), the moved type's uses of Shop's static members are qualified \
+          (label(x) becomes Shop.label(x)), and private members either side uses across the new \
+          boundary become package-private; the result names them.
+          name is Outer.Inner, as written in file. Type-checks the project: a move that adds \
+          compile errors is rolled back and refused.
+          Refuses, saying why: an inner (non-static) class, a top-level type, a file of that \
+          name that exists.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file that declares the type, relative to the project root."},
+              "name": {"type": "string", "description": "The nested type, as Outer.Inner."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name"),
+          Kind.REFACTORING,
+          Tools::moveType);
+
   static final Def CREATE_FILE =
       new Def(
           "create_file",
@@ -424,6 +453,7 @@ final class Tools {
       List.of(
           INSPECT,
           RENAME,
+          MOVE_TYPE,
           CREATE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
@@ -457,6 +487,10 @@ final class Tools {
     }
     Integer column = args.integer("column");
     return Rename.run(project, file, line, name, column == null ? 0 : column, newName);
+  }
+
+  private static Outcome moveType(SourceProject project, Args args) throws Exception {
+    return MoveType.run(project, args.required("file"), args.required("name"));
   }
 
   /** The tool named {@code name}, or a refusal listing the tools there are. */
