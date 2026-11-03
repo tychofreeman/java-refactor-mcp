@@ -460,13 +460,13 @@ final class Tools {
   static Outcome call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
     Args args = new Args(def.name(), values);
     args.check(def.args());
-    Journal.begin(def.name());
+    Journal.begin(project, def.name());
     try {
       Outcome outcome = def.handler().run(project, args);
       Journal.commit(project);
       return outcome;
     } catch (Exception | Error e) {
-      Journal.abort();
+      Journal.abort(project);
       throw e;
     }
   }

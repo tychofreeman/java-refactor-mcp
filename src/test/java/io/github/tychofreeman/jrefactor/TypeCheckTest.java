@@ -35,8 +35,8 @@ class TypeCheckTest {
     SourceProject project = SourceProject.of(root);
 
     TypeCheck.errors(project);
-    int parsed = TypeCheck.parses();
+    int parsed = TypeCheck.parses(project);
     TypeCheck.errors(project);
-    assertEquals(parsed, TypeCheck.parses());
+    assertEquals(parsed, TypeCheck.parses(project));
   }
 }

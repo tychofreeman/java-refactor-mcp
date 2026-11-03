@@ -15,7 +15,11 @@ import java.util.stream.Stream;
  * why the classpath is empty when Maven could not give one, or null.
  */
 public record SourceProject(
-    Path root, List<Path> sourceRoots, List<String> classpath, String classpathProblem) {
+    Path root,
+    List<Path> sourceRoots,
+    List<String> classpath,
+    String classpathProblem,
+    Session session) {
 
   public SourceProject {
     root = root.toAbsolutePath().normalize();
@@ -25,7 +29,7 @@ public record SourceProject(
 
   /** A project whose root is its one source root, with no classpath. */
   public static SourceProject of(Path root) {
-    return new SourceProject(root, List.of(root), List.of(), null);
+    return new SourceProject(root, List.of(root), List.of(), null, new Session());
   }
 
   /**
@@ -51,7 +55,7 @@ public record SourceProject(
           "jrefactor: no classpath from Maven, so library types will not resolve: " + problem);
       classpath = List.of();
     }
-    return new SourceProject(dir, roots, classpath, problem);
+    return new SourceProject(dir, roots, classpath, problem, new Session());
   }
 
   /**

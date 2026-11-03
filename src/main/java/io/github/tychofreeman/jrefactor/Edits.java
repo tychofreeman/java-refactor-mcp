@@ -160,7 +160,7 @@ final class Edits {
       String fix)
       throws Exception {
     if (!rel.endsWith(".java")) {
-      Gate.write(path, text);
+      Gate.write(project, path, text);
       return new Written(new Imports.Fixed(text, 0, List.of()), Stubs.Declared.NONE);
     }
     parses(text, "the result");

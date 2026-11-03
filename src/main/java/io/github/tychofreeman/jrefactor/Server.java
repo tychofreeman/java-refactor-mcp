@@ -25,17 +25,21 @@ public final class Server {
   static final String NAME = "java-refactor-mcp";
   static final String VERSION = "0.1.0";
 
-  /**
-   * Held while a tool runs. The SDK can run calls sent together at the same time; two edits of one
-   * file would each read it before the other wrote, and the second would undo the first.
-   */
-  private static final Object ONE_AT_A_TIME = new Object();
-
-  /** Tool calls running now; the server does not exit at the end of input while one is. */
-  private static final AtomicInteger CALLS = new AtomicInteger();
-
   private static final long QUIET_BEFORE_EXIT_NANOS = 1_000_000_000L;
-  private static volatile long lastOutput;
+
+  /** What one running server knows of its calls: how many run, and when it last wrote. */
+  static final class Quiet {
+    /**
+     * Held while a tool runs. The SDK can run calls sent together at the same time; two edits of
+     * one file would each read it before the other wrote, and the second would undo the first.
+     */
+    final Object oneAtATime = new Object();
+
+    /** Tool calls running now; the server does not exit at the end of input while one is. */
+    final AtomicInteger calls = new AtomicInteger();
+
+    volatile long lastOutput;
+  }
 
   private Server() {}
 
@@ -55,28 +59,30 @@ public final class Server {
             + project.classpath().size()
             + " classpath entries");
     CountDownLatch inputEnded = new CountDownLatch(1);
+    Quiet quiet = new Quiet();
     McpSyncServer server =
         start(
             project,
             endingWith(
                 System.in,
                 () -> {
-                  awaitQuiet();
+                  awaitQuiet(quiet);
                   inputEnded.countDown();
                 }),
             new FilterOutputStream(System.out) {
               @Override
               public void write(int b) throws IOException {
-                lastOutput = System.nanoTime();
+                quiet.lastOutput = System.nanoTime();
                 out.write(b);
               }
 
               @Override
               public void write(byte[] b, int off, int len) throws IOException {
-                lastOutput = System.nanoTime();
+                quiet.lastOutput = System.nanoTime();
                 out.write(b, off, len);
               }
-            });
+            },
+            quiet);
     inputEnded.await();
     server.closeGracefully();
     System.exit(0);
@@ -87,10 +93,11 @@ public final class Server {
    * read that finds the end of input, before it returns: the SDK closes the session when it sees
    * the end, and would drop requests it has read but not yet run.
    */
-  private static void awaitQuiet() {
-    lastOutput = System.nanoTime();
+  private static void awaitQuiet(Quiet quiet) {
+    quiet.lastOutput = System.nanoTime();
     try {
-      while (CALLS.get() > 0 || System.nanoTime() - lastOutput < QUIET_BEFORE_EXIT_NANOS) {
+      while (quiet.calls.get() > 0
+          || System.nanoTime() - quiet.lastOutput < QUIET_BEFORE_EXIT_NANOS) {
         Thread.sleep(50);
       }
     } catch (InterruptedException e) {
@@ -141,6 +148,11 @@ public final class Server {
 
   /** Serves {@code project} on {@code in} and {@code out} until the input closes. */
   public static McpSyncServer start(SourceProject project, InputStream in, OutputStream out) {
+    return start(project, in, out, new Quiet());
+  }
+
+  private static McpSyncServer start(
+      SourceProject project, InputStream in, OutputStream out, Quiet quiet) {
     McpJsonMapper json = McpJsonDefaults.getMapper();
     var spec =
         McpServer.sync(new StdioServerTransportProvider(json, in, out))
@@ -154,7 +166,7 @@ public final class Server {
                   new ToolAnnotations(null, def.readOnly(), false, def.readOnly(), false, null))
               .build(),
           (exchange, request) ->
-              answer(() -> Tools.call(def, project, request.arguments()).render()));
+              answer(quiet, () -> Tools.call(def, project, request.arguments()).render()));
     }
     return spec.build();
   }
@@ -167,11 +179,11 @@ public final class Server {
   /**
    * Runs {@code body}: its text, a refusal's reason, or an engine error, which is not a refusal.
    */
-  private static CallToolResult answer(Body body) {
-    CALLS.incrementAndGet();
+  private static CallToolResult answer(Quiet quiet, Body body) {
+    quiet.calls.incrementAndGet();
     try {
       String text;
-      synchronized (ONE_AT_A_TIME) {
+      synchronized (quiet.oneAtATime) {
         text = body.run();
       }
       return CallToolResult.builder().addTextContent(text).isError(false).build();
@@ -186,7 +198,7 @@ public final class Server {
           .isError(true)
           .build();
     } finally {
-      CALLS.decrementAndGet();
+      quiet.calls.decrementAndGet();
     }
   }
 }

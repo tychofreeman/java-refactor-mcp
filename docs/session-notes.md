@@ -152,6 +152,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `existingFile` (replace_text, any file). `Inspect` keeps "No Java file" (its
   wording is in a golden and two tests). `Signatures` now refuses a non-Java
   file by name, not as "not a Java file under a source root".
+- No static mutable state (roadmap #33 and #43, 2026-11-03): `Session` holds, per
+  `SourceProject`, the undo history and open call (`Journal`), the deferred flag
+  (`Gate.deferred`), the library index (`Imports`) and the last type check
+  (`TypeCheck`). `Server.Quiet` holds the call counter, the one-at-a-time lock and
+  the last output, per started server. Two project objects over one folder share
+  no undo history (`JournalTest.aProjectOpenedAgainHasNoHistory`).
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its

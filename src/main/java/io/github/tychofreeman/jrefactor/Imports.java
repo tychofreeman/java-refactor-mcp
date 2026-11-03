@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -305,10 +304,6 @@ final class Imports {
     return i < 0 ? text.length() : i + 1;
   }
 
-  /** Library class names by simple name, per classpath: the JDK's and the classpath's. */
-  private static final Map<List<String>, Map<String, List<String>>> LIBRARIES =
-      new ConcurrentHashMap<>();
-
   /** The classes named {@code name}, as fully qualified names, sorted, discouraged ones dropped. */
   private record Index(Map<String, List<String>> libraries, Map<String, List<String>> sources) {
     List<String> candidates(String name) {
@@ -338,16 +333,16 @@ final class Imports {
         || qualified.startsWith("jdk.");
   }
 
-  /** The index for {@code project}: libraries kept per classpath, sources read each time. */
+  /** The index for {@code project}: libraries kept for the session, sources read each time. */
   private static Index index(SourceProject project) throws IOException {
-    Map<String, List<String>> libraries = LIBRARIES.get(project.classpath());
+    Map<String, List<String>> libraries = project.session().libraries;
     if (libraries == null) {
       libraries = new HashMap<>();
       jdk(libraries);
       for (String entry : project.classpath()) {
         classpathEntry(Path.of(entry), libraries);
       }
-      LIBRARIES.put(project.classpath(), libraries);
+      project.session().libraries = libraries;
     }
     Map<String, List<String>> sources = new HashMap<>();
     for (Path source : project.javaFiles()) {

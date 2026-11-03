@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,11 +16,11 @@ class JournalTest {
   void undoRemovesAFileTheChangeCreatedAndThenEdited(@TempDir Path root) throws Exception {
     SourceProject project = SourceProject.of(root);
     Path file = root.resolve("notes.txt");
-    Journal.begin("batch");
+    Journal.begin(project, "batch");
     Files.writeString(file, "first");
-    Journal.wrote(file, null, "first");
+    Journal.wrote(project, file, null, "first");
     Files.writeString(file, "second");
-    Journal.wrote(file, "first", "second");
+    Journal.wrote(project, file, "first", "second");
     Journal.commit(project);
     Journal.undo(project);
     assertFalse(Files.exists(file));
@@ -41,5 +42,19 @@ class JournalTest {
         Journal.undo(project));
     assertEquals("package com.example;\n\npublic class Plant {}\n", Files.readString(plant));
     assertFalse(Files.exists(root.resolve("com/example/Herb.java")));
+  }
+
+  @Test
+  void aProjectOpenedAgainHasNoHistory(@TempDir Path root) throws Exception {
+    SourceProject first = SourceProject.of(root);
+    Path file = root.resolve("notes.txt");
+    Journal.begin(first, "batch");
+    Files.writeString(file, "x");
+    Journal.wrote(first, file, null, "x");
+    Journal.commit(first);
+
+    SourceProject second = SourceProject.of(root);
+    Refusal refusal = assertThrows(Refusal.class, () -> Journal.undo(second));
+    assertEquals("Nothing to undo in this session.", refusal.getMessage());
   }
 }

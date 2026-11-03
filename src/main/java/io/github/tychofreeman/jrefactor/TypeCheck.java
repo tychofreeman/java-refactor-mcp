@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.eclipse.jdt.core.compiler.IProblem;
 
 /**
@@ -21,13 +19,7 @@ final class TypeCheck {
   private TypeCheck() {}
 
   /** A count of errors, with the project and the text of every file it was made from. */
-  private record Counted(
-      SourceProject project, Map<Path, String> texts, Map<String, Integer> counts) {}
-
-  /** The last count {@link #errors} made. */
-  private static final AtomicReference<Counted> LAST = new AtomicReference<>();
-
-  private static final AtomicInteger PARSES = new AtomicInteger();
+  record Counted(SourceProject project, Map<Path, String> texts, Map<String, Integer> counts) {}
 
   /**
    * Compile errors in the project as it is on disk, counted per file and message. Keys are {@code
@@ -41,12 +33,12 @@ final class TypeCheck {
     for (Path file : files) {
       texts.put(file, Files.readString(file));
     }
-    Counted last = LAST.get();
+    Counted last = project.session().lastCount;
     if (last != null && last.project().equals(project) && last.texts().equals(texts)) {
       return new TreeMap<>(last.counts());
     }
     Map<String, Integer> counts = count(project, files);
-    LAST.set(new Counted(project, texts, new TreeMap<>(counts)));
+    project.session().lastCount = new Counted(project, texts, new TreeMap<>(counts));
     return counts;
   }
 
@@ -57,7 +49,7 @@ final class TypeCheck {
 
   private static Map<String, Integer> count(SourceProject project, List<Path> files) {
     Map<String, Integer> counts = new TreeMap<>();
-    PARSES.incrementAndGet();
+    project.session().parses++;
     Jdt.parseAll(
         project,
         files,
@@ -84,8 +76,8 @@ final class TypeCheck {
     return out;
   }
 
-  /** How many times {@link #errors} has parsed the project, for tests of the reuse. */
-  static int parses() {
-    return PARSES.get();
+  /** How many times {@link #errors} has parsed {@code project}, for tests of the reuse. */
+  static int parses(SourceProject project) {
+    return project.session().parses;
   }
 }

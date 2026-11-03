@@ -3,14 +3,12 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * What each top-level call wrote, per project: the text of each file before and after, so {@code
@@ -22,8 +20,8 @@ final class Journal {
 
   /** Undoes the last change in {@code project}; says what it undid and which files it restored. */
   static String undo(SourceProject project) throws Exception {
-    Deque<Entry> done = DONE.get(project.root());
-    if (done == null || done.isEmpty()) {
+    Deque<Entry> done = project.session().done;
+    if (done.isEmpty()) {
       throw new Refusal("Nothing to undo in this session.");
     }
     Entry last = done.peek();
@@ -59,7 +57,7 @@ final class Journal {
   record Entry(String what, Map<Path, String> before, Map<Path, String> after) {}
 
   /** The change being made by the call that is running, and how deep calls are nested in it. */
-  private static final class Open {
+  static final class Open {
     final String what;
     final Map<Path, String> before = new LinkedHashMap<>();
     final Map<Path, String> after = new LinkedHashMap<>();
@@ -70,23 +68,18 @@ final class Journal {
     }
   }
 
-  private static final Map<Path, Deque<Entry>> DONE = new ConcurrentHashMap<>();
-
-  private static final ThreadLocal<Open> OPEN = new ThreadLocal<>();
-
   /** Starts a call; a call inside another (a batch's step) joins the outer one's change. */
-  static void begin(String what) {
-    Open open = OPEN.get();
-    if (open == null) {
-      open = new Open(what);
-      OPEN.set(open);
+  static void begin(SourceProject project, String what) {
+    Session session = project.session();
+    if (session.open == null) {
+      session.open = new Open(what);
     }
-    open.depth++;
+    session.open.depth++;
   }
 
   /** Records that the running call wrote {@code file}; nothing is recorded outside a call. */
-  static void wrote(Path file, String before, String after) {
-    Open open = OPEN.get();
+  static void wrote(SourceProject project, Path file, String before, String after) {
+    Open open = project.session().open;
     if (open != null) {
       if (!open.before.containsKey(file)) {
         open.before.put(file, before); // putIfAbsent would replace a null: a new file
@@ -96,31 +89,32 @@ final class Journal {
   }
 
   /** The files the running call has written, with their text before it (null for a new file). */
-  static Map<Path, String> written() {
-    Open open = OPEN.get();
+  static Map<Path, String> written(SourceProject project) {
+    Open open = project.session().open;
     return open == null ? new LinkedHashMap<>() : new LinkedHashMap<>(open.before);
   }
 
   /** Ends a call that succeeded; the outermost one becomes the change {@code undo} reverts. */
   static void commit(SourceProject project) {
-    Open open = OPEN.get();
+    Session session = project.session();
+    Open open = session.open;
     if (--open.depth > 0) {
       return;
     }
-    OPEN.remove();
+    session.open = null;
     if (!open.after.isEmpty()) {
-      DONE.computeIfAbsent(project.root(), k -> new ArrayDeque<>())
-          .push(new Entry(open.what, open.before, open.after));
+      session.done.push(new Entry(open.what, open.before, open.after));
     }
   }
 
   /** Ends a call that failed; the outermost one puts back every file the change wrote. */
-  static void abort() throws IOException {
-    Open open = OPEN.get();
+  static void abort(SourceProject project) throws IOException {
+    Session session = project.session();
+    Open open = session.open;
     if (open == null || --open.depth > 0) {
       return;
     }
-    OPEN.remove();
+    session.open = null;
     restore(open.before);
   }
 
