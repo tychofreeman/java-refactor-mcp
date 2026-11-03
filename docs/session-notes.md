@@ -130,6 +130,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   write case is undone by `undo` and must return to `in/`, and the cached type
   count must equal `TypeCheck.uncached`. All 51 write cases passed on the first
   run, so no journaling gap exists in the golden set; the check guards future ones.
+- `create_file` fixes imports (roadmap #35, 2026-11-03): a new Java file goes through
+  `Edits.write` like the other edits, so `Imports.fix` runs before the gate and
+  `List<String>` gets its import, not a project stub `List`. The result gains
+  "; imported ..." when it imports a name (`create_file_java_imports`).
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
