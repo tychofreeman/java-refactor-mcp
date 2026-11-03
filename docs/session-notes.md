@@ -29,6 +29,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Extraction`, the nested class of `Extract`, is its own file (roadmap order 25,
+  2026-11-03, `docs/sessions/split-extract.md`). Its helpers in `Extract` are
+  package-private for it. `Signatures`, `Declarations` and `Tools` are still whole;
+  split them when a change needs it.
 - Signature tools parse only the files that can hold the method (roadmap
   order 44, 2026-11-03): `Signatures.Family.of` reads every file's text and parses
   only those containing the method's simple name. A family member and a call of
