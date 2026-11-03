@@ -117,6 +117,15 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   was meant. A Haiku probe started from `this.price = price`, was refused,
   and passed `Item.price` (5 turns, $0.0037). `RenameLocal` became `Rename`
   through the new type rename, sent over stdin to the branch's jar.
+- Gate cost (roadmap #10, 2026-11-03): parsing file by file, each with a
+  fresh JDT environment, cost 21.8 s per edit on Commons Math (990 files).
+  `Jdt.parseAll` (`ASTParser.createASTs`) parses a set in one environment;
+  `TypeCheck.errors` reuses the last count while every file's text is the
+  same. One edit there is now about 2.1 s, `add_parameter` 4.1 s (was 15.0),
+  a field rename in 10 files 2.4 s. Measure with the opt-in `GateCostTest`:
+  `-Djrefactor.cost.root=<dir>`, and `-Djrefactor.cost.call='{"tool": ...,
+  "args": {...}}'` for one call and its undo. The projects were Maven Central
+  sources jars unpacked into the scratchpad (JDK-only, so no build runs).
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
@@ -135,7 +144,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   so a session started before `.claude/settings.json` existed has no log.
 - `gh pr checks` right after `gh pr create` can say "no checks reported"
   before CI registers, and `--watch` then returns at once: #22 was merged
-  that way before its run (which passed). Wait for the run to appear.
+  that way before its run (which passed). Wait for the run to appear. A PR
+  that conflicts with `main` gets no run at all (#29, while other sessions
+  merged #25-#28): check `gh pr view N --json mergeable` when none appears.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

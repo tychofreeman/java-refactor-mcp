@@ -116,6 +116,7 @@ item is done, change its status here and in `docs/session-notes.md`.
 | 6 | Wire `rename_local` into the server, same refusal wording | Addressed by name as in gorefactor's `rename`; record in `docs/sessions/rename-local-tool.md` |
 | 13 | Build this project through its own tools: `.mcp.json` running this checkout | `bin/jrefactor-mcp`; record in `docs/sessions/mcp-json-self.md` |
 | 9 | Field, method and type rename across files, Javadoc included: one `rename` replacing `rename_local` (the user's choice of 2026-11-03 over a second tool or widening `rename_local`); a name with two meanings on the line is refused and picked by `Counter.count`, `local count` or column (the user's choice over "the local wins") | Record in `docs/sessions/rename-across-files.md` |
+| 10 | Measure gate cost on a large project; cache the reparse | Commons Math (990 files): one edit 21.8 s to 2.1 s, `add_parameter` 15.0 s to 4.1 s, by one batch parse (`Jdt.parseAll`) and reusing the last count while no file changed. Opt-in `GateCostTest`; record in `docs/sessions/gate-cost.md` |
 | 24 | Results that do not echo what the model sent; locations, not diffs | Audit found no result that repeats input or a diff; the largest result is the stub list (follow-up). Record in `docs/sessions/results-without-echo.md` |
 
 ### Open, in order
@@ -133,8 +134,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 6 | 22 | Signature changes: `add_parameter`, `remove_parameter`, `move_parameter`, across overrides and interface implementations | Done | gorefactor roadmap item 1, "the most common by-hand step"; "2026-10-20: signature tools change interface families". This repo's log names `add_parameter` (2026-11-02) |
 | 7 | 23 | `extract_function` (Java: `extract_method`): at most one result (the user chose refusing two over a record, 2026-11-03); static exactly when the enclosing member is (chosen over "when it can be") | Done | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
 | 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records (`bin/session-log`, `bin/session-report`; the hook in Java from the jar, the user's choice of 2026-11-03 over shell and jq; tokens not yet) | Done | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
-| 11 | 10 | Measure gate cost on a large project; cache or narrow the reparse | Next | First point (2026-11-02): a `rename_local` on 390 files took about 5 s. In gorefactor, reloads that stopped compiling the module took a 13-step batch from 546 s to 21 s |
-| 12 | 14 | Golden cases also undo each applied step and compare with `in/`; incremental state compared with a fresh load | Planned | After 8; in gorefactor this caught reloader bugs |
+| 12 | 14 | Golden cases also undo each applied step and compare with `in/`; incremental state compared with a fresh load | Next | After 8; in gorefactor this caught reloader bugs |
 | 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed |
 | 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
 | 15 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | gorefactor's tool budget |
@@ -196,5 +196,8 @@ From a survey of gorefactor's `docs/friction-log.md` (434 entries, 15 Oct to
 Edits are written to disk, the whole project is parsed again, and the new
 compile errors are compared with the old ones by file and message (not line,
 so moving code does not count). Any new error means the file is restored and the
-edit refused. The gate reparses every file on each call, which is slow on large
-projects; that is accepted until measured.
+edit refused. The gate parses every file in one batch (`Jdt.parseAll`, one JDT
+environment for the whole set), and reuses the last count when every file's
+text is what it saw, so an edit's count after is the next edit's count before.
+On Commons Math (990 files, 224k lines) one edit costs about 2 s (roadmap #10).
+Narrowing the check to the files that depend on the edited ones is not built.

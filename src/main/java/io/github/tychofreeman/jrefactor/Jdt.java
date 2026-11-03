@@ -1,10 +1,14 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.FileASTRequestor;
 
 /**
  * Headless JDT Core parsing with bindings resolved. No workspace, no OSGi runtime. Validated by
@@ -32,7 +36,57 @@ final class Jdt {
    * resolve from the project's source path; library types resolve only from the project's
    * classpath. Problems are recovered, not thrown.
    */
-  static CompilationUnit parse(SourceProject project, java.nio.file.Path file, String source) {
+  static CompilationUnit parse(SourceProject project, Path file, String source) {
+    ASTParser parser = parser(project);
+    parser.setKind(ASTParser.K_COMPILATION_UNIT);
+    parser.setSource(source.toCharArray());
+    parser.setUnitName(project.relative(file));
+    return (CompilationUnit) parser.createAST(null);
+  }
+
+  /**
+   * Parses {@code files} of {@code project} as they are on disk, in one batch that shares one
+   * environment, and hands each unit to {@code each} as it is done. The same units as {@link
+   * #parse} of each file, many times faster on a large project: each type is resolved once, not
+   * once per file that uses it.
+   */
+  static void parseAll(
+      SourceProject project, List<Path> files, BiConsumer<Path, CompilationUnit> each) {
+    String[] paths = files.stream().map(Path::toString).toArray(String[]::new);
+    String[] encodings = new String[paths.length];
+    java.util.Arrays.fill(encodings, "UTF-8");
+    parser(project)
+        .createASTs(
+            paths,
+            encodings,
+            new String[0],
+            new FileASTRequestor() {
+              @Override
+              public void acceptAST(String sourceFilePath, CompilationUnit ast) {
+                each.accept(Path.of(sourceFilePath), ast);
+              }
+            },
+            null);
+  }
+
+  /**
+   * Each of {@code files} parsed as {@link #parseAll(SourceProject, List, BiConsumer)} does, in
+   * their order.
+   */
+  static Map<Path, CompilationUnit> parseAll(SourceProject project, List<Path> files) {
+    Map<Path, CompilationUnit> parsed = new java.util.HashMap<>();
+    parseAll(project, files, parsed::put);
+    Map<Path, CompilationUnit> ordered = new java.util.LinkedHashMap<>();
+    for (Path file : files) {
+      ordered.put(file, parsed.get(file));
+    }
+    return ordered;
+  }
+
+  /**
+   * A parser for Java 21 that resolves bindings against the project's source path and classpath.
+   */
+  private static ASTParser parser(SourceProject project) {
     Map<String, String> options = JavaCore.getOptions();
     JavaCore.setComplianceOptions(SOURCE_LEVEL, options);
     options.put(JavaCore.COMPILER_SOURCE, SOURCE_LEVEL);
@@ -40,17 +94,13 @@ final class Jdt {
     options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, SOURCE_LEVEL);
 
     ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-    parser.setKind(ASTParser.K_COMPILATION_UNIT);
-    parser.setSource(source.toCharArray());
-    parser.setUnitName(project.relative(file));
     parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);
     parser.setCompilerOptions(options);
-    String[] sourcepath =
-        project.sourceRoots().stream().map(java.nio.file.Path::toString).toArray(String[]::new);
+    String[] sourcepath = project.sourceRoots().stream().map(Path::toString).toArray(String[]::new);
     String[] encodings = new String[sourcepath.length];
     java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws
     parser.setEnvironment(project.classpath().toArray(String[]::new), sourcepath, encodings, true);
-    return (CompilationUnit) parser.createAST(null);
+    return parser;
   }
 }

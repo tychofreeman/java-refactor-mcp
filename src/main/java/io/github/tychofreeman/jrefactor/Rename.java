@@ -383,6 +383,18 @@ public final class Rename {
         + items.get(items.size() - 1);
   }
 
+  /** The texts of the project's files that hold {@code name}, in file order. */
+  private static Map<Path, String> holding(SourceProject project, String name) throws IOException {
+    Map<Path, String> texts = new LinkedHashMap<>();
+    for (Path f : project.javaFiles()) {
+      String text = Files.readString(f);
+      if (text.contains(name)) {
+        texts.put(f, text);
+      }
+    }
+    return texts;
+  }
+
   /**
    * Renames a field and every use of it in the project, Javadoc references included. Refuses a new
    * name the type already has as a field, and one a local of that name would hide at an unqualified
@@ -403,12 +415,11 @@ public final class Rename {
     Map<Path, String> texts = new java.util.TreeMap<>();
     Map<String, List<Integer>> lines = new java.util.TreeMap<>();
     int occurrences = 0;
-    for (Path f : project.javaFiles()) {
-      String text = Files.readString(f);
-      if (!text.contains(oldName)) {
-        continue;
-      }
-      CompilationUnit unit = Jdt.parse(project, f, text);
+    Map<Path, String> held = holding(project, oldName);
+    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(held.keySet()));
+    for (Path f : held.keySet()) {
+      String text = held.get(f);
+      CompilationUnit unit = parsed.get(f);
       for (String clashKey : clashKeys) {
         ASTNode clash = unit.findDeclaringNode(clashKey);
         if (clash != null) {
@@ -480,15 +491,8 @@ public final class Rename {
   private static Tools.Outcome renameMethod(
       SourceProject project, IMethodBinding method, String newName) throws IOException {
     String oldName = method.getName();
-    Map<Path, String> texts = new LinkedHashMap<>();
-    Map<Path, CompilationUnit> units = new LinkedHashMap<>();
-    for (Path f : project.javaFiles()) {
-      String text = Files.readString(f);
-      if (text.contains(oldName)) {
-        texts.put(f, text);
-        units.put(f, Jdt.parse(project, f, text));
-      }
-    }
+    Map<Path, String> texts = holding(project, oldName);
+    Map<Path, CompilationUnit> units = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
     Set<String> keys =
         Signatures.family(project, units.values(), method, "so it cannot be renamed.");
 
@@ -579,12 +583,11 @@ public final class Rename {
     Map<Path, String> changed = new TreeMap<>();
     Map<String, List<Integer>> lines = new TreeMap<>();
     int occurrences = 0;
-    for (Path f : project.javaFiles()) {
-      String text = Files.readString(f);
-      if (!text.contains(oldName)) {
-        continue;
-      }
-      CompilationUnit unit = Jdt.parse(project, f, text);
+    Map<Path, String> held = holding(project, oldName);
+    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(held.keySet()));
+    for (Path f : held.keySet()) {
+      String text = held.get(f);
+      CompilationUnit unit = parsed.get(f);
       List<SimpleName> uses = new ArrayList<>();
       unit.accept(
           new ASTVisitor(true) {

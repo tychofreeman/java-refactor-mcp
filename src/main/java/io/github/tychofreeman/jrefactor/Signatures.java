@@ -218,9 +218,10 @@ final class Signatures {
         throw new Refusal("No file " + rel + " in the project.");
       }
       Map<Path, Source> sources = new LinkedHashMap<>();
-      for (Path f : project.javaFiles()) {
-        String text = Files.readString(f);
-        sources.put(f, new Source(f, project.relative(f), text, Jdt.parse(project, f, text)));
+      List<Path> files = project.javaFiles();
+      Map<Path, CompilationUnit> units = Jdt.parseAll(project, files);
+      for (Path f : files) {
+        sources.put(f, new Source(f, project.relative(f), Files.readString(f), units.get(f)));
       }
       Source home = sources.get(path);
       if (home == null) {
