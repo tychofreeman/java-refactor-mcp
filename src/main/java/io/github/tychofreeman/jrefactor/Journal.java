@@ -93,6 +93,12 @@ final class Journal {
     }
   }
 
+  /** The files the running call has written, with their text before it (null for a new file). */
+  static Map<Path, String> written() {
+    Open open = OPEN.get();
+    return open == null ? new LinkedHashMap<>() : new LinkedHashMap<>(open.before);
+  }
+
   /** Ends a call that succeeded; the outermost one becomes the change {@code undo} reverts. */
   static void commit(SourceProject project) {
     Open open = OPEN.get();

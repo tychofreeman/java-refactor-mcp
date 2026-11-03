@@ -90,8 +90,9 @@ final class Tools {
           Create a new file, Java or not (a test, a fixture, a doc), with any missing directories: \
           an edit.
           A .java file must parse and declare the package its directory implies under a source \
-          root, and the project must type-check no worse after: a file that uses what nothing \
-          declares yet is refused, so add that first.
+          root, and the project must type-check no worse after. Methods, constructors and \
+          classes of the project it uses that nothing declares are declared as stubs (a test \
+          written first compiles); other new errors are refused.
           The file must not exist, unless overwrite is set to replace all of it.\
           """,
           """
@@ -117,7 +118,8 @@ final class Tools {
           literals, comments, a few lines of code, and files that are not Java (pom.xml, \
           fixtures, docs).
           old must be as in the file and occur once, or set all_occurrences. In a .java file the \
-          project must type-check no worse after, or nothing changes. Imports the new text needs \
+          project must type-check no worse after, or nothing changes; what it calls that nothing \
+          declares is declared as stubs, as by add_declaration. Imports the new text needs \
           are added and those it leaves unused removed; imports chooses an ambiguous name.\
           """,
           """
@@ -150,6 +152,9 @@ final class Tools {
           A method with the same name and parameter types whose body is only \
           throw new UnsupportedOperationException("not implemented") is a stub, and is replaced \
           rather than added again.
+          Methods, constructors and classes of the project the members use that nothing declares \
+          are declared as such stubs, typed from the use; the result names them ("declared \
+          stubs"). Write a test first and call what does not exist yet.
           Imports the members need are added, and those they no longer use are removed; when a \
           name could be several classes, the call is refused with them, and imports chooses.\
           """,
@@ -304,10 +309,11 @@ final class Tools {
     args.check(def.args());
     Journal.begin(def.name());
     try {
-      String text = def.handler().run(project, args);
+      String text = def.handler().run(project, args) + Stubs.said();
       Journal.commit(project);
       return text;
     } catch (Exception | Error e) {
+      Stubs.said();
       Journal.abort();
       throw e;
     }

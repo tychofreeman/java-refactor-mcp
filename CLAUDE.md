@@ -19,7 +19,8 @@ about 95% of coding through the tools, this project's own code included.
 Current state: early. The MCP server (`Server`, STDIO; tools defined in
 `Tools`) exposes `inspect` (read-only), `rename_local`, and four edits:
 `create_file`, `replace_text`, `add_declaration`, `replace_declaration`; `batch`
-and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`)
+and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`),
+which first declares stubs for what the change uses and nothing declares (`Stubs`),
 and is recorded in `Journal`. Check the roadmap and open questions in
 `docs/design.md` before starting work.
 
@@ -29,8 +30,8 @@ TDD, in this order; refactor only while every test passes:
 1. Green: make the change easy. If the change would be hard, refactor first,
    before writing the test, until it is small and local.
 2. Red: write the next test (a golden case, or a unit test) and see it fail.
-   If the test needs code that does not exist, add a compiling stub first, so
-   the build and the gate still run.
+   If the test needs code that does not exist, it needs a compiling stub, so
+   the build and the gate still run; the edit tools declare one for you.
 3. Green: make it pass with the least code, even code that duplicates what is
    there.
 4. Green: refactor, removing that duplication and shaping the code for the
@@ -109,7 +110,10 @@ checked out, a branch's build included.
    `replace_declaration` for a whole method, field or type by name (empty
    content deletes), `replace_text` for a few lines, literals, comments and
    non-Java files. Imports are added and removed for you; pass `imports` when a
-   refusal says a name is ambiguous.
+   refusal says a name is ambiguous. Test first: write the test with
+   `add_declaration` or `create_file`; the project's methods, constructors and
+   classes it calls that nothing declares get "not implemented" stubs, typed
+   from the use, and `add_declaration` of the real one replaces the stub.
 5. **Plan from one read, send one batch.** Dependent steps (a signature, then
    its callers) go in one `batch` with check `"end"`; lines as you read them
    before the batch. `undo` reverts the last call or batch.

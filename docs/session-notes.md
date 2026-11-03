@@ -77,6 +77,16 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   is not type-checked while the type of the call around it is unresolved, so
   `Imports.fix` parses again with the imports found so far until no more turn
   up (`imports_in_lambda`).
+- Edits declare stubs (roadmap #21, 2026-11-02): `Stubs.declare` runs inside
+  `Gate.apply` and `Batch`'s end check, before a refusal, for methods,
+  constructors and classes of the project that nothing declares. The user chose
+  automatic stubs only, over a `create_from_usage` tool alone or both: a tool
+  waits for evidence that inference picks the wrong place. A member the edit
+  removed is not declared again (deleting a used method is still refused). A
+  Haiku probe wrote a test first in one `add_declaration` and got `int total()`
+  from `total() == 0` (8 turns, $0.0055). The index of class names includes
+  JDT's internal compiler AST (`org.eclipse.jdt.internal.compiler.ast`), so most
+  `org.eclipse.jdt.core.dom` names are ambiguous; pass `imports`.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

@@ -55,13 +55,11 @@ final class Gate {
         Files.createDirectories(change.getKey().getParent());
         Files.writeString(change.getKey(), change.getValue());
       }
-      List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
+      List<String> introduced = Stubs.declare(project, before, old);
       if (!introduced.isEmpty()) {
         restore(old);
       } else {
-        for (Map.Entry<Path, String> change : texts.entrySet()) {
-          Journal.wrote(change.getKey(), old.get(change.getKey()), change.getValue());
-        }
+        journal(old);
       }
       return introduced;
     } catch (IOException | RuntimeException e) {
@@ -95,13 +93,20 @@ final class Gate {
     Journal.wrote(file, before, text);
   }
 
-  private static void restore(Map<Path, String> old) throws IOException {
+  static void restore(Map<Path, String> old) throws IOException {
     for (Map.Entry<Path, String> file : old.entrySet()) {
       if (file.getValue() == null) {
         Files.deleteIfExists(file.getKey());
       } else {
         Files.writeString(file.getKey(), file.getValue());
       }
+    }
+  }
+
+  /** Records each file in {@code old} as written: from its old text to what it holds now. */
+  static void journal(Map<Path, String> old) throws IOException {
+    for (Map.Entry<Path, String> file : old.entrySet()) {
+      Journal.wrote(file.getKey(), file.getValue(), Files.readString(file.getKey()));
     }
   }
 }

@@ -140,3 +140,25 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     Worked around with an indented field in the fixture.
 - Cost: not measured (roadmap #18).
 - Idea: with no indentation in the file, take the step from the content.
+
+## 2026-11-02: stubs from usage, through the tools
+- Task: roadmap #21 (`docs/sessions/stubs-from-usage.md`).
+- Tool: every change through java-refactor-mcp; no hand edits.
+- What happened:
+  - `imports` sent at the top of a `batch` instead of on the step: refused
+    ("batch does not take imports"), which was right.
+  - A 25 KB `replace_text` resent twice: first because `spotless:apply` had
+    reformatted the text I copied as `old` from my own earlier write, then
+    because `ConditionalExpression` was ambiguous with
+    `org.eclipse.jdt.internal.compiler.ast`. Most `org.eclipse.jdt.core.dom`
+    names are; I passed 44 names in `imports`. A refusal that listed every
+    ambiguous name at once would have saved one resend; discouraging
+    `.internal.` packages would have saved both.
+  - The indentation default of 4 in a file with nothing indented (logged with
+    the lambda fix) is fixed here: the step comes from the content.
+  - Probe: once Haiku undid the stubs, reading "do not implement them" as "do
+    not add them"; once it could not find the files (there is no listing tool,
+    and it guessed Maven paths); with paths given, one `add_declaration`.
+- Cost: not measured (roadmap #18).
+- Idea: discourage `.internal.` packages in the import index; name every
+  ambiguous name in one refusal; a way to list the project's Java files.

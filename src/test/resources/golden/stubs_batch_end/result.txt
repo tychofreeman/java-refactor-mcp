@@ -1,0 +1,3 @@
+batch of 1 steps:
+1. created com/example/CartTest.java (7 lines)
+checked at the end: no new compile errors; declared stubs Cart.total() in com/example/Cart.java

@@ -1,0 +1,1 @@
+added baskets() to CartTest in com/example/CartTest.java, lines 8-13; declared stubs Cart(int) in com/example/Cart.java; class Basket, Basket(Cart), Basket.count() in com/example/Basket.java; CartTest.check(long) in com/example/CartTest.java

@@ -1,0 +1,9 @@
+[
+  {
+    "tool": "create_file",
+    "args": {
+      "file": "com/example/CartTest.java",
+      "content": "package com.example;\n\nclass CartTest {\n  boolean total() {\n    return new Cart().total() == 0;\n  }\n}\n"
+    }
+  }
+]

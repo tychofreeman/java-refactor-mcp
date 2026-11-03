@@ -38,6 +38,12 @@ final class Declarations {
   private record Change(
       int start, int end, String text, int blockAt, int blockLength, String said) {}
 
+  /**
+   * Members added to a file's text: the new text, each change, where each change's block starts in
+   * it, and the type they went to ("Cart in com/example/Cart.java").
+   */
+  record Planned(String text, List<Change> changes, List<Integer> blockStarts, String where) {}
+
   static String add(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String content = args.required("content");
@@ -48,10 +54,39 @@ final class Declarations {
     }
     Path path = javaFile(project, rel);
     String text = Files.readString(path);
+    Planned planned = plan(text, rel, args.string("type"), content, after, before);
+
+    Imports.Fixed fixed = Imports.fix(project, path, text, planned.text(), args.list("imports"));
+    Gate.applyOrRefuse(
+        project,
+        Map.of(path, fixed.text()),
+        "adding to " + planned.where(),
+        "Declare what the new members use first.");
+    List<String> said = new ArrayList<>();
+    for (int i = 0; i < planned.changes().size(); i++) {
+      Change c = planned.changes().get(i);
+      said.add(
+          c.said()
+              + ", "
+              + range(
+                  planned.text(),
+                  planned.blockStarts().get(i),
+                  c.blockLength(),
+                  fixed.lineShift()));
+    }
+    return String.join("; ", said) + fixed.said();
+  }
+
+  /**
+   * {@code text}, the file {@code rel}, with {@code content}'s members added to {@code type}: at
+   * its end, or after or before the member named. Stubs among them are replaced instead.
+   */
+  static Planned plan(
+      String text, String rel, String type, String content, String after, String before) {
     CompilationUnit unit = Edits.parses(text, rel);
-    Owner owner = owner(unit, args.string("type"), rel);
+    Owner owner = owner(unit, type, rel);
     List<BodyDeclaration> added = members(content);
-    String indent = memberIndent(text, owner.decl());
+    String indent = memberIndent(text, owner.decl(), content);
 
     String where = owner.label() + " in " + rel;
     List<Change> changes = new ArrayList<>();
@@ -106,20 +141,7 @@ final class Declarations {
       from = c.end();
     }
     out.append(text, from, text.length());
-
-    Imports.Fixed fixed = Imports.fix(project, path, text, out.toString(), args.list("imports"));
-    Gate.applyOrRefuse(
-        project,
-        Map.of(path, fixed.text()),
-        "adding to " + where,
-        "Declare what the new members use first.");
-    List<String> said = new ArrayList<>();
-    for (int i = 0; i < changes.size(); i++) {
-      Change c = changes.get(i);
-      said.add(
-          c.said() + ", " + range(out, blockStarts.get(i), c.blockLength(), fixed.lineShift()));
-    }
-    return String.join("; ", said) + fixed.said();
+    return new Planned(out.toString(), changes, blockStarts, where);
   }
 
   static String replace(SourceProject project, Args args) throws Exception {
@@ -494,8 +516,11 @@ final class Declarations {
     return line.length() - line.stripLeading().length();
   }
 
-  /** The indentation of {@code type}'s members: that of its first member, else one step in. */
-  private static String memberIndent(String text, AbstractTypeDeclaration type) {
+  /**
+   * The indentation of {@code type}'s members: that of its first member, else one step in. The step
+   * is the file's, else that of the {@code content} being added, else 4.
+   */
+  private static String memberIndent(String text, AbstractTypeDeclaration type, String content) {
     if (!type.bodyDeclarations().isEmpty()) {
       BodyDeclaration first = (BodyDeclaration) type.bodyDeclarations().get(0);
       int at = lineStart(text, first.getStartPosition());
@@ -506,7 +531,8 @@ final class Declarations {
     }
     int at = lineStart(text, type.getStartPosition());
     String typeIndent = text.substring(at, at + leading(text, at));
-    return typeIndent + " ".repeat(step(text));
+    int step = step(text) > 0 ? step(text) : step(content) > 0 ? step(content) : 4;
+    return typeIndent + " ".repeat(step);
   }
 
   private static int leading(String text, int at) {
@@ -517,7 +543,7 @@ final class Declarations {
     return n;
   }
 
-  /** The file's indentation step: its smallest nonzero indentation, else 4. */
+  /** The smallest nonzero indentation in {@code text}, or 0 when nothing is indented. */
   private static int step(String text) {
     int step = Integer.MAX_VALUE;
     for (String line : text.split("\n")) {
@@ -526,7 +552,7 @@ final class Declarations {
         step = Math.min(step, n);
       }
     }
-    return step == Integer.MAX_VALUE ? 4 : step;
+    return step == Integer.MAX_VALUE ? 0 : step;
   }
 
   private static Path javaFile(SourceProject project, String rel) {

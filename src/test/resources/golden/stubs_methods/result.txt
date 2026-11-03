@@ -1,0 +1,1 @@
+added totals() to CartTest in com/example/CartTest.java, lines 8-18; declared stubs Cart.add(String, int), Cart.total(), Cart.isEmpty(), Cart.size(), Cart.empty() in com/example/Cart.java
