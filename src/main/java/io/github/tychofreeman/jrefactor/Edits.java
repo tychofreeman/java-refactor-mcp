@@ -40,22 +40,28 @@ final class Edits {
                 + (expected.isEmpty() ? "(the default package)" : expected)
                 + ". Change the package line, or the file's path.");
       }
-      stubs =
-          Gate.applyOrRefuse(
-              project,
-              Map.of(path, content),
-              (exists ? "replacing " : "creating ") + rel,
-              "Declare what it uses first (add_declaration or create_file), then create it.");
-    } else {
-      Gate.write(path, content);
     }
+    Written written =
+        write(
+            project,
+            path,
+            rel,
+            exists ? Files.readString(path) : "",
+            content,
+            args.list("imports"),
+            (exists ? "replacing " : "creating ") + rel,
+            "Declare what it uses first (add_declaration or create_file), then create it.");
+    Imports.Fixed fixed = written.fixed();
+    stubs = written.declared();
+    content = fixed.text();
     long lines = content.lines().count();
     return new Tools.Outcome(
         (exists ? "replaced " : "created ")
             + rel
             + " ("
             + lines
-            + (lines == 1 ? " line)" : " lines)"),
+            + (lines == 1 ? " line)" : " lines)")
+            + fixed.said(),
         stubs);
   }
 
@@ -115,7 +121,8 @@ final class Edits {
             text,
             out.toString(),
             args.list("imports"),
-            "replacing old in " + rel);
+            "replacing old in " + rel,
+            "Nothing was changed; adjust and retry.");
     Imports.Fixed fixed = written.fixed();
     List<String> ranges = new ArrayList<>();
     for (int[] span : spans) {
@@ -158,7 +165,8 @@ final class Edits {
       String before,
       String text,
       List<String> chosen,
-      String what)
+      String what,
+      String fix)
       throws Exception {
     if (!rel.endsWith(".java")) {
       Gate.write(path, text);
@@ -166,9 +174,7 @@ final class Edits {
     }
     parses(text, "the result");
     Imports.Fixed fixed = Imports.fix(project, path, before, text, chosen);
-    Stubs.Declared declared =
-        Gate.applyOrRefuse(
-            project, Map.of(path, fixed.text()), what, "Nothing was changed; adjust and retry.");
+    Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
     return new Written(fixed, declared);
   }
 
