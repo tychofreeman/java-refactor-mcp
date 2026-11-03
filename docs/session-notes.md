@@ -95,6 +95,15 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   (`getMethodDeclaration().getKey()`). A Haiku probe added a parameter to an
   interface method, two implementations and two calls in one call (10 turns,
   $0.004).
+- Extract method exists (roadmap #23, 2026-11-03): `extract_method` in
+  `Extract`, Java's name for `extract_function`. The user chose refusing two
+  or more results over returning a record, and static exactly when the
+  enclosing member is over "whenever it can be". The tool was registered first
+  with a handler class that did not exist, and #19's stubs declared it. A
+  Haiku probe did an extraction in one call (6 turns, $0.004).
+- Pull up / push down (roadmap #25) was added at the user's request
+  (2026-11-03), with a note that gorefactor and the TypeScript port may want
+  the same; it waits for friction evidence.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

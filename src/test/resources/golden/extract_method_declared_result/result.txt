@@ -1,0 +1,1 @@
+extracted lines 9-12 of com/example/Report.java into sum(List<Integer> values), returning total, at lines 14-20; the call is line 9

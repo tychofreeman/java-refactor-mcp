@@ -1,0 +1,1 @@
+lines 10-11 cut the statement at lines 10-12; select whole statements of one block. There: line 9, lines 10-12, line 13, line 14

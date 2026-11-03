@@ -29,7 +29,8 @@ implemented or being implemented.
 | Multi-step | `batch` |
 
 Java names may differ where the Java language needs it (for example, `add_field`
-on a class, or `add_case` for a `switch`). Record any difference in this file.
+on a class, or `add_case` for a `switch`). Record any difference in this file:
+`rename_local` (a narrower `rename`), `extract_method` (`extract_function`).
 
 ## `inspect` (built)
 
@@ -160,6 +161,38 @@ edits overlap.
 
 Result: `added int capacity to Cart.Cart(String) in 1 declaration and 3 calls
 (a.java, b.java)`, then any import notes per file.
+
+## `extract_method` (built)
+
+Java's name for gorefactor's `extract_function` (roadmap #23).
+
+- Arguments: `file`, `start_line`, `end_line` (inclusive), `name`, optional
+  `doc` (Javadoc text without `/** */`). Blank lines at either end of the range
+  are dropped.
+- The lines cover whole statements of one statement list (a body, a `{}`
+  block, a `case`, a lambda's block); comments and blank lines may be in the
+  range. The list is the outermost one the range falls in.
+- The new method is private, after the member the statements are in (in the
+  same type, an anonymous class's included), static exactly when that member
+  is. Its parameters are the locals declared outside the statements that they
+  use, in order of first use, typed from their bindings. Its result is the one
+  local the statements declare, or assign, that later code uses (or that they
+  assign inside a loop it outlives); the call is `T x = m(...)` or
+  `x = m(...)`. It declares the checked exceptions the statements throw and do
+  not catch, and the enclosing method's type parameters.
+- `return`: in a method with a result, the call is `return m(...)` and the
+  statements must return on every path; in a void method, only statements
+  that end the body.
+- The text moves, comments included, re-indented (text blocks as they are).
+- Refused: a range that cuts a statement (with the statement lines of that
+  list), no statements, not in a body, two or more results (named), a return
+  and a result, a `break`/`continue`/`yield` whose target is outside, a return
+  on some paths only, a return mid-way through a void method (with the range to
+  the end of the body), `this(...)`/`super(...)`, a name a method of the type
+  or a supertype has; then the gate.
+- Result: `extracted lines 9-12 of a/B.java into sum(List<Integer> values),
+  returning total, at lines 14-20; the call is line 9`, a note past five
+  parameters, then import notes.
 
 ## `batch` (built)
 

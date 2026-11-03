@@ -300,6 +300,40 @@ final class Tools {
           false,
           (project, args) -> Signatures.moveParameter(project, args));
 
+  static final Def EXTRACT_METHOD =
+      new Def(
+          "extract_method",
+          """
+          Move whole statements into a new private method, declared after the one they are in, \
+          and call it in their place: lines 9-12 of print, which sum values into total, become \
+          int total = sum(values); and a method int sum(List<Integer> values). Behavior is \
+          unchanged.
+          start_line and end_line (inclusive, as inspect numbers them) cover whole statements \
+          of one block; comments and blank lines may be in the range. The locals they use \
+          become parameters; the one they set or declare that later code uses is returned. \
+          The method is static when the enclosing one is, and declares the checked exceptions \
+          the statements throw. doc becomes its Javadoc.
+          Refuses, saying why: a range that cuts a statement (with the statement lines there), \
+          two or more results, a break, continue or yield that leaves the statements, a return \
+          in the middle of a void method, a name the type already has.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":       {"type": "string",  "description": "Java file path relative to the project root."},
+              "start_line": {"type": "integer", "description": "First line of the statements (1-based)."},
+              "end_line":   {"type": "integer", "description": "Last line of the statements (inclusive)."},
+              "name":       {"type": "string",  "description": "The new method's name."},
+              "doc":        {"type": "string",  "description": "Optional: its Javadoc text, without /** */."}
+            },
+            "required": ["file", "start_line", "end_line", "name"]
+          }\
+          """,
+          Set.of("file", "start_line", "end_line", "name", "doc"),
+          false,
+          (project, args) -> Extract.method(project, args));
+
   static final Def UNDO =
       new Def(
           "undo",
@@ -357,6 +391,7 @@ final class Tools {
           ADD_PARAMETER,
           REMOVE_PARAMETER,
           MOVE_PARAMETER,
+          EXTRACT_METHOD,
           BATCH,
           UNDO);
 

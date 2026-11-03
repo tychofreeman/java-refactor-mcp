@@ -1,0 +1,1 @@
+extracted lines 6-9 of com/example/Scores.java into doubled(int[] xs, int total), returning total, at lines 10-17; the call is line 6
