@@ -147,8 +147,9 @@ final class Edits {
   record Written(Imports.Fixed fixed, Stubs.Declared declared) {}
 
   /**
-   * Fixes the imports of {@code after}, which replaces {@code before} in {@code path}, and applies
-   * it under the gate, refusing as {@link Gate#applyOrRefuse} does.
+   * Fixes the imports of {@code after}, which replaces {@code before} in {@code path} (when the
+   * file is under a source root), and applies it under the gate, refusing as {@link
+   * Gate#applyOrRefuse} does.
    */
   static Written gated(
       SourceProject project,
@@ -159,7 +160,12 @@ final class Edits {
       String what,
       String fix)
       throws Exception {
-    Imports.Fixed fixed = Imports.fix(project, path, before, after, chosen);
+    // Only a file under a source root has a package the imports can be resolved in; elsewhere
+    // (a golden expected file, a script) the text is applied as written.
+    Imports.Fixed fixed =
+        project.packageOf(path) == null
+            ? new Imports.Fixed(after, 0, List.of())
+            : Imports.fix(project, path, before, after, chosen);
     Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
     return new Written(fixed, declared);
   }
