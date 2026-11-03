@@ -397,3 +397,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Gate.java` and `Batch.java` were changed with the Edit
   tool. A `move` of the check's steps into `Gate` has no tool; `replace_text`
   would cover each edit.
+
+## 2026-11-03: rename column refusal and golden written by hand
+- Task: roadmap order 37 (`docs/sessions/refuse-column-below-one.md`).
+- Tool: none used. `Tools.java` and `Rename.java` were changed with the Edit
+  tool, and the golden case was copied with cp. `replace_text` would cover
+  the source edits; `create_file` the golden files.
