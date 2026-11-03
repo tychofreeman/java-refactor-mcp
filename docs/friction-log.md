@@ -362,3 +362,13 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Signatures.java` (`Family.of`, a new `simpleName`) was
   changed with the Edit tool; the java-refactor-mcp tools were not in this
   session's tool list. `replace_text` would have made both edits.
+
+## 2026-11-03: nested class moved to its own file by script
+- Task: roadmap order 25 (`docs/sessions/split-extract.md`).
+- Tool: none used. `Extract`'s nested `Extraction` (660 lines) was copied to
+  `Extraction.java` by a Python script, deleted from `Extract.java`, and its
+  helper calls were qualified by regular expression. No tool moves a type or
+  member to a new file: a `create_file` needed the 660 lines typed out, and
+  `replace_declaration` with empty content only deletes. A `move_type` tool
+  (move a nested class or member to a new file, fixing references and
+  imports) would have done it.
