@@ -82,8 +82,11 @@ again, for up to five rounds (a new class, then its members):
   argument's); else Object;
 - a constructor of a project class, and `T() {}` beside it when T had only the
   implicit one;
-- a class nothing declares, in the using file's package under the first source
-  root, as `public class T {}`.
+- a class nothing declares (a type, or the receiver of a static call
+  `Tasks.run()`), in the using file's package under the first source root, as
+  `public class T {}`.
+A call that is a lambda's body, or returned from one, gets the result type of
+the method the lambda implements.
 The body is `throw new UnsupportedOperationException("not implemented");`,
 which `add_declaration` replaces. Members are public only when the type is in
 another package. Not declared: methods of interfaces or library types, fields,

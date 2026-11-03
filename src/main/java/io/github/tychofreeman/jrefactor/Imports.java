@@ -312,7 +312,13 @@ final class Imports {
   /** The classes named {@code name}, as fully qualified names, sorted, discouraged ones dropped. */
   private record Index(Map<String, List<String>> libraries, Map<String, List<String>> sources) {
     List<String> candidates(String name) {
-      Set<String> all = new TreeSet<>(libraries.getOrDefault(name, List.of()));
+      Set<String> all = new TreeSet<>();
+      for (String c : libraries.getOrDefault(name, List.of())) {
+        // A library's internal packages are not for its users (and the JDK's are not exported).
+        if (!c.contains(".internal.")) {
+          all.add(c);
+        }
+      }
       all.addAll(sources.getOrDefault(name, List.of()));
       List<String> preferred = new ArrayList<>();
       for (String c : all) {

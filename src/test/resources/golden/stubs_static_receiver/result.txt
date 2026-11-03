@@ -1,0 +1,1 @@
+added RUN to Registry in com/example/Registry.java, line 6; declared stubs class Signatures, Signatures.run(String, int) in com/example/Signatures.java

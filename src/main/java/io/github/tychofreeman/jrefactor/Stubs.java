@@ -196,6 +196,14 @@ final class Stubs {
               constructor(unit, creation);
             }
           }
+          case IProblem.UndefinedName -> {
+            // A class that does not exist yet, as the receiver of a static call: Tasks.run().
+            if (node instanceof SimpleName n
+                && n.getParent() instanceof MethodInvocation call
+                && call.getExpression() == n) {
+              type(file, n.getIdentifier());
+            }
+          }
           case IProblem.UndefinedType -> {
             if (p.getArguments().length > 0 && ancestor(node, ImportDeclaration.class) == null) {
               type(file, p.getArguments()[0]);
@@ -395,6 +403,9 @@ final class Stubs {
       if (parent instanceof ExpressionStatement) {
         return "void";
       }
+      if (parent instanceof LambdaExpression lambda && lambda.getBody() == child) {
+        return lambdaResult(lambda);
+      }
       if (parent instanceof VariableDeclarationFragment f && f.getInitializer() == child) {
         Type type =
             switch (f.getParent()) {
@@ -418,7 +429,7 @@ final class Stubs {
         if (in instanceof MethodDeclaration m && m.getReturnType2() != null) {
           return typeName(m.getReturnType2().resolveBinding());
         }
-        return "Object";
+        return in instanceof LambdaExpression lambda ? lambdaResult(lambda) : "Object";
       }
       if (parent instanceof IfStatement
           || parent instanceof WhileStatement
@@ -459,6 +470,12 @@ final class Stubs {
         }
       }
       return "Object";
+    }
+
+    /** The result type of the method {@code lambda} implements, or Object when unknown. */
+    private String lambdaResult(LambdaExpression lambda) {
+      IMethodBinding m = lambda.resolveMethodBinding();
+      return m == null ? "Object" : typeName(m.getReturnType());
     }
 
     /** How the stub writes {@code b}, noting the classes it names for their imports. */
