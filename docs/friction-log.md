@@ -162,3 +162,19 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: discourage `.internal.` packages in the import index; name every
   ambiguous name in one refusal; a way to list the project's Java files.
+
+## 2026-11-02: stubs for a class used as a static receiver
+- Task: registering #22's tools with handlers not written yet
+  (`Signatures.addParameter(...)` in a lambda), to let stubs declare them.
+- Tool: add_declaration, refused.
+- What happened:
+  - `Signatures cannot be resolved` is UndefinedName, not UndefinedType, so no
+    class was declared.
+  - The import fixing imported `jdk.javadoc.internal...Signatures`, from a
+    package the JDK does not export ("The import jdk.javadoc.internal cannot
+    be resolved").
+  - The call is a lambda's body, whose result type stubs did not infer.
+  Fixed in their own PR before #22: a static receiver nothing declares becomes
+  a class, a lambda's result type comes from the method it implements, and
+  libraries' `.internal.` packages are not import candidates (this also ends
+  the dom/internal ambiguity logged above).

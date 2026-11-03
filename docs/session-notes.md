@@ -84,9 +84,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   waits for evidence that inference picks the wrong place. A member the edit
   removed is not declared again (deleting a used method is still refused). A
   Haiku probe wrote a test first in one `add_declaration` and got `int total()`
-  from `total() == 0` (8 turns, $0.0055). The index of class names includes
-  JDT's internal compiler AST (`org.eclipse.jdt.internal.compiler.ast`), so most
-  `org.eclipse.jdt.core.dom` names are ambiguous; pass `imports`.
+  from `total() == 0` (8 turns, $0.0055). The import index leaves out libraries'
+  `.internal.` packages (2026-11-02): JDT's internal compiler AST made most
+  `org.eclipse.jdt.core.dom` names ambiguous, and a JDK class in an unexported
+  `jdk.javadoc.internal` package was imported for a name nothing declared.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading
