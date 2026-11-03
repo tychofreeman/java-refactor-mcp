@@ -211,9 +211,9 @@ final class Declarations {
   }
 
   /** A declaration found by name, and how to say which one ("A.b(int)"). */
-  private record Named(BodyDeclaration decl, String label) {}
+  record Named(BodyDeclaration decl, String label) {}
 
-  private static Named find(CompilationUnit unit, String name, String rel) {
+  static Named find(CompilationUnit unit, String name, String rel) {
     String base = name;
     List<String> params = null;
     int paren = name.indexOf('(');

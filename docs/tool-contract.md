@@ -132,6 +132,35 @@ in the same turn only if it is sent after it.
 Refusals come back as an error result whose text starts `refused: `. Other
 failures start `engine error (not a refusal; ...)`.
 
+## Signature changes (built)
+
+`add_parameter`, `remove_parameter`, `move_parameter` (roadmap #22). Each takes
+`file` (the declaring file) and `name` (as `replace_declaration`: `Type.member`,
+`member`, `m(int, String)` for an overload; a constructor by its type's name),
+and `parameter`:
+- `add_parameter`: `type`, `value` (a Java expression each call passes),
+  optional `before` (default last), optional `imports`.
+- `remove_parameter`: also deletes the parameter's `@param` tag.
+- `move_parameter`: optional `before` (default last).
+
+The change covers the method's family: every project declaration that overrides
+it or that it overrides, transitively, joined by binding key across files (an
+interface method and all its implementations). Calls: method invocations
+(`super.m` too), `new T(...)`, `this(...)`, `super(...)`, enum constants. Each
+changed file has its imports fixed; the whole change passes the gate once.
+
+Refusals: a family member that overrides a library method ("Name.compareTo(Name)
+overrides compareTo in java.lang.Comparable, which is not the project's"), a
+method reference to it, varargs, a parameter or `before` it does not have;
+add: a body that reads an unqualified field of the new name; remove: a body
+that reads the parameter, an argument that may have side effects (anything but
+names, literals, `this`, field accesses, lambdas and operators over those);
+move: two such arguments whose order would change; nested calls whose
+edits overlap.
+
+Result: `added int capacity to Cart.Cart(String) in 1 declaration and 3 calls
+(a.java, b.java)`, then any import notes per file.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
