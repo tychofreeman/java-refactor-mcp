@@ -43,7 +43,7 @@ final class Gate {
     Map<Path, String> old = Journal.written(project);
     Stubs.Check declaring = Stubs.declare(project, before, old);
     if (!declaring.introduced().isEmpty()) {
-      restore(old);
+      Journal.restore(old);
       throw refusal(project, declaring.introduced(), what, fix);
     }
     journal(project, old);
@@ -80,7 +80,7 @@ final class Gate {
     if (project.session().deferred) {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         String old = Files.exists(change.getKey()) ? Files.readString(change.getKey()) : null;
-        put(change.getKey(), change.getValue());
+        Journal.put(change.getKey(), change.getValue());
         Journal.wrote(project, change.getKey(), old, change.getValue());
       }
       return new Stubs.Check(List.of(), Stubs.Declared.NONE);
@@ -92,17 +92,17 @@ final class Gate {
     }
     try {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
-        put(change.getKey(), change.getValue());
+        Journal.put(change.getKey(), change.getValue());
       }
       Stubs.Check check = Stubs.declare(project, before, old);
       if (!check.introduced().isEmpty()) {
-        restore(old);
+        Journal.restore(old);
       } else {
         journal(project, old);
       }
       return check;
     } catch (IOException | RuntimeException e) {
-      restore(old);
+      Journal.restore(old);
       throw e;
     }
   }
@@ -123,29 +123,8 @@ final class Gate {
   /** Writes a file that is not Java, which the gate does not check, creating its directories. */
   static void write(SourceProject project, Path file, String text) throws IOException {
     String before = Files.exists(file) ? Files.readString(file) : null;
-    Files.createDirectories(file.getParent());
-    Files.writeString(file, text);
+    Journal.put(file, text);
     Journal.wrote(project, file, before, text);
-  }
-
-  /** Writes {@code text} to {@code file}, creating its directories; null deletes the file. */
-  private static void put(Path file, String text) throws IOException {
-    if (text == null) {
-      Files.deleteIfExists(file);
-    } else {
-      Files.createDirectories(file.getParent());
-      Files.writeString(file, text);
-    }
-  }
-
-  static void restore(Map<Path, String> old) throws IOException {
-    for (Map.Entry<Path, String> file : old.entrySet()) {
-      if (file.getValue() == null) {
-        Files.deleteIfExists(file.getKey());
-      } else {
-        Files.writeString(file.getKey(), file.getValue());
-      }
-    }
   }
 
   /** Records each file in {@code old} as written: from its old text to what it holds now. */

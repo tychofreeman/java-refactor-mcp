@@ -410,6 +410,11 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `JournalTest.java` were changed with the Edit tool; `replace_text` and
   `add_declaration` would have covered the edits and the tests.
 
+## 2026-11-03: file writers consolidated by hand
+- Task: roadmap order 40 (`docs/sessions/file-writers-one-place.md`).
+- Tool: none used. `Gate.java`, `Journal.java` and `GateTest.java` were changed
+  with the Edit tool and sed. `replace_text` would cover the source edits; a
+  `move` of a method between two classes has no tool.
 ## 2026-11-03: create_file fixes imports in a file under no source root
 - Task: `move_type` golden cases (`docs/sessions/move-type.md`).
 - Tool: `create_file` of `src/test/resources/golden/move_type/out/com/example/Shop.java`
