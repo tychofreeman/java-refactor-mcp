@@ -143,6 +143,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   (`uses` is cleared at each handler's start). Before, every file got every
   stub's picks, so a shared simple name (`java.awt.List`, `java.util.List`)
   took the last one sorted. Golden: `stubs_uses_per_file`.
+- A failed Maven classpath is kept and named (roadmap #38, 2026-11-03): the user
+  chose "keep serving, name the cause" over refusing to start. `SourceProject`
+  has a `classpathProblem`; `Gate.applyOrRefuse` adds the reason to a refusal
+  that says a name "cannot be resolved". Test: `GateTest`.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its

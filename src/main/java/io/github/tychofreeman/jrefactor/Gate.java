@@ -74,10 +74,18 @@ final class Gate {
       SourceProject project, Map<Path, String> texts, String what, String fix) throws IOException {
     Stubs.Check check = apply(project, texts);
     if (!check.introduced().isEmpty()) {
+      boolean unresolved =
+          check.introduced().stream().anyMatch(e -> e.contains("cannot be resolved"));
+      String missing =
+          unresolved && project.classpathProblem() != null
+              ? "\nMaven gave no classpath, so library types do not resolve: "
+                  + project.classpathProblem()
+              : "";
       throw new Refusal(
           what
               + " would add compile errors, so nothing was changed:\n  "
               + String.join("\n  ", check.introduced())
+              + missing
               + "\n"
               + fix);
     }
