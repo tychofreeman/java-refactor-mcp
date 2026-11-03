@@ -309,3 +309,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   repo's own source. Those tools cover it once the server runs; the choice was
   not tested against them.
 
+## 2026-11-03: stub import picks from another file, found by reading
+- Task: roadmap #37 (`docs/sessions/stubs-uses-picks.md`).
+- Tool: none. Found by reading `Stubs.Round` after the review; no call was
+  refused. `create_file` of a class calling two stubs with `java.awt.List` and
+  `java.util.List` wrote `import java.util.List;` into the file that needed
+  `java.awt.List`, and was refused only as a side effect of the call.
+- Edit: `Stubs.java` changed with the Edit tool, not `replace_text`, the same
+  gap as #36's entry above.
+
