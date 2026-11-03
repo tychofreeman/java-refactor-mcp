@@ -482,8 +482,17 @@ final class Tools {
       Journal.commit(project);
       return outcome;
     } catch (Exception | Error e) {
-      Journal.abort(project);
+      abort(project, e);
       throw e;
+    }
+  }
+
+  /** Undoes the open call after {@code failure}; an undo that fails is added to it, not thrown. */
+  static void abort(SourceProject project, Throwable failure) {
+    try {
+      Journal.abort(project);
+    } catch (java.io.IOException undo) {
+      failure.addSuppressed(undo);
     }
   }
 }

@@ -403,3 +403,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Tools.java` and `Rename.java` were changed with the Edit
   tool, and the golden case was copied with cp. `replace_text` would cover
   the source edits; `create_file` the golden files.
+
+## 2026-11-03: engine-error path and undo change made by hand
+- Task: roadmap order 35 (`docs/sessions/server-engine-error.md`).
+- Tool: none used. `Server.java`, `Tools.java`, `ServerTest.java` and
+  `JournalTest.java` were changed with the Edit tool; `replace_text` and
+  `add_declaration` would have covered the edits and the tests.
