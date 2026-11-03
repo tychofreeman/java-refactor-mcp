@@ -53,8 +53,9 @@ final class Imports {
       SourceProject project, Path file, String before, String after, List<String> chosen)
       throws IOException {
     CompilationUnit unit = Jdt.parse(project, file, after);
+    Set<String> unresolvedBefore = unresolved(Jdt.parse(project, file, before));
     Set<String> missing = unresolved(unit);
-    missing.removeAll(unresolved(Jdt.parse(project, file, before)));
+    missing.removeAll(unresolvedBefore);
     Set<String> usedBefore = names(Jdt.parseSyntax(before));
     Set<String> usedAfter = names(unit);
 
@@ -76,32 +77,16 @@ final class Imports {
     for (String name : chosen) {
       picks.put(simpleName(name), name);
     }
-    Set<String> add = new TreeSet<>();
-    for (String name : missing) {
-      if (imported.containsKey(name)) {
-        continue;
-      }
-      String pick = picks.get(name);
-      if (pick == null) {
-        List<String> candidates = index(project).candidates(name);
-        if (candidates.isEmpty()) {
-          continue;
-        }
-        if (candidates.size() > 1) {
-          String last = candidates.get(candidates.size() - 1);
-          throw new Refusal(
-              name
-                  + " could be "
-                  + String.join(", ", candidates.subList(0, candidates.size() - 1))
-                  + " or "
-                  + last
-                  + ". Pass imports with the one to use, as imports: [\""
-                  + last
-                  + "\"].");
-        }
-        pick = candidates.get(0);
-      }
-      add.add(pick);
+    Set<String> add = toImport(project, missing, imported, picks);
+    // A name in a lambda is reported only once the names around it resolve, so look again with
+    // the imports found so far, until no more are needed.
+    Set<String> found = new TreeSet<>(add);
+    while (!found.isEmpty()) {
+      Set<String> still = unresolved(Jdt.parse(project, file, withImports(after, unit, add)));
+      still.removeAll(unresolvedBefore);
+      found = toImport(project, still, imported, picks);
+      found.removeAll(add);
+      add.addAll(found);
     }
     if (add.isEmpty() && remove.isEmpty()) {
       return new Fixed(after, 0, List.of());
@@ -167,6 +152,57 @@ final class Imports {
     }
     String fixed = text.toString();
     return new Fixed(fixed, count(fixed) - count(after), notes);
+  }
+
+  /**
+   * The fully qualified names to import for the simple {@code names}: the one chosen, or the one
+   * class with that name. Names already imported, or that no class has, are left out; a name that
+   * several classes have is refused.
+   */
+  private static Set<String> toImport(
+      SourceProject project,
+      Set<String> names,
+      Map<String, ImportDeclaration> imported,
+      Map<String, String> picks)
+      throws IOException {
+    Set<String> add = new TreeSet<>();
+    for (String name : names) {
+      if (imported.containsKey(name)) {
+        continue;
+      }
+      String pick = picks.get(name);
+      if (pick == null) {
+        List<String> candidates = index(project).candidates(name);
+        if (candidates.isEmpty()) {
+          continue;
+        }
+        if (candidates.size() > 1) {
+          String last = candidates.get(candidates.size() - 1);
+          throw new Refusal(
+              name
+                  + " could be "
+                  + String.join(", ", candidates.subList(0, candidates.size() - 1))
+                  + " or "
+                  + last
+                  + ". Pass imports with the one to use, as imports: [\""
+                  + last
+                  + "\"].");
+        }
+        pick = candidates.get(0);
+      }
+      add.add(pick);
+    }
+    return add;
+  }
+
+  /** {@code text} with imports of {@code names} after its package line, to see what resolves. */
+  private static String withImports(String text, CompilationUnit unit, Set<String> names) {
+    StringBuilder lines = new StringBuilder();
+    for (String name : names) {
+      lines.append("\nimport ").append(name).append(';');
+    }
+    int at = packageEnd(text, unit);
+    return text.substring(0, at) + lines + "\n" + text.substring(at);
   }
 
   /** Where an import of {@code name} goes: in order among the kept non-static imports. */

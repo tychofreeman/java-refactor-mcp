@@ -42,7 +42,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   A Haiku probe renamed a constructor parameter through it with no column.
 - Sessions here have the tools (roadmap #13, 2026-11-02): `.mcp.json` runs
   `bin/jrefactor-mcp`, which rebuilds a stale jar (about 4 s, output to stderr)
-  and serves this checkout. Restart Claude Code after merging a server change.
+  and serves this checkout. After merging a server change, check out `main`
+  and reconnect the server with `/mcp` (the user asked, 2026-11-02, why a
+  restart was needed; it is not: a reconnect starts a new server process).
 - The server exits when stdin ends, but only after it is quiet: the SDK closes
   the session as soon as it reads the end of input and drops requests it has
   read but not run, so the read that finds the end waits until no tool call is
@@ -71,6 +73,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   top-level call is `Tools.call`, which begins and commits the journal entry.
   A Haiku probe chose `batch` with check `"end"` for a signature change and its
   caller unprompted (6 turns, $0.004).
+- Edits import names that resolve only once others do (2026-11-02): a lambda
+  is not type-checked while the type of the call around it is unresolved, so
+  `Imports.fix` parses again with the imports found so far until no more turn
+  up (`imports_in_lambda`).
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

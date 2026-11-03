@@ -125,3 +125,18 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: the nearest lines in "old is not in", and spacing-tolerant matching;
   the likely candidate first in an ambiguity refusal; the lambda import bug.
+
+## 2026-11-02: imports in lambdas, through the tools
+- Task: the import fixing missed `ArrayDeque` in a lambda (#8's follow-up).
+- Tool: every change through java-refactor-mcp; no hand edits.
+- What happened:
+  - The first two fixtures (a lambda alone, then a chained call) imported
+    `ArrayDeque` fine. The miss needs the call's receiver unresolved too:
+    JDT does not type-check a lambda whose target type it cannot find, so
+    `ArrayDeque` is reported only after `Map` and `Deque` are imported. Fixed
+    by parsing again with the imports found, until none are added.
+  - `add_declaration` into `public class A {}` in a file with no indented line
+    indents members by 4 (the default step) while the content's own step is 2.
+    Worked around with an indented field in the fixture.
+- Cost: not measured (roadmap #18).
+- Idea: with no indentation in the file, take the step from the content.

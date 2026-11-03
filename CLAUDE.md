@@ -89,12 +89,14 @@ hand edits, refusals, reads and large writes.
 `.mcp.json` starts `bin/jrefactor-mcp`, which serves this checkout with the
 server built from it, rebuilding the jar first when `pom.xml` or `src/main`
 changed. Claude Code asks once to approve the project's server. A session's
-tools are the build from when it started: after changing the server, test the
-change with `./mvnw test`, not by calling the tool, and restart Claude Code
-after the change is merged to use it.
+tools are the build from when the server started: after changing the server,
+test the change with `./mvnw test`, not by calling the tool. To use it once
+merged, check out `main` and reconnect the server (`/mcp`, jrefactor,
+Reconnect); no restart of Claude Code is needed. A reconnect serves whatever is
+checked out, a branch's build included.
 
 1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__batch,mcp__jrefactor__undo`.
-   After a restart the client may list descriptions from before it; the server's
+   After a restart or reconnect the client may list descriptions from before it; the server's
    own are current (it accepts the arguments they name).
 2. **Read Java through `inspect`:** the file without method bodies, then the
    line ranges you will change. Each line is the number, two spaces, then the
