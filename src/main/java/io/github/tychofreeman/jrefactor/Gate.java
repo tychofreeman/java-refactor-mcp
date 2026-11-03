@@ -18,11 +18,12 @@ final class Gate {
   /** Runs {@code body} with the type check deferred, as a batch with check "end" does. */
   static <T> T deferred(SourceProject project, java.util.concurrent.Callable<T> body)
       throws Exception {
+    boolean outer = project.session().deferred;
     project.session().deferred = true;
     try {
       return body.call();
     } finally {
-      project.session().deferred = false;
+      project.session().deferred = outer;
     }
   }
 

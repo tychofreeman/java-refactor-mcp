@@ -29,6 +29,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Gate.deferred` restores the flag it found, so a nested deferred call (a batch
+  inside a batch) leaves the outer call deferred (roadmap order 41, 2026-11-03).
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate (roadmap order 32, 2026-11-03). `Declarations` (3), `Extraction` and
   `Edits.write` use it; `Signatures` keeps its per-file loop. Add new single-file

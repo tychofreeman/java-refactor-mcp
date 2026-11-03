@@ -385,3 +385,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   were changed with the Edit tool; the java-refactor-mcp tools were not in
   this session's tool list. `replace_text` would have made each edit, and a
   `batch` of them with check "end" the whole change in one call.
+
+## 2026-11-03: Gate.deferred fix and its test made by hand
+- Task: roadmap order 41 (`docs/sessions/gate-deferred-nesting.md`).
+- Tool: none used. `Gate.java` and `GateTest.java` were changed with the Edit
+  tool; the java-refactor-mcp tools were not in this session's tool list.
+  `add_declaration` would have written the test and `replace_text` the fix.
