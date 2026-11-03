@@ -41,16 +41,16 @@ final class Cli {
       """;
 
   public static void main(String[] args) {
-    int status = run(List.of(args), Path.of("").toAbsolutePath(), undoDir(), System.out);
+    int status = run(List.of(args), Path.of("").toAbsolutePath(), cacheDir(), System.out);
     System.out.flush();
     System.exit(status);
   }
 
   /**
-   * Runs one command line {@code args} from directory {@code cwd}, keeping undo stacks in {@code
-   * undoDir}; returns the exit status.
+   * Runs one command line {@code args} from directory {@code cwd}, keeping undo stacks, the
+   * classpath and the last type check in {@code cacheDir}; returns the exit status.
    */
-  static int run(List<String> args, Path cwd, Path undoDir, PrintStream out) {
+  static int run(List<String> args, Path cwd, Path cacheDir, PrintStream out) {
     List<String> rest = new ArrayList<>(args);
     Path dir = cwd;
     if (rest.size() >= 2 && rest.get(0).equals("-C")) {
@@ -70,13 +70,21 @@ final class Cli {
       }
       Tools.Def def = Tools.named(name);
       Map<String, Object> values = arguments(def, words);
-      SourceProject project = SourceProject.load(root(dir));
-      Path stack = undoDir.resolve(stackName(project.root()));
+      Path at = root(dir).toAbsolutePath().normalize();
+      String cached = cacheName(at);
+      SourceProject project = SourceProject.load(at, cacheDir.resolve(cached + "-classpath.txt"));
+      Path stack = cacheDir.resolve(cached + ".json");
+      Path count = cacheDir.resolve(cached + "-count.json");
       Journal.load(project, stack);
-      Tools.Outcome outcome = Tools.call(def, project, values);
-      Journal.save(project, stack);
-      out.println(outcome.render());
-      return 0;
+      TypeCheck.load(project, count);
+      try {
+        Tools.Outcome outcome = Tools.call(def, project, values);
+        Journal.save(project, stack);
+        out.println(outcome.render());
+        return 0;
+      } finally {
+        TypeCheck.save(project, count);
+      }
     } catch (Refusal refusal) {
       out.println(Refusal.PREFIX + refusal.getMessage());
       return 2;
@@ -184,23 +192,25 @@ final class Cli {
   }
 
   /**
-   * The undo stack's file name for the project at {@code root}: its name and a hash of its path.
+   * The start of the cache files' names for the project at {@code root} (its undo stack, classpath
+   * and last type check): its name and a hash of its path.
    */
-  private static String stackName(Path root) {
+  private static String cacheName(Path root) {
     try {
       byte[] hash =
           MessageDigest.getInstance("SHA-256")
               .digest(root.toString().getBytes(StandardCharsets.UTF_8));
-      return root.getFileName() + "-" + HexFormat.of().formatHex(hash, 0, 8) + ".json";
+      return root.getFileName() + "-" + HexFormat.of().formatHex(hash, 0, 8);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e);
     }
   }
 
   /**
-   * Where undo stacks are kept: {@code $XDG_CACHE_HOME/jrefactor}, or {@code ~/.cache/jrefactor}.
+   * Where undo stacks, classpaths and type checks are kept: {@code $XDG_CACHE_HOME/jrefactor}, or
+   * {@code ~/.cache/jrefactor}.
    */
-  private static Path undoDir() {
+  private static Path cacheDir() {
     String cache = System.getenv("XDG_CACHE_HOME");
     Path base =
         cache != null && !cache.isEmpty()

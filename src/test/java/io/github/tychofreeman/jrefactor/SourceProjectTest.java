@@ -38,6 +38,25 @@ class SourceProjectTest {
     assertEquals(List.of(), project.classpath());
   }
 
+  /** Maven cannot build the pom here, so a classpath can only come from the cache. */
+  @Test
+  void aCachedClasspathIsUsedWhileThePomIsTheSame(@TempDir Path cacheDir) throws IOException {
+    write("pom.xml", "<project>not a build Maven can run</project>");
+    write("src/main/java/a/A.java", "package a; class A {}");
+    Path jar = Files.createFile(cacheDir.resolve("lib.jar"));
+    Path cache = cacheDir.resolve("classpath.txt");
+    MavenBuild.remember(dir, cache, List.of(jar.toString()));
+
+    SourceProject cached = SourceProject.load(dir, cache);
+    assertEquals(List.of(jar.toString()), cached.classpath());
+    assertEquals(null, cached.classpathProblem());
+
+    write("pom.xml", "<project>changed</project>");
+    SourceProject reloaded = SourceProject.load(dir, cache);
+    assertEquals(List.of(), reloaded.classpath());
+    assertTrue(reloaded.classpathProblem() != null);
+  }
+
   /** This repo, loaded from its pom, resolves its dependencies and compiles without errors. */
   @Test
   void thisRepoTypeChecksClean() throws IOException {

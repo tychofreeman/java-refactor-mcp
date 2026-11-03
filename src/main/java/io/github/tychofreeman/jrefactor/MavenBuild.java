@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -86,6 +89,37 @@ final class MavenBuild {
     }
   }
 
+  /**
+   * {@link #classpath(Path)}, kept in {@code cache} with a hash of the {@code pom.xml} it came
+   * from: used again while the pom is the same and every entry exists, so Maven runs only when the
+   * build may have changed.
+   */
+  static List<String> classpath(Path root, Path cache) throws IOException {
+    String pom = pomHash(root);
+    if (Files.isRegularFile(cache)) {
+      List<String> lines = Files.readAllLines(cache);
+      if (!lines.isEmpty() && lines.get(0).equals(pom)) {
+        List<String> entries = lines.subList(1, lines.size());
+        if (entries.stream().allMatch(e -> Files.exists(Path.of(e)))) {
+          return List.copyOf(entries);
+        }
+      }
+    }
+    List<String> entries = classpath(root);
+    remember(root, cache, entries);
+    return entries;
+  }
+
+  private static String pomHash(Path root) throws IOException {
+    try {
+      byte[] hash =
+          MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("pom.xml")));
+      return "pom " + HexFormat.of().formatHex(hash);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
   private static List<String> maven(Path root) throws IOException {
     Path wrapper = root.resolve("mvnw");
     if (Files.isExecutable(wrapper)) {
@@ -102,5 +136,16 @@ final class MavenBuild {
   private static String tail(Path log) throws IOException {
     List<String> lines = Files.readAllLines(log);
     return String.join("\n", lines.subList(Math.max(0, lines.size() - 20), lines.size()));
+  }
+
+  /**
+   * Writes {@code entries} to {@code cache} as the classpath of {@code root}'s pom as it is now.
+   */
+  static void remember(Path root, Path cache, List<String> entries) throws IOException {
+    List<String> lines = new ArrayList<>();
+    lines.add(pomHash(root));
+    lines.addAll(entries);
+    Files.createDirectories(cache.getParent());
+    Files.write(cache, lines);
   }
 }

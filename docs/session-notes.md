@@ -230,8 +230,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `Cli`, one tool call per process, for sessions where the MCP server cannot
   run (the user's other session, in a container, made orders 24-44's edits by
   hand). `Journal.save` and `load` keep the undo stack between runs in the
-  user's cache. A run costs about 9 s on this repo (a Maven classpath and a
-  cold type check each time); a batch spreads that over its steps.
+  user's cache, beside the classpath (`MavenBuild.classpath(root, cache)`,
+  keyed by `pom.xml`'s hash) and the last count (`TypeCheck.save`/`load`,
+  each file's hash). On this repo a read takes 0.3 s and an edit 2.4 s (they
+  were 9.4 s and 4.7 s): `bin/jrefactor` had rebuilt the jar after each of
+  its own edits to `src/main`, so it now rebuilds only for a commit newer
+  than the jar.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

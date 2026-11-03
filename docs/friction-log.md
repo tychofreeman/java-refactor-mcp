@@ -438,3 +438,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   notes say a member the edit removed is not declared again; here it was, and
   the cause is not yet known (not checked: whether the callers were in the
   same file as the deletion's target, or the rule covers only methods).
+
+## 2026-11-03: no stub for a new overload of an existing method
+- Task: `docs/sessions/cli-cache.md`.
+- Tool: `add_declaration` of a test calling `SourceProject.load(dir, cache)`
+  was refused, "The method load(Path) in the type SourceProject is not
+  applicable for the arguments (Path, Path)", where a new method name would
+  have got a stub. Answered with a batch: the overload first, then the test.
+- Idea: declare a stub for a call whose arguments fit no overload of a
+  project method, as for an undefined method, typed from the call.
