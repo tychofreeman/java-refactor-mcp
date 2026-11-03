@@ -8,7 +8,7 @@
     }
   },
   {
-    "tool": "rename_local",
+    "tool": "rename",
     "args": {
       "file": "com/example/A.java",
       "line": 9,

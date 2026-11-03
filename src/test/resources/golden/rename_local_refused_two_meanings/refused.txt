@@ -1,1 +1,0 @@
-'x' on line 6 names 2 different variables, at columns 29 and 37

@@ -32,15 +32,14 @@ final class Gate {
   }
 
   /**
-   * Writes each file's new text. Returns the compile errors the edit would add; when there are any,
-   * nothing is left changed.
+   * Writes each file's new text; a null text deletes the file. Returns the compile errors the edit
+   * would add; when there are any, nothing is left changed.
    */
   static List<String> apply(SourceProject project, Map<Path, String> texts) throws IOException {
     if (DEFERRED.get()) {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         String old = Files.exists(change.getKey()) ? Files.readString(change.getKey()) : null;
-        Files.createDirectories(change.getKey().getParent());
-        Files.writeString(change.getKey(), change.getValue());
+        put(change.getKey(), change.getValue());
         Journal.wrote(change.getKey(), old, change.getValue());
       }
       return List.of();
@@ -52,8 +51,7 @@ final class Gate {
     }
     try {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
-        Files.createDirectories(change.getKey().getParent());
-        Files.writeString(change.getKey(), change.getValue());
+        put(change.getKey(), change.getValue());
       }
       List<String> introduced = Stubs.declare(project, before, old);
       if (!introduced.isEmpty()) {
@@ -93,6 +91,16 @@ final class Gate {
     Journal.wrote(file, before, text);
   }
 
+  /** Writes {@code text} to {@code file}, creating its directories; null deletes the file. */
+  private static void put(Path file, String text) throws IOException {
+    if (text == null) {
+      Files.deleteIfExists(file);
+    } else {
+      Files.createDirectories(file.getParent());
+      Files.writeString(file, text);
+    }
+  }
+
   static void restore(Map<Path, String> old) throws IOException {
     for (Map.Entry<Path, String> file : old.entrySet()) {
       if (file.getValue() == null) {
@@ -106,7 +114,8 @@ final class Gate {
   /** Records each file in {@code old} as written: from its old text to what it holds now. */
   static void journal(Map<Path, String> old) throws IOException {
     for (Map.Entry<Path, String> file : old.entrySet()) {
-      Journal.wrote(file.getKey(), file.getValue(), Files.readString(file.getKey()));
+      Path f = file.getKey();
+      Journal.wrote(f, file.getValue(), Files.exists(f) ? Files.readString(f) : null);
     }
   }
 }

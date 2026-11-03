@@ -54,7 +54,7 @@ class SessionReportTest {
         "mcp__jrefactor__batch",
         "{\"steps\": [{\"tool\": \"create_file\", \"args\": {\"file\": \"src/A.java\", \"content\": "
             + JSON.writeValueAsString(content)
-            + "}}, {\"tool\": \"rename_local\", \"args\": {\"file\": \"src/A.java\"}}]}",
+            + "}}, {\"tool\": \"rename\", \"args\": {\"file\": \"src/A.java\"}}]}",
         "batch of 2 steps");
     call(null, "Bash", "{\"command\": \"rm -rf build\"}", null);
     call(post, "Write", "{\"file_path\": \"/tmp/scratch/x.txt\", \"content\": \"z\"}", "ok");

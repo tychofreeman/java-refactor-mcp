@@ -1,0 +1,1 @@
+renamed the field Item.price to cost in 2 files: 4 occurrences, com/shop/Cart.java lines 5, 10; com/shop/Item.java lines 4, 7

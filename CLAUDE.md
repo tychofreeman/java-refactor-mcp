@@ -17,7 +17,7 @@ the tools costs fewer tokens than editing by hand. Once the server runs, aim for
 about 95% of coding through the tools, this project's own code included.
 
 Current state: early. The MCP server (`Server`, STDIO; tools defined in
-`Tools`) exposes `inspect` (read-only), `rename_local`, and four edits:
+`Tools`) exposes `inspect` (read-only), `rename` (`Rename`), and four edits:
 `create_file`, `replace_text`, `add_declaration`, `replace_declaration`;
 `add_parameter`, `remove_parameter`, `move_parameter` (`Signatures`);
 `extract_method` (`Extract`); `batch` and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`),
@@ -99,15 +99,17 @@ merged, check out `main` and reconnect the server (`/mcp`, jrefactor,
 Reconnect); no restart of Claude Code is needed. A reconnect serves whatever is
 checked out, a branch's build included.
 
-1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__add_parameter,mcp__jrefactor__remove_parameter,mcp__jrefactor__move_parameter,mcp__jrefactor__extract_method,mcp__jrefactor__batch,mcp__jrefactor__undo`.
+1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__add_parameter,mcp__jrefactor__remove_parameter,mcp__jrefactor__move_parameter,mcp__jrefactor__extract_method,mcp__jrefactor__batch,mcp__jrefactor__undo`.
    After a restart or reconnect the client may list descriptions from before it; the server's
    own are current (it accepts the arguments they name).
 2. **Read Java through `inspect`:** the file without method bodies, then the
    line ranges you will change. Each line is the number, two spaces, then the
    code: do not count those two spaces as indentation in `old`. Avoid Read or `cat` of whole `.java` files;
    each result is sent again on every later turn.
-3. **Rename locals and parameters with `rename_local`,** by `file`, `line` and
-   `name`; it finds every use and type-checks. **Change parameters with
+3. **Rename with `rename`** (locals, parameters, fields, methods, types), by
+   `file`, `line` and `name`; it changes every reference in the project,
+   Javadoc and a type's file included, and type-checks. When the line has two
+   meanings, `name` picks one: `Counter.count` or `local count`. **Change parameters with
    `add_parameter`, `remove_parameter`, `move_parameter`:** every override,
    implementation and call follows, in one call. **Move statements into a new
    method with `extract_method`** (`start_line`, `end_line`, `name`):

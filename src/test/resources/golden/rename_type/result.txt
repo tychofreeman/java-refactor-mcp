@@ -1,0 +1,1 @@
+renamed the type com.example.Plant to Herb, and com/example/Plant.java to com/example/Herb.java, in 2 files: 9 occurrences, com/example/Herb.java lines 3, 4, 7, 11, 12; com/example/garden/Bed.java lines 3, 8, 10

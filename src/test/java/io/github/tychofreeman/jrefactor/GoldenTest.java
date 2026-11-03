@@ -24,10 +24,10 @@ import org.junit.jupiter.api.TestFactory;
  * Runs each directory under src/test/resources/golden as one case.
  *
  * <p>A case has {@code in/} (the project before), {@code args.properties} (the call: {@code tool},
- * default {@code rename_local}, and its arguments; {@code <arg>.txt} files give arguments with
- * several lines), and {@code out/} (the project after; without it, the project must be unchanged),
- * {@code result.txt} (the text the tool returns), or {@code refused.txt} (a fragment the refusal
- * must contain; the project must be unchanged).
+ * default {@code rename}, and its arguments; {@code <arg>.txt} files give arguments with several
+ * lines), and {@code out/} (the project after; without it, the project must be unchanged), {@code
+ * result.txt} (the text the tool returns), or {@code refused.txt} (a fragment the refusal must
+ * contain; the project must be unchanged).
  */
 class GoldenTest {
 
@@ -53,7 +53,7 @@ class GoldenTest {
     try (Reader reader = Files.newBufferedReader(caseDir.resolve("args.properties"))) {
       args.load(reader);
     }
-    String tool = args.getProperty("tool", "rename_local");
+    String tool = args.getProperty("tool", "rename");
     SourceProject project = SourceProject.of(work);
 
     Path refused = caseDir.resolve("refused.txt");

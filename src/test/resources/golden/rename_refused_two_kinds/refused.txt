@@ -1,0 +1,1 @@
+names 2 declarations: the field Counter.count (column 10) and the parameter count (column 18). Pass name "Counter.count" or "local count", or column.

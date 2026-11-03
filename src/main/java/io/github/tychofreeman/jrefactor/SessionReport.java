@@ -28,8 +28,7 @@ final class SessionReport {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private static final Set<String> REFACTORINGS =
-      Set.of(
-          "rename_local", "add_parameter", "remove_parameter", "move_parameter", "extract_method");
+      Set.of("rename", "add_parameter", "remove_parameter", "move_parameter", "extract_method");
 
   private static final Set<String> EDITS =
       Set.of("create_file", "replace_text", "add_declaration", "replace_declaration");
