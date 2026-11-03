@@ -544,7 +544,7 @@ final class Declarations {
   }
 
   /** The smallest nonzero indentation in {@code text}, or 0 when nothing is indented. */
-  private static int step(String text) {
+  static int step(String text) {
     int step = Integer.MAX_VALUE;
     for (String line : text.split("\n")) {
       int n = line.length() - line.stripLeading().length();

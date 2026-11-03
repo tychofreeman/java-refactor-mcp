@@ -1,0 +1,1 @@
+Adds xs to total and doubles it.

@@ -1,0 +1,1 @@
+the return at line 6 is on some paths only: after line 7 the code goes on, and positive would have no value to return

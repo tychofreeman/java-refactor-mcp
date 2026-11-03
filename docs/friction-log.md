@@ -200,3 +200,18 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     `last`; with "named priority, at the end", one `add_parameter` call.
 - Cost: not measured (roadmap #18).
 - Idea: stub replacement by erasure.
+
+## 2026-11-03: extract method, through the tools
+- Task: roadmap #23 (`docs/sessions/extract-function.md`).
+- Tool: every Java change through java-refactor-mcp; one hand edit to
+  `docs/design.md` (a roadmap row the user asked for mid-item).
+- What happened: `create_file` of the 1000-line `Extract` was refused for two
+  compile errors (a name clash and a private helper it called), and the whole
+  file had to be sent again. A refused `create_file` of a large new file costs
+  its size per retry.
+- Cost: not measured (roadmap #18).
+- Idea: let `create_file` of a new file that fails only the type check be
+  fixed by edits before the gate runs: in a batch with check "end", create the
+  file and then `replace_text` it, which works today; say so in the refusal
+  for a large file ("send it in a batch with check end, with the fixes as later
+  steps").

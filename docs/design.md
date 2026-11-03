@@ -121,8 +121,8 @@ friction log; reorder when this repo's own log says otherwise.
 | 4 | 8 | Undo, and `batch` with check `"end"`, lines translated through earlier steps, and `$prev.*` references | Done | Oct 19 in gorefactor: 99-100% through the tools and input tokens per step from 0.5-1.8M to 170-190k. "2026-10-18: a batch checked at its end" ("hit four times"). Open questions 3 and 4 |
 | 5 | 21 | Stubs from usage: a test written first gets compiling stubs (automatic in every edit; no `create_from_usage` tool, the user's choice of 2026-11-02 over the tool alone or both) | Done | "2026-10-17: adding `remove_parameter`" ("A red test blocks every refactoring"); first in TypeScript's gap list (item 41), second in item 43. CLAUDE.md's TDD order needs it |
 | 6 | 22 | Signature changes: `add_parameter`, `remove_parameter`, `move_parameter`, across overrides and interface implementations | Done | gorefactor roadmap item 1, "the most common by-hand step"; "2026-10-20: signature tools change interface families". This repo's log names `add_parameter` (2026-11-02) |
-| 7 | 23 | `extract_function` (Java: extract method) | Next | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
-| 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Planned | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
+| 7 | 23 | `extract_function` (Java: `extract_method`): at most one result (the user chose refusing two over a record, 2026-11-03); static exactly when the enclosing member is (chosen over "when it can be") | Done | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
+| 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records | Next | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
 | 9 | 24 | Results that do not echo what the model sent; locations, not diffs | Planned | gorefactor's cost history: smaller results were "the largest single win". Build into each edit as it comes; this item audits them once there are several |
 | 10 | 9 | Field, method and type rename across files; `rename_local` also updates Javadoc `@param` | Planned | 20 gorefactor entries on renames leaving doc comments stale ("Seven renames, seven stale doc comments") |
 | 11 | 10 | Measure gate cost on a large project; cache or narrow the reparse | Open | First point (2026-11-02): a `rename_local` on 390 files took about 5 s. In gorefactor, reloads that stopped compiling the module took a 13-step batch from 546 s to 21 s |
@@ -131,7 +131,8 @@ friction log; reorder when this repo's own log says otherwise.
 | 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
 | 15 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | gorefactor's tool budget |
 | 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
-| 17 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
+| 17 | 25 | `pull_up` and `push_down` for methods (and fields): move a member to a supertype or to its subtypes, with the type-check gate behind it | Open | The user asked, 2026-11-03; no friction entry yet, so it waits for one. Also worth a look for gorefactor (Go has embedding, not inheritance: the nearest is moving a method between a struct and the one it embeds) and the TypeScript port |
+| 18 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
 
 ### Why this order
 
