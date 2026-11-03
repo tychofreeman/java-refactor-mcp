@@ -137,8 +137,10 @@ file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
 `-` for stdin), and `content_file=path` (any `key_file`) for long text.
 Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
 call, also one from an earlier run (the stack is kept in
-`~/.cache/jrefactor`). Each run loads the project, about 9 s on this repo, so
-send several steps as one `batch`.
+`~/.cache/jrefactor`, with the classpath and the last type check). A read
+takes about 0.3 s; an edit about 2.4 s on this repo, most of it the type
+check after, so send several steps as one `batch`. The jar is rebuilt when a
+commit changes `pom.xml` or `src/main`, not for uncommitted edits.
 
 Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,
 naming the tool or composition that would have done it.
