@@ -1,0 +1,3 @@
+  int b(Map<String, Integer> m) {
+    return m.size();
+  }

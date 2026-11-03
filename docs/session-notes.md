@@ -134,6 +134,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `Edits.write` like the other edits, so `Imports.fix` runs before the gate and
   `List<String>` gets its import, not a project stub `List`. The result gains
   "; imported ..." when it imports a name (`create_file_java_imports`).
+- Overload names split at top-level commas only (roadmap #36, 2026-11-03):
+  `Declarations.topLevelCommas`, so `name=A.b(Map<String, Integer>)` finds the
+  overload the refusal listed. Labels stay without spaces (`Map<String,Integer>`),
+  as members are labelled. Golden: `replace_declaration_generic_overload`.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
