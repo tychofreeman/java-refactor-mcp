@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -54,13 +53,17 @@ final class Declarations {
     String text = Files.readString(path);
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
-    Imports.Fixed fixed = Imports.fix(project, path, text, planned.text(), args.list("imports"));
-    Stubs.Declared stubs =
-        Gate.applyOrRefuse(
+    Edits.Written written =
+        Edits.gated(
             project,
-            Map.of(path, fixed.text()),
+            path,
+            text,
+            planned.text(),
+            args.list("imports"),
             "adding to " + planned.where(),
             "Declare what the new members use first.");
+    Imports.Fixed fixed = written.fixed();
+    Stubs.Declared stubs = written.declared();
     List<String> said = new ArrayList<>();
     for (int i = 0; i < planned.changes().size(); i++) {
       Change c = planned.changes().get(i);
@@ -167,13 +170,17 @@ final class Declarations {
         end++;
       }
       String out = text.substring(0, start) + text.substring(end);
-      Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
-      Stubs.Declared stubs =
-          Gate.applyOrRefuse(
+      Edits.Written written =
+          Edits.gated(
               project,
-              Map.of(path, fixed.text()),
+              path,
+              text,
+              out,
+              args.list("imports"),
               "deleting " + target.label(),
               "Remove or change its uses first.");
+      Imports.Fixed fixed = written.fixed();
+      Stubs.Declared stubs = written.declared();
       return new Tools.Outcome(
           "deleted %s from %s (was lines %d-%d)%s"
               .formatted(target.label(), rel, firstLine, lastLine, fixed.said()),
@@ -198,13 +205,17 @@ final class Declarations {
       blocks.append(blocks.isEmpty() ? "" : "\n\n").append(reindent(content, d, indent));
     }
     String out = text.substring(0, start) + blocks + "\n" + text.substring(end);
-    Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
-    Stubs.Declared stubs =
-        Gate.applyOrRefuse(
+    Edits.Written written =
+        Edits.gated(
             project,
-            Map.of(path, fixed.text()),
+            path,
+            text,
+            out,
+            args.list("imports"),
             "replacing " + target.label(),
             "Change its uses in the same way first, or keep the old signature.");
+    Imports.Fixed fixed = written.fixed();
+    Stubs.Declared stubs = written.declared();
     return new Tools.Outcome(
         "replaced %s in %s, %s%s"
             .formatted(

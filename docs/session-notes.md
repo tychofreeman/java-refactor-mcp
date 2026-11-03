@@ -29,6 +29,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Edits.gated` is the one place a single-file edit fixes imports and passes the
+  gate (roadmap order 32, 2026-11-03). `Declarations` (3), `Extraction` and
+  `Edits.write` use it; `Signatures` keeps its per-file loop. Add new single-file
+  edits through `gated`.
 - `Jdt` owns every parser (review item 28, 2026-11-03): `Jdt.parseMembers` parses
   class-body members for `Declarations`, and the compiler options come from one
   function. `grep ASTParser` finds `Jdt` only; keep it that way.

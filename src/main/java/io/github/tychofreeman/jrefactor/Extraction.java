@@ -220,14 +220,18 @@ final class Extraction {
             + method
             + text.substring(insertAt);
     int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
-    Imports.Fixed fixed = Imports.fix(project, path, text, edited, List.of());
-    Stubs.Declared stubs =
-        Gate.applyOrRefuse(
+    Edits.Written written =
+        Edits.gated(
             project,
-            Map.of(path, fixed.text()),
+            path,
+            text,
+            edited,
+            List.of(),
             "extracting " + sel.lines() + " into " + name,
             "Nothing was changed. Choose lines whose variables and exceptions the new method can"
                 + " take, or adjust them first.");
+    Imports.Fixed fixed = written.fixed();
+    Stubs.Declared stubs = written.declared();
     int shift = fixed.lineShift();
     int first = Lines.number(edited, methodAt) + shift;
     int last = Lines.number(edited, methodAt + method.length() - 2) + shift;
