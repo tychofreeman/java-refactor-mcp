@@ -29,6 +29,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `rename` refuses a column below 1 (roadmap order 37, 2026-11-03): `Tools` passes
+  the column as given (null when absent), and `Rename.run` takes an `Integer`.
 - The end-of-batch check is `Gate.checkedAtEnd` (roadmap order 24, 2026-11-03):
   it counts, runs the body deferred, declares stubs, then refuses and restores or
   journals. `Batch` calls it; `Gate.refusal` is the one refusal wording for both.
