@@ -45,6 +45,17 @@ final class TypeCheck {
     if (last != null && last.project().equals(project) && last.texts().equals(texts)) {
       return new TreeMap<>(last.counts());
     }
+    Map<String, Integer> counts = count(project, files);
+    LAST.set(new Counted(project, texts, new TreeMap<>(counts)));
+    return counts;
+  }
+
+  /** {@link #errors} counted from scratch, never from the last count: what a fresh load gives. */
+  static Map<String, Integer> uncached(SourceProject project) throws IOException {
+    return count(project, project.javaFiles());
+  }
+
+  private static Map<String, Integer> count(SourceProject project, List<Path> files) {
     Map<String, Integer> counts = new TreeMap<>();
     PARSES.incrementAndGet();
     Jdt.parseAll(
@@ -58,7 +69,6 @@ final class TypeCheck {
             }
           }
         });
-    LAST.set(new Counted(project, texts, new TreeMap<>(counts)));
     return counts;
   }
 

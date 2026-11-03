@@ -126,6 +126,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `-Djrefactor.cost.root=<dir>`, and `-Djrefactor.cost.call='{"tool": ...,
   "args": {...}}'` for one call and its undo. The projects were Maven Central
   sources jars unpacked into the scratchpad (JDK-only, so no build runs).
+- Golden cases check undo and the cache (roadmap #14, 2026-11-03): every
+  write case is undone by `undo` and must return to `in/`, and the cached type
+  count must equal `TypeCheck.uncached`. All 51 write cases passed on the first
+  run, so no journaling gap exists in the golden set; the check guards future ones.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
