@@ -27,6 +27,20 @@ class JournalTest {
   }
 
   @Test
+  void aFailedUndoDoesNotHideTheErrorThatCausedIt(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    Path file = root.resolve("notes.txt");
+    Files.writeString(file, "first");
+    Journal.begin(project, "batch");
+    Journal.wrote(project, file, "first", "second");
+    Files.delete(file);
+    Files.createDirectory(file); // the undo cannot write over a directory
+    IllegalStateException failure = new IllegalStateException("the call failed");
+    Tools.abort(project, failure);
+    assertEquals(1, failure.getSuppressed().length);
+  }
+
+  @Test
   void undoOfATypeRenameMovesTheFileBack(@TempDir Path root) throws Exception {
     Path plant = root.resolve("com/example/Plant.java");
     Files.createDirectories(plant.getParent());

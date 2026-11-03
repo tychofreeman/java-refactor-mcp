@@ -172,14 +172,14 @@ public final class Server {
   }
 
   /** A tool body that returns its text, or refuses. */
-  private interface Body {
+  interface Body {
     String run() throws Exception;
   }
 
   /**
    * Runs {@code body}: its text, a refusal's reason, or an engine error, which is not a refusal.
    */
-  private static CallToolResult answer(Quiet quiet, Body body) {
+  static CallToolResult answer(Quiet quiet, Body body) {
     quiet.calls.incrementAndGet();
     try {
       String text;
@@ -193,8 +193,14 @@ public final class Server {
           .isError(true)
           .build();
     } catch (Exception e) {
+      e.printStackTrace(System.err);
+      String where =
+          java.util.Arrays.stream(e.getStackTrace())
+              .limit(3)
+              .map(f -> "\n  at " + f)
+              .collect(java.util.stream.Collectors.joining());
       return CallToolResult.builder()
-          .addTextContent("engine error (not a refusal; the call may be fine): " + e)
+          .addTextContent("engine error (not a refusal; the call may be fine): " + e + where)
           .isError(true)
           .build();
     } finally {
