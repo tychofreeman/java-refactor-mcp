@@ -37,6 +37,14 @@ public record SourceProject(
    * src/main/java} and {@code src/test/java} and the test classpath. Anything else is {@link #of}.
    */
   public static SourceProject load(Path root) {
+    return load(root, null);
+  }
+
+  /**
+   * {@link #load(Path)}, with the classpath kept in {@code classpathCache} (none when null) while
+   * {@code pom.xml} is unchanged, so a command-line run need not start Maven each time.
+   */
+  public static SourceProject load(Path root, Path classpathCache) {
     Path dir = root.toAbsolutePath().normalize();
     if (!MavenBuild.isMaven(dir)) {
       return of(dir);
@@ -48,7 +56,10 @@ public record SourceProject(
     List<String> classpath;
     String problem = null;
     try {
-      classpath = MavenBuild.classpath(dir);
+      classpath =
+          classpathCache == null
+              ? MavenBuild.classpath(dir)
+              : MavenBuild.classpath(dir, classpathCache);
     } catch (IOException e) {
       problem = e.getMessage();
       System.err.println(

@@ -1,8 +1,8 @@
 #!/bin/sh
 # Runs one java-refactor-mcp tool from the command line (see Cli.USAGE, or run
 # it with no arguments), with the jar built from this checkout. Rebuilds the jar
-# first when it is missing or older than the sources; the build's output goes to
-# stderr, so stdout carries only the result.
+# first when it is missing or older than the last commit of its sources; the
+# build's output goes to stderr, so stdout carries only the result.
 set -eu
 
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -15,7 +15,20 @@ if [ -z "${JAVA_HOME:-}" ] && command -v javac >/dev/null 2>&1; then
   export JAVA_HOME
 fi
 
-if [ ! -f "$jar" ] || [ -n "$(find "$here/pom.xml" "$here/src/main" -newer "$jar" -print 2>/dev/null | head -n 1)" ]; then
+# Stale means older than the last commit of the tools' code, not than the
+# working tree: this command edits src/main itself, and rebuilding after each
+# of its own edits cost about 5 s a run. Without git, any newer source counts.
+stale() {
+  [ ! -f "$jar" ] && return 0
+  committed=$(git -C "$here" log -1 --format=%ct -- pom.xml src/main 2>/dev/null) || committed=
+  if [ -n "$committed" ]; then
+    [ "$committed" -gt "$(stat -c %Y "$jar")" ]
+  else
+    [ -n "$(find "$here/pom.xml" "$here/src/main" -newer "$jar" -print 2>/dev/null | head -n 1)" ]
+  fi
+}
+
+if stale; then
   echo "jrefactor: building $jar" >&2
   (cd "$here" && ./mvnw -q -B package -DskipTests) >&2 || {
     echo "jrefactor: build failed; run ./mvnw package in $here to see why" >&2

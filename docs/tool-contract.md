@@ -290,7 +290,10 @@ schema (integer, boolean; arrays and objects as JSON). `key_file=path` gives
 the text argument `key` from a file. Output is the result the model would
 read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. The undo
 stack (the newest 20 changes) is kept between runs in
-`$XDG_CACHE_HOME/jrefactor` or `~/.cache/jrefactor`, one file per project.
+`$XDG_CACHE_HOME/jrefactor` or `~/.cache/jrefactor`, one file per project,
+beside the Maven classpath (used while `pom.xml` is unchanged and every entry
+exists) and the last type check (used while every file's hash and the
+classpath are the same).
 Not built: gorefactor's `-n` preview and `check`.
 
 ## Results

@@ -425,3 +425,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   heredoc instead.
 - Idea: fix imports (and type-check) only for `.java` files under a source
   root, as the gate already counts errors only there.
+
+## 2026-11-03: no stub for a new overload of an existing method
+- Task: `docs/sessions/cli-cache.md`.
+- Tool: `add_declaration` of a test calling `SourceProject.load(dir, cache)`
+  was refused, "The method load(Path) in the type SourceProject is not
+  applicable for the arguments (Path, Path)", where a new method name would
+  have got a stub. Answered with a batch: the overload first, then the test.
+- Idea: declare a stub for a call whose arguments fit no overload of a
+  project method, as for an undefined method, typed from the call.

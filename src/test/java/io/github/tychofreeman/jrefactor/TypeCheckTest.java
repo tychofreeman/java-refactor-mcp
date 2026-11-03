@@ -39,4 +39,27 @@ class TypeCheckTest {
     TypeCheck.errors(project);
     assertEquals(parsed, TypeCheck.parses(project));
   }
+
+  /** The command line runs one call per process; a saved count serves the next one's check. */
+  @Test
+  void aSavedCountServesANewProcess(@TempDir Path root, @TempDir Path cache) throws Exception {
+    Path file = root.resolve("com/example/A.java");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, "package com.example;\n\nclass A {\n  int x = \"one\";\n}\n");
+    SourceProject first = SourceProject.of(root);
+    Map<String, Integer> counted = TypeCheck.errors(first);
+    Path saved = cache.resolve("count.json");
+    TypeCheck.save(first, saved);
+
+    SourceProject second = SourceProject.of(root);
+    TypeCheck.load(second, saved);
+    assertEquals(counted, TypeCheck.errors(second));
+    assertEquals(0, TypeCheck.parses(second));
+
+    Files.writeString(file, "package com.example;\n\nclass A {}\n");
+    SourceProject third = SourceProject.of(root);
+    TypeCheck.load(third, saved);
+    assertEquals(Map.of(), TypeCheck.errors(third));
+    assertEquals(1, TypeCheck.parses(third));
+  }
 }
