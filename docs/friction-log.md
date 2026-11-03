@@ -318,3 +318,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Edit: `Stubs.java` changed with the Edit tool, not `replace_text`, the same
   gap as #36's entry above.
 
+## 2026-11-03: the server's own source edited with the Edit tool
+- Task: roadmap #38 (`docs/sessions/maven-classpath-note.md`).
+- Tool: none used. `SourceProject.java` and `Gate.java` were changed with the
+  Edit tool; `replace_text` on those files would have made the same change.
+  The same gap as the #36 and #37 entries above.
+

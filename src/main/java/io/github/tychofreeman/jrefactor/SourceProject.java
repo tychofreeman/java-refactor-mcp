@@ -11,9 +11,11 @@ import java.util.stream.Stream;
 /**
  * A Java project the server works on. Tool arguments name files relative to {@code root}; the
  * {@code .java} files under {@code sourceRoots} are what the gate checks and where types are found,
- * and {@code classpath} holds the library jars and class directories.
+ * and {@code classpath} holds the library jars and class directories. {@code classpathProblem} is
+ * why the classpath is empty when Maven could not give one, or null.
  */
-public record SourceProject(Path root, List<Path> sourceRoots, List<String> classpath) {
+public record SourceProject(
+    Path root, List<Path> sourceRoots, List<String> classpath, String classpathProblem) {
 
   public SourceProject {
     root = root.toAbsolutePath().normalize();
@@ -23,7 +25,7 @@ public record SourceProject(Path root, List<Path> sourceRoots, List<String> clas
 
   /** A project whose root is its one source root, with no classpath. */
   public static SourceProject of(Path root) {
-    return new SourceProject(root, List.of(root), List.of());
+    return new SourceProject(root, List.of(root), List.of(), null);
   }
 
   /**
@@ -40,15 +42,16 @@ public record SourceProject(Path root, List<Path> sourceRoots, List<String> clas
       return of(dir);
     }
     List<String> classpath;
+    String problem = null;
     try {
       classpath = MavenBuild.classpath(dir);
     } catch (IOException e) {
+      problem = e.getMessage();
       System.err.println(
-          "jrefactor: no classpath from Maven, so library types will not resolve: "
-              + e.getMessage());
+          "jrefactor: no classpath from Maven, so library types will not resolve: " + problem);
       classpath = List.of();
     }
-    return new SourceProject(dir, roots, classpath);
+    return new SourceProject(dir, roots, classpath, problem);
   }
 
   /** All {@code .java} files under the source roots, sorted. */
