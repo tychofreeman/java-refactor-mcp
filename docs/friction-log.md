@@ -426,6 +426,19 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: fix imports (and type-check) only for `.java` files under a source
   root, as the gate already counts errors only there.
 
+## 2026-11-03: deleting a helper still called in the same file declares a stub
+- Task: roadmap order 36 (`docs/sessions/names-one-class.md`): `Stubs.label`
+  deleted with `replace_declaration`, its callers in `Stubs.Round` still using it.
+- Tool: `replace_declaration` deleted `Stubs.label` and then declared
+  `Stubs.Round.label(ITypeBinding)` back in the file, as a "not implemented"
+  method for the calls that remained. No refusal. Removed with a second
+  `replace_declaration` after the callers were repointed.
+- Idea: a deletion whose callers remain should refuse and name them, as
+  `replace_declaration` does for a deleted method used elsewhere. The session
+  notes say a member the edit removed is not declared again; here it was, and
+  the cause is not yet known (not checked: whether the callers were in the
+  same file as the deletion's target, or the rule covers only methods).
+
 ## 2026-11-03: no stub for a new overload of an existing method
 - Task: `docs/sessions/cli-cache.md`.
 - Tool: `add_declaration` of a test calling `SourceProject.load(dir, cache)`

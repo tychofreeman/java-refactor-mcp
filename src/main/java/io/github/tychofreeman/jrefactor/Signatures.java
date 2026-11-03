@@ -746,13 +746,16 @@ final class Signatures {
     return b.getMethodDeclaration().getKey();
   }
 
-  /** "Cart.add(String, int)". */
+  /**
+   * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
+   * types.
+   */
   static String label(IMethodBinding b) {
     List<String> types = new ArrayList<>();
     for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
       types.add(t.getErasure().getName());
     }
-    return b.getDeclaringClass().getErasure().getName()
+    return Names.typeLabel(b.getDeclaringClass())
         + "."
         + b.getName()
         + "("

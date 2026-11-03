@@ -263,7 +263,7 @@ public final class Rename {
       if (owner == null) {
         return false;
       }
-      String label = typeLabel(owner);
+      String label = Names.typeLabel(owner);
       return label.equals(type)
           || label.endsWith("." + type)
           || owner.getErasure().getQualifiedName().equals(type);
@@ -302,36 +302,28 @@ public final class Rename {
     return null;
   }
 
-  /** A type's name with its enclosing types: {@code Outer.Inner}. */
-  private static String typeLabel(ITypeBinding type) {
-    ITypeBinding t = type.getErasure();
-    return t.getDeclaringClass() == null
-        ? t.getName()
-        : typeLabel(t.getDeclaringClass()) + "." + t.getName();
-  }
-
   /** "the field Counter.count", "the parameter count", "the method Cart.add", "the type Cart". */
   private static String describe(IBinding declaration) {
     if (declaration instanceof IVariableBinding v) {
       if (v.isField()) {
-        return "the field " + typeLabel(v.getDeclaringClass()) + "." + v.getName();
+        return "the field " + Names.typeLabel(v.getDeclaringClass()) + "." + v.getName();
       }
       return (v.isParameter() ? "the parameter " : "the local ") + v.getName();
     }
     if (declaration instanceof IMethodBinding m) {
-      return "the method " + typeLabel(m.getDeclaringClass()) + "." + m.getName();
+      return "the method " + Names.typeLabel(m.getDeclaringClass()) + "." + m.getName();
     }
-    return "the type " + typeLabel((ITypeBinding) declaration);
+    return "the type " + Names.typeLabel((ITypeBinding) declaration);
   }
 
   /** The {@code name} argument that picks {@code declaration}: Counter.count, or local count. */
   private static String pick(IBinding declaration) {
     ITypeBinding owner = owner(declaration);
     if (owner != null) {
-      return typeLabel(owner) + "." + declaration.getName();
+      return Names.typeLabel(owner) + "." + declaration.getName();
     }
     if (declaration instanceof ITypeBinding t) {
-      return typeLabel(t);
+      return Names.typeLabel(t);
     }
     return "local " + declaration.getName();
   }
@@ -409,7 +401,7 @@ public final class Rename {
   private static Tools.Outcome renameField(
       SourceProject project, IVariableBinding field, String newName) throws IOException {
     String oldName = field.getName();
-    String owner = typeLabel(field.getDeclaringClass());
+    String owner = Names.typeLabel(field.getDeclaringClass());
     String key = field.getKey();
     List<String> clashKeys = new ArrayList<>();
     for (IVariableBinding other : field.getDeclaringClass().getDeclaredFields()) {
@@ -578,7 +570,7 @@ public final class Rename {
       for (ITypeBinding member : type.getDeclaringClass().getDeclaredTypes()) {
         if (member.getName().equals(newName)) {
           throw new Refusal(
-              typeLabel(type.getDeclaringClass())
+              Names.typeLabel(type.getDeclaringClass())
                   + " already has a type "
                   + newName
                   + ". Choose another name.");
@@ -665,7 +657,7 @@ public final class Rename {
         ASTNode at = unit.findDeclaringNode(other.getKey());
         String label = Signatures.label(other);
         throw new Refusal(
-            typeLabel(b.getDeclaringClass())
+            Names.typeLabel(b.getDeclaringClass())
                 + " already has a method "
                 + label.substring(label.indexOf('.') + 1)
                 + (at == null ? "" : " (line " + unit.getLineNumber(at.getStartPosition()) + ")")
