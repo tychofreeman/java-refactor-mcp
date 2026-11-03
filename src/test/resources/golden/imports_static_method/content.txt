@@ -1,0 +1,3 @@
+  void bounds() {
+    isFalse(min(1, 2) > 1);
+  }

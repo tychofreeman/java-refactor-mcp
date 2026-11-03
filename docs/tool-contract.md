@@ -120,8 +120,11 @@ the JDK; `java.awt`, `javax.swing`, `sun.*`, `com.sun.*`, `jdk.*` only when
 nothing else has it), in order among the file's imports, and remove single-type
 imports the edit left unused (an import already unused stays). A name with
 several candidates is refused with them; the optional `imports` argument (fully
-qualified names) chooses. Results end with `; imported a.B, c.D` and `; removed
-import e.F`, and their line numbers count the import lines. `create_file`
+qualified names) chooses. An unqualified call to no method is imported
+statically from the one class the file already imports a static member from
+that has a static method of that name (`assertFalse` beside `import static
+...Assertions.assertEquals`), before stubs are declared. Results end with
+`; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
 content is a whole file and keeps its own imports.
 
 The server runs one call at a time: calls sent together in one turn run in the
