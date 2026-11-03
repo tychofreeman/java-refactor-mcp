@@ -59,17 +59,30 @@ final class Stubs {
 
   private Stubs() {}
 
-  /** What the running call declared, as its result says it. */
-  private static final ThreadLocal<Map<String, List<String>>> DECLARED =
-      ThreadLocal.withInitial(LinkedHashMap::new);
+  /** The stubs one change declared: the labels the result names, by the file they went in. */
+  record Declared(Map<String, List<String>> byFile) {
+
+    static final Declared NONE = new Declared(Map.of());
+
+    /** "; declared stubs a, b in f" for these stubs, or nothing. */
+    String text() {
+      List<String> parts = new ArrayList<>();
+      for (Map.Entry<String, List<String>> file : byFile.entrySet()) {
+        parts.add(String.join(", ", file.getValue()) + " in " + file.getKey());
+      }
+      return parts.isEmpty() ? "" : "; declared stubs " + String.join("; ", parts);
+    }
+  }
+
+  /** The compile errors a change left beyond the ones before it, and the stubs it declared. */
+  record Check(List<String> introduced, Declared declared) {}
 
   /**
    * Declares stubs until the project has no compile errors beyond {@code before}, or none can be
    * declared. Writes each file it changes, first putting its old text (null for a new file) in
    * {@code old} when it is not there yet. Returns the errors left.
    */
-  static List<String> declare(
-      SourceProject project, Map<String, Integer> before, Map<Path, String> old)
+  static Check declare(SourceProject project, Map<String, Integer> before, Map<Path, String> old)
       throws IOException {
     List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
     Round round = new Round(project, old);
@@ -86,18 +99,7 @@ final class Stubs {
       }
       introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
     }
-    return introduced;
-  }
-
-  /** "; declared stubs a, b in f" for what the running call declared, or nothing; clears it. */
-  static String said() {
-    Map<String, List<String>> declared = DECLARED.get();
-    DECLARED.remove();
-    List<String> parts = new ArrayList<>();
-    for (Map.Entry<String, List<String>> file : declared.entrySet()) {
-      parts.add(String.join(", ", file.getValue()) + " in " + file.getKey());
-    }
-    return parts.isEmpty() ? "" : "; declared stubs " + String.join("; ", parts);
+    return new Check(introduced, new Declared(round.declared));
   }
 
   /** Rounds of stubs, as members of a class become declarable once the class is. */
@@ -132,6 +134,9 @@ final class Stubs {
     final Set<String> done = new HashSet<>();
     final Set<String> created = new HashSet<>();
     final Set<String> uses = new TreeSet<>();
+
+    /** The labels of the stubs written, by the file they went in. */
+    final Map<String, List<String>> declared = new LinkedHashMap<>();
 
     /** The text of each file before the edit, to tell a removed member from a missing one. */
     final Map<Path, String> old;
@@ -325,7 +330,7 @@ final class Stubs {
       String rel = project.relative(file);
       String text = before;
       Map<String, List<String>> byType = new LinkedHashMap<>();
-      List<String> labels = DECLARED.get().computeIfAbsent(rel, k -> new ArrayList<>());
+      List<String> labels = declared.computeIfAbsent(rel, k -> new ArrayList<>());
       for (Stub stub : stubs) {
         if (stub.type() == null) {
           text = stub.code();

@@ -54,7 +54,7 @@ public final class Rename {
    * @param column 1-based column where the name starts; 0 when not given
    * @return what was renamed, and the lines of each file it changed
    */
-  public static String run(
+  public static Tools.Outcome run(
       SourceProject project, String relFile, int line, String name, int column, String newName)
       throws IOException {
     Path file = project.root().resolve(relFile).normalize();
@@ -120,14 +120,17 @@ public final class Rename {
               + "). Choose another name.");
     }
 
-    gate(project, Map.of(file, apply(source, found.occurrences(), newName)), oldName, newName);
-    return "renamed %s to %s in %s: %d occurrences, %s"
-        .formatted(
-            oldName,
-            newName,
-            project.relative(file),
-            found.occurrences().size(),
-            Tools.lines(lineNumbers(cu, found.occurrences())));
+    Stubs.Declared stubs =
+        gate(project, Map.of(file, apply(source, found.occurrences(), newName)), oldName, newName);
+    return new Tools.Outcome(
+        "renamed %s to %s in %s: %d occurrences, %s"
+            .formatted(
+                oldName,
+                newName,
+                project.relative(file),
+                found.occurrences().size(),
+                Tools.lines(lineNumbers(cu, found.occurrences()))),
+        stubs);
   }
 
   /** The name {@code name} that starts at {@code line}, {@code column}. */
@@ -397,8 +400,8 @@ public final class Rename {
    * name the type already has as a field, and one a local of that name would hide at an unqualified
    * use.
    */
-  private static String renameField(SourceProject project, IVariableBinding field, String newName)
-      throws IOException {
+  private static Tools.Outcome renameField(
+      SourceProject project, IVariableBinding field, String newName) throws IOException {
     String oldName = field.getName();
     String owner = typeLabel(field.getDeclaringClass());
     String key = field.getKey();
@@ -475,9 +478,9 @@ public final class Rename {
       occurrences += uses.size();
     }
 
-    gate(project, texts, oldName, newName);
+    Stubs.Declared stubs = gate(project, texts, oldName, newName);
     return summary(
-        "renamed the field " + owner + "." + oldName + " to " + newName, lines, occurrences);
+        "renamed the field " + owner + "." + oldName + " to " + newName, lines, occurrences, stubs);
   }
 
   /**
@@ -485,8 +488,8 @@ public final class Rename {
    * reference of them in the project, Javadoc included. Refuses a family member that overrides a
    * library method, and a new name a declaring type already has with the same parameter types.
    */
-  private static String renameMethod(SourceProject project, IMethodBinding method, String newName)
-      throws IOException {
+  private static Tools.Outcome renameMethod(
+      SourceProject project, IMethodBinding method, String newName) throws IOException {
     String oldName = method.getName();
     Map<Path, String> texts = holding(project, oldName);
     Map<Path, CompilationUnit> units = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
@@ -531,11 +534,12 @@ public final class Rename {
       occurrences += uses.size();
     }
 
-    gate(project, changed, oldName, newName);
+    Stubs.Declared stubs = gate(project, changed, oldName, newName);
     List<String> names = new ArrayList<>(List.of(Signatures.label(method)));
     others.remove(names.get(0));
     names.addAll(others);
-    return summary("renamed the method " + joinAnd(names) + " to " + newName, lines, occurrences);
+    return summary(
+        "renamed the method " + joinAnd(names) + " to " + newName, lines, occurrences, stubs);
   }
 
   /**
@@ -543,7 +547,7 @@ public final class Rename {
    * top-level type's file with it. Refuses a type parameter, and a new name whose file exists or
    * that the enclosing type already has as a member type.
    */
-  private static String renameType(SourceProject project, ITypeBinding type, String newName)
+  private static Tools.Outcome renameType(SourceProject project, ITypeBinding type, String newName)
       throws IOException {
     if (type.isTypeVariable()) {
       throw new Refusal(
@@ -608,12 +612,12 @@ public final class Rename {
       occurrences += uses.size();
     }
 
-    gate(project, changed, oldName, newName);
+    Stubs.Declared stubs = gate(project, changed, oldName, newName);
     String what = "renamed the type " + type.getQualifiedName() + " to " + newName;
     if (from != null) {
       what += ", and " + project.relative(from) + " to " + project.relative(to) + ",";
     }
-    return summary(what, lines, occurrences);
+    return summary(what, lines, occurrences, stubs);
   }
 
   /**
@@ -668,16 +672,21 @@ public final class Rename {
    * "{@code what} in F: n occurrences, lines a, b" for one file; "{@code what} in k files: n
    * occurrences, F lines a, b; G line c" for several.
    */
-  private static String summary(String what, Map<String, List<Integer>> lines, int occurrences) {
+  private static Tools.Outcome summary(
+      String what, Map<String, List<Integer>> lines, int occurrences, Stubs.Declared stubs) {
     if (lines.size() == 1) {
       Map.Entry<String, List<Integer>> only = lines.entrySet().iterator().next();
-      return "%s in %s: %d occurrences, %s"
-          .formatted(what, only.getKey(), occurrences, Tools.lines(only.getValue()));
+      return new Tools.Outcome(
+          "%s in %s: %d occurrences, %s"
+              .formatted(what, only.getKey(), occurrences, Tools.lines(only.getValue())),
+          stubs);
     }
     List<String> each = new ArrayList<>();
     lines.forEach((rel, ls) -> each.add(rel + " " + Tools.lines(ls)));
-    return "%s in %d files: %d occurrences, %s"
-        .formatted(what, lines.size(), occurrences, String.join("; ", each));
+    return new Tools.Outcome(
+        "%s in %d files: %d occurrences, %s"
+            .formatted(what, lines.size(), occurrences, String.join("; ", each)),
+        stubs);
   }
 
   /**
@@ -732,11 +741,11 @@ public final class Rename {
   }
 
   /** Writes the renamed files through the gate, refusing (and restoring) on new compile errors. */
-  private static void gate(
+  private static Stubs.Declared gate(
       SourceProject project, Map<Path, String> texts, String oldName, String newName)
       throws IOException {
-    List<String> introduced = Gate.apply(project, texts);
-    if (!introduced.isEmpty()) {
+    Stubs.Check check = Gate.apply(project, texts);
+    if (!check.introduced().isEmpty()) {
       throw new Refusal(
           "renaming '"
               + oldName
@@ -744,9 +753,10 @@ public final class Rename {
               + newName
               + "' would introduce compile errors, "
               + "so nothing was changed:\n  "
-              + String.join("\n  ", introduced)
+              + String.join("\n  ", check.introduced())
               + "\nChoose a name that does not clash with a name the code already uses.");
     }
+    return check.declared();
   }
 
   /** The distinct lines of {@code nodes}, in order. */

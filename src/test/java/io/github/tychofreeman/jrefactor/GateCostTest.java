@@ -33,7 +33,7 @@ class GateCostTest {
     String text = Files.readString(file);
     List<String> introduced;
     try {
-      introduced = Gate.apply(project, Map.of(file, text + "\n// gate cost\n"));
+      introduced = Gate.apply(project, Map.of(file, text + "\n// gate cost\n")).introduced();
     } finally {
       Files.writeString(file, text);
     }
@@ -65,7 +65,7 @@ class GateCostTest {
     TypeCheck.errors(project);
 
     long start = System.nanoTime();
-    String result = Tools.call(Tools.named((String) call.get("tool")), project, args);
+    String result = Tools.call(Tools.named((String) call.get("tool")), project, args).render();
     long done = System.nanoTime();
     Journal.undo(project);
     long undone = System.nanoTime();

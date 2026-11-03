@@ -126,6 +126,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `-Djrefactor.cost.root=<dir>`, and `-Djrefactor.cost.call='{"tool": ...,
   "args": {...}}'` for one call and its undo. The projects were Maven Central
   sources jars unpacked into the scratchpad (JDK-only, so no build runs).
+- Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
+  returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
+  the model reads, with the stubs named after it. `Stubs.said()` and its
+  `ThreadLocal` are gone. Golden `stubs_*` text is unchanged.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
@@ -140,7 +144,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   so a session started before `.claude/settings.json` existed has no log.
 - `gh pr checks` right after `gh pr create` can say "no checks reported"
   before CI registers, and `--watch` then returns at once: #22 was merged
-  that way before its run (which passed). Wait for the run to appear.
+  that way before its run (which passed). Wait for the run to appear. A PR
+  that conflicts with `main` gets no run at all (#29, while other sessions
+  merged #25-#28): check `gh pr view N --json mergeable` when none appears.
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

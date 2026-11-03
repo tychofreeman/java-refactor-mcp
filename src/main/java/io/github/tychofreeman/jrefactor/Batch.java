@@ -15,7 +15,7 @@ final class Batch {
 
   private Batch() {}
 
-  static String run(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome run(SourceProject project, Args args) throws Exception {
     List<Map<String, Object>> steps = args.objects("steps");
     if (steps.isEmpty()) {
       throw new Refusal("batch needs steps: a list of {\"tool\": ..., \"args\": {...}}.");
@@ -28,18 +28,19 @@ final class Batch {
       Map<String, Integer> before = TypeCheck.errors(project);
       String said = Gate.deferred(() -> steps(project, steps, true));
       Map<Path, String> old = Journal.written();
-      List<String> introduced = Stubs.declare(project, before, old);
-      if (!introduced.isEmpty()) {
+      Stubs.Check declaring = Stubs.declare(project, before, old);
+      if (!declaring.introduced().isEmpty()) {
         Gate.restore(old);
         throw new Refusal(
             "the batch would add compile errors, so nothing was changed:\n  "
-                + String.join("\n  ", introduced)
+                + String.join("\n  ", declaring.introduced())
                 + "\nAdd the steps that fix them, or change the steps that cause them.");
       }
       Gate.journal(old);
-      return said + "\nchecked at the end: no new compile errors";
+      return new Tools.Outcome(
+          said + "\nchecked at the end: no new compile errors", declaring.declared());
     }
-    return steps(project, steps, false);
+    return Tools.Outcome.of(steps(project, steps, false));
   }
 
   /**
@@ -88,7 +89,7 @@ final class Batch {
       String before = path != null && Files.isRegularFile(path) ? Files.readString(path) : null;
       String text;
       try {
-        text = Tools.call(def, project, stepArgs);
+        text = Tools.call(def, project, stepArgs).render();
       } catch (Refusal refusal) {
         String hint =
             !atEnd && refusal.getMessage().contains("would add compile errors")
