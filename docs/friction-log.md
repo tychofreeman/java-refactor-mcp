@@ -378,3 +378,10 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Jdt.java` and `Declarations.java` were changed with the
   Edit tool; the java-refactor-mcp tools were not in this session's tool
   list. `replace_text` would have made each edit.
+
+## 2026-11-03: gated-edit call sites changed by hand
+- Task: roadmap order 32 (`docs/sessions/edit-pipeline.md`).
+- Tool: none used. `Edits.java`, `Declarations.java` and `Extraction.java`
+  were changed with the Edit tool; the java-refactor-mcp tools were not in
+  this session's tool list. `replace_text` would have made each edit, and a
+  `batch` of them with check "end" the whole change in one call.
