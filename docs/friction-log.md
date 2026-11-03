@@ -215,3 +215,17 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   file and then `replace_text` it, which works today; say so in the refusal
   for a large file ("send it in a batch with check end, with the fixes as later
   steps").
+
+## 2026-11-03: a refused create_file left a stub class behind
+- Task: roadmap #18 (session log), writing its test first.
+- Tool: `create_file` of a test that used a class nothing declared, and a
+  constant of it (stubs do not declare fields), was refused, but the stub
+  class it had declared stayed on disk; the next `create_file` of that class
+  was refused as "already exists".
+- Cause: the before-text of a new file is null, and `Map.putIfAbsent`
+  replaces a null, so the second stub round recorded the stub as the file's
+  old text and the refusal restored it. `Journal.wrote` had the same bug:
+  undoing a batch that created a file and then edited it would have left the
+  file. Fixed with `containsKey` in both (`stubs_refused_leaves_no_class`,
+  `JournalTest`).
+- Idea: none beyond the fix.

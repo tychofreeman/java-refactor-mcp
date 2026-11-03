@@ -1,0 +1,7 @@
+package com.example;
+
+class AppTest {
+  int limit() {
+    return Settings.entry("x") + Settings.MAX;
+  }
+}
