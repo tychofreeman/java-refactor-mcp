@@ -9,10 +9,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * What each top-level call wrote, per project: the text of each file before and after, so {@code
- * undo} can put the last change back. Kept in memory for the life of the server.
+ * undo} can put the last change back. Kept in memory for the life of the server; the command line
+ * ({@link Cli}) saves it between runs.
  */
 final class Journal {
 
@@ -51,6 +56,59 @@ final class Journal {
           .append(String.join(", ", removed));
     }
     return said.toString();
+  }
+
+  /** How many changes {@link #save} keeps: the newest. */
+  static final int KEPT = 20;
+
+  private static final ObjectMapper JSON = new ObjectMapper();
+
+  /**
+   * Writes {@code project}'s undo history to {@code file}, the newest {@link #KEPT} changes, so a
+   * later process can {@link #load} it: the command line runs one call per process.
+   */
+  static void save(SourceProject project, Path file) throws IOException {
+    ArrayNode entries = JSON.createArrayNode();
+    int n = 0;
+    for (Entry e : project.session().done) {
+      if (n++ == KEPT) {
+        break;
+      }
+      ObjectNode entry = entries.addObject();
+      entry.put("what", e.what());
+      ArrayNode files = entry.putArray("files");
+      for (Path p : e.after().keySet()) {
+        ObjectNode f = files.addObject();
+        f.put("path", p.toString());
+        f.put("before", e.before().get(p));
+        f.put("after", e.after().get(p));
+      }
+    }
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, JSON.writeValueAsString(entries));
+  }
+
+  /** Replaces {@code project}'s undo history with the one {@link #save} wrote to {@code file}. */
+  static void load(SourceProject project, Path file) throws IOException {
+    if (!Files.exists(file)) {
+      return;
+    }
+    Deque<Entry> done = project.session().done;
+    done.clear();
+    for (JsonNode entry : JSON.readTree(Files.readString(file)).values()) {
+      Map<Path, String> before = new LinkedHashMap<>();
+      Map<Path, String> after = new LinkedHashMap<>();
+      for (JsonNode f : entry.path("files").values()) {
+        Path p = Path.of(f.path("path").asString());
+        before.put(p, text(f.get("before")));
+        after.put(p, text(f.get("after")));
+      }
+      done.addLast(new Entry(entry.path("what").asString(), before, after));
+    }
+  }
+
+  private static String text(JsonNode node) {
+    return node == null || node.isNull() ? null : node.asString();
   }
 
   /** One change: what made it, and each file's text before and after (null: no such file). */

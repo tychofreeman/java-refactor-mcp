@@ -130,6 +130,16 @@ checked out, a branch's build included.
    before the batch. `undo` reverts the last call or batch.
 6. **Read refusals; they say what to send.** A refusal changes nothing.
 
+**Without the MCP server** (a container that cannot run it, a script):
+`bin/jrefactor` runs the same tools from a shell, one call per run, with the
+same arguments and results: `bin/jrefactor list`, `bin/jrefactor rename
+file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
+`-` for stdin), and `content_file=path` (any `key_file`) for long text.
+Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
+call, also one from an earlier run (the stack is kept in
+`~/.cache/jrefactor`). Each run loads the project, about 9 s on this repo, so
+send several steps as one `batch`.
+
 Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,
 naming the tool or composition that would have done it.
 

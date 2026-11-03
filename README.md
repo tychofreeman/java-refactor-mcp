@@ -7,7 +7,8 @@ built on Eclipse JDT Core. It is the Java counterpart to
 **Status: early.** The server runs over STDIO with `inspect` (read-only),
 `rename` (locals, parameters, fields, methods and types, across files),
 `move_type` (a nested type to its own file), the edits, signature changes, `extract_method`, `batch` and `undo`, each
-type-checked before and after. The roadmap is in [docs/design.md](docs/design.md).
+type-checked before and after. `bin/jrefactor` runs the same tools from a
+shell, one call per run (`bin/jrefactor list`). The roadmap is in [docs/design.md](docs/design.md).
 
 ## Goal
 
