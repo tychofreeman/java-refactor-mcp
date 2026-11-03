@@ -110,8 +110,8 @@ final class Imports {
     for (ImportDeclaration i : remove) {
       cuts.add(
           new int[] {
-            lineStart(after, i.getStartPosition()),
-            lineEnd(after, i.getStartPosition() + i.getLength())
+            Lines.start(after, i.getStartPosition()),
+            Lines.end(after, i.getStartPosition() + i.getLength())
           });
     }
     if (kept.isEmpty() && add.isEmpty() && !cuts.isEmpty()) {
@@ -213,15 +213,15 @@ final class Imports {
         continue;
       }
       if (i.getName().getFullyQualifiedName().compareTo(name) > 0) {
-        return lineStart(text, i.getStartPosition());
+        return Lines.start(text, i.getStartPosition());
       }
       lastPlain = i;
     }
     if (lastPlain != null) {
-      return lineEnd(text, lastPlain.getStartPosition() + lastPlain.getLength());
+      return Lines.end(text, lastPlain.getStartPosition() + lastPlain.getLength());
     }
     if (!kept.isEmpty()) {
-      return lineStart(text, kept.get(0).getStartPosition());
+      return Lines.start(text, kept.get(0).getStartPosition());
     }
     return packageEnd(text, unit);
   }
@@ -229,7 +229,7 @@ final class Imports {
   /** The offset just past the package line, or 0 with no package. */
   private static int packageEnd(String text, CompilationUnit unit) {
     PackageDeclaration p = unit.getPackage();
-    return p == null ? 0 : lineEnd(text, p.getStartPosition() + p.getLength());
+    return p == null ? 0 : Lines.end(text, p.getStartPosition() + p.getLength());
   }
 
   /** Simple type names the compiler could not resolve in {@code unit}. */
@@ -289,19 +289,6 @@ final class Imports {
       }
     }
     return n;
-  }
-
-  private static int lineStart(String text, int offset) {
-    int i = offset;
-    while (i > 0 && text.charAt(i - 1) != '\n') {
-      i--;
-    }
-    return i;
-  }
-
-  private static int lineEnd(String text, int offset) {
-    int i = text.indexOf('\n', offset);
-    return i < 0 ? text.length() : i + 1;
   }
 
   /** The classes named {@code name}, as fully qualified names, sorted, discouraged ones dropped. */

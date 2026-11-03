@@ -337,6 +337,15 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `replace_text` would have made the same edits.
 
 
+## 2026-11-03: line helper call sites changed by script across six files
+- Task: roadmap #27 (`docs/sessions/one-line-helper.md`).
+- Tool: none used. `Declarations`, `Imports`, `Edits`, `Tools`, `Rename` and
+  `Extract` were changed by a Python script (regex renames and exact anchor
+  replacements); `Lines.java` and `LinesTest.java` were written with Write.
+  `replace_text` would cover the call-site renames, one file per call; a
+  `batch` of six `replace_text` edits with check "end" would have made the
+  whole change in one call. The script's anchors that matched more than once
+  were caught by count assertions, not by the tool.
 ## 2026-11-03: a stub assertFalse again, for a missing static import
 - Task: roadmap #45 (`docs/sessions/session-report-counts.md`).
 - Tool: `add_declaration` of three tests, one calling `assertFalse`, with

@@ -118,7 +118,7 @@ final class Extract {
     }
 
     String lines() {
-      return startLine == endLine ? "line " + startLine : "lines " + startLine + "-" + endLine;
+      return Lines.range(startLine, endLine);
     }
 
     /**
@@ -128,7 +128,7 @@ final class Extract {
     static Selection of(CompilationUnit unit, String text, int start, int end) {
       int startOffset = unit.getPosition(start, 0);
       int endOffset = lineEndOffset(unit, text, end);
-      String range = start == end ? "line " + start : "lines " + start + "-" + end;
+      String range = Lines.range(start, end);
       List<Statement> list = body(unit, startOffset, endOffset, range);
       Statement through = null;
       List<Statement> throughList = null;
@@ -476,8 +476,8 @@ final class Extract {
               "Nothing was changed. Choose lines whose variables and exceptions the new method can"
                   + " take, or adjust them first.");
       int shift = fixed.lineShift();
-      int first = Edits.lineOf(edited, methodAt) + shift;
-      int last = Edits.lineOf(edited, methodAt + method.length() - 2) + shift;
+      int first = Lines.number(edited, methodAt) + shift;
+      int last = Lines.number(edited, methodAt + method.length() - 2) + shift;
       return new Tools.Outcome(
           "extracted "
               + sel.lines()
@@ -1040,6 +1040,6 @@ final class Extract {
   private static String span(CompilationUnit unit, ASTNode n) {
     int a = unit.getLineNumber(n.getStartPosition());
     int b = unit.getLineNumber(endOf(n) - 1);
-    return a == b ? "line " + a : "lines " + a + "-" + b;
+    return Lines.range(a, b);
   }
 }
