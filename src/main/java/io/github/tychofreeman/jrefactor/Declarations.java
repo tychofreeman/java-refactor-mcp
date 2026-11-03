@@ -97,10 +97,10 @@ final class Declarations {
       String block = reindent(content, d, indent);
       MethodDeclaration stub = d instanceof MethodDeclaration m ? stubFor(owner.decl(), m) : null;
       if (stub != null) {
-        int start = lineStart(text, stub.getStartPosition());
+        int start = Lines.start(text, stub.getStartPosition());
         String said = "replaced the stub " + label(stub) + " in " + where;
         changes.add(
-            new Change(start, lineEnd(text, end(stub)), block + "\n", 0, block.length(), said));
+            new Change(start, Lines.end(text, end(stub)), block + "\n", 0, block.length(), said));
       } else {
         pending.add(block);
         addedLabels.add(label(d));
@@ -111,15 +111,15 @@ final class Declarations {
       String said = "added " + String.join(", ", addedLabels) + " to " + where;
       if (after != null) {
         BodyDeclaration m = member(owner, after, true);
-        int at = lineEnd(text, end(m));
+        int at = Lines.end(text, end(m));
         changes.add(new Change(at, at, "\n" + blocks + "\n", 1, blocks.length(), said));
       } else if (before != null) {
         BodyDeclaration m = member(owner, before, false);
-        int at = lineStart(text, m.getStartPosition());
+        int at = Lines.start(text, m.getStartPosition());
         changes.add(new Change(at, at, blocks + "\n\n", 0, blocks.length(), said));
       } else {
         int close = end(owner.decl());
-        int at = lineStart(text, close);
+        int at = Lines.start(text, close);
         String lead = text.substring(at, close).isBlank() ? "" : "\n";
         if (!lead.isEmpty()) {
           at = close;
@@ -157,12 +157,12 @@ final class Declarations {
     CompilationUnit unit = Edits.parses(text, rel);
     Named target = find(unit, name, rel);
     BodyDeclaration decl = target.decl();
-    int firstLine = Edits.lineOf(text, decl.getStartPosition());
-    int lastLine = Edits.lineOf(text, end(decl));
+    int firstLine = Lines.number(text, decl.getStartPosition());
+    int lastLine = Lines.number(text, end(decl));
 
     if (content.isBlank()) {
-      int start = lineStart(text, decl.getStartPosition());
-      int end = lineEnd(text, end(decl));
+      int start = Lines.start(text, decl.getStartPosition());
+      int end = Lines.end(text, end(decl));
       if (start >= 2 && text.charAt(start - 1) == '\n' && text.charAt(start - 2) == '\n') {
         start--;
       } else if (end < text.length() && text.charAt(end) == '\n') {
@@ -191,10 +191,10 @@ final class Declarations {
         from++;
       }
     }
-    int start = lineStart(text, from);
-    int end = lineEnd(text, end(decl));
+    int start = Lines.start(text, from);
+    int end = Lines.end(text, end(decl));
     String indent =
-        text.substring(lineStart(text, decl.getStartPosition()), decl.getStartPosition());
+        text.substring(Lines.start(text, decl.getStartPosition()), decl.getStartPosition());
     StringBuilder blocks = new StringBuilder();
     for (BodyDeclaration d : replacement) {
       blocks.append(blocks.isEmpty() ? "" : "\n\n").append(reindent(content, d, indent));
@@ -513,8 +513,8 @@ final class Declarations {
    * to be at that indentation too.
    */
   private static String reindent(String content, BodyDeclaration d, String indent) {
-    int start = lineStart(content, d.getStartPosition());
-    int end = lineEnd(content, end(d));
+    int start = Lines.start(content, d.getStartPosition());
+    int end = Lines.end(content, end(d));
     String[] lines = content.substring(start, end).replaceAll("\n$", "").split("\n", -1);
     int common = Integer.MAX_VALUE;
     for (int i = 1; i < lines.length; i++) {
@@ -552,13 +552,13 @@ final class Declarations {
   private static String memberIndent(String text, AbstractTypeDeclaration type, String content) {
     if (!type.bodyDeclarations().isEmpty()) {
       BodyDeclaration first = (BodyDeclaration) type.bodyDeclarations().get(0);
-      int at = lineStart(text, first.getStartPosition());
+      int at = Lines.start(text, first.getStartPosition());
       String lead = text.substring(at, first.getStartPosition());
       if (lead.isBlank()) {
         return lead;
       }
     }
-    int at = lineStart(text, type.getStartPosition());
+    int at = Lines.start(text, type.getStartPosition());
     String typeIndent = text.substring(at, at + leading(text, at));
     int step = step(text) > 0 ? step(text) : step(content) > 0 ? step(content) : 4;
     return typeIndent + " ".repeat(step);
@@ -589,27 +589,13 @@ final class Declarations {
    * moved by {@code lineShift} lines.
    */
   private static String range(CharSequence text, int at, int length, int lineShift) {
-    int first = Edits.lineOf(text, at) + lineShift;
-    int last = Edits.lineOf(text, at + Math.max(length - 1, 0)) + lineShift;
-    return first == last ? "line " + first : "lines " + first + "-" + last;
+    int first = Lines.number(text, at) + lineShift;
+    int last = Lines.number(text, at + Math.max(length - 1, 0)) + lineShift;
+    return Lines.range(first, last);
   }
 
   /** The offset of the last character of {@code node}. */
   private static int end(ASTNode node) {
     return node.getStartPosition() + node.getLength() - 1;
-  }
-
-  private static int lineStart(String text, int offset) {
-    int i = offset;
-    while (i > 0 && text.charAt(i - 1) != '\n') {
-      i--;
-    }
-    return i;
-  }
-
-  /** The offset just past the line ending of the line that holds {@code offset}. */
-  private static int lineEnd(String text, int offset) {
-    int i = text.indexOf('\n', offset);
-    return i < 0 ? text.length() : i + 1;
   }
 }

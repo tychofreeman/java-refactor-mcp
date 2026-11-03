@@ -88,7 +88,7 @@ final class Edits {
     if (at.size() > 1 && !args.flag("all_occurrences")) {
       List<Integer> lines = new ArrayList<>();
       for (int i : at) {
-        lines.add(lineOf(text, i));
+        lines.add(Lines.number(text, i));
       }
       throw new Refusal(
           "old occurs "
@@ -96,7 +96,7 @@ final class Edits {
               + " times in "
               + rel
               + " ("
-              + Tools.lines(lines)
+              + Lines.list(lines)
               + "). Make old longer so it occurs once, or set all_occurrences.");
     }
 
@@ -105,9 +105,9 @@ final class Edits {
     int from = 0;
     for (int i : at) {
       out.append(text, from, i);
-      int first = lineOf(out, out.length());
+      int first = Lines.number(out, out.length());
       out.append(replacement);
-      int last = replacement.isEmpty() ? first : lineOf(out, Math.max(out.length() - 1, 0));
+      int last = replacement.isEmpty() ? first : Lines.number(out, Math.max(out.length() - 1, 0));
       spans.add(new int[] {first, last});
       from = i + old.length();
     }
@@ -167,17 +167,6 @@ final class Edits {
     Imports.Fixed fixed = Imports.fix(project, path, before, text, chosen);
     Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
     return new Written(fixed, declared);
-  }
-
-  /** The 1-based line of {@code offset} in {@code text}. */
-  static int lineOf(CharSequence text, int offset) {
-    int line = 1;
-    for (int i = 0; i < offset && i < text.length(); i++) {
-      if (text.charAt(i) == '\n') {
-        line++;
-      }
-    }
-    return line;
   }
 
   /** {@code source} parsed, or refused with its first syntax errors and their lines. */

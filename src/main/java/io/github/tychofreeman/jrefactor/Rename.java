@@ -129,7 +129,7 @@ public final class Rename {
                 newName,
                 project.relative(file),
                 found.occurrences().size(),
-                Tools.lines(lineNumbers(cu, found.occurrences()))),
+                Lines.list(lineNumbers(cu, found.occurrences()))),
         stubs);
   }
 
@@ -678,11 +678,11 @@ public final class Rename {
       Map.Entry<String, List<Integer>> only = lines.entrySet().iterator().next();
       return new Tools.Outcome(
           "%s in %s: %d occurrences, %s"
-              .formatted(what, only.getKey(), occurrences, Tools.lines(only.getValue())),
+              .formatted(what, only.getKey(), occurrences, Lines.list(only.getValue())),
           stubs);
     }
     List<String> each = new ArrayList<>();
-    lines.forEach((rel, ls) -> each.add(rel + " " + Tools.lines(ls)));
+    lines.forEach((rel, ls) -> each.add(rel + " " + Lines.list(ls)));
     return new Tools.Outcome(
         "%s in %d files: %d occurrences, %s"
             .formatted(what, lines.size(), occurrences, String.join("; ", each)),

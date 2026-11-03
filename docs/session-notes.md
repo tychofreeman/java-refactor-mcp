@@ -29,6 +29,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- One line helper (roadmap #27, 2026-11-03): `Lines` holds `number` (1-based line of an
+  offset), `start`, `end`, `range` ("line N" or "lines A-B") and `list` ("line N" or
+  "lines 4, 7, 9"). The duplicates in `Declarations`, `Imports`, `Edits`, `Tools`, `Rename`
+  and `Extract` now call it. `Inspect` and `SessionReport` never had a copy; the review
+  row said they did. Batch's "line N of rel" and Rename's "line N, column" refusals are
+  separate wordings and were left as they were.
 - Built: the type-check gate and `rename`. Layers: `SourceProject` (root and
   classpath), `Jdt` (headless parse), `TypeCheck` (project-wide compile-error
   counts before and after, the gate every refactoring uses), `Refusal`,

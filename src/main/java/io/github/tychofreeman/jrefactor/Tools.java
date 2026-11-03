@@ -3,7 +3,6 @@ package io.github.tychofreeman.jrefactor;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** The server's tools: each one's name, description, schema and what a call does. */
 final class Tools {
@@ -469,11 +468,5 @@ final class Tools {
       Journal.abort(project);
       throw e;
     }
-  }
-
-  /** "line 4" or "lines 4, 7, 9". */
-  static String lines(List<Integer> lines) {
-    return (lines.size() == 1 ? "line " : "lines ")
-        + lines.stream().map(String::valueOf).collect(Collectors.joining(", "));
   }
 }
