@@ -54,17 +54,24 @@ final class Tools {
           true,
           Tools::inspect);
 
-  static final Def RENAME_LOCAL =
+  static final Def RENAME =
       new Def(
-          "rename_local",
+          "rename",
           """
-          Rename a local variable or parameter and every use of it in the method that declares it.
-          Identify it by file, line (its declaration or any use) and its current name; column only \
-          when the name is on the line twice with different meanings.
+          Rename a local variable, parameter, field, method or type, and every reference to it in \
+          the project, Javadoc included: renaming the field price of Item to cost changes its \
+          declaration, every item.price and this.price, and {@link Item#price}. A method takes \
+          every declaration it overrides or that overrides it (an interface method and its \
+          implementations); a top-level type takes its file (Plant.java becomes Herb.java).
+          Identify it by file, line (its declaration or any use) and its current name. When the \
+          name means two things on the line (this.count = count), name the one you mean: \
+          "Counter.count" for the member of Counter, "local count" for the local or parameter, \
+          or pass column.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
-          rolled back and refused. Returns the lines changed.
-          Refuses, saying why: a field (not built yet), a name that is not a variable, a new name \
-          that is not a valid Java name or that another variable in the method already uses.\
+          rolled back and refused. Returns the lines changed in each file.
+          Refuses, saying why: a declaration of a library, a method that overrides a library \
+          method, a new name that is not a valid Java name, that the type already has, or that \
+          a local would hide at a use of the field.\
           """,
           """
           {
@@ -72,7 +79,7 @@ final class Tools {
             "properties": {
               "file":     {"type": "string",  "description": "Java file path relative to the project root."},
               "line":     {"type": "integer", "description": "1-based line of the declaration or any use."},
-              "name":     {"type": "string",  "description": "The variable's current name."},
+              "name":     {"type": "string",  "description": "The current name; Type.name for a member of Type, or local name for a local, when the line has both."},
               "column":   {"type": "integer", "description": "Optional 1-based column of the name, only to tell two meanings apart."},
               "new_name": {"type": "string",  "description": "The new name; a valid Java name."}
             },
@@ -81,7 +88,7 @@ final class Tools {
           """,
           Set.of("file", "line", "name", "column", "new_name"),
           false,
-          Tools::renameLocal);
+          Tools::rename);
 
   static final Def CREATE_FILE =
       new Def(
@@ -383,7 +390,7 @@ final class Tools {
   static final List<Def> ALL =
       List.of(
           INSPECT,
-          RENAME_LOCAL,
+          RENAME,
           CREATE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
@@ -406,19 +413,16 @@ final class Tools {
         project, file, start == null ? 1 : start, end == null ? Integer.MAX_VALUE : end);
   }
 
-  private static String renameLocal(SourceProject project, Args args) throws Exception {
+  private static String rename(SourceProject project, Args args) throws Exception {
     String file = args.required("file");
     String name = args.required("name");
     String newName = args.required("new_name");
     Integer line = args.integer("line");
     if (line == null) {
-      throw new Refusal("rename_local needs line: the 1-based line of a use or declaration.");
+      throw new Refusal("rename needs line: the 1-based line of a use or declaration.");
     }
     Integer column = args.integer("column");
-    RenameLocal.Result result =
-        RenameLocal.run(project, file, line, name, column == null ? 0 : column, newName);
-    return "renamed %s to %s in %s: %d occurrences, %s"
-        .formatted(name, newName, result.file(), result.occurrences(), lines(result.lines()));
+    return Rename.run(project, file, line, name, column == null ? 0 : column, newName);
   }
 
   /** The tool named {@code name}, or a refusal listing the tools there are. */

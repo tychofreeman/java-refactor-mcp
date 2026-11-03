@@ -1,0 +1,1 @@
+Name.compareTo(Name) overrides compareTo in java.lang.Comparable, which is not the project's, so it cannot be renamed.

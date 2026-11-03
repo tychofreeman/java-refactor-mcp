@@ -238,3 +238,54 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   held the constant first. One extra call, and the test resent whole.
 - Idea: a stub for a static field read as `T.NAME` (typed from the use, as
   methods are, with a default value) when the type is the project's.
+
+## 2026-11-03: an import for a name a later batch step declares
+- Task: roadmap #9 (`docs/sessions/rename-across-files.md`).
+- Tool: `batch` with check "end": step 1 replaced `RenameLocal.run` with a
+  body that used `Query`, a nested record step 4 added. Step 1's import fix
+  found one class of that name, `javax.management.Query`, and imported it.
+  It compiled (the member type shadows the import) and stayed until removed
+  by hand with `replace_text`.
+- Idea: in a batch checked at the end, fix imports once at the end too, or
+  have a later step's import fix drop an import that a member type of the
+  file now shadows.
+
+## 2026-11-03: one refused step costs the whole batch again
+- Task: roadmap #9.
+- Tool: a five-step batch of about 15 KB (the field rename) was refused twice:
+  step 1 deleted a record `run` still used (the import fixer then had two
+  `Result` classes), and step 4 needed `imports` for `QualifiedName`. Each time
+  the whole batch was sent again to change one step.
+- Idea: an ambiguous import in a batch checked at the end could take the
+  candidate in the same package family as the file's other imports
+  (`org.eclipse.jdt.core.dom`, like the file's 14 others) rather than refuse;
+  and a deleted declaration still used could be deferred to the end check.
+
+## 2026-11-03: stubs declared a local assertEquals for a missing static import
+- Task: roadmap #9, a `JournalTest` method using `assertEquals` when the
+  file imported only `assertFalse`.
+- Tool: `add_declaration` declared a stub `JournalTest.assertEquals(String,
+  String)` instead of importing `Assertions.assertEquals` statically. A
+  second batch deleted the stub and added the import with `replace_text`.
+- Idea: before declaring a stub method on the enclosing type, look for a
+  static import of the same class as an existing static import
+  (`org.junit.jupiter.api.Assertions.*`) that has the method.
+
+## 2026-11-03: no tool moves golden directories
+- Task: roadmap #9: eight `rename_local_*` golden cases renamed to `rename_*`,
+  and two copied into new cases.
+- Tool: by hand, `git mv` and `cp -r`. Compositions tried: `create_file` of
+  each file under the new name and then deleting the old (no tool deletes a
+  file that is not Java). gorefactor has a file move with copy for this
+  ("testdata/old_case to testdata/new_case renames a golden case").
+- Idea: a `move_file` (with `copy`) for fixtures and docs, as gorefactor's.
+
+## 2026-11-03: session report counts reads as hand writes
+- Task: roadmap #9, `bin/session-report` for the record.
+- What happened: `grep` commands with `<` or `>` in the pattern
+  (`List<Path>`) were listed under "by hand", and a Python heredoc that
+  edited `docs/tool-contract.md` was counted as "44 lines of Java". The
+  rename sent to the branch's jar over stdin is not counted as a step.
+- Idea: count a Bash command as a write only when a redirect target or a
+  writing command names a file, not for `>` inside quotes; count lines of
+  Java only for `.java` targets.

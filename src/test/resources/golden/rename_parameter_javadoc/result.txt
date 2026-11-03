@@ -1,0 +1,1 @@
+renamed total to amount in com/example/Totals.java: 4 occurrences, lines 7, 10, 11

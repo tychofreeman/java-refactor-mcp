@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -240,10 +241,13 @@ final class Signatures {
       family.target = target;
       family.size = target.parameters().size();
 
-      // Pairs of overriding and overridden methods, by binding key, from every file.
-      Map<String, Set<String>> links = new HashMap<>();
+      Set<String> keys =
+          family(
+              project,
+              sources.values().stream().map(Source::unit).toList(),
+              binding,
+              "so its parameters cannot change.");
       Map<String, Decl> declared = new HashMap<>();
-      Map<String, IMethodBinding> library = new HashMap<>();
       for (Source s : sources.values()) {
         s.unit()
             .accept(
@@ -251,41 +255,14 @@ final class Signatures {
                   @Override
                   public boolean visit(MethodDeclaration m) {
                     IMethodBinding b = m.resolveBinding();
-                    if (b != null) {
-                      String k = key(b);
-                      declared.put(k, new Decl(s, m, b, open(s.text(), m.getName())));
-                      for (IMethodBinding over : overridden(b)) {
-                        String o = key(over);
-                        links.computeIfAbsent(k, x -> new HashSet<>()).add(o);
-                        links.computeIfAbsent(o, x -> new HashSet<>()).add(k);
-                        if (!projects(project, over.getDeclaringClass())) {
-                          library.put(k, over);
-                        }
-                      }
+                    if (b != null && keys.contains(key(b))) {
+                      declared.put(key(b), new Decl(s, m, b, open(s.text(), m.getName())));
                     }
                     return true;
                   }
                 });
       }
-      Set<String> keys = new HashSet<>();
-      Deque<String> todo = new ArrayDeque<>(List.of(key(binding)));
-      while (!todo.isEmpty()) {
-        String k = todo.pop();
-        if (keys.add(k)) {
-          todo.addAll(links.getOrDefault(k, Set.of()));
-        }
-      }
-      for (String k : new TreeSet<>(keys)) {
-        IMethodBinding over = library.get(k);
-        if (over != null) {
-          throw new Refusal(
-              label(declared.get(k).binding())
-                  + " overrides "
-                  + over.getName()
-                  + " in "
-                  + over.getDeclaringClass().getErasure().getQualifiedName()
-                  + ", which is not the project's, so its parameters cannot change.");
-        }
+      for (String k : keys) {
         Decl d = declared.get(k);
         if (d != null) {
           family.decls.add(d);
@@ -633,6 +610,66 @@ final class Signatures {
     }
   }
 
+  /**
+   * The binding keys of {@code binding}'s family in {@code units}: every declaration it overrides
+   * or that overrides it, transitively. Refuses when one of them overrides a library method:
+   * "{@code Name.compareTo(Name) overrides compareTo in java.lang.Comparable, which is not the
+   * project's, }" then {@code consequence}.
+   */
+  static Set<String> family(
+      SourceProject project,
+      Collection<CompilationUnit> units,
+      IMethodBinding binding,
+      String consequence) {
+    Map<String, Set<String>> links = new HashMap<>();
+    Map<String, IMethodBinding> declared = new HashMap<>();
+    Map<String, IMethodBinding> library = new HashMap<>();
+    for (CompilationUnit unit : units) {
+      unit.accept(
+          new ASTVisitor() {
+            @Override
+            public boolean visit(MethodDeclaration m) {
+              IMethodBinding b = m.resolveBinding();
+              if (b != null) {
+                String k = key(b);
+                declared.put(k, b);
+                for (IMethodBinding over : overridden(b)) {
+                  String o = key(over);
+                  links.computeIfAbsent(k, x -> new HashSet<>()).add(o);
+                  links.computeIfAbsent(o, x -> new HashSet<>()).add(k);
+                  if (!projects(project, over.getDeclaringClass())) {
+                    library.put(k, over);
+                  }
+                }
+              }
+              return true;
+            }
+          });
+    }
+    Set<String> keys = new TreeSet<>();
+    Deque<String> todo = new ArrayDeque<>(List.of(key(binding)));
+    while (!todo.isEmpty()) {
+      String k = todo.pop();
+      if (keys.add(k)) {
+        todo.addAll(links.getOrDefault(k, Set.of()));
+      }
+    }
+    for (String k : keys) {
+      IMethodBinding over = library.get(k);
+      if (over != null) {
+        throw new Refusal(
+            label(declared.get(k))
+                + " overrides "
+                + over.getName()
+                + " in "
+                + over.getDeclaringClass().getErasure().getQualifiedName()
+                + ", which is not the project's, "
+                + consequence);
+      }
+    }
+    return keys;
+  }
+
   /** The methods of supertypes that {@code b} overrides. */
   private static List<IMethodBinding> overridden(IMethodBinding b) {
     List<IMethodBinding> out = new ArrayList<>();
@@ -665,7 +702,7 @@ final class Signatures {
   }
 
   /** Whether {@code type} is declared in one of the project's source files. */
-  private static boolean projects(SourceProject project, ITypeBinding type) {
+  static boolean projects(SourceProject project, ITypeBinding type) {
     ITypeBinding top = type.getErasure();
     while (top.getDeclaringClass() != null) {
       top = top.getDeclaringClass();
@@ -685,7 +722,7 @@ final class Signatures {
   }
 
   /** "Cart.add(String, int)". */
-  private static String label(IMethodBinding b) {
+  static String label(IMethodBinding b) {
     List<String> types = new ArrayList<>();
     for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
       types.add(t.getErasure().getName());

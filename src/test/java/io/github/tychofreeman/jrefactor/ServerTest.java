@@ -35,7 +35,7 @@ class ServerTest {
   private static final List<Path> INPUTS =
       List.of(
           Path.of("src/test/resources/golden/inspect_outline/in"),
-          Path.of("src/test/resources/golden/rename_local_basic/in"));
+          Path.of("src/test/resources/golden/rename_basic/in"));
 
   @TempDir Path project;
 
@@ -153,7 +153,7 @@ class ServerTest {
         result(
             call(
                 6,
-                "rename_local",
+                "rename",
                 Map.of(
                     "file", "com/example/Totals.java",
                     "line", 5,
@@ -174,7 +174,7 @@ class ServerTest {
         result(
             call(
                 7,
-                "rename_local",
+                "rename",
                 Map.of(
                     "file", "com/example/Totals.java",
                     "line", 5,

@@ -30,7 +30,7 @@ implemented or being implemented.
 
 Java names may differ where the Java language needs it (for example, `add_field`
 on a class, or `add_case` for a `switch`). Record any difference in this file:
-`rename_local` (a narrower `rename`), `extract_method` (`extract_function`).
+`extract_method` (`extract_function`). `rename` has gorefactor's name.
 
 ## `inspect` (built)
 
@@ -49,21 +49,39 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
 - Not yet: gorefactor's no-argument overview, `function`, `targets`, `names`
   and `uses`.
 
-## `rename_local` (built)
+## `rename` (built)
 
-Java's name for a narrower `rename`: local variables and parameters only, and
-uses within the method (or initializer, or field) that declares them.
+gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
+`rename_local`, the user's choice over adding `rename` beside it or widening
+`rename_local`).
 
-- Arguments as gorefactor's `rename`: `file`, `line` (the declaration or any
-  use), `name` (the current name), `new_name`; `column` (1-based) only when the
-  name is on the line with two meanings. gorefactor's `function` in place of
-  `line` is not built.
-- Result: `renamed <name> to <new_name> in <file>: <n> occurrences, lines a, b`.
-- Refused: the name not on the line (with the line's text); a field, or a name
-  that is not a variable; two variables of that name on the line (with their
-  columns); a `column` not on `name`; an invalid new name; a new name another
-  variable in the method uses; an edit that would add compile errors (rolled
-  back, with the errors).
+- Arguments: `file`, `line` (the declaration or any use), `name`, `new_name`;
+  `column` (1-based) to pick one of two meanings on the line. `name` may also
+  pick a meaning: `Counter.count` (a member of Counter, or `Outer.Inner.count`)
+  or `local count` (a local variable or parameter). gorefactor's `function` in
+  place of `line` is not built.
+- What changes: a local or parameter within the method (or initializer, or
+  field) that declares it, its `@param` tag included; a field everywhere in
+  the project, `{@link T#f}` included; a method with every project
+  declaration it overrides or that overrides it, its calls, method
+  references and Javadoc references; a type with its constructors, imports and
+  Javadoc references, and the file of a top-level type (`Plant.java` becomes
+  `Herb.java`; one `undo` moves it back). Prose in comments is not changed.
+- Result: `renamed total to runningSum in <file>: <n> occurrences, lines a,
+  b` for a local; `renamed the field Item.price to cost in 2 files: 4
+  occurrences, a/Cart.java lines 5, 10; a/Item.java lines 4, 7`; `renamed the
+  method Square.area() and Shape.area() to surface in ...`; `renamed the type
+  com.example.Plant to Herb, and a/Plant.java to a/Herb.java, in ...`.
+- Refused: the name not on the line (with the line's text); a name with two
+  meanings there, each named with its column and the `name` that picks it
+  ("names 2 declarations: the field Counter.count (column 10) and the parameter
+  count (column 18). Pass name "Counter.count" or "local count", or
+  column."); a declaration of a library; a method that overrides a library
+  method; a type parameter (not built); an invalid new name; a new name
+  another variable in the method uses, the type already has as a field, method
+  with the same parameter types, or member type, or whose file exists; a field
+  rename that a local of the new name would hide at an unqualified use; an
+  edit that would add compile errors (rolled back, with the errors).
 
 ## Edits (built)
 

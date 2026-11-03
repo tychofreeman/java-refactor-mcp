@@ -1,0 +1,1 @@
+the method String.length is declared in java.lang.String, not in this project. rename renames the project's own declarations.

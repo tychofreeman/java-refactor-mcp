@@ -29,11 +29,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
-- Built: the type-check gate and `rename_local` (locals and parameters). Layers:
-  `SourceProject` (root and classpath), `Jdt` (headless parse), `TypeCheck`
-  (project-wide compile-error counts before and after, the gate every
-  refactoring uses), `Refusal`, `Positions` (1-based to offset), `RenameLocal`.
-  Four golden cases.
+- Built: the type-check gate and `rename`. Layers: `SourceProject` (root and
+  classpath), `Jdt` (headless parse), `TypeCheck` (project-wide compile-error
+  counts before and after, the gate every refactoring uses), `Refusal`,
+  `Positions` (1-based to offset), `Rename`.
 - The MCP server runs (roadmap #5, 2026-11-02): `Server` over STDIO, one
   project root per process, one tool, `inspect`. Claude Code lists and calls it
   (`claude -p --mcp-config` probe with Haiku, $0.0008).
@@ -107,6 +106,17 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the stubs declared (a follow-up in `docs/sessions/results-without-echo.md`).
   The session log recorded nothing for this session: the hook loads only in
   a session started after `.claude/settings.json` existed.
+- Rename across files (roadmap #9, 2026-11-03): `rename` (class `Rename`)
+  replaced `rename_local`, the user's choice over a second tool or widening
+  the old one. Fields, methods (with their override family, from
+  `Signatures.family`) and types (with their file; `Gate.apply` deletes a
+  file whose text is null) are renamed in every file, Javadoc references
+  included. A name with two meanings on the line is refused, and `name`
+  picks one (`Counter.count`, `local count`) or column does: the user's
+  choice over "the local wins", which renamed the parameter when the field
+  was meant. A Haiku probe started from `this.price = price`, was refused,
+  and passed `Item.price` (5 turns, $0.0037). `RenameLocal` became `Rename`
+  through the new type rename, sent over stdin to the branch's jar.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
@@ -146,8 +156,6 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   Redirect stdin (`< /dev/null`): otherwise it waits 3 s and prints a warning
   into the output, which then does not parse as JSON (the cause of two "not
   JSON" probe outputs, in #6 and #19).
-- `rename_local` is a Java-specific name; gorefactor's `rename` covers more
-  kinds of declaration.
 
 ## Why past choices were made
 
