@@ -72,6 +72,12 @@ class GoldenTest {
       if (Files.exists(result)) {
         assertEquals(Files.readString(result), text);
       }
+      assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "cached count");
+      if (!Tools.named(tool).readOnly()) {
+        Tools.call(Tools.named("undo"), project, Map.of());
+        assertTreesEqual(caseDir.resolve("in"), work);
+        assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "cached count");
+      }
     }
   }
 
