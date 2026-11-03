@@ -289,3 +289,13 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: count a Bash command as a write only when a redirect target or a
   writing command names a file, not for `>` inside quotes; count lines of
   Java only for `.java` targets.
+
+## 2026-11-03: an import removed by one edit, refused as ambiguous by the next
+- Task: roadmap #10 (`docs/sessions/gate-cost.md`).
+- Tool: `replace_declaration` of `TypeCheck.errors` with a body that no longer
+  used `Path` removed `import java.nio.file.Path`; the next edit used `Path`
+  again and was refused: "Path could be com.networknt.schema.path.Path,
+  java.nio.file.Path or org.eclipse.core.runtime.Path". Resent with `imports`.
+- Idea: when a name is ambiguous, prefer `java.*` (or what the file imported
+  before, or what its other imports' packages suggest) over library classes,
+  and say which was chosen in the result.

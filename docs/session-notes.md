@@ -117,6 +117,15 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   was meant. A Haiku probe started from `this.price = price`, was refused,
   and passed `Item.price` (5 turns, $0.0037). `RenameLocal` became `Rename`
   through the new type rename, sent over stdin to the branch's jar.
+- Gate cost (roadmap #10, 2026-11-03): parsing file by file, each with a
+  fresh JDT environment, cost 21.8 s per edit on Commons Math (990 files).
+  `Jdt.parseAll` (`ASTParser.createASTs`) parses a set in one environment;
+  `TypeCheck.errors` reuses the last count while every file's text is the
+  same. One edit there is now about 2.1 s, `add_parameter` 4.1 s (was 15.0),
+  a field rename in 10 files 2.4 s. Measure with the opt-in `GateCostTest`:
+  `-Djrefactor.cost.root=<dir>`, and `-Djrefactor.cost.call='{"tool": ...,
+  "args": {...}}'` for one call and its undo. The projects were Maven Central
+  sources jars unpacked into the scratchpad (JDK-only, so no build runs).
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
