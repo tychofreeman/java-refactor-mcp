@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -88,6 +89,7 @@ final class Stubs {
     Round round = new Round(project, old);
     for (int i = 0; i < ROUNDS && !introduced.isEmpty(); i++) {
       round.wanted.clear();
+      round.wantedUses.clear();
       for (Path file : files(project, introduced)) {
         round.find(file);
       }
@@ -133,7 +135,12 @@ final class Stubs {
     final Map<Path, List<Stub>> wanted = new LinkedHashMap<>();
     final Set<String> done = new HashSet<>();
     final Set<String> created = new HashSet<>();
+
+    /** The names the stub being built uses, which its imports are picked from. */
     final Set<String> uses = new TreeSet<>();
+
+    /** The names the stubs wanted in each file use: the picks for that file's imports. */
+    final Map<Path, Set<String>> wantedUses = new HashMap<>();
 
     /** The labels of the stubs written, by the file they went in. */
     final Map<String, List<String>> declared = new LinkedHashMap<>();
@@ -220,6 +227,7 @@ final class Stubs {
     }
 
     private void method(CompilationUnit unit, MethodInvocation call) throws IOException {
+      uses.clear();
       Expression receiver = call.getExpression();
       ITypeBinding owner;
       boolean isStatic;
@@ -258,6 +266,7 @@ final class Stubs {
 
     private void constructor(CompilationUnit unit, ClassInstanceCreation creation)
         throws IOException {
+      uses.clear();
       ITypeBinding owner = creation.getType().resolveBinding();
       Path target = sourceOf(owner);
       if (target == null
@@ -318,6 +327,7 @@ final class Stubs {
     private void want(Path target, Stub stub) {
       if (done.add(project.relative(target) + "\0" + stub.key())) {
         wanted.computeIfAbsent(target, k -> new ArrayList<>()).add(stub);
+        wantedUses.computeIfAbsent(target, k -> new TreeSet<>()).addAll(uses);
       }
     }
 
@@ -349,7 +359,14 @@ final class Stubs {
         text = Declarations.plan(text, rel, type.getKey(), content, null, null).text();
       }
       if (before != null) {
-        text = Imports.fix(project, file, before, text, List.copyOf(uses)).text();
+        text =
+            Imports.fix(
+                    project,
+                    file,
+                    before,
+                    text,
+                    List.copyOf(wantedUses.getOrDefault(file, Set.of())))
+                .text();
       }
       Files.createDirectories(file.getParent());
       Files.writeString(file, text);

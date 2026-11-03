@@ -138,6 +138,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `Declarations.topLevelCommas`, so `name=A.b(Map<String, Integer>)` finds the
   overload the refusal listed. Labels stay without spaces (`Map<String,Integer>`),
   as members are labelled. Golden: `replace_declaration_generic_overload`.
+- Stub import picks are per file (roadmap #37, 2026-11-03): `Stubs.Round` keeps
+  `wantedUses` per target file, filled from the names each stub's handler used
+  (`uses` is cleared at each handler's start). Before, every file got every
+  stub's picks, so a shared simple name (`java.awt.List`, `java.util.List`)
+  took the last one sorted. Golden: `stubs_uses_per_file`.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
