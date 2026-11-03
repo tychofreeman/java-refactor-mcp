@@ -1,0 +1,9 @@
+#!/bin/sh
+# Reports on a session log (bin/session-log): what went through java-refactor-mcp, what
+# was done by hand, after a refusal, in large writes, and what was read. With no
+# arguments, the log of the branch checked out. The whats-next skill puts it in the
+# item's session record.
+set -eu
+here=$(cd "$(dirname "$0")/.." && pwd)
+exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" -cp "$here/target/java-refactor-mcp.jar" \
+  io.github.tychofreeman.jrefactor.SessionReport "$@"

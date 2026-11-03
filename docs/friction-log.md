@@ -229,3 +229,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   file. Fixed with `containsKey` in both (`stubs_refused_leaves_no_class`,
   `JournalTest`).
 - Idea: none beyond the fix.
+
+## 2026-11-03: stubs do not declare a constant a test uses first
+- Task: roadmap #18 (`docs/sessions/session-log.md`).
+- Tool: `create_file` of `SessionLogTest`, which used `SessionLog.MAX_RESULT`;
+  refused ("MAX_RESULT cannot be resolved or is not a field").
+- What happened: resent in a batch with `create_file` of a `SessionLog` that
+  held the constant first. One extra call, and the test resent whole.
+- Idea: a stub for a static field read as `T.NAME` (typed from the use, as
+  methods are, with a default value) when the type is the project's.

@@ -83,8 +83,10 @@ claude.ai Project) do not reach sessions on other machines.
 
 When the user asks "what's next?", the `whats-next` skill
 (`.claude/skills/whats-next`) offers the next items, and keeps a record of the
-chosen one in `docs/sessions/<branch>.md`: the plan before code, and notes of
-hand edits, refusals, reads and large writes.
+chosen one in `docs/sessions/<branch>.md`: the plan before code, notes of
+hand edits, refusals, reads and large writes, and the report of the session
+log. The hook `bin/session-log` (`.claude/settings.json`) logs every tool call
+to `.claude/session-log/<branch>.jsonl`; `bin/session-report` reports on it.
 
 ## Using java-refactor-mcp
 
