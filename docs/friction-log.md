@@ -391,3 +391,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Tool: none used. `Gate.java` and `GateTest.java` were changed with the Edit
   tool; the java-refactor-mcp tools were not in this session's tool list.
   `add_declaration` would have written the test and `replace_text` the fix.
+
+## 2026-11-03: end-of-batch check moved into Gate by hand
+- Task: roadmap order 24 (`docs/sessions/gate-before-after.md`).
+- Tool: none used. `Gate.java` and `Batch.java` were changed with the Edit
+  tool. A `move` of the check's steps into `Gate` has no tool; `replace_text`
+  would cover each edit.

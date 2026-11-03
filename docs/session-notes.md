@@ -29,6 +29,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- The end-of-batch check is `Gate.checkedAtEnd` (roadmap order 24, 2026-11-03):
+  it counts, runs the body deferred, declares stubs, then refuses and restores or
+  journals. `Batch` calls it; `Gate.refusal` is the one refusal wording for both.
 - `Gate.deferred` restores the flag it found, so a nested deferred call (a batch
   inside a batch) leaves the outer call deferred (roadmap order 41, 2026-11-03).
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
