@@ -44,7 +44,7 @@ final class Declarations {
    */
   record Planned(String text, List<Change> changes, List<Integer> blockStarts, String where) {}
 
-  static String add(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome add(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String content = args.required("content");
     String after = args.string("after");
@@ -57,11 +57,12 @@ final class Declarations {
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
     Imports.Fixed fixed = Imports.fix(project, path, text, planned.text(), args.list("imports"));
-    Gate.applyOrRefuse(
-        project,
-        Map.of(path, fixed.text()),
-        "adding to " + planned.where(),
-        "Declare what the new members use first.");
+    Stubs.Declared stubs =
+        Gate.applyOrRefuse(
+            project,
+            Map.of(path, fixed.text()),
+            "adding to " + planned.where(),
+            "Declare what the new members use first.");
     List<String> said = new ArrayList<>();
     for (int i = 0; i < planned.changes().size(); i++) {
       Change c = planned.changes().get(i);
@@ -74,7 +75,7 @@ final class Declarations {
                   c.blockLength(),
                   fixed.lineShift()));
     }
-    return String.join("; ", said) + fixed.said();
+    return new Tools.Outcome(String.join("; ", said) + fixed.said(), stubs);
   }
 
   /**
@@ -144,7 +145,7 @@ final class Declarations {
     return new Planned(out.toString(), changes, blockStarts, where);
   }
 
-  static String replace(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome replace(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String name = args.required("name");
     String content = args.string("content");
@@ -169,13 +170,16 @@ final class Declarations {
       }
       String out = text.substring(0, start) + text.substring(end);
       Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
-      Gate.applyOrRefuse(
-          project,
-          Map.of(path, fixed.text()),
-          "deleting " + target.label(),
-          "Remove or change its uses first.");
-      return "deleted %s from %s (was lines %d-%d)%s"
-          .formatted(target.label(), rel, firstLine, lastLine, fixed.said());
+      Stubs.Declared stubs =
+          Gate.applyOrRefuse(
+              project,
+              Map.of(path, fixed.text()),
+              "deleting " + target.label(),
+              "Remove or change its uses first.");
+      return new Tools.Outcome(
+          "deleted %s from %s (was lines %d-%d)%s"
+              .formatted(target.label(), rel, firstLine, lastLine, fixed.said()),
+          stubs);
     }
 
     List<BodyDeclaration> replacement = members(content);
@@ -197,17 +201,20 @@ final class Declarations {
     }
     String out = text.substring(0, start) + blocks + "\n" + text.substring(end);
     Imports.Fixed fixed = Imports.fix(project, path, text, out, args.list("imports"));
-    Gate.applyOrRefuse(
-        project,
-        Map.of(path, fixed.text()),
-        "replacing " + target.label(),
-        "Change its uses in the same way first, or keep the old signature.");
-    return "replaced %s in %s, %s%s"
-        .formatted(
-            target.label(),
-            rel,
-            range(out, start, blocks.length(), fixed.lineShift()),
-            fixed.said());
+    Stubs.Declared stubs =
+        Gate.applyOrRefuse(
+            project,
+            Map.of(path, fixed.text()),
+            "replacing " + target.label(),
+            "Change its uses in the same way first, or keep the old signature.");
+    return new Tools.Outcome(
+        "replaced %s in %s, %s%s"
+            .formatted(
+                target.label(),
+                rel,
+                range(out, start, blocks.length(), fixed.lineShift()),
+                fixed.said()),
+        stubs);
   }
 
   /** A declaration found by name, and how to say which one ("A.b(int)"). */

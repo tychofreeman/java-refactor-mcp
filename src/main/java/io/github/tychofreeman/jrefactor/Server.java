@@ -153,7 +153,8 @@ public final class Server {
               .annotations(
                   new ToolAnnotations(null, def.readOnly(), false, def.readOnly(), false, null))
               .build(),
-          (exchange, request) -> answer(() -> Tools.call(def, project, request.arguments())));
+          (exchange, request) ->
+              answer(() -> Tools.call(def, project, request.arguments()).render()));
     }
     return spec.build();
   }

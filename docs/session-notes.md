@@ -117,6 +117,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   was meant. A Haiku probe started from `this.price = price`, was refused,
   and passed `Item.price` (5 turns, $0.0037). `RenameLocal` became `Rename`
   through the new type rename, sent over stdin to the branch's jar.
+- Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
+  returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
+  the model reads, with the stubs named after it. `Stubs.said()` and its
+  `ThreadLocal` are gone. Golden `stubs_*` text is unchanged.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
