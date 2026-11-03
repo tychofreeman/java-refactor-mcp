@@ -214,11 +214,26 @@ final class Signatures {
     static Family of(SourceProject project, Args args) throws Exception {
       String rel = args.required("file");
       Path path = project.javaFile(rel);
+      Map<Path, String> texts = new LinkedHashMap<>();
+      for (Path f : project.javaFiles()) {
+        texts.put(f, Files.readString(f));
+      }
+      if (!texts.containsKey(path)) {
+        throw new Refusal(rel + " is not a Java file under a source root.");
+      }
+      // A family member and a call of one have the method's simple name, so a file without that
+      // name cannot hold either: only the files with it are parsed.
+      String simple = simpleName(args.required("name"));
+      List<Path> files = new ArrayList<>();
+      for (Map.Entry<Path, String> e : texts.entrySet()) {
+        if (e.getKey().equals(path) || e.getValue().contains(simple)) {
+          files.add(e.getKey());
+        }
+      }
       Map<Path, Source> sources = new LinkedHashMap<>();
-      List<Path> files = project.javaFiles();
       Map<Path, CompilationUnit> units = Jdt.parseAll(project, files);
       for (Path f : files) {
-        sources.put(f, new Source(f, project.relative(f), Files.readString(f), units.get(f)));
+        sources.put(f, new Source(f, project.relative(f), texts.get(f), units.get(f)));
       }
       Source home = sources.get(path);
       if (home == null) {
@@ -270,6 +285,15 @@ final class Signatures {
         family.findCalls(s, keys);
       }
       return family;
+    }
+
+    /**
+     * The method's own name: {@code Cart} for {@code Cart(String)}, {@code count} for {@code
+     * Counter.count}.
+     */
+    static String simpleName(String name) {
+      String head = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
+      return head.substring(head.lastIndexOf('.') + 1);
     }
 
     /** Adds the calls in {@code s} of the methods with {@code keys}; refuses method references. */

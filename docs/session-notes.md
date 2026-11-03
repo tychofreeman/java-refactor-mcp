@@ -29,6 +29,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- Signature tools parse only the files that can hold the method (roadmap
+  order 44, 2026-11-03): `Signatures.Family.of` reads every file's text and parses
+  only those containing the method's simple name. A family member and a call of
+  one share that name, so nothing is missed; `add_parameter` on Commons Math went
+  from 6.5 s to 2.9 s. The summary's option (reuse the gate's parse across calls)
+  was not taken: it keeps every AST of the project between calls.
 - One line helper (roadmap #27, 2026-11-03): `Lines` holds `number` (1-based line of an
   offset), `start`, `end`, `range` ("line N" or "lines A-B") and `list` ("line N" or
   "lines 4, 7, 9"). The duplicates in `Declarations`, `Imports`, `Edits`, `Tools`, `Rename`
