@@ -219,6 +219,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   over refusing. A trial move of `Signatures.Family` (327 lines) through the
   branch's jar passed the gate and every test; it was reverted, since the
   split of `Signatures` (order 25) is its own item.
+- The command line exists (roadmap #53, 2026-11-03): `bin/jrefactor` runs
+  `Cli`, one tool call per process, for sessions where the MCP server cannot
+  run (the user's other session, in a container, made orders 24-44's edits by
+  hand). `Journal.save` and `load` keep the undo stack between runs in the
+  user's cache. A run costs about 9 s on this repo (a Maven classpath and a
+  cold type check each time); a batch spreads that over its steps.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

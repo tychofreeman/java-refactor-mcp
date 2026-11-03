@@ -274,6 +274,25 @@ Java's name for gorefactor's `extract_function` (roadmap #23).
 - Refused when a file it would restore changed since; nothing is undone.
 - Result: `undid <tool>: restored a, b; removed c`.
 
+## Command line (built)
+
+`bin/jrefactor` (class `Cli`) runs one tool per process with the server's
+definitions, arguments and results, as gorefactor's `cmd/refactor` does:
+
+    jrefactor list [tool...]
+    jrefactor [-C dir] <tool> key=value...
+    jrefactor [-C dir] <tool> '<json>' | @file | -
+    jrefactor [-C dir] undo
+
+The project is the nearest directory with a `pom.xml` at or above `-C`
+(default: the current directory). `key=value` values are typed by the tool's
+schema (integer, boolean; arrays and objects as JSON). `key_file=path` gives
+the text argument `key` from a file. Output is the result the model would
+read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. The undo
+stack (the newest 20 changes) is kept between runs in
+`$XDG_CACHE_HOME/jrefactor` or `~/.cache/jrefactor`, one file per project.
+Not built: gorefactor's `-n` preview and `check`.
+
 ## Results
 
 - Applied change: the file or files touched, and a compact diff or a count of
