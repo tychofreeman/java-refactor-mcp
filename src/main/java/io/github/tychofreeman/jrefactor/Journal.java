@@ -118,14 +118,20 @@ final class Journal {
     restore(open.before);
   }
 
-  private static void restore(Map<Path, String> texts) throws IOException {
+  /** The only writer of project files: each path gets its text, or is deleted for null. */
+  static void restore(Map<Path, String> texts) throws IOException {
     for (Map.Entry<Path, String> file : texts.entrySet()) {
-      if (file.getValue() == null) {
-        Files.deleteIfExists(file.getKey());
-      } else {
-        Files.createDirectories(file.getKey().getParent());
-        Files.writeString(file.getKey(), file.getValue());
-      }
+      put(file.getKey(), file.getValue());
+    }
+  }
+
+  /** Writes {@code text} to {@code file}, creating its directories; null deletes the file. */
+  static void put(Path file, String text) throws IOException {
+    if (text == null) {
+      Files.deleteIfExists(file);
+    } else {
+      Files.createDirectories(file.getParent());
+      Files.writeString(file, text);
     }
   }
 

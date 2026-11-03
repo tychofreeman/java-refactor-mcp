@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,6 +33,13 @@ class GateTest {
             .contains(
                 "Maven gave no classpath, so library types do not resolve: mvn exit 1: no network"),
         refusal::getMessage);
+  }
+
+  @Test
+  void aRestoreRecreatesTheDirectoryOfTheFileItWrites(@TempDir Path root) throws Exception {
+    Path file = root.resolve("gone/A.java");
+    Journal.restore(Map.of(file, "old text"));
+    assertEquals("old text", Files.readString(file));
   }
 
   @Test
