@@ -145,11 +145,15 @@ friction log; reorder when this repo's own log says otherwise.
 | 20 | 27 | One line helper: `lineStart` and `lineEnd` (identical in `Declarations` and `Imports`), `Edits.lineOf`, and the "line N" / "lines N, M" text in `Tools`, `Inspect` and `SessionReport` | Open | Code review 2026-11-03 |
 | 21 | 28 | One ASTParser configuration: `Declarations.members` sets its own options and no environment; `Jdt` should own every parser | Open | Code review 2026-11-03. The options can drift from `Jdt`'s |
 | 22 | 29 | Name the two `ancestor` helpers apart: `Extract` starts at the parent, `Stubs` at the node itself | Open | Code review 2026-11-03. Same name, different meaning |
-| 23 | 30 | Stubs travel in the call's result object, not `Stubs.said()` and a `ThreadLocal` (decided 2026-11-03, see Decisions) | Open | Code review 2026-11-03. The user's request. Handlers' output depends on state they do not return |
+| 23 | 30 | Stubs travel in the call's result object, not `Stubs.said()` and a `ThreadLocal` (decided 2026-11-03, see Decisions) | Done | `Tools.Outcome`, `Stubs.Declared`, `Stubs.Check`; record in `docs/sessions/stubs-in-result.md` |
 | 24 | 31 | The before/after type check goes through `Gate`: `Batch` and `Stubs` each re-implement it | Open | Code review 2026-11-03 |
 | 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Open | Code review 2026-11-03. No behavior change; no split without a change that needs it |
 | 26 | 33 | Static mutable state: `Journal.DONE`, `Imports.LIBRARIES`, `Server.CALLS`, `Stubs.DECLARED`; tests in one JVM can interfere | Open | Code review 2026-11-03. Safe in the server today: one call at a time |
 | 27 | 34 | One `ObjectMapper` shared by `SessionLog` and `SessionReport` | Open, low priority | Code review 2026-11-03. Minor |
+| 28 | 35 | `create_file` fixes imports before the gate, as every other edit does; a new file's unimported library type is now declared as a project class (`List.java`) | Open | Full code review 2026-11-03: reading, not run. `Edits.createFile` calls `Gate.applyOrRefuse` without `Imports.fix` |
+| 29 | 36 | Overload parameter lists split at commas inside generics (`Map<String, Integer>` breaks), so `replace_declaration`, `add_parameter`, `remove_parameter` and `move_parameter` refuse such overloads with names the model cannot type back | Open | Full code review 2026-11-03: reading, not run. `Declarations` splits on `,` |
+| 30 | 37 | `Stubs.uses` gives every file the import picks of every stub, so an ambiguous name in one file can resolve to a class another stub named | Open | Full code review 2026-11-03: reading, not run. `Imports.fix` takes the picks |
+| 31 | 38 | A failed Maven classpath is only on stderr: the server runs with no classpath and the model sees only "cannot be resolved" | Open | Full code review 2026-11-03: reading, not run. `SourceProject`, `Server` |
 
 ### Why this order
 

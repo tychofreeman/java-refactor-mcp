@@ -10,9 +10,25 @@ final class Tools {
 
   private Tools() {}
 
-  /** What a call does: its text, or a {@link Refusal}. */
+  /**
+   * What a successful call returned: its text, and the stubs it declared, which the text names but
+   * which are carried apart so that a caller can check them.
+   */
+  record Outcome(String text, Stubs.Declared declared) {
+
+    static Outcome of(String text) {
+      return new Outcome(text, Stubs.Declared.NONE);
+    }
+
+    /** The text the model reads: the call's text with the stubs it declared named after it. */
+    String render() {
+      return text + declared.text();
+    }
+  }
+
+  /** What a call does: its outcome, or a {@link Refusal}. */
   interface Handler {
-    String run(SourceProject project, Args args) throws Exception;
+    Outcome run(SourceProject project, Args args) throws Exception;
   }
 
   /**
@@ -357,7 +373,7 @@ final class Tools {
           """,
           Set.of(),
           false,
-          (project, args) -> Journal.undo(project));
+          (project, args) -> Outcome.of(Journal.undo(project)));
 
   static final Def BATCH =
       new Def(
@@ -402,18 +418,19 @@ final class Tools {
           BATCH,
           UNDO);
 
-  private static String inspect(SourceProject project, Args args) throws Exception {
+  private static Outcome inspect(SourceProject project, Args args) throws Exception {
     String file = args.required("file");
     Integer start = args.integer("start_line");
     Integer end = args.integer("end_line");
     if (start == null && end == null) {
-      return Inspect.file(project, file);
+      return Outcome.of(Inspect.file(project, file));
     }
-    return Inspect.lines(
-        project, file, start == null ? 1 : start, end == null ? Integer.MAX_VALUE : end);
+    return Outcome.of(
+        Inspect.lines(
+            project, file, start == null ? 1 : start, end == null ? Integer.MAX_VALUE : end));
   }
 
-  private static String rename(SourceProject project, Args args) throws Exception {
+  private static Outcome rename(SourceProject project, Args args) throws Exception {
     String file = args.required("file");
     String name = args.required("name");
     String newName = args.required("new_name");
@@ -440,16 +457,15 @@ final class Tools {
    * Runs one call of {@code def}: its arguments checked, then its handler, as one change in the
    * journal, so {@code undo} can revert it; a call that fails leaves nothing changed.
    */
-  static String call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
+  static Outcome call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
     Args args = new Args(def.name(), values);
     args.check(def.args());
     Journal.begin(def.name());
     try {
-      String text = def.handler().run(project, args) + Stubs.said();
+      Outcome outcome = def.handler().run(project, args);
       Journal.commit(project);
-      return text;
+      return outcome;
     } catch (Exception | Error e) {
-      Stubs.said();
       Journal.abort();
       throw e;
     }

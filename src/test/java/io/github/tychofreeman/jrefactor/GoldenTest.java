@@ -101,7 +101,7 @@ class GoldenTest {
         }
       }
     }
-    return Tools.call(def, project, values);
+    return Tools.call(def, project, values).render();
   }
 
   private static Object value(String text) {

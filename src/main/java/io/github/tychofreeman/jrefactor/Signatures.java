@@ -65,7 +65,7 @@ final class Signatures {
 
   private Signatures() {}
 
-  static String addParameter(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome addParameter(SourceProject project, Args args) throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
     String value = args.required("value");
@@ -88,7 +88,7 @@ final class Signatures {
         project, "added " + type + " " + parameter + " to " + family.label, args.list("imports"));
   }
 
-  static String removeParameter(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome removeParameter(SourceProject project, Args args) throws Exception {
     Family family = Family.of(project, args);
     int at = family.index(args.required("parameter"), "parameter", false);
     family.refuseReading(at);
@@ -116,7 +116,7 @@ final class Signatures {
         project, "removed " + args.required("parameter") + " from " + family.label, List.of());
   }
 
-  static String moveParameter(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome moveParameter(SourceProject project, Args args) throws Exception {
     Family family = Family.of(project, args);
     String parameter = args.required("parameter");
     String before = args.string("before");
@@ -557,7 +557,7 @@ final class Signatures {
     }
 
     /** Applies the edits, fixes each file's imports, and writes them all under the gate. */
-    String apply(SourceProject project, String what, List<String> chosen) throws Exception {
+    Tools.Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
       Map<Path, String> texts = new LinkedHashMap<>();
       Set<String> files = new TreeSet<>();
       List<String> notes = new ArrayList<>();
@@ -588,25 +588,28 @@ final class Signatures {
           notes.add(s.rel() + ": " + String.join("; ", fixed.notes()));
         }
       }
-      Gate.applyOrRefuse(
-          project,
-          texts,
-          what,
-          "Nothing was changed. If a value or type does not resolve at some call, choose one"
-              + " that does.");
+      Stubs.Declared stubs =
+          Gate.applyOrRefuse(
+              project,
+              texts,
+              what,
+              "Nothing was changed. If a value or type does not resolve at some call, choose one"
+                  + " that does.");
       int d = family.decls.size();
       int c = family.calls.size();
-      return what
-          + " in "
-          + d
-          + (d == 1 ? " declaration" : " declarations")
-          + " and "
-          + c
-          + (c == 1 ? " call" : " calls")
-          + " ("
-          + String.join(", ", files)
-          + ")"
-          + (notes.isEmpty() ? "" : "; " + String.join("; ", notes));
+      return new Tools.Outcome(
+          what
+              + " in "
+              + d
+              + (d == 1 ? " declaration" : " declarations")
+              + " and "
+              + c
+              + (c == 1 ? " call" : " calls")
+              + " ("
+              + String.join(", ", files)
+              + ")"
+              + (notes.isEmpty() ? "" : "; " + String.join("; ", notes)),
+          stubs);
     }
   }
 

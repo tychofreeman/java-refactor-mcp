@@ -13,11 +13,12 @@ final class Edits {
 
   private Edits() {}
 
-  static String createFile(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome createFile(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String content = args.required("content");
     Path path = project.file(rel);
     boolean exists = Files.exists(path);
+    Stubs.Declared stubs = Stubs.Declared.NONE;
     if (exists && !args.flag("overwrite")) {
       throw new Refusal(
           rel
@@ -39,23 +40,26 @@ final class Edits {
                 + (expected.isEmpty() ? "(the default package)" : expected)
                 + ". Change the package line, or the file's path.");
       }
-      Gate.applyOrRefuse(
-          project,
-          Map.of(path, content),
-          (exists ? "replacing " : "creating ") + rel,
-          "Declare what it uses first (add_declaration or create_file), then create it.");
+      stubs =
+          Gate.applyOrRefuse(
+              project,
+              Map.of(path, content),
+              (exists ? "replacing " : "creating ") + rel,
+              "Declare what it uses first (add_declaration or create_file), then create it.");
     } else {
       Gate.write(path, content);
     }
     long lines = content.lines().count();
-    return (exists ? "replaced " : "created ")
-        + rel
-        + " ("
-        + lines
-        + (lines == 1 ? " line)" : " lines)");
+    return new Tools.Outcome(
+        (exists ? "replaced " : "created ")
+            + rel
+            + " ("
+            + lines
+            + (lines == 1 ? " line)" : " lines)"),
+        stubs);
   }
 
-  static String replaceText(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome replaceText(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String old = args.required("old");
     String replacement = args.string("new");
@@ -103,7 +107,7 @@ final class Edits {
     }
     out.append(text, from, text.length());
 
-    Imports.Fixed fixed =
+    Written written =
         write(
             project,
             path,
@@ -112,6 +116,7 @@ final class Edits {
             out.toString(),
             args.list("imports"),
             "replacing old in " + rel);
+    Imports.Fixed fixed = written.fixed();
     List<String> ranges = new ArrayList<>();
     for (int[] span : spans) {
       int first = span[0] + fixed.lineShift();
@@ -119,15 +124,20 @@ final class Edits {
       ranges.add(first == last ? "" + first : first + "-" + last);
     }
     boolean one = ranges.size() == 1 && !ranges.get(0).contains("-");
-    return "replaced %d occurrence%s in %s, %s %s%s"
-        .formatted(
-            at.size(),
-            at.size() == 1 ? "" : "s",
-            rel,
-            one ? "line" : "lines",
-            String.join(", ", ranges),
-            fixed.said());
+    return new Tools.Outcome(
+        "replaced %d occurrence%s in %s, %s %s%s"
+            .formatted(
+                at.size(),
+                at.size() == 1 ? "" : "s",
+                rel,
+                one ? "line" : "lines",
+                String.join(", ", ranges),
+                fixed.said()),
+        written.declared());
   }
+
+  /** A file as written: its fixed text, and the stubs its gate declared. */
+  private record Written(Imports.Fixed fixed, Stubs.Declared declared) {}
 
   /** The path of an existing file, or a refusal. */
   private static Path existing(SourceProject project, String rel) {
@@ -141,7 +151,7 @@ final class Edits {
   /**
    * Writes a file, under the gate when it is Java, after fixing its imports against {@code before}.
    */
-  private static Imports.Fixed write(
+  private static Written write(
       SourceProject project,
       Path path,
       String rel,
@@ -152,13 +162,14 @@ final class Edits {
       throws Exception {
     if (!rel.endsWith(".java")) {
       Gate.write(path, text);
-      return new Imports.Fixed(text, 0, List.of());
+      return new Written(new Imports.Fixed(text, 0, List.of()), Stubs.Declared.NONE);
     }
     parses(text, "the result");
     Imports.Fixed fixed = Imports.fix(project, path, before, text, chosen);
-    Gate.applyOrRefuse(
-        project, Map.of(path, fixed.text()), what, "Nothing was changed; adjust and retry.");
-    return fixed;
+    Stubs.Declared declared =
+        Gate.applyOrRefuse(
+            project, Map.of(path, fixed.text()), what, "Nothing was changed; adjust and retry.");
+    return new Written(fixed, declared);
   }
 
   /** The 1-based line of {@code offset} in {@code text}. */

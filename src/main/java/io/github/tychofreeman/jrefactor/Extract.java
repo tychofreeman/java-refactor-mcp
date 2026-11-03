@@ -65,7 +65,7 @@ final class Extract {
 
   private Extract() {}
 
-  static String method(SourceProject project, Args args) throws Exception {
+  static Tools.Outcome method(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String name = args.required("name");
     Integer startArg = args.integer("start_line");
@@ -337,7 +337,7 @@ final class Extract {
       this.member = ancestor(sel.list().get(0), BodyDeclaration.class);
     }
 
-    String apply() throws Exception {
+    Tools.Outcome apply() throws Exception {
       refuseClash();
       refuseConstructorCalls();
       refuseJumps();
@@ -474,32 +474,35 @@ final class Extract {
               + text.substring(insertAt);
       int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
       Imports.Fixed fixed = Imports.fix(project, path, text, edited, List.of());
-      Gate.applyOrRefuse(
-          project,
-          Map.of(path, fixed.text()),
-          "extracting " + sel.lines() + " into " + name,
-          "Nothing was changed. Choose lines whose variables and exceptions the new method can"
-              + " take, or adjust them first.");
+      Stubs.Declared stubs =
+          Gate.applyOrRefuse(
+              project,
+              Map.of(path, fixed.text()),
+              "extracting " + sel.lines() + " into " + name,
+              "Nothing was changed. Choose lines whose variables and exceptions the new method can"
+                  + " take, or adjust them first.");
       int shift = fixed.lineShift();
       int first = Edits.lineOf(edited, methodAt) + shift;
       int last = Edits.lineOf(edited, methodAt + method.length() - 2) + shift;
-      return "extracted "
-          + sel.lines()
-          + " of "
-          + rel
-          + " into "
-          + signature
-          + (results.isEmpty() ? "" : ", returning " + results.get(0).getName())
-          + ", at lines "
-          + first
-          + "-"
-          + last
-          + "; the call is line "
-          + (sel.startLine() + shift)
-          + (params.size() > 5
-              ? "; it takes " + params.size() + " parameters, and fewer lines may read better"
-              : "")
-          + fixed.said();
+      return new Tools.Outcome(
+          "extracted "
+              + sel.lines()
+              + " of "
+              + rel
+              + " into "
+              + signature
+              + (results.isEmpty() ? "" : ", returning " + results.get(0).getName())
+              + ", at lines "
+              + first
+              + "-"
+              + last
+              + "; the call is line "
+              + (sel.startLine() + shift)
+              + (params.size() > 5
+                  ? "; it takes " + params.size() + " parameters, and fewer lines may read better"
+                  : "")
+              + fixed.said(),
+          stubs);
     }
 
     /** Refuses a name some method of the type, or of its supertypes, already has. */

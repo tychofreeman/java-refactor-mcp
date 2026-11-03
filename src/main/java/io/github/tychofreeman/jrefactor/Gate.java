@@ -33,16 +33,16 @@ final class Gate {
 
   /**
    * Writes each file's new text; a null text deletes the file. Returns the compile errors the edit
-   * would add; when there are any, nothing is left changed.
+   * would add, and the stubs it declared; when there are any errors, nothing is left changed.
    */
-  static List<String> apply(SourceProject project, Map<Path, String> texts) throws IOException {
+  static Stubs.Check apply(SourceProject project, Map<Path, String> texts) throws IOException {
     if (DEFERRED.get()) {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         String old = Files.exists(change.getKey()) ? Files.readString(change.getKey()) : null;
         put(change.getKey(), change.getValue());
         Journal.wrote(change.getKey(), old, change.getValue());
       }
-      return List.of();
+      return new Stubs.Check(List.of(), Stubs.Declared.NONE);
     }
     Map<String, Integer> before = TypeCheck.errors(project);
     Map<Path, String> old = new LinkedHashMap<>();
@@ -53,13 +53,13 @@ final class Gate {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         put(change.getKey(), change.getValue());
       }
-      List<String> introduced = Stubs.declare(project, before, old);
-      if (!introduced.isEmpty()) {
+      Stubs.Check check = Stubs.declare(project, before, old);
+      if (!check.introduced().isEmpty()) {
         restore(old);
       } else {
         journal(old);
       }
-      return introduced;
+      return check;
     } catch (IOException | RuntimeException e) {
       restore(old);
       throw e;
@@ -68,19 +68,20 @@ final class Gate {
 
   /**
    * {@link #apply}, refusing when the edit adds compile errors: "{@code what} would add compile
-   * errors, so nothing was changed", the errors, then {@code fix}.
+   * errors, so nothing was changed", the errors, then {@code fix}. Returns the stubs declared.
    */
-  static void applyOrRefuse(SourceProject project, Map<Path, String> texts, String what, String fix)
-      throws IOException {
-    List<String> introduced = apply(project, texts);
-    if (!introduced.isEmpty()) {
+  static Stubs.Declared applyOrRefuse(
+      SourceProject project, Map<Path, String> texts, String what, String fix) throws IOException {
+    Stubs.Check check = apply(project, texts);
+    if (!check.introduced().isEmpty()) {
       throw new Refusal(
           what
               + " would add compile errors, so nothing was changed:\n  "
-              + String.join("\n  ", introduced)
+              + String.join("\n  ", check.introduced())
               + "\n"
               + fix);
     }
+    return check.declared();
   }
 
   /** Writes a file that is not Java, which the gate does not check, creating its directories. */
