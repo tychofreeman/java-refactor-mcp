@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +19,13 @@ import java.util.zip.ZipFile;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PackageDeclaration;
 import org.eclipse.jdt.core.dom.SimpleName;
 
@@ -52,7 +59,8 @@ final class Imports {
       SourceProject project, Path file, String before, String after, List<String> chosen)
       throws IOException {
     CompilationUnit unit = Jdt.parse(project, file, after);
-    Set<String> unresolvedBefore = unresolved(Jdt.parse(project, file, before));
+    CompilationUnit beforeUnit = Jdt.parse(project, file, before);
+    Set<String> unresolvedBefore = unresolved(beforeUnit);
     Set<String> missing = unresolved(unit);
     missing.removeAll(unresolvedBefore);
     Set<String> usedBefore = names(Jdt.parseSyntax(before));
@@ -77,6 +85,7 @@ final class Imports {
       picks.put(simpleName(name), name);
     }
     Set<String> add = toImport(project, missing, imported, picks);
+    add.addAll(staticImports(unit, beforeUnit));
     // A name in a lambda is reported only once the names around it resolve, so look again with
     // the imports found so far, until no more are needed.
     Set<String> found = new TreeSet<>(add);
@@ -194,6 +203,65 @@ final class Imports {
     return add;
   }
 
+  /**
+   * {@code "static a.B.m"} for each unqualified call in {@code unit} that resolves to no method,
+   * when exactly one class the file imports a static member from has a static method {@code m}.
+   * Calls that were unresolved in {@code before} are left out.
+   */
+  private static Set<String> staticImports(CompilationUnit unit, CompilationUnit before) {
+    Set<String> was = uncalled(before);
+    Map<String, ITypeBinding> classes = new LinkedHashMap<>();
+    for (Object o : unit.imports()) {
+      ImportDeclaration i = (ImportDeclaration) o;
+      if (!i.isStatic() || i.isOnDemand()) {
+        continue;
+      }
+      IBinding b = i.resolveBinding();
+      ITypeBinding c =
+          b instanceof IMethodBinding m
+              ? m.getDeclaringClass()
+              : b instanceof IVariableBinding v ? v.getDeclaringClass() : null;
+      if (c != null) {
+        classes.putIfAbsent(c.getQualifiedName(), c);
+      }
+    }
+    Set<String> out = new TreeSet<>();
+    for (String name : uncalled(unit)) {
+      if (was.contains(name)) {
+        continue;
+      }
+      List<String> from = new ArrayList<>();
+      for (ITypeBinding c : classes.values()) {
+        for (IMethodBinding m : c.getDeclaredMethods()) {
+          if (m.getName().equals(name) && Modifier.isStatic(m.getModifiers())) {
+            from.add(c.getQualifiedName());
+            break;
+          }
+        }
+      }
+      if (from.size() == 1) {
+        out.add("static " + from.get(0) + "." + name);
+      }
+    }
+    return out;
+  }
+
+  /** The names of unqualified calls in {@code unit} that resolve to no method. */
+  private static Set<String> uncalled(CompilationUnit unit) {
+    Set<String> out = new TreeSet<>();
+    unit.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(MethodInvocation call) {
+            if (call.getExpression() == null && call.resolveMethodBinding() == null) {
+              out.add(call.getName().getIdentifier());
+            }
+            return true;
+          }
+        });
+    return out;
+  }
+
   /** {@code text} with imports of {@code names} after its package line, to see what resolves. */
   private static String withImports(String text, CompilationUnit unit, Set<String> names) {
     StringBuilder lines = new StringBuilder();
@@ -204,21 +272,26 @@ final class Imports {
     return text.substring(0, at) + lines + "\n" + text.substring(at);
   }
 
-  /** Where an import of {@code name} goes: in order among the kept non-static imports. */
+  /**
+   * Where an import of {@code name} goes: in order among the kept imports of its kind, static
+   * ({@code "static a.B.c"}) or not.
+   */
   private static int insertionPoint(
       String text, CompilationUnit unit, List<ImportDeclaration> kept, String name) {
-    ImportDeclaration lastPlain = null;
+    boolean isStatic = name.startsWith("static ");
+    String bare = isStatic ? name.substring("static ".length()) : name;
+    ImportDeclaration last = null;
     for (ImportDeclaration i : kept) {
-      if (i.isStatic()) {
+      if (i.isStatic() != isStatic) {
         continue;
       }
-      if (i.getName().getFullyQualifiedName().compareTo(name) > 0) {
+      if (i.getName().getFullyQualifiedName().compareTo(bare) > 0) {
         return Lines.start(text, i.getStartPosition());
       }
-      lastPlain = i;
+      last = i;
     }
-    if (lastPlain != null) {
-      return Lines.end(text, lastPlain.getStartPosition() + lastPlain.getLength());
+    if (last != null) {
+      return Lines.end(text, last.getStartPosition() + last.getLength());
     }
     if (!kept.isEmpty()) {
       return Lines.start(text, kept.get(0).getStartPosition());

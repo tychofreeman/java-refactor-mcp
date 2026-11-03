@@ -187,6 +187,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   text and heredoc bodies are not read as redirects, and a shell write
   counts lines of Java only when it writes a `.java` file. Records written
   before this may count some reads as hand writes, and Markdown as Java.
+- Edits import static methods (2026-11-03, from two friction entries):
+  `Imports.fix` imports an unresolved unqualified call statically from the
+  one class the file already has a single static import from with that
+  static method, so stubs no longer declare `assertFalse` in a test class.
+  Several such classes, or none, still leave it to the stubs.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
