@@ -330,3 +330,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `Edits` and `Inspect` were changed by Python scripts that replaced anchor
   text. `replace_text` on those files would have made the same edits.
 
+## 2026-11-03: static state removed by script, six server files
+- Task: roadmap #33 and #43 (`docs/sessions/no-global-state.md`).
+- Tool: none used. `Journal`, `Gate`, `Imports`, `TypeCheck`, `Server`, `Tools`,
+  `Batch` and `Edits` were changed by Python scripts that replaced anchor text.
+  `replace_text` would have made the same edits.
+

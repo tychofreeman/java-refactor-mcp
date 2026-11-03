@@ -19,7 +19,7 @@ class GateTest {
     Files.createDirectories(file.getParent());
     String text = "package com.example;\n\nimport org.lib.Foo;\n\nclass A {\n  Foo f;\n}\n";
     SourceProject project =
-        new SourceProject(root, List.of(root), List.of(), "mvn exit 1: no network");
+        new SourceProject(root, List.of(root), List.of(), "mvn exit 1: no network", new Session());
 
     Refusal refusal =
         assertThrows(

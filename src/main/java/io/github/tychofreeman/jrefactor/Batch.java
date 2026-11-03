@@ -26,8 +26,8 @@ final class Batch {
     }
     if (check.equals("end")) {
       Map<String, Integer> before = TypeCheck.errors(project);
-      String said = Gate.deferred(() -> steps(project, steps, true));
-      Map<Path, String> old = Journal.written();
+      String said = Gate.deferred(project, () -> steps(project, steps, true));
+      Map<Path, String> old = Journal.written(project);
       Stubs.Check declaring = Stubs.declare(project, before, old);
       if (!declaring.introduced().isEmpty()) {
         Gate.restore(old);
@@ -36,7 +36,7 @@ final class Batch {
                 + String.join("\n  ", declaring.introduced())
                 + "\nAdd the steps that fix them, or change the steps that cause them.");
       }
-      Gate.journal(old);
+      Gate.journal(project, old);
       return new Tools.Outcome(
           said + "\nchecked at the end: no new compile errors", declaring.declared());
     }

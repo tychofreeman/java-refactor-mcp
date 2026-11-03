@@ -15,19 +15,14 @@ final class Gate {
 
   private Gate() {}
 
-  /**
-   * True while a batch with check "end" runs: edits are written without the type check, which the
-   * batch makes once after its last step.
-   */
-  private static final ThreadLocal<Boolean> DEFERRED = ThreadLocal.withInitial(() -> false);
-
   /** Runs {@code body} with the type check deferred, as a batch with check "end" does. */
-  static <T> T deferred(java.util.concurrent.Callable<T> body) throws Exception {
-    DEFERRED.set(true);
+  static <T> T deferred(SourceProject project, java.util.concurrent.Callable<T> body)
+      throws Exception {
+    project.session().deferred = true;
     try {
       return body.call();
     } finally {
-      DEFERRED.set(false);
+      project.session().deferred = false;
     }
   }
 
@@ -36,11 +31,11 @@ final class Gate {
    * would add, and the stubs it declared; when there are any errors, nothing is left changed.
    */
   static Stubs.Check apply(SourceProject project, Map<Path, String> texts) throws IOException {
-    if (DEFERRED.get()) {
+    if (project.session().deferred) {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         String old = Files.exists(change.getKey()) ? Files.readString(change.getKey()) : null;
         put(change.getKey(), change.getValue());
-        Journal.wrote(change.getKey(), old, change.getValue());
+        Journal.wrote(project, change.getKey(), old, change.getValue());
       }
       return new Stubs.Check(List.of(), Stubs.Declared.NONE);
     }
@@ -57,7 +52,7 @@ final class Gate {
       if (!check.introduced().isEmpty()) {
         restore(old);
       } else {
-        journal(old);
+        journal(project, old);
       }
       return check;
     } catch (IOException | RuntimeException e) {
@@ -93,11 +88,11 @@ final class Gate {
   }
 
   /** Writes a file that is not Java, which the gate does not check, creating its directories. */
-  static void write(Path file, String text) throws IOException {
+  static void write(SourceProject project, Path file, String text) throws IOException {
     String before = Files.exists(file) ? Files.readString(file) : null;
     Files.createDirectories(file.getParent());
     Files.writeString(file, text);
-    Journal.wrote(file, before, text);
+    Journal.wrote(project, file, before, text);
   }
 
   /** Writes {@code text} to {@code file}, creating its directories; null deletes the file. */
@@ -121,10 +116,10 @@ final class Gate {
   }
 
   /** Records each file in {@code old} as written: from its old text to what it holds now. */
-  static void journal(Map<Path, String> old) throws IOException {
+  static void journal(SourceProject project, Map<Path, String> old) throws IOException {
     for (Map.Entry<Path, String> file : old.entrySet()) {
       Path f = file.getKey();
-      Journal.wrote(f, file.getValue(), Files.exists(f) ? Files.readString(f) : null);
+      Journal.wrote(project, f, file.getValue(), Files.exists(f) ? Files.readString(f) : null);
     }
   }
 }
