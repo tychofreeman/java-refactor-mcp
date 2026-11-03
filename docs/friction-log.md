@@ -299,3 +299,13 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: when a name is ambiguous, prefer `java.*` (or what the file imported
   before, or what its other imports' packages suggest) over library classes,
   and say which was chosen in the result.
+
+## 2026-11-03: overload name with a generic parameter typed by hand
+- Task: roadmap #36 (`docs/sessions/overload-generic-params.md`).
+- Tool: `replace_declaration` named `A.b(Map<String, Integer>)` was refused:
+  "has no member b with parameters (Map<String, Integer>). Its members are
+  b(Map<String,Integer>)". The fix, `Declarations.topLevelCommas`, was written
+  with the Edit tool, not with `replace_text` or `replace_declaration` on this
+  repo's own source. Those tools cover it once the server runs; the choice was
+  not tested against them.
+

@@ -217,6 +217,28 @@ final class Declarations {
         stubs);
   }
 
+  /**
+   * The parts of a parameter list split at its commas, outside any {@code <...>} or {@code (...)}.
+   */
+  static List<String> topLevelCommas(String list) {
+    List<String> parts = new ArrayList<>();
+    int depth = 0;
+    int from = 0;
+    for (int i = 0; i < list.length(); i++) {
+      char c = list.charAt(i);
+      if (c == '<' || c == '(') {
+        depth++;
+      } else if (c == '>' || c == ')') {
+        depth--;
+      } else if (c == ',' && depth == 0) {
+        parts.add(list.substring(from, i));
+        from = i + 1;
+      }
+    }
+    parts.add(list.substring(from));
+    return parts;
+  }
+
   /** A declaration found by name, and how to say which one ("A.b(int)"). */
   record Named(BodyDeclaration decl, String label) {}
 
@@ -231,7 +253,7 @@ final class Declarations {
       base = name.substring(0, paren).strip();
       String inside = name.substring(paren + 1, name.length() - 1).strip();
       params = new ArrayList<>();
-      for (String p : inside.isEmpty() ? new String[0] : inside.split(",")) {
+      for (String p : inside.isEmpty() ? List.<String>of() : topLevelCommas(inside)) {
         params.add(p.replace(" ", ""));
       }
     }
