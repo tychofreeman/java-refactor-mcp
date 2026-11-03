@@ -206,6 +206,100 @@ final class Tools {
           false,
           (project, args) -> Declarations.replace(project, args));
 
+  static final Def ADD_PARAMETER =
+      new Def(
+          "add_parameter",
+          """
+          Add a parameter to a method or constructor, and pass the same value for it at every \
+          call in the project: with parameter retries, type int and value 3, void send(String to) \
+          becomes void send(String to, int retries), and send(addr) becomes send(addr, 3). Every \
+          declaration it overrides or that overrides it changes too. The body does not use it \
+          yet, so behavior is unchanged; add it, then change the body.
+          name finds the method as replace_declaration does (Type.member, member, m(int, String) \
+          for an overload; a constructor by its type's name). value is a Java expression every \
+          call can see, with no side effects. before puts the parameter ahead of that one \
+          (default: last).
+          Refuses, saying why: a method that overrides a library method, one used as a method \
+          reference, varargs, a name that would hide a field a body reads, a value that does \
+          not type-check at some call.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
+              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
+              "parameter": {"type": "string", "description": "The new parameter's name."},
+              "type":      {"type": "string", "description": "Its Java type."},
+              "value":     {"type": "string", "description": "The Java expression each call passes."},
+              "before":    {"type": "string", "description": "Optional: the parameter to put it before; default last."},
+              "imports":   {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "name", "parameter", "type", "value"]
+          }\
+          """,
+          Set.of("file", "name", "parameter", "type", "value", "before", "imports"),
+          false,
+          (project, args) -> Signatures.addParameter(project, args));
+
+  static final Def REMOVE_PARAMETER =
+      new Def(
+          "remove_parameter",
+          """
+          Remove a parameter no body reads, with its @param tag, and its argument at every call \
+          in the project: removing retries, void send(String to, int retries) becomes \
+          void send(String to), and send(addr, 3) becomes send(addr). Every declaration it \
+          overrides or that overrides it changes too. Use it last when taking a feature out: \
+          first change the bodies so they no longer read it.
+          name finds the method as replace_declaration does. A dropped argument must have no \
+          side effects (a name, a literal, this, a field).
+          Refuses, saying why: a body that reads the parameter, an argument with side effects, \
+          a method that overrides a library method, one used as a method reference, varargs.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
+              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
+              "parameter": {"type": "string", "description": "The parameter to remove."}
+            },
+            "required": ["file", "name", "parameter"]
+          }\
+          """,
+          Set.of("file", "name", "parameter"),
+          false,
+          (project, args) -> Signatures.removeParameter(project, args));
+
+  static final Def MOVE_PARAMETER =
+      new Def(
+          "move_parameter",
+          """
+          Move a parameter to another place in the list, in every declaration of the method's \
+          family (what it overrides and what overrides it) and every call's arguments: moving \
+          to before from, void copy(Path from, Path to) becomes void copy(Path to, Path from), \
+          and copy(a, b) becomes copy(b, a).
+          name finds the method as replace_declaration does; before names the parameter to put \
+          it ahead of (default: last).
+          Refuses, saying why: two arguments with side effects whose order would change, a \
+          method that overrides a library method, one used as a method reference, varargs.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
+              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
+              "parameter": {"type": "string", "description": "The parameter to move."},
+              "before":    {"type": "string", "description": "Optional: the parameter to put it before; default last."}
+            },
+            "required": ["file", "name", "parameter"]
+          }\
+          """,
+          Set.of("file", "name", "parameter", "before"),
+          false,
+          (project, args) -> Signatures.moveParameter(project, args));
+
   static final Def UNDO =
       new Def(
           "undo",
@@ -260,6 +354,9 @@ final class Tools {
           REPLACE_TEXT,
           ADD_DECLARATION,
           REPLACE_DECLARATION,
+          ADD_PARAMETER,
+          REMOVE_PARAMETER,
+          MOVE_PARAMETER,
           BATCH,
           UNDO);
 

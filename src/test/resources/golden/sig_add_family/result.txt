@@ -1,0 +1,1 @@
+added double scale to Circle.area() in 3 declarations and 2 calls (com/example/Circle.java, com/example/Report.java, com/example/Shape.java, com/example/Square.java)

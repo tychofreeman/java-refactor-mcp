@@ -88,6 +88,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `.internal.` packages (2026-11-02): JDT's internal compiler AST made most
   `org.eclipse.jdt.core.dom` names ambiguous, and a JDK class in an unexported
   `jdk.javadoc.internal` package was imported for a name nothing declared.
+- Signature changes exist (roadmap #22, 2026-11-02): `add_parameter`,
+  `remove_parameter`, `move_parameter` in `Signatures`. The family is found by
+  `IMethodBinding.overrides` against each declaration's supertypes, in each
+  file's own parse, joined across files by binding key
+  (`getMethodDeclaration().getKey()`). A Haiku probe added a parameter to an
+  interface method, two implementations and two calls in one call (10 turns,
+  $0.004).
 - The client keeps tool descriptions from before a restart in its listing (seen
   twice: after #19 and #20); the server's are current. Not this server's bug.
 - Two `replace_text` "old is not in" refusals (#20, #8) were the model reading

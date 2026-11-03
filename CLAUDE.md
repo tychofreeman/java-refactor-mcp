@@ -18,7 +18,8 @@ about 95% of coding through the tools, this project's own code included.
 
 Current state: early. The MCP server (`Server`, STDIO; tools defined in
 `Tools`) exposes `inspect` (read-only), `rename_local`, and four edits:
-`create_file`, `replace_text`, `add_declaration`, `replace_declaration`; `batch`
+`create_file`, `replace_text`, `add_declaration`, `replace_declaration`;
+`add_parameter`, `remove_parameter`, `move_parameter` (`Signatures`); `batch`
 and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`),
 which first declares stubs for what the change uses and nothing declares (`Stubs`),
 and is recorded in `Journal`. Check the roadmap and open questions in
@@ -96,7 +97,7 @@ merged, check out `main` and reconnect the server (`/mcp`, jrefactor,
 Reconnect); no restart of Claude Code is needed. A reconnect serves whatever is
 checked out, a branch's build included.
 
-1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__batch,mcp__jrefactor__undo`.
+1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename_local,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__add_parameter,mcp__jrefactor__remove_parameter,mcp__jrefactor__move_parameter,mcp__jrefactor__batch,mcp__jrefactor__undo`.
    After a restart or reconnect the client may list descriptions from before it; the server's
    own are current (it accepts the arguments they name).
 2. **Read Java through `inspect`:** the file without method bodies, then the
@@ -104,7 +105,9 @@ checked out, a branch's build included.
    code: do not count those two spaces as indentation in `old`. Avoid Read or `cat` of whole `.java` files;
    each result is sent again on every later turn.
 3. **Rename locals and parameters with `rename_local`,** by `file`, `line` and
-   `name`; it finds every use and type-checks.
+   `name`; it finds every use and type-checks. **Change parameters with
+   `add_parameter`, `remove_parameter`, `move_parameter`:** every override,
+   implementation and call follows, in one call.
 4. **Write through the edits:** `create_file` for new files (tests, fixtures),
    `add_declaration` for new members (by `type`, `after`/`before`),
    `replace_declaration` for a whole method, field or type by name (empty

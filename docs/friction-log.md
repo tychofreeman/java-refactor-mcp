@@ -178,3 +178,25 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   a class, a lambda's result type comes from the method it implements, and
   libraries' `.internal.` packages are not import candidates (this also ends
   the dom/internal ambiguity logged above).
+
+## 2026-11-02: signature changes, through the tools
+- Task: roadmap #22 (`docs/sessions/signature-changes.md`).
+- Tool: every change through java-refactor-mcp; no hand edits.
+- What happened:
+  - A batch checked at each step: step 1 called `allPure(...)`, which step 2
+    declared. Step 1's gate declared a stub `allPure(List)` (raw, from
+    `extendedOperands()`), and step 2's `allPure(List<?>)` then clashed with it
+    ("Erasure of method allPure(List) is the same"), since a stub is replaced
+    only when the parameter types are written the same. Resent with check
+    "end". Two fixes would each have avoided it: replace a stub whose
+    parameters have the same erasure; or, in a batch, declare stubs only after
+    the last step that could declare the name.
+  - `GoldenTest` reads `value=10` in `args.properties` as a number, which the
+    tool refuses ("value must be a string"); moved to `value.txt`.
+  - `./mvnw -q test | grep` hid a compile failure (a -Werror warning, a raw
+    `stream()`): the quiet grep showed nothing, as for a pass. Check the build
+    result, not the absence of failures.
+  - Probe: Haiku read "an int priority parameter, last" as a parameter named
+    `last`; with "named priority, at the end", one `add_parameter` call.
+- Cost: not measured (roadmap #18).
+- Idea: stub replacement by erasure.

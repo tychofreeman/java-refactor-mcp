@@ -1,0 +1,1 @@
+Clock.tick() is used as a method reference (com/example/Clock.java, line 9)
