@@ -36,6 +36,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - The two `ancestor` helpers are named by where they start (roadmap order 29, 2026-11-04):
   `Stubs.ancestorOrSelf` (from the node itself) and `Extract.ancestorAbove` (from its
   parent). The names were chosen by the session, not asked; `rename` moved the calls.
+- The server loads its classpath from the same cache the command line keeps
+  (order 63, 2026-11-04, `docs/sessions/server-classpath-cache.md`): `Cli.classpathCache`
+  names the file, `Server.load` uses it. A second start on this repo takes 1.6 s, not 4.7 s.
 - `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
   and `Extract.typeName` still differ on wildcards: `Stubs` erases them, `Extract` keeps them.
   Stub type variables (decided 2026-11-04): written by name when the target type declares
