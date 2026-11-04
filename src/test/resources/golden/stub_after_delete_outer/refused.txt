@@ -1,0 +1,1 @@
+deleting Outer.label(int) would add compile errors
