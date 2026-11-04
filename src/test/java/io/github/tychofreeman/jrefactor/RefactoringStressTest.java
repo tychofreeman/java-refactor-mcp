@@ -17,6 +17,7 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
@@ -134,20 +135,23 @@ class RefactoringStressTest {
     args.put("file", rel);
     switch (tool) {
       case "rename" -> {
-        List<SimpleName> names = new ArrayList<>();
+        // By kind first, so the many locals do not crowd out fields, methods and types.
+        Map<String, List<SimpleName>> byKind = new TreeMap<>();
         unit.accept(
             new ASTVisitor() {
               @Override
               public boolean visit(SimpleName n) {
                 if (n.isDeclaration()) {
-                  names.add(n);
+                  byKind.computeIfAbsent(kind(n), k -> new ArrayList<>()).add(n);
                 }
                 return true;
               }
             });
-        if (names.isEmpty()) {
+        if (byKind.isEmpty()) {
           return null;
         }
+        List<List<SimpleName>> kinds = new ArrayList<>(byKind.values());
+        List<SimpleName> names = kinds.get(random.nextInt(kinds.size()));
         SimpleName n = names.get(random.nextInt(names.size()));
         args.put("line", unit.getLineNumber(n.getStartPosition()));
         args.put("name", n.getIdentifier());
@@ -237,6 +241,21 @@ class RefactoringStressTest {
       default -> throw new IllegalArgumentException(tool);
     }
     return args;
+  }
+
+  /** What a declared name declares: "type", "method", "field", or "local" (a parameter too). */
+  private static String kind(SimpleName n) {
+    ASTNode parent = n.getParent();
+    if (parent instanceof AbstractTypeDeclaration) {
+      return "type";
+    }
+    if (parent instanceof MethodDeclaration) {
+      return "method";
+    }
+    if (parent.getParent() instanceof FieldDeclaration) {
+      return "field";
+    }
+    return "local";
   }
 
   private static List<MethodDeclaration> methods(CompilationUnit unit) {
