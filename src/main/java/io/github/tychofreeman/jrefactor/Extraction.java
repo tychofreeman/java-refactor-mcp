@@ -138,7 +138,7 @@ final class Extraction {
 
   /** What the extraction works out before it writes: the parameters, the value and the returns. */
   private record Plan(
-      Map<IVariableBinding, Boolean> used,
+      Set<IVariableBinding> declaredInside,
       List<IVariableBinding> params,
       List<IVariableBinding> results,
       List<ReturnStatement> returns,
@@ -212,7 +212,13 @@ final class Extraction {
                 + " every path, or lines without a return.");
       }
     }
-    return new Plan(used, params, results, returns, enclosingResult, voidResult);
+    Set<IVariableBinding> declared = new LinkedHashSet<>();
+    for (Map.Entry<IVariableBinding, Boolean> e : used.entrySet()) {
+      if (e.getValue()) {
+        declared.add(e.getKey());
+      }
+    }
+    return new Plan(declared, params, results, returns, enclosingResult, voidResult);
   }
 
   /** The call that replaces the statements, with the new method's result type and return line. */
@@ -224,7 +230,7 @@ final class Extraction {
       IVariableBinding r = p.results().get(0);
       String resultType = Extract.typeName(r.getType());
       String call =
-          p.used().get(r)
+          p.declaredInside().contains(r)
               ? (Modifier.isFinal(r.getModifiers()) ? "final " : "")
                   + resultType
                   + " "
