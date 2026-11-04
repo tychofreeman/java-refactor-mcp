@@ -48,8 +48,11 @@ Not measured (the session log does not cover this branch; the goldens are the me
 
 ## Assessment
 
-Through the tools: the three refusals were the change the probes asked for, made by Edit in three
-classes that the tools already share (the same `Refusal` path). No rewrite was done by hand.
+Around the tools: the three refusals were written by hand with Edit, in three existing classes.
+No java-refactor-mcp tool was loaded in this session, and no tool adds a refusal, so there was
+no tool path to take. The refusals share the existing `Refusal` path, but that is not tool work.
+The seven goldens and the rules were written by hand too; none of this was a rewrite of existing
+code by a tool.
 The gap: the stress run cannot see these (every case compiles), so the goldens and the probe list
 are the only check. A rule that refuses every non-equal argument type is broader than the probe
 needed; the cost is refusals on safe calls with subtypes, which no golden covers yet.
