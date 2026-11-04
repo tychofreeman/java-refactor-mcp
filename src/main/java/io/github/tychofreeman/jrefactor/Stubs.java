@@ -24,6 +24,7 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -459,6 +460,13 @@ final class Stubs {
       if (parent instanceof LambdaExpression lambda && lambda.getBody() == child) {
         return lambdaResult(lambda);
       }
+      if (parent instanceof EnhancedForStatement f && f.getExpression() == child) {
+        uses.add("java.util.List");
+        ITypeBinding element = f.getParameter().getType().resolveBinding();
+        return "List<"
+            + (element != null && element.isPrimitive() ? wrapper(element) : typeName(element))
+            + ">";
+      }
       if (parent instanceof VariableDeclarationFragment f && f.getInitializer() == child) {
         Type type =
             switch (f.getParent()) {
@@ -565,6 +573,15 @@ final class Stubs {
       }
       return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
     }
+  }
+
+  /** The class that boxes the primitive {@code b}, as a type argument needs it. */
+  private static String wrapper(ITypeBinding b) {
+    return switch (b.getName()) {
+      case "int" -> "Integer";
+      case "char" -> "Character";
+      default -> Character.toUpperCase(b.getName().charAt(0)) + b.getName().substring(1);
+    };
   }
 
   /**
