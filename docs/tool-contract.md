@@ -391,6 +391,18 @@ Result: `moved the statement at line L up|down, past the statement at line M in 
 return, break, continue, throw or yield (on either side), no neighbour in that direction, a shared
 name, two side effects under the strict rule, and the gate's "would add compile errors".
 
+## `invert_if` (built)
+
+Inverts an if that has an else: the branches swap and the condition is negated. Arguments: `file`,
+`line` (the line the if starts on). A comparison takes its opposite operator (`==` and `!=`, `<` and
+`>=`, `<=` and `>`); a `!x` loses its `!`; any other condition is wrapped as `!(...)` (or `!x` for a
+name or a call).
+
+Result: `inverted the if at line L in file; its condition is now C`, with `; imported ...` when an
+import is added. Refusals: no if on the line, several on it, an if with no else, an else if chain
+(invert the inner if), an ordering comparison on a float or double (NaN), and the gate's "would add
+compile errors".
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

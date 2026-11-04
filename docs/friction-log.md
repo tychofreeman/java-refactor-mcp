@@ -537,3 +537,7 @@ The sixth of the ten higher-level tools (`docs/sessions/move-statement.md`). The
 tool. The independence rule was the user's choice (strict by default, names_only as a flag); the
 text swap itself is a composition that could be written with `replace_text` over the two lines,
 which the refactoring now does without it.
+
+The seventh of the ten higher-level tools (`docs/sessions/invert-if.md`). The class and registration
+were written by hand, as the earlier new tools were. The negation rules were the user's choice
+(simplify comparisons; refuse ordering comparisons on floats).

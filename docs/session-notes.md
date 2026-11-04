@@ -416,6 +416,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   strict (no shared written name, at most one side effect); `names_only=true` relaxes it to the
   shared-name rule. The user chose this over Names-only as the default and over a `force` flag.
 
+- `invert_if` exists (2026-11-04, `docs/sessions/invert-if.md`): the seventh of the ten higher-level
+  tools. The negated condition simplifies comparisons (the user's choice over always `!(...)` and over
+  refusing non-simple conditions). An ordering comparison on a float or double is refused (NaN).
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

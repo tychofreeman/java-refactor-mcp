@@ -1,0 +1,1 @@
+inverted the if at line 5 in com/example/Price.java; its condition is now !(a > 0 && b > 0)

@@ -289,6 +289,32 @@ final class Tools {
           Kind.REFACTORING,
           Tools::moveStatement);
 
+  static final Def INVERT_IF =
+      new Def(
+          "invert_if",
+          """
+          Invert an if that has an else: its branches swap and its condition is negated, so the \
+          code runs the same. Identify the if by the line it starts on.
+          The condition is negated by its opposite operator (== and !=, < and >=, <= and >), a \
+          !x loses its !, and any other condition is wrapped in !(...). An ordering comparison on \
+          a float or double is refused: it is not the opposite when a value is NaN.
+          Refuses, saying why: no if on the line, an if with no else, an else if chain (invert the \
+          inner if), a float comparison, or a change that adds compile errors, naming them.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root."},
+              "line": {"type": "integer", "description": "The 1-based line the if starts on."}
+            },
+            "required": ["file", "line"]
+          }\
+          """,
+          Set.of("file", "line"),
+          Kind.REFACTORING,
+          Tools::invertIf);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -696,6 +722,7 @@ final class Tools {
           CHANGE_TYPE,
           ADD_SUPERTYPE,
           MOVE_STATEMENT,
+          INVERT_IF,
           BATCH,
           UNDO);
 
@@ -775,6 +802,10 @@ final class Tools {
         args.integer("line"),
         args.required("direction"),
         args.flag("names_only"));
+  }
+
+  private static Outcome invertIf(SourceProject project, Args args) throws Exception {
+    return InvertIf.run(project, args.required("file"), args.integer("line"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
