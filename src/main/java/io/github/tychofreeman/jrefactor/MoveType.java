@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,9 +47,6 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 final class MoveType {
 
   private MoveType() {}
-
-  /** The text from {@code start} to {@code end} replaced by {@code text}. */
-  private record Edit(int start, int end, String text) {}
 
   /** Moves the nested type {@code name} ("Outer.Inner") declared in {@code rel}. */
   static Tools.Outcome run(SourceProject project, String rel, String name) throws IOException {
@@ -103,7 +99,7 @@ final class MoveType {
       String text = e.getValue();
       CompilationUnit u = parsed.get(f);
       boolean samePackage = packageOf(u).equals(pkg);
-      List<Edit> edits = new ArrayList<>();
+      List<TextEdit> edits = new ArrayList<>();
       List<ASTNode> refs = new ArrayList<>();
       boolean needsImport = references(u, text, key, pkg, simple, samePackage, edits, refs);
       if (needsImport && !imports(u, qualified(pkg, simple))) {
@@ -129,9 +125,9 @@ final class MoveType {
           edits.add(dropModifier(text, m));
         }
       }
-      List<Edit> inside = new ArrayList<>();
-      List<Edit> outside = new ArrayList<>();
-      for (Edit edit : edits) {
+      List<TextEdit> inside = new ArrayList<>();
+      List<TextEdit> outside = new ArrayList<>();
+      for (TextEdit edit : edits) {
         (edit.start() >= start && edit.start() < end ? inside : outside).add(edit);
       }
       int lineStart = Lines.start(text, start);
@@ -156,7 +152,7 @@ final class MoveType {
             text, Lines.start(text, i.getStartPosition()), Lines.end(text, i.getStartPosition()));
         if (!i.isOnDemand() && !usedOutside.contains(last)) {
           outside.add(
-              new Edit(
+              new TextEdit(
                   Lines.start(text, i.getStartPosition()),
                   Lines.end(text, i.getStartPosition()),
                   ""));
@@ -167,7 +163,7 @@ final class MoveType {
       if (cutStart > 0 && text.substring(before, cutStart).isBlank()) {
         cutStart = before;
       }
-      outside.add(new Edit(cutStart, Lines.end(text, end), ""));
+      outside.add(new TextEdit(cutStart, Lines.end(text, end), ""));
       changed.put(f, apply(text, 0, outside));
       String created =
           (pkg.isEmpty() ? "" : "package " + pkg + ";\n\n")
@@ -264,7 +260,7 @@ final class MoveType {
       String pkg,
       String simple,
       boolean samePackage,
-      List<Edit> edits,
+      List<TextEdit> edits,
       List<ASTNode> refs) {
     boolean[] needsImport = {false};
     u.accept(
@@ -283,13 +279,13 @@ final class MoveType {
               refs.add(i);
               if (samePackage) {
                 edits.add(
-                    new Edit(
+                    new TextEdit(
                         Lines.start(text, i.getStartPosition()),
                         Lines.end(text, i.getStartPosition()),
                         ""));
               } else {
                 edits.add(
-                    new Edit(
+                    new TextEdit(
                         i.getName().getStartPosition(),
                         i.getName().getStartPosition() + i.getName().getLength(),
                         qualified(pkg, simple)));
@@ -305,7 +301,7 @@ final class MoveType {
               refs.add(q);
               boolean short_ = q.getQualifier() instanceof SimpleName;
               edits.add(
-                  new Edit(
+                  new TextEdit(
                       q.getStartPosition(),
                       q.getStartPosition() + q.getLength(),
                       short_ ? simple : qualified(pkg, simple)));
@@ -335,7 +331,7 @@ final class MoveType {
       String outerKey,
       String outerLabel,
       String simple,
-      List<Edit> edits,
+      List<TextEdit> edits,
       Map<Integer, String> widened) {
     int start = decl.getStartPosition();
     int end = start + decl.getLength();
@@ -349,7 +345,7 @@ final class MoveType {
             }
             boolean inside = n.getStartPosition() >= start && n.getStartPosition() < end;
             if (inside && unqualified(n) && memberOf(b, outerKey, key)) {
-              edits.add(new Edit(n.getStartPosition(), n.getStartPosition(), outerLabel + "."));
+              edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), outerLabel + "."));
             }
             widen(b, inside);
             return true;
@@ -499,7 +495,7 @@ final class MoveType {
   }
 
   /** An import of {@code name}, in order among {@code u}'s non-static imports. */
-  private static Edit importEdit(String text, CompilationUnit u, String name) {
+  private static TextEdit importEdit(String text, CompilationUnit u, String name) {
     String line = "import " + name + ";\n";
     ImportDeclaration last = null;
     for (Object o : u.imports()) {
@@ -509,39 +505,33 @@ final class MoveType {
       }
       if (i.getName().getFullyQualifiedName().compareTo(name) > 0) {
         int at = Lines.start(text, i.getStartPosition());
-        return new Edit(at, at, line);
+        return new TextEdit(at, at, line);
       }
       last = i;
     }
     if (last != null) {
       int at = Lines.end(text, last.getStartPosition());
-      return new Edit(at, at, line);
+      return new TextEdit(at, at, line);
     }
     int at =
         u.getPackage() == null
             ? 0
             : Lines.end(text, u.getPackage().getStartPosition() + u.getPackage().getLength());
-    return new Edit(at, at, "\n" + line);
+    return new TextEdit(at, at, "\n" + line);
   }
 
   /** Removes modifier {@code m} and the spaces after it. */
-  private static Edit dropModifier(String text, Modifier m) {
+  private static TextEdit dropModifier(String text, Modifier m) {
     int end = m.getStartPosition() + m.getLength();
     while (end < text.length() && text.charAt(end) == ' ') {
       end++;
     }
-    return new Edit(m.getStartPosition(), end, "");
+    return new TextEdit(m.getStartPosition(), end, "");
   }
 
   /** {@code text}, which starts at {@code offset} of the file, with {@code edits} applied. */
-  private static String apply(String text, int offset, List<Edit> edits) {
-    List<Edit> sorted = new ArrayList<>(edits);
-    sorted.sort(Comparator.comparingInt(Edit::start).thenComparingInt(Edit::end).reversed());
-    StringBuilder out = new StringBuilder(text);
-    for (Edit e : sorted) {
-      out.replace(e.start() - offset, e.end() - offset, e.text());
-    }
-    return out.toString();
+  private static String apply(String text, int offset, List<TextEdit> edits) {
+    return TextEdit.apply(text, edits, offset);
   }
 
   /**

@@ -16,17 +16,14 @@ import org.eclipse.jdt.core.dom.TagElement;
 /** The edits of one signature change, by file, applied together under the gate. */
 final class SignatureChange {
   final MethodFamily family;
-  final Map<Signatures.Source, List<Edit>> edits = new LinkedHashMap<>();
-
-  /** One text replacement in a file. */
-  private record Edit(int start, int end, String text) {}
+  final Map<Signatures.Source, List<TextEdit>> edits = new LinkedHashMap<>();
 
   SignatureChange(MethodFamily family) {
     this.family = family;
   }
 
   private void add(Signatures.Source file, int start, int end, String text) {
-    edits.computeIfAbsent(file, k -> new ArrayList<>()).add(new Edit(start, end, text));
+    edits.computeIfAbsent(file, k -> new ArrayList<>()).add(new TextEdit(start, end, text));
   }
 
   /** Inserts {@code text} at position {@code at} of {@code list}, which opens at {@code open}. */
@@ -100,13 +97,12 @@ final class SignatureChange {
     Map<Path, String> texts = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
     List<String> notes = new ArrayList<>();
-    for (Map.Entry<Signatures.Source, List<Edit>> e : edits.entrySet()) {
+    for (Map.Entry<Signatures.Source, List<TextEdit>> e : edits.entrySet()) {
       Signatures.Source s = e.getKey();
-      List<Edit> list = new ArrayList<>(e.getValue());
+      List<TextEdit> list = new ArrayList<>(e.getValue());
       list.sort((a, b) -> a.start() != b.start() ? b.start() - a.start() : b.end() - a.end());
-      StringBuilder text = new StringBuilder(s.text());
       int limit = Integer.MAX_VALUE;
-      for (Edit edit : list) {
+      for (TextEdit edit : list) {
         if (edit.end() > limit) {
           throw new Refusal(
               "calls of "
@@ -117,10 +113,10 @@ final class SignatureChange {
                   + s.unit().getLineNumber(edit.start())
                   + "). Assign the inner call to a variable first.");
         }
-        text.replace(edit.start(), edit.end(), edit.text());
         limit = edit.start();
       }
-      Imports.Fixed fixed = Imports.fix(project, s.file(), s.text(), text.toString(), chosen);
+      String edited = TextEdit.apply(s.text(), list, 0);
+      Imports.Fixed fixed = Imports.fix(project, s.file(), s.text(), edited, chosen);
       texts.put(s.file(), fixed.text());
       files.add(s.rel());
       if (!fixed.notes().isEmpty()) {
