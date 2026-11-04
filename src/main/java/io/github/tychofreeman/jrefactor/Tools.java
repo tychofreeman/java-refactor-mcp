@@ -185,8 +185,12 @@ final class Tools {
           rolled back and refused.
           Refuses, saying why: an instance, varargs, generic or abstract method; a body that is \
           not one return or one statement; a method that calls itself; a method used as Type::name; \
-          a call nested in another call's arguments; a parameter used twice when its argument \
-          calls or assigns; a method with no calls.\
+          a call nested in another call's arguments; a method with no calls; a body that assigns \
+          a parameter or uses a static import; an argument that calls, assigns or reads a field \
+          when the body would drop it, run it twice or later (in a lambda, a branch), after one of \
+          its own effects, or in another order than the arguments (put it in a variable first). \
+          A primitive argument of another type is cast (half(3) with double x gives ((double) 3)), \
+          and the method's statics are qualified at a call in another class.\
           """,
           """
           {

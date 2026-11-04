@@ -451,3 +451,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   docs-only changes. Dependabot opens weekly PRs for Maven and Actions. As of
   2026-11-02: JUnit 6.1.3, `actions/checkout@v7`, `actions/setup-java@v6`. The
   first runs on `main` passed (2026-11-02).
+
+- `inline_function` keeps what the call did (roadmap #67, 2026-11-04,
+  `docs/sessions/inline-function-behavior.md`): an argument that is not
+  *fixed* (literals, locals, parameters, constants) is refused when the body
+  would drop it, defer it (lambda, anonymous class, a branch for one with an
+  effect), run an effect of the body before it, or use such arguments in
+  another order. A primitive of another type is cast (`((double) 3)`); a
+  bare static of the method's class is qualified at a call in another class.
+  The rules are conservative: "put the argument in a variable first"
+  (`extract_variable`) is the way through each refusal.

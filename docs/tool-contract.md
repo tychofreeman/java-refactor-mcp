@@ -348,8 +348,18 @@ declares the method) and `name` (`Type.method`), and inlines every call.
 - Result: `inlined Type.method into N calls and deleted the method in <file>`.
 - Refuses: an instance, varargs, generic or abstract method; a body that is not one
   `return` or one statement; a method that calls itself; a method used as
-  `Type::name`; a call nested in another call's arguments; a parameter used more than
-  once when its argument calls, assigns or changes a variable; a method with no calls.
+  `Type::name`; a call nested in another call's arguments; a method with no calls; a
+  body that assigns a parameter or uses a static import; an argument the inlined body
+  would run at another time than the call did: one that calls, assigns or reads a field
+  or array element, when the body does not use it (dropped), uses it twice, in a lambda,
+  an anonymous class or a branch, after an effect of its own, or in another order than
+  the arguments; a reference argument of another type than the parameter's that the body
+  passes to a call (another overload could be chosen); an argument naming a variable the
+  body declares.
+- Keeps meaning: a primitive argument of another type than its parameter is cast
+  (`half(3)` for `double x` gives `((double) 3) / 2`), and a static field or method of the
+  method's class named bare in the body is qualified (`Lib.FACTOR`) at a call in another
+  class, or where the caller declares that name.
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
   several-statement bodies, inlining one call at a time.
 

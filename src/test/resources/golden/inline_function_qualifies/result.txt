@@ -1,0 +1,1 @@
+inlined Lib.scale into 1 call and deleted the method in com/example/Lib.java
