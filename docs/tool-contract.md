@@ -353,6 +353,17 @@ declares the method) and `name` (`Type.method`), and inlines every call.
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
   several-statement bodies, inlining one call at a time.
 
+## `change_type` (built)
+
+Changes the declared type of a field, so that its uses must still compile. The
+first version takes `file` (the file that declares the field), `name` (`Type.field`)
+and `type` (the new type as written).
+
+- Result: `changed the type of Type.field from <old> to <new> in <file>`.
+- Refuses: a name that is not a field of the top-level class; a declaration of several
+  fields; a change that adds compile errors (the gate names them, nothing changes).
+- Not built yet: locals, parameters, return types, and fields declared with several names.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

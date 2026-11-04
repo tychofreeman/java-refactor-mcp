@@ -517,3 +517,10 @@ goldens and `InlineFunction` were written with Write, since the tool did not exi
 The gate caught the first wrong substitution (the whole statement, not its expression)
 as a syntax error; the golden run caught the blank line left after the method. The tool
 that would have written them: none yet; the case is the tool being built.
+
+## 2026-11-04: change_type's cases written by hand (before the tool existed)
+
+The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The goldens and
+`ChangeType` were written with Write. The first success case was wrong (a getter returning
+`int`), and the gate refused it, which the golden run showed. The tool that would have written
+the cases: none yet; the case is the tool being built.

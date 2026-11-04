@@ -402,6 +402,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   a body that is one return or one statement, every call in the project. An instance method is
   refused for its receiver, not inlined. The method is removed with the blank line after it.
 
+- `change_type` exists (2026-11-04, `docs/sessions/change-type.md`): fields only, named
+  `Type.field`. The gate checks the uses, so a change that a use no longer compiles with is
+  refused, not applied.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
