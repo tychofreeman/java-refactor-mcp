@@ -199,6 +199,8 @@ opens weekly PRs for Maven dependencies and GitHub Actions versions.
 - `docs/tool-contract.md`: update when a tool name, argument or result shape changes.
 - `docs/design.md`: the roadmap, and each decision that changes the architecture.
 - `docs/session-notes.md`: current facts a later session needs; fix stale ones.
+- `docs/how-this-project-was-built.md`: the arc of the project and each decision that
+  changed how work is done (as gorefactor's of the same name); extend it in that PR.
 - `docs/friction-log.md`: each time a tool got in the way or a refactoring was
   done by hand. Append entries at the end of the file, so parallel PRs do not
   conflict at the same place. The roadmap is ordered by this log, as in gorefactor.
