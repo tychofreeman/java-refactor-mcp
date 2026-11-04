@@ -139,7 +139,7 @@ final class Extract {
       }
     }
 
-    /** The statements of the innermost body (method, initializer, lambda) holding the range. */
+    /** The statements of the outermost body (method, initializer, lambda) holding the range. */
     private static List<Statement> body(
         CompilationUnit unit, int startOffset, int endOffset, String range) {
       List<Block> bodies = new ArrayList<>();
