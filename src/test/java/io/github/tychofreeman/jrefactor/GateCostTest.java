@@ -72,6 +72,7 @@ class GateCostTest {
     int files = TypeCheck.lastParsed(project).size();
     // The narrowed count after the call, and after its undo, are what a fresh count gives.
     assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "after the call");
+    long undoing = System.nanoTime();
     Journal.undo(project);
     long undone = System.nanoTime();
 
@@ -81,7 +82,7 @@ class GateCostTest {
         (done - start) / 1_000_000,
         parsed,
         files,
-        (undone - done) / 1_000_000,
+        (undone - undoing) / 1_000_000,
         result.length() > 200 ? result.substring(0, 200) + "..." : result);
     assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "after the undo");
   }

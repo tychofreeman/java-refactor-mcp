@@ -31,7 +31,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 - `TextEdit` is the one replace-back-to-front edit (roadmap order 32, 2026-11-03), used by `Rename`, `MoveType` and `SignatureChange`. `Declarations.plan` and `Edits.replaceText` keep their own shape.
 - `Extraction.apply` is split into `Plan`, `callOf` and `methodText` (roadmap order 34, 2026-11-03); behavior is the extract goldens, unchanged.
-- `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use; why a class this call created gets no default-constructor stub is not written down.
+- `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use. A class this call created gets no default-constructor stub: the user chose that (2026-11-03), and `Stubs` skips it through `created`.
 - `Stubs.find` declares a stub for a call that fits no overload (`IProblem.ParameterMismatch`, roadmap order 48, 2026-11-03): an overload typed from the call. A wrong call to an existing method now gets a stub overload, not a refusal.
 - `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
   and `Extract.typeName` still differ on type variables and captures: a decision, not done.
@@ -211,8 +211,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - Import and stub costs on Commons Math (roadmap #44, 2026-11-03,
   `docs/sessions/measure-imports-stubs.md`): a plain `add_declaration` 0.27 s;
   one needing a JDK import 0.96 s; one declaring a stub 0.47 s with a second
-  parse. Every undo took 2.7-2.9 s, about ten times the call: not yet
-  investigated, the next cost to look at.
+  parse.
+- Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
+  takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
+  check, now timed apart. Measure undo with the harness, not from its old figures.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
