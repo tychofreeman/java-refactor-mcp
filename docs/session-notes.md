@@ -61,6 +61,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   journals. `Batch` calls it; `Gate.refusal` is the one refusal wording for both.
 - `Gate.deferred` restores the flag it found, so a nested deferred call (a batch
   inside a batch) leaves the outer call deferred (roadmap order 41, 2026-11-03).
+- Order 32 (edit pipeline) is closed as partly done (2026-11-03, the user's choice
+  from the options, `docs/sessions/edit-pipeline-close.md`). Its open part is the
+  per-file import fix and gate in `SignatureChange` and `MoveType`.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate (roadmap order 32, 2026-11-03). `Declarations` (3), `Extraction` and
   `Edits.write` use it; `Signatures` keeps its per-file loop. Add new single-file
