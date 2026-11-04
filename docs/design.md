@@ -161,7 +161,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 36 | 43 | Names: `Stubs.label` duplicates `Rename.typeLabel`; `Stubs.typeName` and `Extract.typeName` disagree on type variables and captures; `Signatures.label` drops the outer class that `typeLabel` keeps | Partly done | Full code review 2026-11-03. `Names.typeLabel` replaces `Rename.typeLabel` and `Stubs.label`; `Signatures.label` keeps the outer class (golden `sig_add_refused_nested_class`). Type variables decided 2026-11-04: a stub writes a type variable by name when the type it goes in declares it, and erases it otherwise (`docs/sessions/stubs-type-variables.md`). Open: wildcards, which `Stubs` erases and `Extract` keeps. Record: `docs/sessions/names-one-class.md` |
 | 37 | 44 | A column of 0 or below is accepted silently and falls back to name lookup, so `Positions.offset`'s refusal is never reached | Done | Full code review 2026-11-03: reading, not run. Small: refuse a given column below 1 |
 | 38 | 45 | `SessionReport` hardcodes three tool sets that copy `Tools.ALL`, so a new tool counts as "other"; it matches the text "refused:" that `Server` writes | Done | `Tools.Def` has a `Kind` (read, refactoring, edit, control) and the report counts by it; `Refusal.PREFIX` is the one refusal prefix (a flag logged by `SessionLog` would still match text, since the hook sees only the result). Also: quoted text and heredoc bodies are not redirects, and a shell write counts lines of Java only for a `.java` target (friction log, 2026-11-03) |
-| 39 | 46 | Layering: domain classes import `Tools.lines` and call `Edits.lineOf`, so they depend on the MCP registry; line helpers are spread over six classes | Open, cloud session | Full code review 2026-11-03: reading, not run. Overlaps #27 (the line helper). Move the helpers to their own class first |
+| 39 | 46 | Layering: domain classes import `Tools.lines` and call `Edits.lineOf`, so they depend on the MCP registry; line helpers are spread over six classes | Done (2026-11-04): the line helpers were gone after #27; the result type is `Outcome` (its own file). `Edits.gated`, `parses` and `Written` stay in `Edits`, by choice (`docs/sessions/layering-line-helpers.md`) | Full code review 2026-11-03: reading, not run. Overlaps #27 (the line helper). Move the helpers to their own class first |
 | 40 | 47 | `Gate.restore` and `Journal.restore` both write or delete files, with different parent-directory handling; `Gate.put` is a third writer | Done | Full code review 2026-11-03. `Journal.put` and `Journal.restore` are the one writer; `Gate` calls them. Record: `docs/sessions/file-writers-one-place.md` |
 | 41 | 48 | `Gate.deferred` resets the flag to false in `finally`, not to its previous value, so a nested deferred call resets the outer one | Done | Full code review 2026-11-03. Fixed: a nested deferred call restores the outer flag (`GateTest.aNestedDeferredCallLeavesTheOuterOneDeferred`). Record: `docs/sessions/gate-deferred-nesting.md` |
 | 42 | 49 | Misleading names: `Extract` maps each variable to "declared inside", so `used.get(r)` reads as "used"; `Stubs` `implicit` is set as `!created.contains(...)`, the inverse of its name | Partly done | Full code review 2026-11-03: reading, not run. Done for `Extraction`: `Plan.declaredInside` is the set of variables declared inside, so `callOf` asks `declaredInside().contains(r)`. Open: `Stubs` `implicit` matches its use; why a class this call created gets no default-constructor stub is not in the code (a question). Record: `docs/sessions/misleading-names.md` |
@@ -179,6 +179,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 54 | 61 | The stress tests restore an edited file after a killed run: write the original to a side file first, and restore it at the next start | Open, local session | Follow-up of `docs/sessions/stress-narrow-check.md`: a stopped run left a Commons Math file changed. `NarrowCheckStressTest`, `RefactoringStressTest` |
 | 55 | 62 | A batch checked at the end declares stubs only for its edit steps' code, not for a refactoring step's | Open, cloud session | Follow-up of `docs/sessions/no-stubs-for-refactorings.md`. `Batch`, `Gate`, `Stubs` |
 | 56 | 63 | The server uses the command line's classpath cache at start (about 3 s each start) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `Server`, `SourceProject` |
+| 57 | 64 | The classpath cache notices a change to a parent pom (it is keyed by `pom.xml` alone) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `MavenBuild` |
 
 ### Split between sessions (2026-11-03)
 
@@ -194,13 +195,12 @@ other five left to the cloud session. Each row's status says which.
 - **Cloud session** (the edit pipeline, the server and the structure:
   `Batch`, `Gate`, `Stubs`, `Server`, `SourceProject`, `SessionLog`,
   `SessionReport`, `Tools`, `Extract`, `Declarations`): #62 stubs per batch
-  step, #63 the server's classpath cache, #34 one `ObjectMapper`, #46 the
-  layering of the line helpers, #32 the rest of the large-class splits
-  (`Extract`, `Declarations`, `Tools`).
+  step, #63 the server's classpath cache, #64 a parent pom and the classpath
+  cache, #34 one `ObjectMapper`, #32 the rest of the large-class splits
+  (`Extract`, `Declarations`, `Tools`). (#46, first on this list, was done
+  by the cloud session before the split was merged.)
 
-The two sets share no class, except that #46 may reach the line helpers
-`Rename` and `MoveType` call; the cloud session takes those calls as they
-are when it gets there.
+The two sets share no class.
 
 ### Why this order
 

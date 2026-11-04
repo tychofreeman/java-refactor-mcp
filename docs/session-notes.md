@@ -236,7 +236,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
   check, now timed apart. Measure undo with the harness, not from its old figures.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
-  returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
+  returns an `Outcome` (text and `Stubs.Declared`; its own file since 2026-11-04, moved
+  from `Tools`, roadmap order 46); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
   `ThreadLocal` are gone. Golden `stubs_*` text is unchanged.
 - The session report counts by `Tools.Def.kind` (roadmap #45, 2026-11-03):
@@ -314,7 +315,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   class for it, which the gate passed.
 - The next ten items are split between sessions (the user, 2026-11-03): the
   local session takes #57-#61 (the refactorings and their stress tests), the
-  cloud session #62, #63, #34, #46 and the rest of #32 (pipeline, server,
+  cloud session #62, #63, #64, #34 and the rest of #32 (pipeline, server,
   structure). Each roadmap row's status names its session; see "Split
   between sessions" in `docs/design.md`. Take another session's item only
   when the user says so.

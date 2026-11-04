@@ -48,7 +48,7 @@ final class Signatures {
 
   private Signatures() {}
 
-  static Tools.Outcome addParameter(SourceProject project, Args args) throws Exception {
+  static Outcome addParameter(SourceProject project, Args args) throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
     String value = args.required("value");
@@ -71,7 +71,7 @@ final class Signatures {
         project, "added " + type + " " + parameter + " to " + family.label, args.list("imports"));
   }
 
-  static Tools.Outcome removeParameter(SourceProject project, Args args) throws Exception {
+  static Outcome removeParameter(SourceProject project, Args args) throws Exception {
     MethodFamily family = MethodFamily.of(project, args);
     int at = family.index(args.required("parameter"), "parameter", false);
     family.refuseReading(at);
@@ -99,7 +99,7 @@ final class Signatures {
         project, "removed " + args.required("parameter") + " from " + family.label, List.of());
   }
 
-  static Tools.Outcome moveParameter(SourceProject project, Args args) throws Exception {
+  static Outcome moveParameter(SourceProject project, Args args) throws Exception {
     MethodFamily family = MethodFamily.of(project, args);
     String parameter = args.required("parameter");
     String before = args.string("before");

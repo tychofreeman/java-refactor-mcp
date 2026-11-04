@@ -54,7 +54,7 @@ public final class Rename {
    * @param column 1-based column where the name starts; 0 when not given
    * @return what was renamed, and the lines of each file it changed
    */
-  public static Tools.Outcome run(
+  public static Outcome run(
       SourceProject project, String relFile, int line, String name, Integer column, String newName)
       throws IOException {
     if (column != null && column < 1) {
@@ -128,7 +128,7 @@ public final class Rename {
 
     Stubs.Declared stubs =
         gate(project, Map.of(file, apply(source, found.occurrences(), newName)), oldName, newName);
-    return new Tools.Outcome(
+    return new Outcome(
         "renamed %s to %s in %s: %d occurrences, %s"
             .formatted(
                 oldName,
@@ -398,8 +398,8 @@ public final class Rename {
    * name the type already has as a field, and one a local of that name would hide at an unqualified
    * use.
    */
-  private static Tools.Outcome renameField(
-      SourceProject project, IVariableBinding field, String newName) throws IOException {
+  private static Outcome renameField(SourceProject project, IVariableBinding field, String newName)
+      throws IOException {
     String oldName = field.getName();
     String owner = Names.typeLabel(field.getDeclaringClass());
     String key = field.getKey();
@@ -486,8 +486,8 @@ public final class Rename {
    * reference of them in the project, Javadoc included. Refuses a family member that overrides a
    * library method, and a new name a declaring type already has with the same parameter types.
    */
-  private static Tools.Outcome renameMethod(
-      SourceProject project, IMethodBinding method, String newName) throws IOException {
+  private static Outcome renameMethod(SourceProject project, IMethodBinding method, String newName)
+      throws IOException {
     String oldName = method.getName();
     Map<Path, String> texts = holding(project, oldName);
     Map<Path, CompilationUnit> units = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
@@ -545,7 +545,7 @@ public final class Rename {
    * top-level type's file with it. Refuses a type parameter, and a new name whose file exists or
    * that the enclosing type already has as a member type.
    */
-  private static Tools.Outcome renameType(SourceProject project, ITypeBinding type, String newName)
+  private static Outcome renameType(SourceProject project, ITypeBinding type, String newName)
       throws IOException {
     if (type.isTypeVariable()) {
       throw new Refusal(
@@ -670,18 +670,18 @@ public final class Rename {
    * "{@code what} in F: n occurrences, lines a, b" for one file; "{@code what} in k files: n
    * occurrences, F lines a, b; G line c" for several.
    */
-  private static Tools.Outcome summary(
+  private static Outcome summary(
       String what, Map<String, List<Integer>> lines, int occurrences, Stubs.Declared stubs) {
     if (lines.size() == 1) {
       Map.Entry<String, List<Integer>> only = lines.entrySet().iterator().next();
-      return new Tools.Outcome(
+      return new Outcome(
           "%s in %s: %d occurrences, %s"
               .formatted(what, only.getKey(), occurrences, Lines.list(only.getValue())),
           stubs);
     }
     List<String> each = new ArrayList<>();
     lines.forEach((rel, ls) -> each.add(rel + " " + Lines.list(ls)));
-    return new Tools.Outcome(
+    return new Outcome(
         "%s in %d files: %d occurrences, %s"
             .formatted(what, lines.size(), occurrences, String.join("; ", each)),
         stubs);

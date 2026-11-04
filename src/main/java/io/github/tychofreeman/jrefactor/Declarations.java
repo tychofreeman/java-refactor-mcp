@@ -41,7 +41,7 @@ final class Declarations {
    */
   record Planned(String text, List<Change> changes, List<Integer> blockStarts, String where) {}
 
-  static Tools.Outcome add(SourceProject project, Args args) throws Exception {
+  static Outcome add(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String content = args.required("content");
     String after = args.string("after");
@@ -76,7 +76,7 @@ final class Declarations {
                   c.blockLength(),
                   fixed.lineShift()));
     }
-    return new Tools.Outcome(String.join("; ", said) + fixed.said(), stubs);
+    return new Outcome(String.join("; ", said) + fixed.said(), stubs);
   }
 
   /**
@@ -146,7 +146,7 @@ final class Declarations {
     return new Planned(out.toString(), changes, blockStarts, where);
   }
 
-  static Tools.Outcome replace(SourceProject project, Args args) throws Exception {
+  static Outcome replace(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String name = args.required("name");
     String content = args.string("content");
@@ -181,7 +181,7 @@ final class Declarations {
               "Remove or change its uses first.");
       Imports.Fixed fixed = written.fixed();
       Stubs.Declared stubs = written.declared();
-      return new Tools.Outcome(
+      return new Outcome(
           "deleted %s from %s (was lines %d-%d)%s"
               .formatted(target.label(), rel, firstLine, lastLine, fixed.said()),
           stubs);
@@ -216,7 +216,7 @@ final class Declarations {
             "Change its uses in the same way first, or keep the old signature.");
     Imports.Fixed fixed = written.fixed();
     Stubs.Declared stubs = written.declared();
-    return new Tools.Outcome(
+    return new Outcome(
         "replaced %s in %s, %s%s"
             .formatted(
                 target.label(),
