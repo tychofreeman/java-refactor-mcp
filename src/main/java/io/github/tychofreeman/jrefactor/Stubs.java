@@ -24,6 +24,7 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -458,6 +459,10 @@ final class Stubs {
       }
       if (parent instanceof LambdaExpression lambda && lambda.getBody() == child) {
         return lambdaResult(lambda);
+      }
+      if (parent instanceof EnhancedForStatement f && f.getExpression() == child) {
+        uses.add("java.util.List");
+        return "List<" + typeName(f.getParameter().getType().resolveBinding()) + ">";
       }
       if (parent instanceof VariableDeclarationFragment f && f.getInitializer() == child) {
         Type type =

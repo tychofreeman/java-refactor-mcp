@@ -30,3 +30,34 @@ iterable.
 
 ## Notes
 
+- `read:` `Stubs.resultType`, to see how a stub's result type is chosen from
+  its parent node. The parent cases are the same shape each time, so the new
+  case follows the existing ones.
+- Red golden `stub_enhanced_for`: refused, "Can only iterate over an array or
+  an instance of java.lang.Iterable", as the friction entry says. The
+  hypothesis held: the call's parent was not handled, so its type was
+  `Object`.
+- `hand:` the new case and its import were written by Edit; `Stubs` is
+  java-refactor-mcp's own source, which no tool edits here.
+
+## Measured
+
+Golden `stub_enhanced_for`: red before (refused), green after (the stub is
+`List<String> items()`, with `import java.util.List;`). `./mvnw verify`
+passes; spotless clean. The session-log hook was not measured for this
+session.
+
+## Assessment
+
+- **Through the tools or around them:** the change is in `Stubs`, which the
+  tools do not edit; the golden went through `add_declaration`, the case
+  that failed.
+- **Did the plan hold?** Yes. The hypothesis was confirmed by the red golden,
+  and the one change was the parent case the plan named.
+- **Reading:** `Stubs.resultType`, its parent cases.
+
+## Follow-ups
+
+- A loop variable of a primitive type (`for (int n : items())`) gives
+  `List<int>`, which does not compile, so the stub is refused. Not
+  reproduced; needs its wrapper type, which is not done.
