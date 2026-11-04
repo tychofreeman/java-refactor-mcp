@@ -222,6 +222,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   variable's type `>` (2026-11-04, `docs/sessions/stub-enhanced-for.md`). A primitive
   loop variable is boxed (`List<Integer>`, 2026-11-04, `docs/sessions/stub-enhanced-for-primitive.md`);
   `List<int>` as a stub's text does not parse, and the refusal then blames the caller's content.
+- A lambda argument to an undefined method gets a functional interface by its
+  arity (`Supplier`, `Function`, `BiFunction`; the user's choice over refusing, 2026-11-04,
+  `docs/sessions/stub-lambda-argument.md`). It is a guess: a `Runnable` parameter or a body that
+  uses a parameter's type is still refused.
 - Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
   takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
   check, now timed apart. Measure undo with the harness, not from its old figures.

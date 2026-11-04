@@ -37,3 +37,34 @@ Decision needed (two options; the user chooses):
 
 ## Notes
 
+- `decision:` the user chose option A (functional interface by arity), asked
+  with the two options above, 2026-11-04.
+- `read:` `Stubs.params`, to find where an argument's type comes from; for a
+  lambda `resolveTypeBinding` is null, so `typeName` returns `Object`.
+- Red golden `stub_lambda_argument`: refused, "The method store(Object) ... is
+  not applicable for the arguments (() -> {})", as the friction entry says.
+- `hand:` `lambdaType` and `functional` in `Stubs` were written by Edit.
+- Second golden `stub_lambda_two_arguments` covers the two-parameter case,
+  which the first golden does not reach.
+
+## Measured
+
+Goldens `stub_lambda_argument` and `stub_lambda_two_arguments`: red before,
+green after. `./mvnw verify` passes; spotless clean. The session-log hook was
+not measured for this session.
+
+## Assessment
+
+- **Through the tools or around them:** the change is in `Stubs`, which the
+  tools do not edit; the goldens went through `add_declaration`.
+- **Did the plan hold?** Yes, with option A as chosen. The red golden
+  reproduced the friction entry before the change.
+- **Reading:** `Stubs.params`; the lambda's parameter count.
+
+## Follow-ups
+
+- Option A is a guess. A method expecting `Runnable` or a project interface
+  is still refused, and the model changes the type by hand.
+- A lambda whose body uses its parameter as a specific type (`x -> x.size()`)
+  fails to compile against `Object`; the stub is then refused.
+- A lambda with more than two parameters still gets `Object`, and is refused.
