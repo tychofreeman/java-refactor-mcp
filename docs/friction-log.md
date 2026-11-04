@@ -538,3 +538,23 @@ that would have written them: none yet; the case is the tool being built.
   imports only `org.eclipse.jdt.core.dom` classes. Listing every
   ambiguous name, and preferring a package the file already imports from,
   would have saved two calls.
+
+## 2026-11-04: change_type's cases written by hand (before the tool existed)
+
+The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The goldens and
+`ChangeType` were written with Write. The first success case was wrong (a getter returning
+`int`), and the gate refused it, which the golden run showed. The tool that would have written
+the cases: none yet; the case is the tool being built.
+
+The fifth of the ten higher-level tools (`docs/sessions/add-supertype.md`). The class and the
+`Tools` registration (the `Def`, its `ALL` entry, the handler) were written by hand: the tool does
+not exist yet to write its own body. Once the server runs, `create_file` writes the class and
+`add_declaration` adds the `Def` field, with a `replace_text` for the `ALL` list. The insertion
+point for an interface's list and a class's `extends` before `implements` was not in the plan; the
+goldens showed both.
+
+The sixth of the ten higher-level tools (`docs/sessions/move-statement.md`). The class and its
+`Tools` registration were written by hand, as the earlier new tools were: no tool writes a new
+tool. The independence rule was the user's choice (strict by default, names_only as a flag); the
+text swap itself is a composition that could be written with `replace_text` over the two lines,
+which the refactoring now does without it.

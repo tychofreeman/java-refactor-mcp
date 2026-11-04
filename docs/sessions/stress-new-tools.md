@@ -133,3 +133,5 @@ From `bin/session-report` (the branch's log):
   try limit (`calls * 200`), so a project with no class hierarchy spends
   its tries on `pull_up`. Not seen on Lang or Math.
 - `push_down` into a one-line `{}` subclass was not probed.
+- `change_type`, `add_supertype` and `move_statement` (merged by the other
+  session while this ran) are not in the stress test yet.

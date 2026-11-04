@@ -411,6 +411,20 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   a body that is one return or one statement, every call in the project. An instance method is
   refused for its receiver, not inlined. The method is removed with the blank line after it.
 
+- `change_type` exists (2026-11-04, `docs/sessions/change-type.md`): fields only, named
+  `Type.field`. The gate checks the uses, so a change that a use no longer compiles with is
+  refused, not applied.
+
+- `add_supertype` exists (2026-11-04, `docs/sessions/add-supertype.md`): the fifth of the ten
+  higher-level tools. The caller states the relation (`extends` or `implements`) rather than the
+  tool working out the supertype's kind. Interfaces take `extends` into their list; a class's
+  `extends` goes before any `implements` clause. No stubs: it is a refactoring.
+
+- `move_statement` exists (2026-11-04, `docs/sessions/move-statement.md`): the sixth of the ten
+  higher-level tools. Two adjacent statements in one block trade places. The default rule is
+  strict (no shared written name, at most one side effect); `names_only=true` relaxes it to the
+  shared-name rule. The user chose this over Names-only as the default and over a `force` flag.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
