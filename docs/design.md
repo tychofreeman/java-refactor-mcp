@@ -147,9 +147,9 @@ friction log; reorder when this repo's own log says otherwise.
 | 22 | 29 | Name the two `ancestor` helpers apart: `Extract` starts at the parent, `Stubs` at the node itself | Done (2026-11-04): `Extract.ancestorAbove`, `Stubs.ancestorOrSelf`, `docs/sessions/ancestor-helper-names.md` | Code review 2026-11-03. Same name, different meaning |
 | 23 | 30 | Stubs travel in the call's result object, not `Stubs.said()` and a `ThreadLocal` (decided 2026-11-03, see Decisions) | Done | `Tools.Outcome`, `Stubs.Declared`, `Stubs.Check`; record in `docs/sessions/stubs-in-result.md` |
 | 24 | 31 | The before/after type check goes through `Gate`: `Batch` and `Stubs` each re-implement it | Done | Code review 2026-11-03. `Gate.checkedAtEnd` is the end-of-batch check; `Batch` calls it. `Stubs.declare` stays the declare loop. Record: `docs/sessions/gate-before-after.md` |
-| 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Partly done | Code review 2026-11-03. No behavior change; no split without a change that needs it. `Signatures` is split (`MethodFamily`, `SignatureChange`; the other session, 2026-11-03). `Extraction` (the nested class of `Extract`, about 660 lines) is its own file (`docs/sessions/split-extract.md`); `Signatures`, `Declarations` and `Tools` are not split; `Signatures` (818 lines) split by `move_type` into `Signatures` (365, the entry points and shared helpers), `MethodFamily` (327) and `SignatureChange` (153), record in `docs/sessions/split-signatures.md` |
+| 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Partly done, cloud session | Code review 2026-11-03. No behavior change; no split without a change that needs it. `Signatures` is split (`MethodFamily`, `SignatureChange`; the other session, 2026-11-03). `Extraction` (the nested class of `Extract`, about 660 lines) is its own file (`docs/sessions/split-extract.md`); `Signatures`, `Declarations` and `Tools` are not split; `Signatures` (818 lines) split by `move_type` into `Signatures` (365, the entry points and shared helpers), `MethodFamily` (327) and `SignatureChange` (153), record in `docs/sessions/split-signatures.md` |
 | 26 | 33 | Static mutable state: `Journal.DONE`, `Imports.LIBRARIES`, `Server.CALLS`, `Stubs.DECLARED`; tests in one JVM can interfere | Done | Code review 2026-11-03. Safe in the server today: one call at a time |
-| 27 | 34 | One `ObjectMapper` shared by `SessionLog` and `SessionReport` | Open, low priority | Code review 2026-11-03. Minor |
+| 27 | 34 | One `ObjectMapper` shared by `SessionLog` and `SessionReport` | Open, low priority, cloud session | Code review 2026-11-03. Minor |
 | 28 | 35 | `create_file` fixes imports before the gate, as every other edit does; a new file's unimported library type is now declared as a project class (`List.java`) | Done | Full code review 2026-11-03; reproduced by `create_file_java_imports`. `createFile` now goes through `write`, which fixes imports before the gate |
 | 29 | 36 | Overload parameter lists split at commas inside generics (`Map<String, Integer>` breaks), so `replace_declaration`, `add_parameter`, `remove_parameter` and `move_parameter` refuse such overloads with names the model cannot type back | Done | Full code review 2026-11-03: reading, not run. `Declarations` splits on `,` |
 | 30 | 37 | `Stubs.uses` gives every file the import picks of every stub, so an ambiguous name in one file can resolve to a class another stub named | Done | Full code review 2026-11-03: reading, not run. `Imports.fix` takes the picks |
@@ -172,6 +172,35 @@ friction log; reorder when this repo's own log says otherwise.
 | 47 | 54 | Imports fixed only for a file under a source root: `create_file` of a file outside the source roots (a golden's expected file) was refused for an ambiguous name it does not need to resolve | Done | Friction log 2026-11-03 (the `move_type` golden). `Edits.gated` applies the text as written when `SourceProject.packageOf` is null. Record: `docs/sessions/imports-source-root.md` |
 | 48 | 55 | A stub for a call that fits no overload of a project method: `add_declaration` of a test calling `add("apple", quantity)` on a `Cart` with only `add(String)` was refused, where a new name would have got a stub | Done | Friction log 2026-11-03 (`docs/sessions/cli-cache.md`). `Stubs.find` handles `IProblem.ParameterMismatch` as an undefined method. Record: `docs/sessions/stub-overload.md` |
 | 49 | 56 | The check after an edit parses only the changed files and those that name a declaration whose header changed (`Headers`) | Done | Follow-up of #10 and the command line. Commons Math: one edit 2.1 s to 64 ms, `rename` 2.4 s to 1.3 s, `add_parameter` 3.2 s to 1.9 s, after the stress test's fixes. Records in `docs/sessions/narrow-check.md` and `docs/sessions/stress-narrow-check.md` |
+| 50 | 57 | Signature changes change the lambdas that implement the method (add a parameter name, drop an unused one, reorder), instead of refusing them | Open, local session | Follow-up of `docs/sessions/refuse-lambda-implemented.md`. `MethodFamily`, `SignatureChange` |
+| 51 | 58 | `move_type` drops an `import a.Outer` that a file in another package no longer uses once it imports `a.Inner` | Open, local session | Follow-up of `docs/sessions/move-type.md`. `MoveType` |
+| 52 | 59 | One walk over "the files that hold the name" for `Rename` (field, method, type) and `MoveType` | Open, local session | Follow-ups of `docs/sessions/move-type.md` and `docs/sessions/rename-across-files.md`; with order 33's folding of `Rename`'s walks. `Rename`, `MoveType` |
+| 53 | 60 | `RefactoringStressTest` weights its targets toward fields, methods and types (local renames dominate now) | Open, local session | Follow-up of `docs/sessions/stress-refactorings.md` |
+| 54 | 61 | The stress tests restore an edited file after a killed run: write the original to a side file first, and restore it at the next start | Open, local session | Follow-up of `docs/sessions/stress-narrow-check.md`: a stopped run left a Commons Math file changed. `NarrowCheckStressTest`, `RefactoringStressTest` |
+| 55 | 62 | A batch checked at the end declares stubs only for its edit steps' code, not for a refactoring step's | Open, cloud session | Follow-up of `docs/sessions/no-stubs-for-refactorings.md`. `Batch`, `Gate`, `Stubs` |
+| 56 | 63 | The server uses the command line's classpath cache at start (about 3 s each start) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `Server`, `SourceProject` |
+| 57 | 64 | The classpath cache notices a change to a parent pom (it is keyed by `pom.xml` alone) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `MavenBuild` |
+
+### Split between sessions (2026-11-03)
+
+The user asked for the next ten reasonable items, five of them taken by the
+local session, chosen so its changes sit close together in the code, and the
+other five left to the cloud session. Each row's status says which.
+
+- **Local session** (the refactorings and their stress test: `MethodFamily`,
+  `SignatureChange`, `MoveType`, `Rename`, `RefactoringStressTest`,
+  `NarrowCheckStressTest`): #57 lambdas changed with their method, #58
+  `move_type`'s unused import, #59 one "files that hold the name" walk, #60
+  stress targets weighted, #61 stress restore after a killed run.
+- **Cloud session** (the edit pipeline, the server and the structure:
+  `Batch`, `Gate`, `Stubs`, `Server`, `SourceProject`, `SessionLog`,
+  `SessionReport`, `Tools`, `Extract`, `Declarations`): #62 stubs per batch
+  step, #63 the server's classpath cache, #64 a parent pom and the classpath
+  cache, #34 one `ObjectMapper`, #32 the rest of the large-class splits
+  (`Extract`, `Declarations`, `Tools`). (#46, first on this list, was done
+  by the cloud session before the split was merged.)
+
+The two sets share no class.
 
 ### Why this order
 

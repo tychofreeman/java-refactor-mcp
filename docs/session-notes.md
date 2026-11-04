@@ -313,6 +313,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   refactoring that leaves a name unresolved is refused: before, `move_type`
   left an inherited `Helper` unqualified and the stubs declared an empty
   class for it, which the gate passed.
+- The next ten items are split between sessions (the user, 2026-11-03): the
+  local session takes #57-#61 (the refactorings and their stress tests), the
+  cloud session #62, #63, #64, #34 and the rest of #32 (pipeline, server,
+  structure). Each roadmap row's status names its session; see "Split
+  between sessions" in `docs/design.md`. Take another session's item only
+  when the user says so.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
