@@ -57,7 +57,9 @@ class RefactoringStressTest {
     long seed = Long.getLong("jrefactor.stress.seed", System.nanoTime());
     boolean countsOnly = Boolean.getBoolean("jrefactor.stress.counts");
     Random random = new Random(seed);
+    StressSnapshot.recover(project.root());
     List<Path> files = project.javaFiles();
+    StressSnapshot.take(project.root(), files);
     Map<String, Integer> first = TypeCheck.errors(project);
     Map<Path, String> texts = texts(files);
     System.out.printf("stress: %d files, %d calls, seed %d%n", files.size(), calls, seed);
@@ -122,6 +124,7 @@ class RefactoringStressTest {
     System.out.printf("stress: %d calls%n", made);
     outcomes.forEach((tool, tally) ->
         tally.forEach((k, n) -> System.out.printf("stress: %s %s: %d%n", tool, k, n)));
+    StressSnapshot.done(project.root());
     failures.forEach(f -> System.out.println("stress failure: " + f));
     if (!countsOnly) {
       assertEquals(List.of(), failures, "seed " + seed);

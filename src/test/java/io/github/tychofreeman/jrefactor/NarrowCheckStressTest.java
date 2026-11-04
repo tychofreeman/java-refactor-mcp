@@ -89,7 +89,9 @@ class NarrowCheckStressTest {
     long seed = Long.getLong("jrefactor.stress.seed", System.nanoTime());
     boolean countsOnly = Boolean.getBoolean("jrefactor.stress.counts");
     Random random = new Random(seed);
+    StressSnapshot.recover(project.root());
     List<Path> files = project.javaFiles();
+    StressSnapshot.take(project.root(), files);
     TypeCheck.errors(project);
     System.out.printf("stress: %d files, %d edits, seed %d%n", files.size(), edits, seed);
 
@@ -124,6 +126,7 @@ class NarrowCheckStressTest {
     System.out.printf(
         "stress: %d edits, %.1f files re-checked per edit, %d misses%n",
         made, made == 0 ? 0.0 : (double) rechecked / made, misses.size());
+    StressSnapshot.done(project.root());
     misses.forEach(m -> System.out.println("stress miss: " + m));
     if (!countsOnly) {
       assertEquals(List.of(), misses, "seed " + seed);
