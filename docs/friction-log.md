@@ -531,3 +531,9 @@ not exist yet to write its own body. Once the server runs, `create_file` writes 
 `add_declaration` adds the `Def` field, with a `replace_text` for the `ALL` list. The insertion
 point for an interface's list and a class's `extends` before `implements` was not in the plan; the
 goldens showed both.
+
+The sixth of the ten higher-level tools (`docs/sessions/move-statement.md`). The class and its
+`Tools` registration were written by hand, as the earlier new tools were: no tool writes a new
+tool. The independence rule was the user's choice (strict by default, names_only as a flag); the
+text swap itself is a composition that could be written with `replace_text` over the two lines,
+which the refactoring now does without it.

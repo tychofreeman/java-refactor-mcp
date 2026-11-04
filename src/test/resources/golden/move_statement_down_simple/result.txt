@@ -1,0 +1,1 @@
+moved the statement at line 5 down, past the statement at line 6 in com/example/Price.java

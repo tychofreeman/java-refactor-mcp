@@ -375,6 +375,22 @@ adds an import. Refusals: a relation other than `extends` or `implements`; a nam
 top-level type of the file that resolves; `implements` on an interface; `extends` on a class that
 already extends one; and the gate's "would add compile errors", naming them.
 
+## `move_statement` (built)
+
+Swaps a statement with the one before it (`direction=up`) or after it (`direction=down`) in the same
+block. Arguments: `file`, `line` (the 1-based line the statement starts on), `direction` (`up` or
+`down`), and `names_only` (optional flag; see below).
+
+The two statements must be independent. By default (strict): they share no name that one of them
+declares or writes and the other uses, and at most one has a side effect (a call, an assignment,
+`++`/`--`, a `new`). With `names_only=true`, only the shared-name rule applies, so two calls may swap
+order.
+
+Result: `moved the statement at line L up|down, past the statement at line M in file`, with
+`; imported ...` when an import is added. Refusals: no statement starts on the line, several do, a
+return, break, continue, throw or yield (on either side), no neighbour in that direction, a shared
+name, two side effects under the strict rule, and the gate's "would add compile errors".
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
