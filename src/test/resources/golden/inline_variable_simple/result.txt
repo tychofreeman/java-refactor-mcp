@@ -1,0 +1,1 @@
+inlined subtotal into 1 use and deleted its declaration at line 5 of com/example/Price.java

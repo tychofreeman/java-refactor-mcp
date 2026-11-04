@@ -209,7 +209,7 @@ final class ExtractVariable {
     }
   }
 
-  private static boolean hasEffect(Expression e) {
+  static boolean hasEffect(Expression e) {
     boolean[] found = {false};
     e.accept(
         new ASTVisitor() {

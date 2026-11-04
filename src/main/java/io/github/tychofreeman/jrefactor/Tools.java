@@ -140,6 +140,38 @@ final class Tools {
           Kind.REFACTORING,
           Tools::extractVariable);
 
+  static final Def INLINE_VARIABLE =
+      new Def(
+          "inline_variable",
+          """
+          Replace every use of a local variable with its initializer, and delete the declaration: \
+          the inverse of extract_variable. int subtotal = price * qty; return subtotal + tax; \
+          becomes return (price * qty) + tax;.
+          Identify the variable by file, a line on which it is declared or used, and its name. \
+          When the name means two variables on the line, pass column.
+          Applies the edit, then type-checks the project: an edit that adds compile errors is \
+          rolled back and refused.
+          Refuses, saying why: a field or a parameter; a declaration of several variables or \
+          without an initializer; a variable assigned after its declaration; an initializer that \
+          calls, assigns or changes a variable; a variable the initializer reads that is assigned \
+          after the declaration; a declared type different from the initializer's.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":   {"type": "string",  "description": "Java file path relative to the project root."},
+              "line":   {"type": "integer", "description": "1-based line on which the variable is declared or used."},
+              "name":   {"type": "string",  "description": "The variable's name."},
+              "column": {"type": "integer", "description": "Optional 1-based column of the name, only when the line has two variables of that name."}
+            },
+            "required": ["file", "line", "name"]
+          }\
+          """,
+          Set.of("file", "line", "name", "column"),
+          Kind.REFACTORING,
+          Tools::inlineVariable);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -542,6 +574,7 @@ final class Tools {
           MOVE_PARAMETER,
           EXTRACT_METHOD,
           EXTRACT_VARIABLE,
+          INLINE_VARIABLE,
           BATCH,
           UNDO);
 
@@ -584,6 +617,16 @@ final class Tools {
         args.required("expression"),
         args.required("name"),
         args.integer("column"));
+  }
+
+  private static Outcome inlineVariable(SourceProject project, Args args) throws Exception {
+    Integer line = args.integer("line");
+    if (line == null) {
+      throw new Refusal(
+          "inline_variable needs line, a line on which the variable is declared or used.");
+    }
+    return InlineVariable.run(
+        project, args.required("file"), line, args.required("name"), args.integer("column"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
