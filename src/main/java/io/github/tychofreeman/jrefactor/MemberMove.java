@@ -196,7 +196,12 @@ final class MemberMove {
    * The edit that adds {@code moved} as the last member of {@code type}, a blank line before it.
    */
   static TextEdit appendTo(String text, TypeDeclaration type, String moved) {
-    int at = Lines.start(text, end(type) - 1);
+    int brace = end(type) - 1;
+    int at = Lines.start(text, brace);
+    if (!text.substring(at, brace).isBlank()) {
+      // The closing brace shares its line ({} on one line): insert just before it.
+      return new TextEdit(brace, brace, "\n  " + moved + "\n");
+    }
     return new TextEdit(at, at, "\n  " + moved + "\n");
   }
 
