@@ -235,7 +235,7 @@ final class Tools {
           """
           Replace a whole declaration, found by name, with new source: an edit, for a signature \
           and body that change together, a field, or a type. Empty content deletes it, with its \
-          Javadoc.
+          Javadoc; a file's only top-level type takes the file with it (undo restores it).
           name is Type, Type.member, or member (of the file's only top-level type); for one of \
           several overloads, add its parameter types: Cart.add(int, String).
           The old Javadoc stays unless content has its own. Callers a new signature or a \
