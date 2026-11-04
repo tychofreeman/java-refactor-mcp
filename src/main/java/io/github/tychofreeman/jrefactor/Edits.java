@@ -13,7 +13,7 @@ final class Edits {
 
   private Edits() {}
 
-  static Tools.Outcome createFile(SourceProject project, Args args) throws Exception {
+  static Outcome createFile(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String content = args.required("content");
     Path path = project.file(rel);
@@ -55,7 +55,7 @@ final class Edits {
     stubs = written.declared();
     content = fixed.text();
     long lines = content.lines().count();
-    return new Tools.Outcome(
+    return new Outcome(
         (exists ? "replaced " : "created ")
             + rel
             + " ("
@@ -65,7 +65,7 @@ final class Edits {
         stubs);
   }
 
-  static Tools.Outcome replaceText(SourceProject project, Args args) throws Exception {
+  static Outcome replaceText(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String old = args.required("old");
     String replacement = args.string("new");
@@ -131,7 +131,7 @@ final class Edits {
       ranges.add(first == last ? "" + first : first + "-" + last);
     }
     boolean one = ranges.size() == 1 && !ranges.get(0).contains("-");
-    return new Tools.Outcome(
+    return new Outcome(
         "replaced %d occurrence%s in %s, %s %s%s"
             .formatted(
                 at.size(),

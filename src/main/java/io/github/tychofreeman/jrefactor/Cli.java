@@ -78,7 +78,7 @@ final class Cli {
       Journal.load(project, stack);
       TypeCheck.load(project, count);
       try {
-        Tools.Outcome outcome = Tools.call(def, project, values);
+        Outcome outcome = Tools.call(def, project, values);
         Journal.save(project, stack);
         out.println(outcome.render());
         return 0;

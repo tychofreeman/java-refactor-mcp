@@ -49,7 +49,7 @@ final class MoveType {
   private MoveType() {}
 
   /** Moves the nested type {@code name} ("Outer.Inner") declared in {@code rel}. */
-  static Tools.Outcome run(SourceProject project, String rel, String name) throws IOException {
+  static Outcome run(SourceProject project, String rel, String name) throws IOException {
     Path file = project.javaFile(rel);
     String simple = name.substring(name.lastIndexOf('.') + 1);
     Map<Path, String> held = new LinkedHashMap<>();
@@ -205,7 +205,7 @@ final class MoveType {
     if (!widened.isEmpty()) {
       result += "; widened " + joinAnd(new ArrayList<>(widened.values())) + " to package-private";
     }
-    return new Tools.Outcome(result, declared);
+    return new Outcome(result, declared);
   }
 
   /**
