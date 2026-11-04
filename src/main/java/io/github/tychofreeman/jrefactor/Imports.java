@@ -168,6 +168,23 @@ final class Imports {
   }
 
   /**
+   * {@code text}, parsed as {@code unit}, with an import of {@code name} in order among its
+   * imports, for a name the fix cannot see is missing (a refactoring's output, before it is
+   * written).
+   */
+  static String adding(String text, CompilationUnit unit, String name) {
+    List<ImportDeclaration> kept = new ArrayList<>();
+    for (Object o : unit.imports()) {
+      kept.add((ImportDeclaration) o);
+    }
+    int at = insertionPoint(text, unit, kept, name);
+    int packageEnd = packageEnd(text, unit);
+    String line = "import " + name + ";\n";
+    boolean first = kept.isEmpty() && at == packageEnd && packageEnd > 0;
+    return text.substring(0, at) + (first ? "\n" + line : line) + text.substring(at);
+  }
+
+  /**
    * The fully qualified names to import for the simple {@code names}: the one chosen, or the one
    * class with that name. Names already imported, or that no class has, are left out; a name that
    * several classes have is refused.

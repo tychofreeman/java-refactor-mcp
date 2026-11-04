@@ -101,7 +101,10 @@ package:
   fully qualified `a.Outer.Inner` becomes `a.Inner`, `import a.Outer.Inner`
   becomes `import a.Inner` (removed in the same package), and a file in another
   package that wrote `Outer.Inner` gets `import a.Inner`, and loses an `import
-  a.Outer` it no longer uses;
+  a.Outer` it no longer uses; one that wrote `Inner` unqualified, reaching it
+  through a type it inherits, gets `import a.Inner` too;
+- a member type of an interface (public without saying so) is written
+  `public`;
 - inside the moved type, unqualified uses of the outer type's static methods,
   static fields and other member types are qualified with `Outer.`, and those
   the outer type (or a type enclosing it) inherits with the declaring type's

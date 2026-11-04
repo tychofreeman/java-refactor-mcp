@@ -180,7 +180,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 55 | 62 | A batch checked at the end declares stubs only for its edit steps' code, not for a refactoring step's | Open, cloud session | Follow-up of `docs/sessions/no-stubs-for-refactorings.md`. `Batch`, `Gate`, `Stubs` |
 | 56 | 63 | The server uses the command line's classpath cache at start (about 3 s each start) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `Server`, `SourceProject` |
 | 57 | 64 | The classpath cache notices a change to a parent pom (it is keyed by `pom.xml` alone) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `MavenBuild` |
-| 58 | 65 | `move_type` imports the moved type into a file of another package that names it unqualified through inheritance (`OutlineExtractor` implements `BSPTreeVisitor` and writes `Order`) | Open, local session | Found by `RefactoringStressTest` on Commons Math, seed 7 (`docs/sessions/stress-weighted-targets.md`). `MoveType` |
+| 58 | 65 | `move_type` imports the moved type into a file of another package that names it unqualified through inheritance (`OutlineExtractor` implements `BSPTreeVisitor` and writes `Order`) | Done, local session | Found by `RefactoringStressTest` on Commons Math, seed 7 (`docs/sessions/stress-weighted-targets.md`). `MoveType`; also `public` for an interface\'s member type; record in `docs/sessions/move-type-inherited-users.md` |
 | 59 | 66 | `extract_method` refuses statements that assign a blank final field (in a constructor or initializer) | Open | Found by `RefactoringStressTest` on Commons Math, seed 7: `Interval`'s `upper` was refused by the gate ("may not have been initialized"). `Extraction`; not on either session's list |
 
 ### Split between sessions (2026-11-03)
