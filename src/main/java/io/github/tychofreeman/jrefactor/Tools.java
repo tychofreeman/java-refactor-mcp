@@ -266,15 +266,15 @@ final class Tools {
           Add a parameter to a method or constructor, and pass the same value for it at every \
           call in the project: with parameter retries, type int and value 3, void send(String to) \
           becomes void send(String to, int retries), and send(addr) becomes send(addr, 3). Every \
-          declaration it overrides or that overrides it changes too. The body does not use it \
+          declaration it overrides or that overrides it changes too, and every lambda that \
+          implements it ((a, b) -> a becomes (a, b, retries) -> a). The body does not use it \
           yet, so behavior is unchanged; add it, then change the body.
           name finds the method as replace_declaration does (Type.member, member, m(int, String) \
           for an overload; a constructor by its type's name). value is a Java expression every \
           call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
           Refuses, saying why: a method that overrides a library method, one used as a method \
-          reference or implemented by a lambda, varargs, a name that would hide a field a body \
-          reads, a value that does \
+          reference, varargs, a name that would hide a field a body reads, a value that does \
           not type-check at some call.\
           """,
           """
@@ -303,13 +303,14 @@ final class Tools {
           Remove a parameter no body reads, with its @param tag, and its argument at every call \
           in the project: removing retries, void send(String to, int retries) becomes \
           void send(String to), and send(addr, 3) becomes send(addr). Every declaration it \
-          overrides or that overrides it changes too. Use it last when taking a feature out: \
+          overrides or that overrides it changes too, and every lambda that implements it. Use \
+          it last when taking a feature out: \
           first change the bodies so they no longer read it.
           name finds the method as replace_declaration does. A dropped argument must have no \
           side effects (a name, a literal, this, a field).
-          Refuses, saying why: a body that reads the parameter, an argument with side effects, \
-          a method that overrides a library method, one used as a method reference or \
-          implemented by a lambda, varargs.\
+          Refuses, saying why: a body or lambda that reads the parameter, an argument with side \
+          effects, a method that overrides a library method, one used as a method reference, \
+          varargs.\
           """,
           """
           {
@@ -331,14 +332,14 @@ final class Tools {
           "move_parameter",
           """
           Move a parameter to another place in the list, in every declaration of the method's \
-          family (what it overrides and what overrides it) and every call's arguments: moving \
+          family (what it overrides and what overrides it), every lambda that implements it, and \
+          every call's arguments: moving \
           to before from, void copy(Path from, Path to) becomes void copy(Path to, Path from), \
           and copy(a, b) becomes copy(b, a).
           name finds the method as replace_declaration does; before names the parameter to put \
           it ahead of (default: last).
           Refuses, saying why: two arguments with side effects whose order would change, a \
-          method that overrides a library method, one used as a method reference or \
-          implemented by a lambda, varargs.\
+          method that overrides a library method, one used as a method reference, varargs.\
           """,
           """
           {

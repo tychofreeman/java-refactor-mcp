@@ -37,6 +37,10 @@ final class MethodFamily {
   final String label;
   final List<Signatures.Decl> decls = new ArrayList<>();
   final List<Signatures.Call> calls = new ArrayList<>();
+
+  /** The lambdas that implement a member of the family. */
+  final List<Signatures.Lambda> lambdas = new ArrayList<>();
+
   int size;
   MethodDeclaration target;
 
@@ -246,15 +250,7 @@ final class MethodFamily {
               public boolean visit(LambdaExpression n) {
                 ITypeBinding type = n.resolveTypeBinding();
                 if (type != null && ours(type.getFunctionalInterfaceMethod())) {
-                  throw new Refusal(
-                      label
-                          + " is implemented by a lambda ("
-                          + s.rel()
-                          + ", line "
-                          + s.line(n)
-                          + "), whose parameters no call of the method shows. Rewrite the"
-                          + " lambda as an anonymous class first (replace_text); this tool then"
-                          + " changes it with the method's other declarations.");
+                  lambdas.add(new Signatures.Lambda(s, n));
                 }
                 return true;
               }
