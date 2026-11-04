@@ -322,7 +322,10 @@ arguments.
 - Refuses: an expression in a loop condition or update; below `&&` or `||`;
   inside a conditional or lambda; assigned to; one that calls, assigns or
   changes a variable; a statement not directly in a block; a type that does
-  not resolve. `all_occurrences` and `pointer` are not built yet.
+  not resolve; an effect (a call, assignment or `++`/`--`) earlier in the same
+  statement, which the read would move ahead of; a new name that a field of the
+  enclosing class or its superclasses already has, which the local would hide.
+  `all_occurrences` and `pointer` are not built yet.
 
 ## `inline_variable` (built)
 
@@ -336,7 +339,8 @@ and `column` (only when the line has two variables of that name).
   initializer; a variable assigned after its declaration; an initializer that
   calls, assigns or changes a variable; a variable the initializer reads that is
   assigned after the declaration; a declared type that differs from the
-  initializer's. `function` (inline by a function's name) is not built yet.
+  initializer's; an initializer that reads a name a later declaration in the block
+  hides at a use. `function` (inline by a function's name) is not built yet.
 
 ## `inline_function` (built)
 
@@ -349,7 +353,11 @@ declares the method) and `name` (`Type.method`), and inlines every call.
 - Refuses: an instance, varargs, generic or abstract method; a body that is not one
   `return` or one statement; a method that calls itself; a method used as
   `Type::name`; a call nested in another call's arguments; a parameter used more than
-  once when its argument calls, assigns or changes a variable; a method with no calls.
+  once when its argument calls, assigns or changes a variable; a method with no calls;
+  an argument with effects for a parameter the body does not use (the call would drop
+  it); two arguments with effects (they would run in another order); an argument whose
+  type differs from its parameter's, where the call converts (`half(3)` for `double`);
+  a body that names a member of its class when a call is in another class.
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
   several-statement bodies, inlining one call at a time.
 

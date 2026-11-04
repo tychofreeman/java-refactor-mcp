@@ -574,3 +574,10 @@ file is a default this PR took and the record names.
 The tenth of the ten higher-level tools (`docs/sessions/encapsulate-field.md`). The class and
 registration were written by hand. The writes the tool refuses (compound, ++, expressions) are where
 a composition of `replace_text` would be needed: a hand edit for each, which the refusal names.
+
+The effect-order probes (`docs/sessions/stress-new-tools.md`) were found by the stress run's
+own tools, not written by hand: the refusals for the seven cases were added to `InlineFunction`,
+`ExtractVariable` and `InlineVariable` in one change (`docs/sessions/effect-order.md`). Before the
+change, each of the three tools accepted a rewrite that compiled and changed behavior. A
+refusal-only fix is the chosen rule; a tool that rewrote the call (for example, a temporary for the
+dropped argument) would need the evaluation order named first, which no tool gives.

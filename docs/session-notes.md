@@ -411,6 +411,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   a body that is one return or one statement, every call in the project. An instance method is
   refused for its receiver, not inlined. The method is removed with the blank line after it.
 
+- Effect order and name capture (roadmap 60, 61, 2026-11-04, `docs/sessions/effect-order.md`):
+  `inline_function` refuses a dropped effect, two effectful arguments, a converted argument and
+  a body that names a member of its class when a call is in another class. `extract_variable`
+  refuses an effect earlier in the statement and a new name that hides a field. `inline_variable`
+  refuses an initializer name that a later declaration in the block hides. All are refusals, not
+  rewrites: the probes' cases are the goldens. The rules are conservative (a safe case with the
+  same shape is refused too).
+
 - `change_type` exists (2026-11-04, `docs/sessions/change-type.md`): fields only, named
   `Type.field`. The gate checks the uses, so a change that a use no longer compiles with is
   refused, not applied.

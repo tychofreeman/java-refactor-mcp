@@ -74,6 +74,7 @@ final class InlineVariable {
               + " is assigned after its declaration, so its uses do not all hold the initializer."
               + " Keep the variable, or remove the assignment first.");
     }
+    checkShadowed(block, readsIn(init), after, name, text);
     for (IVariableBinding read : readsIn(init)) {
       if (assigns(block, read, after)) {
         throw new Refusal(
@@ -270,6 +271,40 @@ final class InlineVariable {
           }
         });
     return reads;
+  }
+
+  /** Refuses an initializer that reads a name a later declaration in the block hides at a use. */
+  private static void checkShadowed(
+      Block block, List<IVariableBinding> reads, int after, String name, String text) {
+    for (IVariableBinding read : reads) {
+      VariableDeclarationFragment[] later = {null};
+      block.accept(
+          new ASTVisitor() {
+            @Override
+            public boolean visit(VariableDeclarationFragment node) {
+              if (later[0] == null
+                  && node.getStartPosition() >= after
+                  && node.getName().getIdentifier().equals(read.getName())) {
+                later[0] = node;
+              }
+              return true;
+            }
+          });
+      if (later[0] != null) {
+        throw new Refusal(
+            "the initializer of "
+                + name
+                + " reads "
+                + read.getName()
+                + ", and the "
+                + read.getName()
+                + " declared at line "
+                + lineOf(text, later[0].getStartPosition())
+                + " hides it at a use of "
+                + name
+                + ", so inlining would read the new one. Rename that variable first.");
+      }
+    }
   }
 
   /** Whether {@code e} needs parentheses where it replaces a name. */

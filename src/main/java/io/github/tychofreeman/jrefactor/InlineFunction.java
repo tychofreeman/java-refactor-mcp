@@ -13,7 +13,9 @@ import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -124,6 +126,8 @@ final class InlineFunction {
       useCount[u.index()]++;
     }
 
+    boolean usesOwnMembers = usesMembersOf(bodyNode, type.resolveBinding());
+
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
     for (Path p : parsed.keySet()) {
@@ -165,6 +169,17 @@ final class InlineFunction {
       }
       List<TextEdit> list = new ArrayList<>();
       for (MethodInvocation site : sites) {
+        if (usesOwnMembers && !(p.equals(file) && within(site, type))) {
+          throw new Refusal(
+              "the body of "
+                  + name
+                  + " uses a member of "
+                  + typeName
+                  + ", and the call in "
+                  + project.relative(p)
+                  + " is in another class, where that name would mean something else. Keep the"
+                  + " method, or qualify its uses in the body first.");
+        }
         checkNesting(site, sites, name);
         list.add(
             replacementFor(
@@ -221,6 +236,7 @@ final class InlineFunction {
       String name,
       String declaringText) {
     List<Expression> args = typed(site.arguments(), Expression.class);
+    checkArguments(args, params, useCount, name);
     for (int i = 0; i < args.size(); i++) {
       if (useCount[i] > 1 && ExtractVariable.hasEffect(args.get(i))) {
         throw new Refusal(
@@ -266,6 +282,80 @@ final class InlineFunction {
     }
     return new TextEdit(
         stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced);
+  }
+
+  /**
+   * Refuses arguments that inlining would treat differently: one whose call the body drops, two
+   * whose calls would run in another order, and one whose type the call converts.
+   */
+  private static void checkArguments(
+      List<Expression> args, List<SingleVariableDeclaration> params, int[] useCount, String name) {
+    int effects = 0;
+    for (int i = 0; i < args.size(); i++) {
+      Expression arg = args.get(i);
+      String param = params.get(i).getName().getIdentifier();
+      boolean effect = ExtractVariable.hasEffect(arg);
+      if (useCount[i] == 0 && effect) {
+        throw new Refusal(
+            "parameter "
+                + param
+                + " is not used in the body of "
+                + name
+                + ", and its argument calls, assigns or changes a variable, so inlining would drop"
+                + " that effect. Keep the call, or use the argument in the body first.");
+      }
+      ITypeBinding argType = arg.resolveTypeBinding();
+      ITypeBinding paramType = params.get(i).resolveBinding().getType();
+      if (argType != null
+          && !argType.isNullType()
+          && paramType != null
+          && !argType.isEqualTo(paramType)) {
+        throw new Refusal(
+            "argument "
+                + param
+                + " of "
+                + name
+                + " has type "
+                + argType.getName()
+                + ", and the parameter is "
+                + paramType.getName()
+                + ". The call converts to "
+                + paramType.getName()
+                + ", and the body would not. Pass a value of the parameter's type first.");
+      }
+      if (effect) {
+        effects++;
+      }
+    }
+    if (effects > 1) {
+      throw new Refusal(
+          "two arguments of "
+              + name
+              + " call, assign or change a variable, and inlining would run them in another order."
+              + " Put one of them in a variable first.");
+    }
+  }
+
+  /** Whether {@code node} names a field or method that {@code owner} declares. */
+  private static boolean usesMembersOf(ASTNode node, ITypeBinding owner) {
+    boolean[] found = {false};
+    node.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(SimpleName n) {
+            IBinding b = n.resolveBinding();
+            if (b instanceof IVariableBinding v
+                && v.isField()
+                && owner.isEqualTo(v.getDeclaringClass())) {
+              found[0] = true;
+            }
+            if (b instanceof IMethodBinding m && owner.isEqualTo(m.getDeclaringClass())) {
+              found[0] = true;
+            }
+            return true;
+          }
+        });
+    return found[0];
   }
 
   /** Refuses a call inside another call's arguments, whose edits would overlap. */
