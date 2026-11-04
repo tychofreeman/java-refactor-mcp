@@ -297,10 +297,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   Commons Lang and Math (2026-11-03). It prints refusals that the gate made
   ("stress gated:") in full: those are code a tool wrote that did not
   compile, a precondition the tool lacks.
-- The signature tools refuse a method that a lambda implements
-  (2026-11-03), as they refuse a method reference, and look for lambdas in
-  every file with `->` when the family has an abstract interface method,
-  since a lambda need not name the method. Before, `move_parameter` on
+- The signature tools change the lambdas that implement the method (#57,
+  2026-11-04; they refused them from #72): a lambda's parameter list is
+  written again. They look for lambdas in every file with `->` when the
+  family has an abstract interface method, since a lambda need not name the
+  method. Before, `move_parameter` on
   such a method compiled with the lambdas' parameters swapped (seen on
   Commons Lang's `FailableObjIntConsumer.accept`), which neither the gate
   nor the stress test can see.

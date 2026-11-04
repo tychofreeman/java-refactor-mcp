@@ -25,6 +25,7 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
@@ -35,10 +36,13 @@ import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeLiteral;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
 
 /**
  * Signature changes: a parameter added, removed or moved in every declaration of a method's family
@@ -67,6 +71,11 @@ final class Signatures {
     for (Call c : family.calls) {
       change.insert(c.file(), c.arguments(), c.open(), c.bare(), at, value);
     }
+    for (Lambda l : family.lambdas) {
+      List<String> params = l.params();
+      params.add(at, l.typed() ? type + " " + parameter : parameter);
+      change.lambda(l, params);
+    }
     return change.apply(
         project, "added " + type + " " + parameter + " to " + family.label, args.list("imports"));
   }
@@ -75,6 +84,31 @@ final class Signatures {
     MethodFamily family = MethodFamily.of(project, args);
     int at = family.index(args.required("parameter"), "parameter", false);
     family.refuseReading(at);
+    for (Lambda l : family.lambdas) {
+      VariableDeclaration p = (VariableDeclaration) l.node().parameters().get(at);
+      IVariableBinding b = p.resolveBinding();
+      boolean[] reads = {false};
+      l.node()
+          .getBody()
+          .accept(
+              new ASTVisitor() {
+                @Override
+                public boolean visit(SimpleName n) {
+                  reads[0] |= b != null && b.isEqualTo(n.resolveBinding());
+                  return true;
+                }
+              });
+      if (reads[0]) {
+        throw new Refusal(
+            "the lambda ("
+                + l.file().rel()
+                + ", line "
+                + l.file().line(l.node())
+                + ") reads "
+                + args.required("parameter")
+                + ", so it cannot be removed. Change the lambda not to read it first.");
+      }
+    }
     for (Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
       if (!pure(argument)) {
@@ -94,6 +128,11 @@ final class Signatures {
     }
     for (Call c : family.calls) {
       change.remove(c.file(), c.arguments(), at);
+    }
+    for (Lambda l : family.lambdas) {
+      List<String> params = l.params();
+      params.remove(at);
+      change.lambda(l, params);
     }
     return change.apply(
         project, "removed " + args.required("parameter") + " from " + family.label, List.of());
@@ -143,6 +182,14 @@ final class Signatures {
     for (Call c : family.calls) {
       change.reorder(c.file(), c.arguments(), order);
     }
+    for (Lambda l : family.lambdas) {
+      List<String> params = l.params();
+      List<String> moved = new ArrayList<>();
+      for (int i : order) {
+        moved.add(params.get(i));
+      }
+      change.lambda(l, moved);
+    }
     return change.apply(
         project,
         "moved "
@@ -179,6 +226,25 @@ final class Signatures {
   record Call(Source file, ASTNode node, List<?> arguments, int open, int bare) {
     String where(ASTNode n) {
       return file.rel() + ", line " + file.line(n);
+    }
+  }
+
+  /** A lambda that implements a family member: one more declaration whose parameters change. */
+  record Lambda(Source file, LambdaExpression node) {
+    /** Each parameter's text, as written: {@code a}, or {@code int a} when they are typed. */
+    List<String> params() {
+      List<String> out = new ArrayList<>();
+      for (Object o : node.parameters()) {
+        ASTNode p = (ASTNode) o;
+        out.add(file.text().substring(p.getStartPosition(), end(p)));
+      }
+      return out;
+    }
+
+    /** Whether its parameters are written with their types. */
+    boolean typed() {
+      return !node.parameters().isEmpty()
+          && node.parameters().get(0) instanceof SingleVariableDeclaration;
     }
   }
 

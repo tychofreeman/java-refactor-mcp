@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Javadoc;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.TagElement;
@@ -53,6 +54,16 @@ final class SignatureChange {
     } else {
       add(file, Signatures.end((ASTNode) list.get(at - 1)), Signatures.end(e), "");
     }
+  }
+
+  /** Writes {@code params} as lambda {@code l}'s parameters, from its start to its arrow. */
+  void lambda(Signatures.Lambda l, List<String> params) {
+    LambdaExpression n = l.node();
+    List<?> old = n.parameters();
+    int from =
+        old.isEmpty() ? n.getStartPosition() : Signatures.end((ASTNode) old.get(old.size() - 1));
+    int arrow = l.file().text().indexOf("->", from);
+    add(l.file(), n.getStartPosition(), arrow, "(" + String.join(", ", params) + ") ");
   }
 
   /** Puts the elements of {@code list} in {@code order}, keeping the separators in place. */
