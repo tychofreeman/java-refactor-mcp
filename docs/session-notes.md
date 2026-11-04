@@ -31,10 +31,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 - `TextEdit` is the one replace-back-to-front edit (roadmap order 32, 2026-11-03), used by `Rename`, `MoveType` and `SignatureChange`. `Declarations.plan` and `Edits.replaceText` keep their own shape.
 - `Extraction.apply` is split into `Plan`, `callOf` and `methodText` (roadmap order 34, 2026-11-03); behavior is the extract goldens, unchanged.
-- `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use; why a class this call created gets no default-constructor stub is not written down.
+- `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use. A class this call created gets no default-constructor stub: the user chose that (2026-11-03), and `Stubs` skips it through `created`.
 - `Stubs.find` declares a stub for a call that fits no overload (`IProblem.ParameterMismatch`, roadmap order 48, 2026-11-03): an overload typed from the call. A wrong call to an existing method now gets a stub overload, not a refusal.
 - `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
-  and `Extract.typeName` still differ on type variables and captures: a decision, not done.
+  and `Extract.typeName` still differ on wildcards: `Stubs` erases them, `Extract` keeps them.
+  Stub type variables (decided 2026-11-04): written by name when the target type declares
+  them, erased otherwise. Writing every type variable by name refuses a stub whose
+  caller's `T` is not in scope in the target (`docs/sessions/stubs-type-variables.md`).
 - `Edits.gated` fixes imports only for a file under a source root (roadmap order 47, 2026-11-03):
   `SourceProject.packageOf` is null elsewhere, and the gate counts errors only under a source root.
 - `Rename.gate` calls `Gate.applyOrRefuse` (roadmap order 33, 2026-11-03): a rename
@@ -208,6 +211,16 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   one whole-project parse is about 3.5 s; rename, replace_text and create_file each
   make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `MethodFamily.of`
   parses every file before the gate. `GateCostTest.timesACall` prints the parse count.
+- Import and stub costs on Commons Math (roadmap #44, 2026-11-03,
+  `docs/sessions/measure-imports-stubs.md`): a plain `add_declaration` 0.27 s;
+  one needing a JDK import 0.96 s; one declaring a stub 0.47 s with a second
+  parse.
+- A deleted member that an unqualified call in a nested class still uses is refused,
+  not declared back (2026-11-04, `docs/sessions/stub-after-delete.md`): `Stubs.removedAround`
+  checks the enclosing types too. A sibling nested class is not covered (not reproduced).
+- Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
+  takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
+  check, now timed apart. Measure undo with the harness, not from its old figures.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its

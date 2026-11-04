@@ -1,0 +1,3 @@
+void keep(T item) {
+  store(item);
+}
