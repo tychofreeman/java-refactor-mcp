@@ -309,6 +309,21 @@ Java's name for gorefactor's `extract_function` (roadmap #23).
   returning total, at lines 14-20; the call is line 9`, a note past five
   parameters, then import notes.
 
+## `extract_variable` (built)
+
+Names an expression: a declaration is inserted just before its statement, and
+the name is used in its place. gorefactor's `extract_variable`, with the same
+arguments.
+
+- `file`, `line` (1-based, the line the expression starts on), `expression`
+  (its exact source text), `name`, and `column` (1-based, only when the text
+  occurs twice on that line).
+- Result: `extracted <expression> as <name>, declared at line N of <file>`.
+- Refuses: an expression in a loop condition or update; below `&&` or `||`;
+  inside a conditional or lambda; assigned to; one that calls, assigns or
+  changes a variable; a statement not directly in a block; a type that does
+  not resolve. `all_occurrences` and `pointer` are not built yet.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

@@ -491,3 +491,13 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: a stub for a class that only a test file uses goes in the test
   tree; `replace_declaration` deletes the file when it removes its only
   type.
+
+## 2026-11-04: extract_variable's golden cases were written by hand (before the tool existed)
+
+The first of the ten higher-level tools (`docs/sessions/extract-variable.md`). Its
+three golden cases and its implementation were written with Write and Edit, since
+the tool did not exist yet. The line numbers in two cases were wrong on the first
+run (the statement was one line lower than written), which the golden run caught.
+The tool that would have written the cases: none yet; a golden-case helper that
+numbers the line of a text would have avoided the mistake, which is a test
+convenience rather than a refactoring, so it is not on the roadmap.

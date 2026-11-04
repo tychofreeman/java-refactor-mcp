@@ -1,0 +1,1 @@
+extracted price * qty as subtotal, declared at line 5 of com/example/Price.java

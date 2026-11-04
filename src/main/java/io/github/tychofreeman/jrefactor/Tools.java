@@ -107,6 +107,39 @@ final class Tools {
           Kind.REFACTORING,
           Tools::rename);
 
+  static final Def EXTRACT_VARIABLE =
+      new Def(
+          "extract_variable",
+          """
+          Name an expression: a declaration is inserted just before its statement and the name \
+          is used in its place. Extracting price * qty as subtotal in return price * qty + tax \
+          gives int subtotal = price * qty; return subtotal + tax;.
+          Identify the expression by file, the line it starts on and its exact source text. When \
+          the text occurs twice on that line, pass column, the 1-based column where it starts.
+          Applies the edit, then type-checks the project: an edit that adds compile errors is \
+          rolled back and refused.
+          Refuses, saying why: an expression in a loop condition or update, below && or ||, \
+          inside a conditional or lambda, assigned to, one that calls, assigns or changes a \
+          variable (its order would change), a statement not directly in a block, or a type \
+          that does not resolve.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":       {"type": "string",  "description": "Java file path relative to the project root."},
+              "line":       {"type": "integer", "description": "1-based line on which the expression starts."},
+              "expression": {"type": "string",  "description": "Exact source text of the expression, e.g. price * qty."},
+              "name":       {"type": "string",  "description": "Name for the new variable."},
+              "column":     {"type": "integer", "description": "Optional 1-based column where the expression starts, only when its text occurs twice on the line."}
+            },
+            "required": ["file", "line", "expression", "name"]
+          }\
+          """,
+          Set.of("file", "line", "expression", "name", "column"),
+          Kind.REFACTORING,
+          Tools::extractVariable);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -508,6 +541,7 @@ final class Tools {
           REMOVE_PARAMETER,
           MOVE_PARAMETER,
           EXTRACT_METHOD,
+          EXTRACT_VARIABLE,
           BATCH,
           UNDO);
 
@@ -536,6 +570,20 @@ final class Tools {
 
   private static Outcome moveType(SourceProject project, Args args) throws Exception {
     return MoveType.run(project, args.required("file"), args.required("name"));
+  }
+
+  private static Outcome extractVariable(SourceProject project, Args args) throws Exception {
+    Integer line = args.integer("line");
+    if (line == null) {
+      throw new Refusal("extract_variable needs line, the 1-based line the expression starts on.");
+    }
+    return ExtractVariable.run(
+        project,
+        args.required("file"),
+        line,
+        args.required("expression"),
+        args.required("name"),
+        args.integer("column"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
