@@ -406,6 +406,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `Type.field`. The gate checks the uses, so a change that a use no longer compiles with is
   refused, not applied.
 
+- `add_supertype` exists (2026-11-04, `docs/sessions/add-supertype.md`): the fifth of the ten
+  higher-level tools. The caller states the relation (`extends` or `implements`) rather than the
+  tool working out the supertype's kind. Interfaces take `extends` into their list; a class's
+  `extends` goes before any `implements` clause. No stubs: it is a refactoring.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

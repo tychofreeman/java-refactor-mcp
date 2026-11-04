@@ -1,0 +1,1 @@
+added Priced as a supertype of Price (implements) in com/example/Price.java
