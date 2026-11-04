@@ -96,7 +96,18 @@ final class MoveType {
       boolean samePackage = packageOf(u).equals(pkg);
       List<TextEdit> edits = new ArrayList<>();
       List<ASTNode> refs = new ArrayList<>();
-      references(u, text, key, pkg, simple, samePackage, edits, refs);
+      List<SimpleName> named = new ArrayList<>();
+      references(u, text, key, pkg, simple, samePackage, edits, refs, named);
+      // A file of another package that names the type without importing it reaches it through a
+      // type it inherits; once the type is top-level, it needs the import.
+      boolean inherits =
+          !samePackage
+              && !f.equals(file)
+              && !named.isEmpty()
+              && refs.stream().noneMatch(r -> r instanceof ImportDeclaration);
+      if (inherits) {
+        refs.addAll(named);
+      }
       if (!refs.isEmpty()) {
         Set<Integer> at = new TreeSet<>();
         for (ASTNode r : refs) {
@@ -106,8 +117,11 @@ final class MoveType {
         references += refs.size();
       }
       if (!f.equals(file)) {
-        if (!edits.isEmpty()) {
+        if (!edits.isEmpty() || inherits) {
           String after = apply(text, 0, edits);
+          if (inherits) {
+            after = Imports.adding(after, Jdt.parseSyntax(after), qualified(pkg, simple));
+          }
           // Another package's file imports the moved type, and drops an import it no longer uses.
           if (!samePackage) {
             after = Imports.fix(project, f, text, after, List.of(qualified(pkg, simple))).text();
@@ -123,6 +137,14 @@ final class MoveType {
         if (o instanceof Modifier m && (m.isStatic() || m.isPrivate() || m.isProtected())) {
           edits.add(dropModifier(text, m));
         }
+      }
+      // A member type of an interface is public without saying so; top-level, it must say so.
+      if (type.getDeclaringClass().isInterface() && !Modifier.isPublic(decl.getModifiers())) {
+        int at = afterJavadoc(text, decl);
+        if (!decl.modifiers().isEmpty()) {
+          at = ((ASTNode) decl.modifiers().get(0)).getStartPosition();
+        }
+        edits.add(new TextEdit(at, at, "public "));
       }
       List<TextEdit> inside = new ArrayList<>();
       List<TextEdit> outside = new ArrayList<>();
@@ -260,9 +282,21 @@ final class MoveType {
       String simple,
       boolean samePackage,
       List<TextEdit> edits,
-      List<ASTNode> refs) {
+      List<ASTNode> refs,
+      List<SimpleName> named) {
     u.accept(
         new ASTVisitor(true) {
+          @Override
+          public boolean visit(SimpleName n) {
+            if (!n.isDeclaration()
+                && n.getLocationInParent() != QualifiedName.NAME_PROPERTY
+                && n.resolveBinding() instanceof ITypeBinding t
+                && t.getTypeDeclaration().getKey().equals(key)) {
+              named.add(n);
+            }
+            return true;
+          }
+
           @Override
           public boolean visit(PackageDeclaration p) {
             return false;
@@ -524,6 +558,18 @@ final class MoveType {
       end++;
     }
     return new TextEdit(m.getStartPosition(), end, "");
+  }
+
+  /** Where {@code decl}'s text starts after its Javadoc and the spaces after it. */
+  private static int afterJavadoc(String text, AbstractTypeDeclaration decl) {
+    if (decl.getJavadoc() == null) {
+      return decl.getStartPosition();
+    }
+    int at = decl.getJavadoc().getStartPosition() + decl.getJavadoc().getLength();
+    while (at < text.length() && Character.isWhitespace(text.charAt(at))) {
+      at++;
+    }
+    return at;
   }
 
   /** {@code text}, which starts at {@code offset} of the file, with {@code edits} applied. */
