@@ -336,9 +336,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   journal; the stubs do not declare a class whose file the edit deleted.
   Before, the file was left with its package line, and removing it took
   `rm` (friction log, twice).
-- Pull up / push down (roadmap #25) was added at the user's request
-  (2026-11-03), with a note that gorefactor and the TypeScript port may want
-  the same; it waits for friction evidence.
+- `pull_up` exists for methods (roadmap #17, 2026-11-04, `docs/sessions/pull-up.md`):
+  a method moves to the direct superclass, or to the direct supertype named by `to`;
+  the gate refuses a move that leaves a name unresolved (no stubs, since a refactoring
+  has `Session.editing` false). `push_down` and fields are open. Originally added at the
+  user's request (2026-11-03), with a note that gorefactor and the TypeScript port may want
+  the same.
 - The session log (roadmap #18, 2026-11-03): `SessionLog` is the hook, run
   from the jar by `bin/session-log` for PreToolUse, PostToolUse and
   PostToolUseFailure; `SessionReport` reads the log. A refused MCP call

@@ -125,6 +125,25 @@ first, passing what it uses from Shop, then move it"); a file of the new name
 that exists ("Rename Shop.Line first, then move it"); a move that adds compile
 errors, with them.
 
+## `pull_up` (built)
+
+Arguments: `file` (the Java file that declares the class), `name` (`Sub.method`,
+the class and the method, both as written in that file; the class is top-level),
+and an optional `to` (the simple name of a direct supertype).
+
+Moves a method from `Sub` to its direct superclass, or to the direct supertype
+named by `to`: the declaration, with its Javadoc, is removed from `Sub` and
+added at the end of the supertype's body; imports are fixed in both files.
+Calls need no change, since `Sub` inherits the method.
+
+- Refused: no superclass and no `to`; `to` that is not a direct supertype; a
+  supertype outside the project's sources; a method the supertype already
+  declares; overloads of the method; a class that is not top-level.
+- Type-checks the project: a method that uses what only `Sub` has is rolled
+  back and refused, with the gate's "would add" wording.
+
+Methods only; fields are not built yet (roadmap order 25).
+
 ## Edits (built)
 
 Edits change behavior on purpose and are held to the same gate: a `.java` file

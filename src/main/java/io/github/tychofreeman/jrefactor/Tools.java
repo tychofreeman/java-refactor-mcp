@@ -136,6 +136,34 @@ final class Tools {
           Kind.REFACTORING,
           Tools::moveType);
 
+  static final Def PULL_UP =
+      new Def(
+          "pull_up",
+          """
+          Move a method from its class to its direct superclass, or to a direct supertype named by \
+          to: the method leaves Sub and is added to the end of Base. Every call still compiles, \
+          since Sub inherits the method. name is Sub.method.
+          Type-checks the project: a move that adds compile errors (the method uses a field only Sub \
+          has, say) is rolled back and refused.
+          Refuses, saying why: no superclass or to that is not a direct supertype, a supertype that \
+          is not in the project's sources, a method the supertype already declares, overloads of \
+          the method, a class that is not top-level.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file that declares the class, relative to the project root."},
+              "name": {"type": "string", "description": "The class and the method, as Sub.method."},
+              "to": {"type": "string", "description": "Optional simple name of a direct supertype, when the superclass is not the one to pull into."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name", "to"),
+          Kind.REFACTORING,
+          Tools::pullUp);
+
   static final Def CREATE_FILE =
       new Def(
           "create_file",
@@ -443,6 +471,7 @@ final class Tools {
           INSPECT,
           RENAME,
           MOVE_TYPE,
+          PULL_UP,
           CREATE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
@@ -479,6 +508,10 @@ final class Tools {
 
   private static Outcome moveType(SourceProject project, Args args) throws Exception {
     return MoveType.run(project, args.required("file"), args.required("name"));
+  }
+
+  private static Outcome pullUp(SourceProject project, Args args) throws Exception {
+    return PullUp.run(project, args.required("file"), args.required("name"), args.string("to"));
   }
 
   /** The tool named {@code name}, or a refusal listing the tools there are. */

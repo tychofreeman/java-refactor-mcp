@@ -34,5 +34,42 @@ The one edit that changes behaviour: none outside the new tool.
 
 ## Notes
 
-- `plan:` the record was written before reading the code.
+- `plan:` the record was written before reading the code. Two goldens were then
+  written first (`pull_up_method`, `pull_up_refused_subclass_field`) and ran red:
+  "No tool pull_up". Then `PullUp.java` and the `Tools` registration.
+- `read:` `Tools` (the `move_type` definition and dispatch), `MoveType.run`'s
+  opening lines, and the `Lines`, `TextEdit` and `Holding` signatures. Each once.
+- `hand:` the two golden cases, `PullUp.java` and the `Tools` registration were
+  written by hand (heredoc, and one Python exact-match replace for `Tools`). The
+  java-refactor-mcp tools are not in this session's tool list, so `bin/jrefactor`
+  was the alternative; not tried. `create_file` and `add_declaration` would have
+  made the new files, and `replace_text` the `Tools` edit.
+- `bulk:` `PullUp.java` is about 170 lines of new behaviour, all written at once;
+  nothing existing was retyped.
+- `refusal:` none from the tools.
+- `plan:` none changed. The methods-only scope was in the plan.
+
+## Measured
+
+Not measured: no session log for this branch.
+Verify: `./mvnw verify` passed, 200 tests, 0 failures, 4 skipped. The golden run
+had 134 tests, with the two new cases among them.
+
+## Assessment
+
+- **Through the tools or around them:** around. The new tool, its goldens and its
+  registration were all written by hand, because the server's tools were not loaded
+  in this session. The tools for each exist, so this is the session gap again.
+- **Did the plan hold?** Yes: the goldens were written first and went red for the
+  stated reason; the moved method and the refusal both match the plan.
+- **Large writes:** `PullUp.java` is new behaviour, not existing code retyped.
+- **One change that would have helped:** the java-refactor-mcp tools loaded at the
+  start of a session (the same gap as `stubs-test-tree.md`).
+
+## Follow-ups
+
+- Fields: `pull_up` of a field is not built; the row says so.
+- Overloads: `pull_up` refuses them. Choosing one by its parameter list would need
+  the overload syntax `Declarations` already parses.
+- `push_down` is the next PR of order 25 (to every direct subtype).
 
