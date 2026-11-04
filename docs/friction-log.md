@@ -456,3 +456,14 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Resent with `List<Path> parsed = TypeCheck.lastParsed(project);` first.
 - Idea: type a stub used as an enhanced for's expression as `List<T>`, T the
   loop variable's type.
+
+## 2026-11-04: a lambda argument to an undefined method gets an Object stub
+- Task: `docs/sessions/stub-parse-refusal.md` (a probe, not a change).
+- Tool: `add_declaration` of a method calling an undefined `store(() -> 1)`
+  was refused: "The method store(Object) in the type Basket is not applicable
+  for the arguments (() -> {})", and "The target type of this expression must
+  be a functional interface". The stub's parameter was typed `Object` from the
+  argument, which is not a functional interface.
+- Idea: type a stub's parameter for a lambda argument as a functional
+  interface, from the lambda's arity (`Function`, `Supplier`, ...), or refuse
+  with the names the model should try, rather than an `Object` stub.
