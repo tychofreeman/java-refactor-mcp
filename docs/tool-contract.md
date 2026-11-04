@@ -131,9 +131,11 @@ Arguments: `file` (the Java file that declares the class), `name` (`Sub.method`,
 the class and the method, both as written in that file; the class is top-level),
 and an optional `to` (the simple name of a direct supertype).
 
-Moves a method from `Sub` to its direct superclass, or to the direct supertype
-named by `to`: the declaration, with its Javadoc, is removed from `Sub` and
-added at the end of the supertype's body; imports are fixed in both files.
+Moves a method or a field from `Sub` to its direct superclass, or to the direct
+supertype named by `to`: the declaration, with its Javadoc, is removed from `Sub`
+and added at the end of the supertype's body; imports are fixed in both files.
+A name that is both a field and a method is refused; a field with other variables
+in its declaration is refused (move one variable per declaration).
 Calls need no change, since `Sub` inherits the method.
 
 - Refused: no superclass and no `to`; `to` that is not a direct supertype; a
@@ -142,16 +144,16 @@ Calls need no change, since `Sub` inherits the method.
 - Type-checks the project: a method that uses what only `Sub` has is rolled
   back and refused, with the gate's "would add" wording.
 
-Methods only; fields are not built yet (roadmap order 25).
+Overloads are not built yet (roadmap order 25).
 
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`
 (`Sub.method`, both as written in that file; the class is top-level).
 
-Moves a method from `Sub` to each direct subclass of `Sub` in the project: the
-declaration, with its Javadoc, is removed from `Sub` and added at the end of
-each subclass's body; imports are fixed in every file touched.
+Moves a method or a field from `Sub` to each direct subclass of `Sub` in the
+project: the declaration, with its Javadoc, is removed from `Sub` and added at the
+end of each subclass's body; imports are fixed in every file touched.
 
 - Refused: no direct subclass in the project; a subclass that already declares
   the method; a method that overrides a method of a supertype (`@Override`, or a
@@ -160,7 +162,7 @@ each subclass's body; imports are fixed in every file touched.
 - Type-checks the project: a caller that uses the method through `Sub` (say
   `Sub s; s.hello()`) no longer compiles, so the move is rolled back and refused.
 
-Methods only, one overload at a time; fields and overloads are not built.
+Overloads are not built yet (roadmap order 25).
 
 ## Edits (built)
 

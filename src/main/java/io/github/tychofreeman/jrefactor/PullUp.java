@@ -7,15 +7,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ITypeBinding;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
- * pull_up: a method moves from its class to a direct supertype in the project. The supertype is the
- * superclass unless {@code to} names another direct supertype. The gate refuses a move that leaves
- * a name unresolved, so a method that uses what only the subclass has is not moved.
+ * pull_up: a method or a field moves from its class to a direct supertype in the project. The
+ * supertype is the superclass unless {@code to} names another direct supertype. The gate refuses a
+ * move that leaves a name unresolved, so a member that uses what only the subclass has is not
+ * moved.
  */
 final class PullUp {
 
@@ -24,10 +25,11 @@ final class PullUp {
   static Outcome run(SourceProject project, String rel, String name, String to) throws IOException {
     int dot = name.lastIndexOf('.');
     if (dot < 0) {
-      throw new Refusal("name is Sub.method, the class and the method to move, not " + name + ".");
+      throw new Refusal(
+          "name is Sub.member, the class and the method or field to move, not " + name + ".");
     }
     String subName = name.substring(0, dot);
-    String method = name.substring(dot + 1);
+    String member = name.substring(dot + 1);
     Path file = project.javaFile(rel);
     String text = Files.readString(file);
     CompilationUnit unit = Jdt.parse(project, file, text);
@@ -37,23 +39,7 @@ final class PullUp {
           subName + " is not a top-level class of " + rel + " that resolves. Fix it first.");
     }
     ITypeBinding superType = supertype(sub.resolveBinding(), to);
-    List<MethodDeclaration> named = new ArrayList<>();
-    for (MethodDeclaration m : sub.getMethods()) {
-      if (m.getName().getIdentifier().equals(method)) {
-        named.add(m);
-      }
-    }
-    if (named.isEmpty()) {
-      throw new Refusal(subName + " declares no method " + method + " in " + rel + ".");
-    }
-    if (named.size() > 1) {
-      throw new Refusal(
-          subName
-              + " has several methods named "
-              + method
-              + "; pull_up moves one method, and overloads are not supported yet.");
-    }
-    MethodDeclaration moved = named.get(0);
+    BodyDeclaration moved = MemberMove.member(sub, subName, member, rel, "pull_up");
 
     String superName = superType.getErasure().getName();
     Holding holding = Holding.of(project, superName, file);
@@ -75,17 +61,15 @@ final class PullUp {
       throw new Refusal(
           superName
               + " is not a top-level class or interface of the project's sources, so "
-              + method
+              + member
               + " cannot be pulled into it.");
     }
-    for (MethodDeclaration m : superDecl.getMethods()) {
-      if (m.getName().getIdentifier().equals(method)) {
-        throw new Refusal(
-            superName
-                + " already declares "
-                + method
-                + ". Rename one of them, or pull_up is not the change you want.");
-      }
+    if (MemberMove.declares(superDecl, member)) {
+      throw new Refusal(
+          superName
+              + " already declares "
+              + member
+              + ". Rename one of them, or pull_up is not the change you want.");
     }
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
@@ -102,13 +86,13 @@ final class PullUp {
             project,
             texts,
             edits,
-            "pulling " + subName + "." + method + " up to " + superName,
-            "Nothing was changed. Move only a method that uses nothing the subclass has.");
+            "pulling " + subName + "." + member + " up to " + superName,
+            "Nothing was changed. Move only a member that uses nothing the subclass has.");
     return new Outcome(
         "pulled "
             + subName
             + "."
-            + method
+            + member
             + " up to "
             + superName
             + " ("

@@ -36,3 +36,23 @@ The one edit that changes behaviour: none outside the two tools.
 ## Notes
 
 - `plan:` the record was written before reading the code.
+
+## Measured
+
+Not measured: no session log for this branch.
+Verify: `./mvnw verify` passed, 207 tests, 0 failures, 4 skipped.
+
+## Assessment
+
+- **Through the tools or around them:** around, as in `pull-up.md` and
+  `push-down.md`: the tools were not loaded in this session.
+- **Did the plan hold?** Yes. The four field goldens went red ("declares no method"
+  and "No tool"), then the general lookup in `MemberMove` made them green with
+  `PullUp` and `PushDown` rewritten on it.
+- **Refactor:** `MemberMove.member` and `declares` replaced the method-only lookup
+  in both tools; the removal, insertion and gate code were already shared.
+
+## Follow-ups
+
+- Overloads for both tools: refused.
+- A subclass nested in another type is still not found (top-level subclasses only).
