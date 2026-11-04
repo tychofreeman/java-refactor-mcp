@@ -46,16 +46,18 @@ not available for this session, so the record counts from these notes.
   parse of those files, not the index; the run does not split the two.
 - **Stub round:** about 0.2 s more, and one more project parse, which fits
   the stub being declared and checked again. It is not a cost to act on.
-- **Undo:** every case's undo took 2.7-2.9 s, about ten times the call in
-  the baseline. This was not in the item's scope and was not investigated;
-  it is the largest cost measured here.
+- **Undo:** reported as 2.7-2.9 s; that was the harness's check, not the undo (see Correction).
 - **Single runs:** each figure is one run on one machine, so differences
   under about 100 ms are noise.
 
+## Correction
+
+The undo column above is wrong. `GateCostTest` started the undo timer before its
+own `uncached` check, which parses the whole project. `Journal.undo` takes under
+1 ms; see `docs/sessions/measure-undo.md`.
+
 ## Follow-ups
 
-- Undo costs 2.7-2.9 s per call on this project, whatever the edit. Find
-  out what it parses (likely the whole project) before deciding anything;
-  this is a new roadmap question, recorded in the roadmap row for #44.
+- Undo cost: resolved in `docs/sessions/measure-undo.md`.
 - Splitting the import case into index and parse would need a counter in
   `Imports`; not added, since the total already answers the item.
