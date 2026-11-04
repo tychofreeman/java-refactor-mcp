@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -252,6 +253,7 @@ final class InlineFunction {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(args, params, useCount, name);
     checkTiming(args, uses, params, value != null ? value : body, siteText, name);
+    checkOrder(args, uses, params, name);
     for (int i = 0; i < args.size(); i++) {
       if (useCount[i] > 1 && ExtractVariable.hasEffect(args.get(i))) {
         throw new Refusal(
@@ -402,6 +404,47 @@ final class InlineFunction {
                   + name
                   + " runs before its use, so the order would change. Put the argument in a"
                   + " variable first.");
+        }
+      }
+    }
+  }
+
+  /**
+   * Refuses arguments that are not {@link #fixed}, one of them with an effect, that the body first
+   * uses in the other order than the call passes them: the read would move to the other side of the
+   * effect.
+   */
+  private static void checkOrder(
+      List<Expression> args,
+      List<ParamUse> uses,
+      List<SingleVariableDeclaration> params,
+      String name) {
+    int[] first = new int[args.size()];
+    Arrays.fill(first, -1);
+    for (ParamUse u : uses) {
+      if (first[u.index()] < 0 || u.start() < first[u.index()]) {
+        first[u.index()] = u.start();
+      }
+    }
+    for (int i = 0; i < args.size(); i++) {
+      if (first[i] < 0 || fixed(args.get(i))) {
+        continue;
+      }
+      for (int j = i + 1; j < args.size(); j++) {
+        if (first[j] < 0 || fixed(args.get(j)) || first[j] > first[i]) {
+          continue;
+        }
+        if (ExtractVariable.hasEffect(args.get(i)) || ExtractVariable.hasEffect(args.get(j))) {
+          throw new Refusal(
+              "the body of "
+                  + name
+                  + " uses "
+                  + params.get(j).getName().getIdentifier()
+                  + " before "
+                  + params.get(i).getName().getIdentifier()
+                  + ", and one of their arguments calls, assigns or changes a variable that the"
+                  + " other may read, so inlining would evaluate them in the other order. Put the"
+                  + " argument with the effect in a variable first.");
         }
       }
     }

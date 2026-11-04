@@ -507,3 +507,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   2026-11-04, `docs/sessions/member-move-one-line-body.md`). Before, the
   member went in front of the class header, and the gate's syntax error was
   refused as if the member used what only the subclass has.
+
+- `inline_function` refuses two arguments that are not fixed, one with an
+  effect, when the body first uses them in the other order than the call
+  passes them (`InlineFunction.checkOrder`, 2026-11-04,
+  `docs/sessions/inline-function-read-order.md`). Together with
+  `checkTiming` and the two-effects rule, these cover the orders the probes
+  found; the rules compare first uses only, so they are a check on the
+  shapes tested, not a proof.
