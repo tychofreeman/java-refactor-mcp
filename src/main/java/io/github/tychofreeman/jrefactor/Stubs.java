@@ -462,7 +462,10 @@ final class Stubs {
       }
       if (parent instanceof EnhancedForStatement f && f.getExpression() == child) {
         uses.add("java.util.List");
-        return "List<" + typeName(f.getParameter().getType().resolveBinding()) + ">";
+        ITypeBinding element = f.getParameter().getType().resolveBinding();
+        return "List<"
+            + (element != null && element.isPrimitive() ? wrapper(element) : typeName(element))
+            + ">";
       }
       if (parent instanceof VariableDeclarationFragment f && f.getInitializer() == child) {
         Type type =
@@ -570,6 +573,15 @@ final class Stubs {
       }
       return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
     }
+  }
+
+  /** The class that boxes the primitive {@code b}, as a type argument needs it. */
+  private static String wrapper(ITypeBinding b) {
+    return switch (b.getName()) {
+      case "int" -> "Integer";
+      case "char" -> "Character";
+      default -> Character.toUpperCase(b.getName().charAt(0)) + b.getName().substring(1);
+    };
   }
 
   /**

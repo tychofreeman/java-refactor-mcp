@@ -1,0 +1,7 @@
+int total() {
+  int sum = 0;
+  for (int n : items()) {
+    sum += n;
+  }
+  return sum;
+}
