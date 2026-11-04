@@ -244,6 +244,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   are top-level, moved by `move_type` and renamed by `rename`; `Signatures`
   keeps the three tools' entry points, `Source`, `Decl`, `Call` and the
   helpers the three share.
+- The check after an edit is narrowed (roadmap #56, 2026-11-03):
+  `TypeCheck.Counted` keeps each file's `Headers`, and `errors` parses only
+  the changed files and those naming a name whose header changed. Commons
+  Math: one edit 63 ms (was 2.1 s), `rename` 0.9 s, `add_parameter` 1.4 s; a
+  CLI rename here 1.2 s (was 2.35). Soundness rests on `GoldenTest`'s
+  comparison with `uncached` at every step, and on `GateCostTest`'s on a
+  real project. A cache file from before (no `version` 2) is ignored.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

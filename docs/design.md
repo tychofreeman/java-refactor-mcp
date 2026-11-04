@@ -171,6 +171,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 46 | 53 | Command line: `bin/jrefactor`, one tool call per run, the undo stack kept between runs (gorefactor's `cmd/refactor`) | Done | The user asked (2026-11-03): another session ran in a container where the MCP server cannot run, and made every edit by hand. Record in `docs/sessions/cli.md`. Runs made faster (a read 9.4 s to 0.3 s, an edit 4.7 s to 2.4 s) in `docs/sessions/cli-cache.md` |
 | 47 | 54 | Imports fixed only for a file under a source root: `create_file` of a file outside the source roots (a golden's expected file) was refused for an ambiguous name it does not need to resolve | Done | Friction log 2026-11-03 (the `move_type` golden). `Edits.gated` applies the text as written when `SourceProject.packageOf` is null. Record: `docs/sessions/imports-source-root.md` |
 | 48 | 55 | A stub for a call that fits no overload of a project method: `add_declaration` of a test calling `add("apple", quantity)` on a `Cart` with only `add(String)` was refused, where a new name would have got a stub | Done | Friction log 2026-11-03 (`docs/sessions/cli-cache.md`). `Stubs.find` handles `IProblem.ParameterMismatch` as an undefined method. Record: `docs/sessions/stub-overload.md` |
+| 49 | 56 | The check after an edit parses only the changed files and those that name a declaration whose header changed (`Headers`) | Done | Follow-up of #10 and the command line. Commons Math: one edit 2.1 s to 63 ms, `rename` 2.4 s to 0.9 s, `add_parameter` 3.2 s to 1.4 s. Record in `docs/sessions/narrow-check.md` |
 
 ### Why this order
 
@@ -197,11 +198,21 @@ From a survey of gorefactor's `docs/friction-log.md` (434 entries, 15 Oct to
 
 ## Gate: how the type check works
 
-Edits are written to disk, the whole project is parsed again, and the new
-compile errors are compared with the old ones by file and message (not line,
+Edits are written to disk, the files whose errors can have changed are parsed
+again, and the new compile errors are compared with the old ones by file and message (not line,
 so moving code does not count). Any new error means the file is restored and the
 edit refused. The gate parses every file in one batch (`Jdt.parseAll`, one JDT
 environment for the whole set), and reuses the last count when every file's
 text is what it saw, so an edit's count after is the next edit's count before.
-On Commons Math (990 files, 224k lines) one edit costs about 2 s (roadmap #10).
-Narrowing the check to the files that depend on the edited ones is not built.
+On Commons Math (990 files, 224k lines) one edit cost about 2 s (roadmap #10).
+
+The check after an edit is narrowed (roadmap #56): each file's `Headers` (for
+each simple name it declares, a hash of the declarations' text up to their
+bodies, with the package and the imports that text names) are kept with the
+count. Only the changed files are parsed again, plus the files that mention,
+as a whole identifier, a name whose header changed. A body change re-checks
+one file. A header change reaches another file only through a name that file
+writes, even through a chain (`b.a().m()` names `m`). On Commons Math, one
+edit takes 63 ms, a field rename in 10 files 0.9 s (34 files re-checked) and
+`add_parameter` 1.4 s (16 files). `GoldenTest` compares every step's count
+with a fresh one, and the opt-in `GateCostTest` does the same on a real project.
