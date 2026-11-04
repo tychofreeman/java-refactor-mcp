@@ -54,6 +54,5 @@ Not measured: no session log for this branch. Counted from the notes: 1
 
 ## Follow-ups
 
-- Decision for the user: close row 55 as not reproducible (the mechanism above
-  waits for a refactoring that leaves a name for a later edit), or build it
-  without a red test. Not decided here.
+- Decided by the user (2026-11-04): close row 55 as not reproducible. The mechanism above
+  is not built; it waits for a refactoring that leaves a name for a later edit.
