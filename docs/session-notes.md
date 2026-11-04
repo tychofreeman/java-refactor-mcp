@@ -208,6 +208,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   one whole-project parse is about 3.5 s; rename, replace_text and create_file each
   make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `MethodFamily.of`
   parses every file before the gate. `GateCostTest.timesACall` prints the parse count.
+- Import and stub costs on Commons Math (roadmap #44, 2026-11-03,
+  `docs/sessions/measure-imports-stubs.md`): a plain `add_declaration` 0.27 s;
+  one needing a JDK import 0.96 s; one declaring a stub 0.47 s with a second
+  parse. Every undo took 2.7-2.9 s, about ten times the call: not yet
+  investigated, the next cost to look at.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
   the model reads, with the stubs named after it. `Stubs.said()` and its
