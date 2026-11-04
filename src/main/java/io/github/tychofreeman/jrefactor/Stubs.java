@@ -139,6 +139,9 @@ final class Stubs {
     /** The names the stub being built uses, which its imports are picked from. */
     final Set<String> uses = new TreeSet<>();
 
+    /** The type variables a stub being written can name: those of the type it goes in. */
+    private Set<String> inScope = Set.of();
+
     /** The names the stubs wanted in each file use: the picks for that file's imports. */
     final Map<Path, Set<String>> wantedUses = new HashMap<>();
 
@@ -249,6 +252,7 @@ final class Stubs {
       if (target == null || owner.isInterface() || removed(target, Names.typeLabel(owner), name)) {
         return;
       }
+      inScope = typeVariablesOf(owner);
       owner = owner.getErasure();
       List<String> types = new ArrayList<>();
       String params = params(call.arguments(), types);
@@ -276,6 +280,7 @@ final class Stubs {
           || creation.getAnonymousClassDeclaration() != null) {
         return;
       }
+      inScope = typeVariablesOf(owner);
       owner = owner.getErasure();
       String simple = owner.getName();
       String type = Names.typeLabel(owner);
@@ -509,6 +514,9 @@ final class Stubs {
       if (b == null || b.isNullType() || b.isRecovered()) {
         return "Object";
       }
+      if (b.isTypeVariable() && inScope.contains(b.getName())) {
+        return b.getName();
+      }
       if (b.isCapture() || b.isWildcardType() || b.isTypeVariable()) {
         return typeName(b.getErasure());
       }
@@ -535,6 +543,23 @@ final class Stubs {
       }
       return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
     }
+  }
+
+  /**
+   * The type variables a stub in {@code owner} can name: its own, and those of the types around it,
+   * up to one that is static.
+   */
+  private static Set<String> typeVariablesOf(ITypeBinding owner) {
+    Set<String> names = new HashSet<>();
+    for (ITypeBinding t = owner; t != null; t = t.getDeclaringClass()) {
+      for (ITypeBinding v : t.getTypeParameters()) {
+        names.add(v.getName());
+      }
+      if (Modifier.isStatic(t.getModifiers()) || t.isInterface() || t.isEnum()) {
+        break;
+      }
+    }
+    return names;
   }
 
   /** "public " when {@code owner} is in another package than {@code unit}, else nothing. */
