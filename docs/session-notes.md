@@ -326,6 +326,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   structure). Each roadmap row's status names its session; see "Split
   between sessions" in `docs/design.md`. Take another session's item only
   when the user says so.
+- A stub goes in the source root of the file that uses it (2026-11-04,
+  `docs/sessions/stubs-test-tree.md`): a class only a test uses is declared in
+  `src/test/java`, not `src/main/java`. Test: `StubsTest`. Goldens have one root,
+  so a two-root case is a unit test.
 - `replace_declaration` with empty content deletes the file when it removes
   the file's only top-level type (2026-11-04), through the gate and the
   journal; the stubs do not declare a class whose file the edit deleted.

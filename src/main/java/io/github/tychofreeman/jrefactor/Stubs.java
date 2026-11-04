@@ -356,7 +356,10 @@ final class Stubs {
               type, label, label, visibility(unit, owner) + simple + "(" + params + ")" + BODY));
     }
 
-    /** A class named {@code name} in the package of {@code file}, under the first source root. */
+    /**
+     * A class named {@code name} in the package of {@code file}, under the source root that holds
+     * {@code file} (so a class a test uses is declared in the test tree), else the first root.
+     */
     private void type(Path file, String name) {
       String pkg = project.packageOf(file);
       if (pkg == null
@@ -366,6 +369,12 @@ final class Stubs {
         return;
       }
       Path dir = project.sourceRoots().get(0);
+      for (Path sourceRoot : project.sourceRoots()) {
+        if (file.startsWith(sourceRoot)) {
+          dir = sourceRoot;
+          break;
+        }
+      }
       if (!pkg.isEmpty()) {
         dir = dir.resolve(pkg.replace('.', '/'));
       }
