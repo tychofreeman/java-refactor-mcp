@@ -501,3 +501,11 @@ run (the statement was one line lower than written), which the golden run caught
 The tool that would have written the cases: none yet; a golden-case helper that
 numbers the line of a text would have avoided the mistake, which is a test
 convenience rather than a refactoring, so it is not on the roadmap.
+
+## 2026-11-04: inline_variable's cases and implementation written by hand (before the tool existed)
+
+The second of the ten higher-level tools (`docs/sessions/inline-variable.md`). Its
+goldens and `InlineVariable` were written with Write, since the tool did not exist.
+Nothing failed on the first real run, but the goldens were run against the refusal
+text they name, so the phrases are checked. The tool that would have written them:
+none yet; the case is the tool being built.

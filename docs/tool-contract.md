@@ -324,6 +324,20 @@ arguments.
   changes a variable; a statement not directly in a block; a type that does
   not resolve. `all_occurrences` and `pointer` are not built yet.
 
+## `inline_variable` (built)
+
+Replaces every use of a local variable with its initializer, and deletes its
+declaration: the inverse of `extract_variable`. gorefactor's `inline_variable`,
+with `file`, `line` (a line where the variable is declared or used), `name`,
+and `column` (only when the line has two variables of that name).
+
+- Result: `inlined <name> into N uses and deleted its declaration at line L of <file>`.
+- Refuses: a field or a parameter; several variables in one declaration, or no
+  initializer; a variable assigned after its declaration; an initializer that
+  calls, assigns or changes a variable; a variable the initializer reads that is
+  assigned after the declaration; a declared type that differs from the
+  initializer's. `function` (inline by a function's name) is not built yet.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

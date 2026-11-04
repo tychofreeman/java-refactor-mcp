@@ -393,6 +393,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   expression by line and exact text, and by column when the text occurs twice. Its implementation
   is `ExtractVariable`; its refusals match gorefactor's conditions.
 
+- `inline_variable` exists (2026-11-04, `docs/sessions/inline-variable.md`): the inverse of
+  `extract_variable`. It refuses an initializer with calls or assignments outright, not only
+  one with several uses: the first version is the simplest safe rule. Uses are parenthesized
+  unless the initializer is primary.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
