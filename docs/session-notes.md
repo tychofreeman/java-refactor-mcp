@@ -248,10 +248,18 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - The check after an edit is narrowed (roadmap #56, 2026-11-03):
   `TypeCheck.Counted` keeps each file's `Headers`, and `errors` parses only
   the changed files and those naming a name whose header changed. Commons
-  Math: one edit 63 ms (was 2.1 s), `rename` 0.9 s, `add_parameter` 1.4 s; a
-  CLI rename here 1.2 s (was 2.35). Soundness rests on `GoldenTest`'s
-  comparison with `uncached` at every step, and on `GateCostTest`'s on a
-  real project. A cache file from before (no `version` 2) is ignored.
+  Math: one edit 64 ms (was 2.1 s), `rename` 1.3 s, `add_parameter` 1.9 s.
+  Soundness rests on `GoldenTest`'s comparison with `uncached` at every
+  step, `GateCostTest`'s on a real project, and the opt-in
+  `NarrowCheckStressTest` (random declaration edits; run it on a copy, since
+  a killed run leaves the file it was editing changed). Following names
+  alone missed edits seen through inheritance; the rule now follows
+  subtypes and headers that name a changed type. A cache file of another
+  `version` is ignored.
+- A rule in the gate that skips work (the narrowed check, #56) is checked
+  by a stress run on a real project before it is merged, not after: #56's
+  first rule missed three of 60 random edits on Commons Math, all through
+  inheritance, though every example test passed (2026-11-03).
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
