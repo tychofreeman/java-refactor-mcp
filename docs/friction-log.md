@@ -467,3 +467,13 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: type a stub's parameter for a lambda argument as a functional
   interface, from the lambda's arity (`Function`, `Supplier`, ...), or refuse
   with the names the model should try, rather than an `Object` stub.
+
+## 2026-11-03: stubs hid a wrong move_type
+- Task: `docs/sessions/move-type-inherited.md`.
+- Tool: `move_type` of a nested class that used `Helper`, a member type the
+  outer class inherits, left `Helper` unqualified in the new file. Nothing
+  declared it there, so the stubs declared an empty `com/example/Helper.java`,
+  and the gate saw no new error: the move applied, wrong.
+- Idea: declare stubs only for edits (code the model wrote), not for a
+  refactoring's own output, which changes no behavior and so needs none; a
+  name a refactoring leaves unresolved is its bug, and should be refused.

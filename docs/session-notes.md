@@ -290,6 +290,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   such a method compiled with the lambdas' parameters swapped (seen on
   Commons Lang's `FailableObjIntConsumer.accept`), which neither the gate
   nor the stress test can see.
+- `move_type` qualifies what the outer type inherits (2026-11-03): a member
+  type or static of the outer type's supertype, used unqualified in the
+  moved type, gets the declaring type's name and keeps its import. Before,
+  the name was left unqualified and the stubs declared an empty class for
+  it, which the gate passed (friction log: stubs should not run for a
+  refactoring's own output).
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

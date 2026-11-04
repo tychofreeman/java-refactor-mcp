@@ -119,7 +119,9 @@ final class MoveType {
         }
         continue;
       }
-      qualifyAndWiden(u, text, decl, type, key, outerKey, outerLabel, simple, edits, widened);
+      Set<String> qualifiers = new HashSet<>();
+      qualifyAndWiden(
+          u, text, decl, type, key, outerKey, outerLabel, simple, edits, widened, qualifiers);
       for (Object o : decl.modifiers()) {
         if (o instanceof Modifier m && (m.isStatic() || m.isPrivate() || m.isProtected())) {
           edits.add(dropModifier(text, m));
@@ -135,6 +137,7 @@ final class MoveType {
       Set<String> usedInside = new HashSet<>();
       Set<String> usedOutside = new HashSet<>();
       identifiers(u, start, end, usedInside, usedOutside);
+      usedInside.addAll(qualifiers);
       StringBuilder kept = new StringBuilder();
       Boolean lastStatic = null;
       for (Object o : u.imports()) {
@@ -317,10 +320,11 @@ final class MoveType {
   }
 
   /**
-   * Adds to {@code edits}, in the outer file {@code u}: the outer type's name before each
-   * unqualified use, inside the moved type, of the outer type's static members and member types;
-   * and the removal of {@code private} from each member used across the moved type's boundary,
-   * which {@code widened} names by position.
+   * Adds to {@code edits}, in the outer file {@code u}: the declaring type's name before each
+   * unqualified use, inside the moved type, of a static member or member type it reaches through
+   * the outer type (its own, an enclosing type's, or one they inherit), with the qualifiers' first
+   * names put in {@code qualifiers}; and the removal of {@code private} from each member used
+   * across the moved type's boundary, which {@code widened} names by position.
    */
   private static void qualifyAndWiden(
       CompilationUnit u,
@@ -332,7 +336,8 @@ final class MoveType {
       String outerLabel,
       String simple,
       List<TextEdit> edits,
-      Map<Integer, String> widened) {
+      Map<Integer, String> widened,
+      Set<String> qualifiers) {
     int start = decl.getStartPosition();
     int end = start + decl.getLength();
     u.accept(
@@ -344,8 +349,10 @@ final class MoveType {
               return true;
             }
             boolean inside = n.getStartPosition() >= start && n.getStartPosition() < end;
-            if (inside && unqualified(n) && memberOf(b, outerKey, key)) {
-              edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), outerLabel + "."));
+            String q = inside && unqualified(n) ? qualifier(b, type, outerLabel) : null;
+            if (q != null) {
+              edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), q + "."));
+              qualifiers.add(q.contains(".") ? q.substring(0, q.indexOf('.')) : q);
             }
             widen(b, inside);
             return true;
@@ -411,22 +418,58 @@ final class MoveType {
   }
 
   /**
-   * Whether {@code b} is a static method or field, or a member type other than the moved one, of
-   * the outer type: what the moved type reaches without a qualifier only while it is nested.
+   * The qualifier {@code b} needs once {@code moved} is top-level, or null for none: {@code b} is a
+   * static method or field, or a member type other than {@code moved}, that {@code moved} reaches
+   * without a qualifier only while it is nested, through the outer type, a type enclosing it, or a
+   * supertype of either. The qualifier is the declaring type ({@code outerLabel} for the outer
+   * type). What {@code moved} reaches through its own supertypes needs none.
    */
-  private static boolean memberOf(IBinding b, String outerKey, String key) {
-    if (b instanceof IMethodBinding m) {
-      return Modifier.isStatic(m.getModifiers()) && declaredBy(m.getDeclaringClass(), outerKey);
+  private static String qualifier(IBinding b, ITypeBinding moved, String outerLabel) {
+    ITypeBinding owner;
+    if (b instanceof IMethodBinding m && Modifier.isStatic(m.getModifiers())) {
+      owner = m.getDeclaringClass();
+    } else if (b instanceof IVariableBinding v
+        && v.isField()
+        && Modifier.isStatic(v.getModifiers())) {
+      owner = v.getDeclaringClass();
+    } else if (b instanceof ITypeBinding t
+        && t.getDeclaringClass() != null
+        && !t.getTypeDeclaration().getKey().equals(moved.getTypeDeclaration().getKey())) {
+      owner = t.getDeclaringClass();
+    } else {
+      return null;
     }
-    if (b instanceof IVariableBinding v) {
-      return v.isField()
-          && Modifier.isStatic(v.getModifiers())
-          && declaredBy(v.getDeclaringClass(), outerKey);
+    String ownerKey = owner.getTypeDeclaration().getKey();
+    if (inherits(moved, ownerKey)) {
+      return null;
     }
-    if (b instanceof ITypeBinding t) {
-      return t.getDeclaringClass() != null
-          && declaredBy(t.getDeclaringClass(), outerKey)
-          && !t.getTypeDeclaration().getKey().equals(key);
+    ITypeBinding outer = moved.getDeclaringClass();
+    if (declaredBy(outer, ownerKey)) {
+      return outerLabel;
+    }
+    for (ITypeBinding t = outer; t != null; t = t.getDeclaringClass()) {
+      if (inherits(t, ownerKey)) {
+        return Names.typeLabel(owner);
+      }
+    }
+    return null;
+  }
+
+  /** Whether {@code type} is the type with key {@code key}, or a subtype of it. */
+  private static boolean inherits(ITypeBinding type, String key) {
+    if (type == null) {
+      return false;
+    }
+    if (declaredBy(type, key)) {
+      return true;
+    }
+    if (inherits(type.getSuperclass(), key)) {
+      return true;
+    }
+    for (ITypeBinding i : type.getInterfaces()) {
+      if (inherits(i, key)) {
+        return true;
+      }
     }
     return false;
   }
