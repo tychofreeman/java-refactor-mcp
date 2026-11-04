@@ -1,0 +1,1 @@
+added Base as a supertype of Price (extends) in com/example/Price.java

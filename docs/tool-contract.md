@@ -364,6 +364,17 @@ and `type` (the new type as written).
   fields; a change that adds compile errors (the gate names them, nothing changes).
 - Not built yet: locals, parameters, return types, and fields declared with several names.
 
+## `add_supertype` (built)
+
+Adds a supertype to a top-level class or interface, in its header. Arguments: `file`, `name`
+(the top-level type), `relation` (`extends` or `implements`, the clause the supertype goes in)
+and `supertype` (as written, such as `Base` or `List<String>`).
+
+Result: `added S as a supertype of T (relation) in file`, with `; imported ...` when the edit
+adds an import. Refusals: a relation other than `extends` or `implements`; a name that is not a
+top-level type of the file that resolves; `implements` on an interface; `extends` on a class that
+already extends one; and the gate's "would add compile errors", naming them.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

@@ -229,6 +229,35 @@ final class Tools {
           Kind.REFACTORING,
           Tools::changeType);
 
+  static final Def ADD_SUPERTYPE =
+      new Def(
+          "add_supertype",
+          """
+          Add a supertype to a top-level class or interface, in its header: relation extends or \
+          implements, and the supertype as written, such as Base or Priced. Identify the type by \
+          name, a top-level type of the file.
+          Applies the edit, then type-checks the project: a supertype that does not resolve, or a \
+          change that adds compile errors, is rolled back and refused.
+          Refuses, saying why: a name that is not a top-level type of the file, extends on a class \
+          that already extends one, implements on an interface, or a change that adds compile \
+          errors, naming them.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the type."},
+              "name": {"type": "string", "description": "The top-level class or interface to add the supertype to."},
+              "relation": {"type": "string", "enum": ["extends", "implements"], "description": "extends for a superclass, or an interface's supertypes; implements for a class's interfaces."},
+              "supertype": {"type": "string", "description": "The supertype as written, such as Base or List<String>."}
+            },
+            "required": ["file", "name", "relation", "supertype"]
+          }\
+          """,
+          Set.of("file", "name", "relation", "supertype"),
+          Kind.REFACTORING,
+          Tools::addSupertype);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -634,6 +663,7 @@ final class Tools {
           INLINE_VARIABLE,
           INLINE_FUNCTION,
           CHANGE_TYPE,
+          ADD_SUPERTYPE,
           BATCH,
           UNDO);
 
@@ -695,6 +725,15 @@ final class Tools {
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
     return ChangeType.run(
         project, args.required("file"), args.required("name"), args.required("type"));
+  }
+
+  private static Outcome addSupertype(SourceProject project, Args args) throws Exception {
+    return AddSupertype.run(
+        project,
+        args.required("file"),
+        args.required("name"),
+        args.required("relation"),
+        args.required("supertype"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {

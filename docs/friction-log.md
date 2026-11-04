@@ -524,3 +524,10 @@ The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The g
 `ChangeType` were written with Write. The first success case was wrong (a getter returning
 `int`), and the gate refused it, which the golden run showed. The tool that would have written
 the cases: none yet; the case is the tool being built.
+
+The fifth of the ten higher-level tools (`docs/sessions/add-supertype.md`). The class and the
+`Tools` registration (the `Def`, its `ALL` entry, the handler) were written by hand: the tool does
+not exist yet to write its own body. Once the server runs, `create_file` writes the class and
+`add_declaration` adds the `Def` field, with a `replace_text` for the `ALL` list. The insertion
+point for an interface's list and a class's `extends` before `implements` was not in the plan; the
+goldens showed both.
