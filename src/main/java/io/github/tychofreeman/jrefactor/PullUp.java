@@ -31,7 +31,7 @@ final class PullUp {
     Path file = project.javaFile(rel);
     String text = Files.readString(file);
     CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration sub = typeNamed(unit, subName);
+    TypeDeclaration sub = MemberMove.typeNamed(unit, subName);
     if (sub == null || sub.resolveBinding() == null) {
       throw new Refusal(
           subName + " is not a top-level class of " + rel + " that resolves. Fix it first.");
@@ -55,11 +55,12 @@ final class PullUp {
     }
     MethodDeclaration moved = named.get(0);
 
-    Holding holding = Holding.of(project, superType.getErasure().getName(), file);
+    String superName = superType.getErasure().getName();
+    Holding holding = Holding.of(project, superName, file);
     Path target = null;
     TypeDeclaration superDecl = null;
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-      TypeDeclaration d = typeNamed(e.getValue(), superType.getErasure().getName());
+      TypeDeclaration d = MemberMove.typeNamed(e.getValue(), superName);
       if (d != null
           && d.resolveBinding() != null
           && d.resolveBinding()
@@ -72,7 +73,7 @@ final class PullUp {
     }
     if (target == null) {
       throw new Refusal(
-          superType.getErasure().getName()
+          superName
               + " is not a top-level class or interface of the project's sources, so "
               + method
               + " cannot be pulled into it.");
@@ -80,7 +81,7 @@ final class PullUp {
     for (MethodDeclaration m : superDecl.getMethods()) {
       if (m.getName().getIdentifier().equals(method)) {
         throw new Refusal(
-            superType.getErasure().getName()
+            superName
                 + " already declares "
                 + method
                 + ". Rename one of them, or pull_up is not the change you want.");
@@ -89,32 +90,19 @@ final class PullUp {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Map<Path, String> texts = holding.texts();
-    String movedText = text.substring(moved.getStartPosition(), end(moved));
-    edits
-        .computeIfAbsent(file, k -> new ArrayList<>())
-        .add(
-            new TextEdit(
-                Lines.start(text, moved.getStartPosition()), Lines.end(text, end(moved) - 1), ""));
+    String movedText = MemberMove.textOf(text, moved);
+    edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
     String targetText = texts.getOrDefault(target, Files.readString(target));
-    int brace = end(superDecl) - 1;
-    int at = Lines.start(targetText, brace);
     edits
         .computeIfAbsent(target, k -> new ArrayList<>())
-        .add(new TextEdit(at, at, "\n  " + movedText + "\n"));
+        .add(MemberMove.appendTo(targetText, superDecl, movedText));
 
-    Map<Path, String> changed = new LinkedHashMap<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String before = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
-      List<TextEdit> list = new ArrayList<>(e.getValue());
-      list.sort((a, b) -> b.start() - a.start());
-      String after = TextEdit.apply(before, list, 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), before, after, List.of()).text());
-    }
     Stubs.Declared declared =
-        Gate.applyOrRefuse(
+        MemberMove.gate(
             project,
-            changed,
-            "pulling " + subName + "." + method + " up to " + superType.getErasure().getName(),
+            texts,
+            edits,
+            "pulling " + subName + "." + method + " up to " + superName,
             "Nothing was changed. Move only a method that uses nothing the subclass has.");
     return new Outcome(
         "pulled "
@@ -122,7 +110,7 @@ final class PullUp {
             + "."
             + method
             + " up to "
-            + superType.getErasure().getName()
+            + superName
             + " ("
             + project.relative(target)
             + ")",
@@ -173,19 +161,5 @@ final class PullUp {
       names.add(i.getErasure().getName());
     }
     return names.isEmpty() ? "none" : String.join(", ", names);
-  }
-
-  /** The top-level type of {@code unit} named {@code name}, or null. */
-  private static TypeDeclaration typeNamed(CompilationUnit unit, String name) {
-    for (Object o : unit.types()) {
-      if (o instanceof TypeDeclaration t && t.getName().getIdentifier().equals(name)) {
-        return t;
-      }
-    }
-    return null;
-  }
-
-  private static int end(org.eclipse.jdt.core.dom.ASTNode n) {
-    return n.getStartPosition() + n.getLength();
   }
 }

@@ -144,6 +144,24 @@ Calls need no change, since `Sub` inherits the method.
 
 Methods only; fields are not built yet (roadmap order 25).
 
+## `push_down` (built)
+
+Arguments: `file` (the Java file that declares the class) and `name`
+(`Sub.method`, both as written in that file; the class is top-level).
+
+Moves a method from `Sub` to each direct subclass of `Sub` in the project: the
+declaration, with its Javadoc, is removed from `Sub` and added at the end of
+each subclass's body; imports are fixed in every file touched.
+
+- Refused: no direct subclass in the project; a subclass that already declares
+  the method; a method that overrides a method of a supertype (`@Override`, or a
+  superclass that declares the name); overloads of the method; a class that is
+  not top-level.
+- Type-checks the project: a caller that uses the method through `Sub` (say
+  `Sub s; s.hello()`) no longer compiles, so the move is rolled back and refused.
+
+Methods only, one overload at a time; fields and overloads are not built.
+
 ## Edits (built)
 
 Edits change behavior on purpose and are held to the same gate: a `.java` file

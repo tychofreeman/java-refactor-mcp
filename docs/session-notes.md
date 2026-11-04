@@ -339,7 +339,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - `pull_up` exists for methods (roadmap #17, 2026-11-04, `docs/sessions/pull-up.md`):
   a method moves to the direct superclass, or to the direct supertype named by `to`;
   the gate refuses a move that leaves a name unresolved (no stubs, since a refactoring
-  has `Session.editing` false). `push_down` and fields are open. Originally added at the
+  has `Session.editing` false). `push_down` (2026-11-04, `docs/sessions/push-down.md`) moves
+  a method to every direct subclass, and refuses an override, since moving it would change what
+  the class runs. Both share `MemberMove`. Fields and overloads are open. Originally added at the
   user's request (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same.
 - The session log (roadmap #18, 2026-11-03): `SessionLog` is the hook, run

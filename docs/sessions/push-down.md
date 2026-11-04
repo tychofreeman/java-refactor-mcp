@@ -38,4 +38,38 @@ The one edit that changes behaviour: none outside the new tool.
 
 ## Notes
 
-- `plan:` the record was written before reading the code.
+- `plan:` the record was written before reading the code. The two goldens went
+  red ("No tool push_down"), then `PushDown.java` and the `Tools` registration
+  made them green on the first run.
+- `refactor:` the removal, insertion, gate and `typeNamed` were in both `PullUp`
+  and `PushDown`; moved to `MemberMove` (`removal`, `appendTo`, `textOf`, `gate`,
+  `typeNamed`, `end`) and both tools rewritten to use it. Goldens stayed green.
+- `refusal:` a third golden, `push_down_refused_override`, covers the override
+  refusal; it passed on the first run.
+- `hand:` the goldens, `PushDown.java`, `MemberMove.java` and the `Tools` registration
+  were written by hand (heredoc and one Python replace). The java-refactor-mcp tools
+  are not in this session's tool list; `create_file` and `replace_declaration` would
+  have made them.
+- `bulk:` `PushDown.java` (about 150 lines) and `MemberMove.java` (about 70) are new
+  behaviour. `PullUp.java` was rewritten in the refactor to call `MemberMove`; its
+  removal and insertion code was the same as `PushDown`'s, so it moved, not retyped.
+
+## Measured
+
+Not measured: no session log for this branch.
+Verify: `./mvnw verify` passed, 203 tests, 0 failures, 4 skipped.
+
+## Assessment
+
+- **Through the tools or around them:** around, for the same reason as `pull-up.md`:
+  the server's tools were not loaded in this session.
+- **Did the plan hold?** Yes. The goldens went red for the stated reason, and the
+  refactor kept both tools' goldens green.
+- **One change that would have helped:** the java-refactor-mcp tools loaded at the
+  start of the session.
+
+## Follow-ups
+
+- Fields for `pull_up` and `push_down`: not built.
+- Overloads for both: refused.
+- A subclass that is nested in another type is not found (top-level subclasses only).
