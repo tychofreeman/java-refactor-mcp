@@ -140,7 +140,9 @@ Calls need no change, since `Sub` inherits the method.
 
 - Refused: no superclass and no `to`; `to` that is not a direct supertype; a
   supertype outside the project's sources; a method the supertype already
-  declares (the same signature); a bare name that matches several overloads,
+  declares (the same signature); a method that overrides a concrete method the
+  supertype inherits (`Root.name()` for `Base extends Root`: `Base` and its other
+  subclasses would run the pulled body); a bare name that matches several overloads,
   which are listed (name one with its parameter types, `Sub.hello(int)`); a
   class that is not top-level.
 - Type-checks the project: a method that uses what only `Sub` has is rolled
