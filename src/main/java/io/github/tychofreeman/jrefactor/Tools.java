@@ -164,6 +164,32 @@ final class Tools {
           Kind.REFACTORING,
           Tools::pullUp);
 
+  static final Def PUSH_DOWN =
+      new Def(
+          "push_down",
+          """
+          Move a method from its class to each direct subclass in the project: the method leaves \
+          Sub and is added to the end of each subclass. name is Sub.method.
+          Type-checks the project: a caller that uses the method through Sub (Sub s; s.hello()) \
+          no longer compiles, so the move is rolled back and refused.
+          Refuses, saying why: no direct subclass in the project, a subclass that already declares \
+          the method, a method that overrides a supertype's method, overloads of the method, a \
+          class that is not top-level.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file that declares the class, relative to the project root."},
+              "name": {"type": "string", "description": "The class and the method, as Sub.method."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name"),
+          Kind.REFACTORING,
+          Tools::pushDown);
+
   static final Def CREATE_FILE =
       new Def(
           "create_file",
@@ -472,6 +498,7 @@ final class Tools {
           RENAME,
           MOVE_TYPE,
           PULL_UP,
+          PUSH_DOWN,
           CREATE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
@@ -512,6 +539,10 @@ final class Tools {
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
     return PullUp.run(project, args.required("file"), args.required("name"), args.string("to"));
+  }
+
+  private static Outcome pushDown(SourceProject project, Args args) throws Exception {
+    return PushDown.run(project, args.required("file"), args.required("name"));
   }
 
   /** The tool named {@code name}, or a refusal listing the tools there are. */
