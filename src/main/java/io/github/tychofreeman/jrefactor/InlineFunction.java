@@ -9,22 +9,36 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.ArrayAccess;
+import org.eclipse.jdt.core.dom.ArrayCreation;
+import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.NodeFinder;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
@@ -237,6 +251,7 @@ final class InlineFunction {
       String declaringText) {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(args, params, useCount, name);
+    checkTiming(args, uses, params, value != null ? value : body, siteText, name);
     for (int i = 0; i < args.size(); i++) {
       if (useCount[i] > 1 && ExtractVariable.hasEffect(args.get(i))) {
         throw new Refusal(
@@ -334,6 +349,164 @@ final class InlineFunction {
               + " call, assign or change a variable, and inlining would run them in another order."
               + " Put one of them in a variable first.");
     }
+  }
+
+  /**
+   * Refuses an argument that is not {@link #fixed} when the inlined body would evaluate it at
+   * another time than the call did: after an effect of the body, or inside a lambda or anonymous
+   * class (later), or, for one with an effect, in a branch (perhaps not at all).
+   */
+  private static void checkTiming(
+      List<Expression> args,
+      List<ParamUse> uses,
+      List<SingleVariableDeclaration> params,
+      ASTNode bodyNode,
+      String siteText,
+      String name) {
+    List<ASTNode> effects = effectsIn(bodyNode);
+    for (ParamUse u : uses) {
+      Expression arg = args.get(u.index());
+      if (fixed(arg)) {
+        continue;
+      }
+      String param = params.get(u.index()).getName().getIdentifier();
+      String source =
+          siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
+      ASTNode use = NodeFinder.perform(bodyNode.getRoot(), u.start(), u.end() - u.start());
+      String where = deferral(use, bodyNode, ExtractVariable.hasEffect(arg));
+      if (where != null) {
+        throw new Refusal(
+            "the argument "
+                + source
+                + " for "
+                + param
+                + " calls, assigns or reads changing state, and the body of "
+                + name
+                + " uses "
+                + param
+                + " "
+                + where
+                + ", so it would run at another time, or not at all. Put the argument in a"
+                + " variable first.");
+      }
+      for (ASTNode e : effects) {
+        if (e.getStartPosition() + e.getLength() <= u.start()) {
+          throw new Refusal(
+              "the argument "
+                  + source
+                  + " for "
+                  + param
+                  + " calls, assigns or reads changing state, and "
+                  + e
+                  + " in the body of "
+                  + name
+                  + " runs before its use, so the order would change. Put the argument in a"
+                  + " variable first.");
+        }
+      }
+    }
+  }
+
+  /**
+   * Where {@code use} runs later or only sometimes, as words ("inside a lambda"), or null when it
+   * runs once, in order. Branches count only for an argument with an effect.
+   */
+  private static String deferral(ASTNode use, ASTNode bodyNode, boolean effect) {
+    for (ASTNode n = use, p = use.getParent();
+        n != bodyNode && p != null;
+        n = p, p = p.getParent()) {
+      if (p instanceof LambdaExpression) {
+        return "inside a lambda";
+      }
+      if (p instanceof AnonymousClassDeclaration) {
+        return "inside an anonymous class";
+      }
+      if (effect && p instanceof ConditionalExpression c && n != c.getExpression()) {
+        return "in a branch of ?:";
+      }
+      if (effect
+          && p instanceof InfixExpression in
+          && n != in.getLeftOperand()
+          && (in.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
+              || in.getOperator() == InfixExpression.Operator.CONDITIONAL_OR)) {
+        return "to the right of && or ||";
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Whether {@code e} is literals, locals, parameters, constants and operators on them: nothing the
+   * body could change or run twice. A lambda counts as fixed, since making one runs nothing.
+   */
+  private static boolean fixed(Expression e) {
+    boolean[] fixed = {true};
+    e.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(LambdaExpression n) {
+            return false;
+          }
+
+          @Override
+          public void preVisit(ASTNode n) {
+            if (n instanceof MethodInvocation
+                || n instanceof SuperMethodInvocation
+                || n instanceof ClassInstanceCreation
+                || n instanceof ArrayCreation
+                || n instanceof Assignment
+                || n instanceof PostfixExpression
+                || n instanceof ArrayAccess
+                || n instanceof FieldAccess
+                || n instanceof SuperFieldAccess
+                || (n instanceof PrefixExpression p && changes(p))
+                || (n instanceof SimpleName s
+                    && s.resolveBinding() instanceof IVariableBinding v
+                    && v.isField()
+                    && v.getConstantValue() == null)) {
+              fixed[0] = false;
+            }
+          }
+        });
+    return fixed[0];
+  }
+
+  private static boolean changes(PrefixExpression p) {
+    return p.getOperator() == PrefixExpression.Operator.INCREMENT
+        || p.getOperator() == PrefixExpression.Operator.DECREMENT;
+  }
+
+  /**
+   * The calls, creations, assignments and increments in {@code node}, outside lambdas and anonymous
+   * classes (which run later, if at all).
+   */
+  private static List<ASTNode> effectsIn(ASTNode node) {
+    List<ASTNode> out = new ArrayList<>();
+    node.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(LambdaExpression n) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(AnonymousClassDeclaration n) {
+            return false;
+          }
+
+          @Override
+          public void preVisit(ASTNode n) {
+            if (n instanceof MethodInvocation
+                || n instanceof SuperMethodInvocation
+                || n instanceof ClassInstanceCreation
+                || n instanceof Assignment
+                || n instanceof PostfixExpression
+                || (n instanceof PrefixExpression p && changes(p))) {
+              out.add(n);
+            }
+          }
+        });
+    return out;
   }
 
   /** Whether {@code node} names a field or method that {@code owner} declares. */

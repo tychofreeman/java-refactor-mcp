@@ -1,0 +1,13 @@
+package com.example;
+
+public class Use {
+  private int n;
+
+  int next() {
+    return n++;
+  }
+
+  int all(boolean c) {
+    return Lib.pick(c, next());
+  }
+}
