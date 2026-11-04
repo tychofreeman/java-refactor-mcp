@@ -493,3 +493,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the class's own members over this session's casts and qualification
   (closed PR #118). Before fixing a planned roadmap row, check `main`
   and the open branches for the same row.
+
+- `pull_up` refuses a method that would override a concrete method the
+  supertype inherits (roadmap #69, 2026-11-04,
+  `docs/sessions/pull-up-inherited-override.md`): `PullUp.overridden` walks
+  the supertype's superclasses and interfaces. An inherited abstract method is
+  not refused, since every concrete class below declares its own. This also
+  refuses pulling up a `toString()` or `equals` into a class that inherits
+  `Object`'s: that changes every other subclass too.

@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
@@ -70,6 +73,31 @@ final class PullUp {
               + " already declares "
               + member
               + ". Rename one of them, or pull_up is not the change you want.");
+    }
+    if (moved instanceof MethodDeclaration md && md.resolveBinding() != null) {
+      IMethodBinding inherited = overridden(md.resolveBinding(), superType);
+      if (inherited != null) {
+        String declaring = inherited.getDeclaringClass().getErasure().getName();
+        throw new Refusal(
+            subName
+                + "."
+                + member
+                + " overrides "
+                + declaring
+                + "."
+                + MemberMove.label(md)
+                + ", which "
+                + superName
+                + " inherits: in "
+                + superName
+                + " it would replace that one for "
+                + superName
+                + " and its other subclasses too. Keep it in "
+                + subName
+                + ", or pull it up to "
+                + declaring
+                + " if every class below should run it.");
+      }
     }
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
@@ -133,6 +161,32 @@ final class PullUp {
             + ". Its direct supertypes are "
             + directNames(sub)
             + ".");
+  }
+
+  /**
+   * The first concrete method of {@code type}'s supertypes (superclasses and interfaces, not {@code
+   * type} itself) that {@code method} overrides, or null. In {@code type}, the moved method would
+   * take its place for every class below that does not declare its own.
+   */
+  private static IMethodBinding overridden(IMethodBinding method, ITypeBinding type) {
+    List<ITypeBinding> todo = new ArrayList<>();
+    if (type.getSuperclass() != null) {
+      todo.add(type.getSuperclass());
+    }
+    todo.addAll(List.of(type.getInterfaces()));
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      for (IMethodBinding m : t.getDeclaredMethods()) {
+        if (!Modifier.isAbstract(m.getModifiers()) && method.overrides(m)) {
+          return m;
+        }
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(List.of(t.getInterfaces()));
+    }
+    return null;
   }
 
   private static String directNames(ITypeBinding sub) {

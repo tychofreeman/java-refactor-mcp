@@ -438,7 +438,9 @@ final class Tools {
           Type-checks the project: a move that adds compile errors (the method uses a field only Sub \
           has, say) is rolled back and refused.
           Refuses, saying why: no superclass or to that is not a direct supertype, a supertype that \
-          is not in the project's sources, a member the supertype already declares, a bare name \
+          is not in the project's sources, a member the supertype already declares, a method that \
+          would override a concrete one the supertype inherits (its other subclasses would run it), \
+          a bare name \
           that matches several overloads (they are listed; name one with its parameter types, as \
           Sub.hello(int)), a class that is not top-level.\
           """,
