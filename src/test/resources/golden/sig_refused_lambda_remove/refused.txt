@@ -1,0 +1,1 @@
+Op.apply(int, int) is implemented by a lambda (com/example/Calc.java, line 5)

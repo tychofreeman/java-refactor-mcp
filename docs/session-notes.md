@@ -283,6 +283,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   Commons Lang and Math (2026-11-03). It prints refusals that the gate made
   ("stress gated:") in full: those are code a tool wrote that did not
   compile, a precondition the tool lacks.
+- The signature tools refuse a method that a lambda implements
+  (2026-11-03), as they refuse a method reference, and look for lambdas in
+  every file with `->` when the family has an abstract interface method,
+  since a lambda need not name the method. Before, `move_parameter` on
+  such a method compiled with the lambdas' parameters swapped (seen on
+  Commons Lang's `FailableObjIntConsumer.accept`), which neither the gate
+  nor the stress test can see.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

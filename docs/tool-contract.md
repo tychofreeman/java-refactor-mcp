@@ -208,7 +208,11 @@ changed file has its imports fixed; the whole change passes the gate once.
 
 Refusals: a family member that overrides a library method ("Name.compareTo(Name)
 overrides compareTo in java.lang.Comparable, which is not the project's"), a
-method reference to it, varargs, a parameter or `before` it does not have;
+method reference to it, a lambda that implements it ("Op.apply(int, int) is
+implemented by a lambda (com/example/Calc.java, line 5) ... Rewrite the lambda as
+an anonymous class first"; files with `->` are searched when the family has an
+abstract interface method, since a lambda need not name it), varargs, a
+parameter or `before` it does not have;
 add: a body that reads an unqualified field of the new name; remove: a body
 that reads the parameter, an argument that may have side effects (anything but
 names, literals, `this`, field accesses, lambdas and operators over those);
