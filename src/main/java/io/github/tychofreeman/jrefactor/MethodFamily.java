@@ -17,10 +17,13 @@ import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.ExpressionMethodReference;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -115,6 +118,26 @@ final class MethodFamily {
     }
     for (Signatures.Source s : sources.values()) {
       family.findCalls(s, keys);
+    }
+    boolean functional =
+        family.decls.stream()
+            .anyMatch(d ->
+                d.binding().getDeclaringClass().isInterface()
+                    && Modifier.isAbstract(d.binding().getModifiers()));
+    if (functional) {
+      // A lambda implements an interface's method without naming it, so the files above can miss
+      // it: look in every other file that has one.
+      List<Path> lambdas = new ArrayList<>();
+      for (Map.Entry<Path, String> e : texts.entrySet()) {
+        if (!sources.containsKey(e.getKey()) && e.getValue().contains("->")) {
+          lambdas.add(e.getKey());
+        }
+      }
+      Map<Path, CompilationUnit> more = Jdt.parseAll(project, lambdas);
+      for (Path f : lambdas) {
+        family.findCalls(
+            new Signatures.Source(f, project.relative(f), texts.get(f), more.get(f)), keys);
+      }
     }
     return family;
   }
@@ -215,6 +238,23 @@ final class MethodFamily {
                           + s.line(n)
                           + "), whose functional interface fixes its parameters. Replace"
                           + " it with a lambda that calls it first.");
+                }
+                return true;
+              }
+
+              @Override
+              public boolean visit(LambdaExpression n) {
+                ITypeBinding type = n.resolveTypeBinding();
+                if (type != null && ours(type.getFunctionalInterfaceMethod())) {
+                  throw new Refusal(
+                      label
+                          + " is implemented by a lambda ("
+                          + s.rel()
+                          + ", line "
+                          + s.line(n)
+                          + "), whose parameters no call of the method shows. Rewrite the"
+                          + " lambda as an anonymous class first (replace_text); this tool then"
+                          + " changes it with the method's other declarations.");
                 }
                 return true;
               }

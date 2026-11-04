@@ -289,7 +289,8 @@ final class Tools {
           call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
           Refuses, saying why: a method that overrides a library method, one used as a method \
-          reference, varargs, a name that would hide a field a body reads, a value that does \
+          reference or implemented by a lambda, varargs, a name that would hide a field a body \
+          reads, a value that does \
           not type-check at some call.\
           """,
           """
@@ -323,7 +324,8 @@ final class Tools {
           name finds the method as replace_declaration does. A dropped argument must have no \
           side effects (a name, a literal, this, a field).
           Refuses, saying why: a body that reads the parameter, an argument with side effects, \
-          a method that overrides a library method, one used as a method reference, varargs.\
+          a method that overrides a library method, one used as a method reference or \
+          implemented by a lambda, varargs.\
           """,
           """
           {
@@ -351,7 +353,8 @@ final class Tools {
           name finds the method as replace_declaration does; before names the parameter to put \
           it ahead of (default: last).
           Refuses, saying why: two arguments with side effects whose order would change, a \
-          method that overrides a library method, one used as a method reference, varargs.\
+          method that overrides a library method, one used as a method reference or \
+          implemented by a lambda, varargs.\
           """,
           """
           {
