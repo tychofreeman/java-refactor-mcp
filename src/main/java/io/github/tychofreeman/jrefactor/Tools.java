@@ -140,13 +140,13 @@ final class Tools {
       new Def(
           "pull_up",
           """
-          Move a method from its class to its direct superclass, or to a direct supertype named by \
-          to: the method leaves Sub and is added to the end of Base. Every call still compiles, \
+          Move a method or field from its class to its direct superclass, or to a direct supertype named by \
+          to: the member leaves Sub and is added to the end of Base. Every call still compiles, \
           since Sub inherits the method. name is Sub.method.
           Type-checks the project: a move that adds compile errors (the method uses a field only Sub \
           has, say) is rolled back and refused.
           Refuses, saying why: no superclass or to that is not a direct supertype, a supertype that \
-          is not in the project's sources, a method the supertype already declares, overloads of \
+          is not in the project's sources, a member the supertype already declares, overloads of \
           the method, a class that is not top-level.\
           """,
           """
@@ -168,12 +168,12 @@ final class Tools {
       new Def(
           "push_down",
           """
-          Move a method from its class to each direct subclass in the project: the method leaves \
+          Move a method or field from its class to each direct subclass in the project: the member leaves \
           Sub and is added to the end of each subclass. name is Sub.method.
           Type-checks the project: a caller that uses the method through Sub (Sub s; s.hello()) \
           no longer compiles, so the move is rolled back and refused.
           Refuses, saying why: no direct subclass in the project, a subclass that already declares \
-          the method, a method that overrides a supertype's method, overloads of the method, a \
+          the member, a method that overrides a supertype's method, overloads of the method, a \
           class that is not top-level.\
           """,
           """
