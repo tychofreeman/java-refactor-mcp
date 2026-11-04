@@ -337,13 +337,13 @@ final class Stubs {
       if (removed(target, type, simple)) {
         return;
       }
-      boolean implicit = !created.contains(owner.getQualifiedName());
+      boolean needsDefault = !created.contains(owner.getQualifiedName());
       for (IMethodBinding m : owner.getDeclaredMethods()) {
         if (m.isConstructor() && !m.isDefaultConstructor()) {
-          implicit = false;
+          needsDefault = false;
         }
       }
-      if (implicit) {
+      if (needsDefault) {
         // Declaring a constructor takes away the implicit one, which other code may use.
         want(target, new Stub(type, type + "()", null, visibility(unit, owner) + simple + "() {}"));
       }
