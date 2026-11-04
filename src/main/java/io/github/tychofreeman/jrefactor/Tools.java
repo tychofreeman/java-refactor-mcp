@@ -514,6 +514,9 @@ final class Tools {
     Args args = new Args(def.name(), values);
     args.check(def.args());
     Journal.begin(project, def.name());
+    Session session = project.session();
+    boolean outer = session.editing;
+    session.editing = def.kind() == Kind.EDIT;
     try {
       Outcome outcome = def.handler().run(project, args);
       Journal.commit(project);
@@ -521,6 +524,9 @@ final class Tools {
     } catch (Exception | Error e) {
       abort(project, e);
       throw e;
+    } finally {
+      // A batch remembers that one of its steps was an edit, for its check at the end.
+      session.editing = outer || def.kind() == Kind.EDIT;
     }
   }
 

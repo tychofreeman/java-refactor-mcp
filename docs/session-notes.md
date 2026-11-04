@@ -303,6 +303,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the name was left unqualified and the stubs declared an empty class for
   it, which the gate passed (friction log: stubs should not run for a
   refactoring's own output).
+- Stubs are declared only for edits (2026-11-03): `Tools.call` sets
+  `Session.editing` for a call of `Kind.EDIT`, and a batch keeps it once a
+  step was an edit; `Stubs.declare` declares nothing otherwise. A
+  refactoring that leaves a name unresolved is refused: before, `move_type`
+  left an inherited `Helper` unqualified and the stubs declared an empty
+  class for it, which the gate passed.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.

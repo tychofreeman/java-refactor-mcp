@@ -23,6 +23,13 @@ final class Session {
   /** True while a batch with check "end" runs: edits skip the type check it makes once after. */
   boolean deferred;
 
+  /**
+   * Whether the running change may declare stubs: the running call is an edit, or a batch one of
+   * whose steps so far was. A refactoring's own output gets none: it changes no behavior, so a name
+   * it leaves unresolved is its mistake, and a stub would hide it.
+   */
+  boolean editing;
+
   /** The library classes by simple name, built on first use; null until then. */
   Map<String, List<String>> libraries;
 

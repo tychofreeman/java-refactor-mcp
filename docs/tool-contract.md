@@ -128,8 +128,12 @@ must parse, and the project must type-check no worse after, or nothing changes.
 Results name the file and lines and never echo content.
 
 Stubs (roadmap #21): before refusing, the gate (every edit, and a batch checked
-at its end) declares what the new code uses and nothing declares, then checks
-again, for up to five rounds (a new class, then its members):
+at its end when one of its steps is an edit) declares what the new code uses and nothing declares, then checks
+again, for up to five rounds (a new class, then its members). A refactoring
+(`rename`, `move_type`, the signature tools, `extract_method`) gets none: it
+changes no behavior, so a name its output leaves unresolved is its own mistake,
+and is refused with the errors (2026-11-03, after a `move_type` bug passed
+the gate behind an empty stub class):
 - a method of a project class: `x.m(a)` on x's type, `T.m(a)` static on T,
   `m(a)` on the enclosing type (static in a static context). Parameters take
   the arguments' types, and their names when they are variables or getters.
