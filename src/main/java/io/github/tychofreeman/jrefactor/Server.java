@@ -43,13 +43,18 @@ public final class Server {
 
   private Server() {}
 
+  /** The project at {@code root}, its classpath kept in {@code cacheDir}. */
+  static SourceProject load(Path root, Path cacheDir) {
+    return SourceProject.load(root, Cli.classpathCache(cacheDir, root));
+  }
+
   /**
    * Serves the project at {@code args[0]} (default: the working directory) on stdin and stdout, and
    * exits when stdin ends, so a client that goes away leaves no server running.
    */
   public static void main(String[] args) throws InterruptedException {
     Path root = Path.of(args.length > 0 ? args[0] : "").toAbsolutePath();
-    SourceProject project = SourceProject.load(root);
+    SourceProject project = load(root, Cli.cacheDir());
     System.err.println(
         "jrefactor: serving "
             + project.root()

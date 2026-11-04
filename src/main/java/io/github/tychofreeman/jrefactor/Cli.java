@@ -72,7 +72,7 @@ final class Cli {
       Map<String, Object> values = arguments(def, words);
       Path at = root(dir).toAbsolutePath().normalize();
       String cached = cacheName(at);
-      SourceProject project = SourceProject.load(at, cacheDir.resolve(cached + "-classpath.txt"));
+      SourceProject project = SourceProject.load(at, classpathCache(cacheDir, at));
       Path stack = cacheDir.resolve(cached + ".json");
       Path count = cacheDir.resolve(cached + "-count.json");
       Journal.load(project, stack);
@@ -210,7 +210,13 @@ final class Cli {
    * Where undo stacks, classpaths and type checks are kept: {@code $XDG_CACHE_HOME/jrefactor}, or
    * {@code ~/.cache/jrefactor}.
    */
-  private static Path cacheDir() {
+  /** The file that keeps the classpath of the project at {@code root} in {@code cacheDir}. */
+  static Path classpathCache(Path cacheDir, Path root) {
+    return cacheDir.resolve(cacheName(root) + "-classpath.txt");
+  }
+
+  /** Where the command line and the server keep their caches (see {@link #cacheDir}). */
+  static Path cacheDir() {
     String cache = System.getenv("XDG_CACHE_HOME");
     Path base =
         cache != null && !cache.isEmpty()

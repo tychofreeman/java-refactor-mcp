@@ -348,4 +348,12 @@ class ServerTest {
   private static Map<String, Object> asMap(Object value) {
     return (Map<String, Object>) value;
   }
+
+  @Test
+  void loadKeepsTheClasspathCache(@TempDir Path cache) throws Exception {
+    Server.load(Path.of("").toAbsolutePath(), cache);
+    try (Stream<Path> files = Files.list(cache)) {
+      assertTrue(files.anyMatch(f -> f.getFileName().toString().endsWith("-classpath.txt")));
+    }
+  }
 }
