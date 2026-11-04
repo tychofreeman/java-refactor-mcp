@@ -501,3 +501,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   not refused, since every concrete class below declares its own. This also
   refuses pulling up a `toString()` or `equals` into a class that inherits
   `Object`'s: that changes every other subclass too.
+
+- `MemberMove.appendTo` inserts before the closing brace when it shares its
+  line (`class Base {}`), for `pull_up` and `push_down` (roadmap #70,
+  2026-11-04, `docs/sessions/member-move-one-line-body.md`). Before, the
+  member went in front of the class header, and the gate's syntax error was
+  refused as if the member used what only the subclass has.
