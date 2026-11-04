@@ -300,7 +300,16 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   tools on random targets of a real project. No failures in 160 calls on
   Commons Lang and Math (2026-11-03). It prints refusals that the gate made
   ("stress gated:") in full: those are code a tool wrote that did not
-  compile, a precondition the tool lacks.
+  compile, a precondition the tool lacks. Since 2026-11-04 it also calls
+  `extract_variable`, `inline_variable`, `inline_function`, `pull_up` and
+  `push_down`, each tool in turn (`made % TOOLS.size()`), with targets
+  weighted to what can apply (call-free expressions, one-statement static
+  methods, classes in a project hierarchy). No failures in 220 calls; but
+  the test sees only compile errors, and probes found seven behavior
+  changes that type-check in those tools (roadmap #67-#69,
+  `docs/sessions/stress-new-tools.md`). A tool that moves expressions or
+  members needs probes for evaluation order and name capture, not only a
+  stress run.
 - The signature tools change the lambdas that implement the method (#57,
   2026-11-04; they refused them from #72): a lambda's parameter list is
   written again. They look for lambdas in every file with `->` when the
