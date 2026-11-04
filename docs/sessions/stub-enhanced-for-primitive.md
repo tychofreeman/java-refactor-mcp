@@ -27,3 +27,32 @@ element type, and the gate refuses it as not a type argument.
 
 ## Notes
 
+- `plan:` the hypothesis was wrong about the message. Red, the golden was
+  refused, not with the compile error the friction entry gives but "content
+  does not parse as members of a type". Turning the boxing off again gave the
+  same refusal, so `List<int>` itself, written as the stub's text, is what
+  does not parse. The plan's fix holds; the cause is the text, not the type
+  check.
+- `hand:` the boxing helper (`Stubs.wrapper`) and its use were written by Edit.
+
+## Measured
+
+Golden `stub_enhanced_for_primitive`: red before (refused, as above), green
+after (the stub is `List<Integer> items()`). `./mvnw verify` passes; spotless
+clean. The session-log hook was not measured for this session.
+
+## Assessment
+
+- **Through the tools or around them:** the change is in `Stubs`, which the
+  tools do not edit; the golden went through `add_declaration`.
+- **Did the plan hold?** The fix did; the stated cause did not. Recorded
+  above rather than corrected in the plan.
+- **Reading:** `Stubs.resultType`'s enhanced-for branch, and the refusal path
+  that reports the stub's text.
+
+## Follow-ups
+
+- A refusal from a stub's own text ("content does not parse as members of a
+  type") names the caller's content, not the stub that was declared. The
+  wording points at the wrong place. Not done; a refusal change needs a golden
+  of its own.

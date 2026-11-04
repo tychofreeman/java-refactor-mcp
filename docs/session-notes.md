@@ -220,7 +220,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   checks the enclosing types too. A sibling nested class is not covered (not reproduced).
 - A stub that is the expression of an enhanced `for` is typed `List<` the loop
   variable's type `>` (2026-11-04, `docs/sessions/stub-enhanced-for.md`). A primitive
-  loop variable gives `List<int>`, which the gate refuses (not done).
+  loop variable is boxed (`List<Integer>`, 2026-11-04, `docs/sessions/stub-enhanced-for-primitive.md`);
+  `List<int>` as a stub's text does not parse, and the refusal then blames the caller's content.
 - Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
   takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
   check, now timed apart. Measure undo with the harness, not from its old figures.
