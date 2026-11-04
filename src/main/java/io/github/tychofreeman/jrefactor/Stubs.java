@@ -251,13 +251,13 @@ final class Stubs {
           // A call that fits no overload of a project method: the stub is an overload, typed from
           // the call.
           case IProblem.UndefinedMethod, IProblem.ParameterMismatch -> {
-            MethodInvocation call = ancestor(node, MethodInvocation.class);
+            MethodInvocation call = ancestorOrSelf(node, MethodInvocation.class);
             if (call != null) {
               method(unit, call);
             }
           }
           case IProblem.UndefinedConstructor -> {
-            ClassInstanceCreation creation = ancestor(node, ClassInstanceCreation.class);
+            ClassInstanceCreation creation = ancestorOrSelf(node, ClassInstanceCreation.class);
             if (creation != null) {
               constructor(unit, creation);
             }
@@ -271,7 +271,8 @@ final class Stubs {
             }
           }
           case IProblem.UndefinedType -> {
-            if (p.getArguments().length > 0 && ancestor(node, ImportDeclaration.class) == null) {
+            if (p.getArguments().length > 0
+                && ancestorOrSelf(node, ImportDeclaration.class) == null) {
               type(file, p.getArguments()[0]);
             }
           }
@@ -286,7 +287,7 @@ final class Stubs {
       ITypeBinding owner;
       boolean isStatic;
       if (receiver == null) {
-        AbstractTypeDeclaration enclosing = ancestor(call, AbstractTypeDeclaration.class);
+        AbstractTypeDeclaration enclosing = ancestorOrSelf(call, AbstractTypeDeclaration.class);
         owner = enclosing == null ? null : enclosing.resolveBinding();
         isStatic = inStaticContext(call);
       } else if (receiver instanceof Name name && name.resolveBinding() instanceof ITypeBinding t) {
@@ -703,7 +704,7 @@ final class Stubs {
   }
 
   /** {@code node} or its nearest ancestor of {@code type}, or null. */
-  private static <T> T ancestor(ASTNode node, Class<T> type) {
+  private static <T> T ancestorOrSelf(ASTNode node, Class<T> type) {
     for (ASTNode n = node; n != null; n = n.getParent()) {
       if (type.isInstance(n)) {
         return type.cast(n);

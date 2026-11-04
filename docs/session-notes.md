@@ -33,6 +33,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - `Extraction.apply` is split into `Plan`, `callOf` and `methodText` (roadmap order 34, 2026-11-03); behavior is the extract goldens, unchanged.
 - `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use. A class this call created gets no default-constructor stub: the user chose that (2026-11-03), and `Stubs` skips it through `created`.
 - `Stubs.find` declares a stub for a call that fits no overload (`IProblem.ParameterMismatch`, roadmap order 48, 2026-11-03): an overload typed from the call. A wrong call to an existing method now gets a stub overload, not a refusal.
+- The two `ancestor` helpers are named by where they start (roadmap order 29, 2026-11-04):
+  `Stubs.ancestorOrSelf` (from the node itself) and `Extract.ancestorAbove` (from its
+  parent). The names were chosen by the session, not asked; `rename` moved the calls.
 - `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
   and `Extract.typeName` still differ on wildcards: `Stubs` erases them, `Extract` keeps them.
   Stub type variables (decided 2026-11-04): written by name when the target type declares
