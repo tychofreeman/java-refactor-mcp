@@ -1,10 +1,14 @@
 package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -61,5 +65,65 @@ class TypeCheckTest {
     TypeCheck.load(third, saved);
     assertEquals(Map.of(), TypeCheck.errors(third));
     assertEquals(1, TypeCheck.parses(third));
+  }
+
+  private static void write(Path root, String name, String body) throws Exception {
+    Path file = root.resolve("com/example/" + name + ".java");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, "package com.example;\n\n" + body + "\n");
+  }
+
+  private static Set<String> lastParsed(SourceProject project) {
+    List<Path> parsed = TypeCheck.lastParsed(project);
+    Set<String> out = new TreeSet<>();
+    for (Path p : parsed) {
+      out.add(p.getFileName().toString());
+    }
+    return out;
+  }
+
+  /** A: m(); B calls it and returns an A; D reaches m() through B only; C is unrelated. */
+  private static SourceProject fourFiles(Path root) throws Exception {
+    write(root, "A", "class A {\n  int m() {\n    return 1;\n  }\n}");
+    write(
+        root,
+        "B",
+        "class B {\n  A a() {\n    return new A();\n  }\n\n  int n() {\n    return a().m();\n  }\n}");
+    write(root, "C", "class C {\n  int c() {\n    return 3;\n  }\n}");
+    write(root, "D", "class D {\n  int p(B b) {\n    return b.a().m();\n  }\n}");
+    SourceProject project = SourceProject.of(root);
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    return project;
+  }
+
+  @Test
+  void aBodyChangeRechecksOnlyItsFile(@TempDir Path root) throws Exception {
+    SourceProject project = fourFiles(root);
+    write(root, "A", "class A {\n  int m() {\n    return 2; // changed\n  }\n}");
+
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    assertEquals(Set.of("A.java"), lastParsed(project));
+  }
+
+  @Test
+  void aChangedHeaderRechecksTheFilesThatNameIt(@TempDir Path root) throws Exception {
+    SourceProject project = fourFiles(root);
+    write(root, "A", "class A {\n  int k() {\n    return 1;\n  }\n}");
+
+    Map<String, Integer> errors = TypeCheck.errors(project);
+    assertEquals(Set.of("A.java", "B.java", "D.java"), lastParsed(project));
+    assertEquals(TypeCheck.uncached(project), errors);
+    assertEquals(2, errors.size(), errors.toString());
+  }
+
+  @Test
+  void aNewFileRechecksTheFilesThatNamedItsType(@TempDir Path root) throws Exception {
+    SourceProject project = fourFiles(root);
+    write(root, "C", "class C {\n  int c() {\n    return new E().e();\n  }\n}");
+    assertTrue(!TypeCheck.errors(project).isEmpty());
+    write(root, "E", "class E {\n  int e() {\n    return 5;\n  }\n}");
+
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    assertEquals(Set.of("C.java", "E.java"), lastParsed(project));
   }
 }

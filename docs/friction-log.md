@@ -447,3 +447,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   have got a stub. Answered with a batch: the overload first, then the test.
 - Idea: declare a stub for a call whose arguments fit no overload of a
   project method, as for an undefined method, typed from the call.
+
+## 2026-11-03: a stub called in an enhanced for is not iterable
+- Task: `docs/sessions/narrow-check.md`.
+- Tool: `add_declaration` of a test with `for (Path p : TypeCheck.lastParsed(project))`
+  was refused: "Can only iterate over an array or an instance of
+  java.lang.Iterable". The stub's return type was not inferred from the loop.
+  Resent with `List<Path> parsed = TypeCheck.lastParsed(project);` first.
+- Idea: type a stub used as an enhanced for's expression as `List<T>`, T the
+  loop variable's type.

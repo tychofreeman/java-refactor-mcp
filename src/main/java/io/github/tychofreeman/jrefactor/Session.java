@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -27,6 +28,9 @@ final class Session {
 
   /** The last type check, with the text of every file it counted. */
   TypeCheck.Counted lastCount;
+
+  /** The files the last type check parsed, for tests of the narrowing. */
+  List<Path> lastParsed = List.of();
 
   /** How many times the project has been parsed for a type check, for tests of the reuse. */
   int parses;

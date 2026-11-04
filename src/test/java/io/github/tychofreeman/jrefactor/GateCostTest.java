@@ -69,15 +69,20 @@ class GateCostTest {
     String result = Tools.call(Tools.named((String) call.get("tool")), project, args).render();
     long done = System.nanoTime();
     int parsed = TypeCheck.parses(project) - parses;
+    int files = TypeCheck.lastParsed(project).size();
+    // The narrowed count after the call, and after its undo, are what a fresh count gives.
+    assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "after the call");
     Journal.undo(project);
     long undone = System.nanoTime();
 
     System.out.printf(
-        "call cost: %s %d ms, %d project parses, undo %d ms; %s%n",
+        "call cost: %s %d ms, %d project parses, the last of %d files, undo %d ms; %s%n",
         call.get("tool"),
         (done - start) / 1_000_000,
         parsed,
+        files,
         (undone - done) / 1_000_000,
         result.length() > 200 ? result.substring(0, 200) + "..." : result);
+    assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project), "after the undo");
   }
 }
