@@ -570,3 +570,7 @@ finish normally) keeps the code's meaning; the dedent is the one extra step beyo
 The ninth of the ten higher-level tools (`docs/sessions/move-member.md`). The class and registration
 were written by hand. The receiver parameter was the user's choice; the target limited to the same
 file is a default this PR took and the record names.
+
+The tenth of the ten higher-level tools (`docs/sessions/encapsulate-field.md`). The class and
+registration were written by hand. The writes the tool refuses (compound, ++, expressions) are where
+a composition of `replace_text` would be needed: a hand edit for each, which the refusal names.

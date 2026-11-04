@@ -428,6 +428,19 @@ method reference to it, a call of itself, super, an anonymous or local class in 
 another class with no instance, a nested call inside an argument, and the gate's "would add compile
 errors". A null instance that the method dereferences fails inside it, not at the call.
 
+## `encapsulate_field` (built)
+
+Makes a field private, with a getter and a setter, and rewrites the project's uses through them. Arguments:
+`file`, `name` (`Type.field`), `getter` and `setter` (optional; default `getX` and `setX`).
+
+A read becomes the getter call (`x` to `getX()`, `p.x` to `p.getX()`); a plain assignment statement
+`x = v;` becomes `setX(v);`. A final field gets a getter only. Result: `encapsulated Type.field in file
+with getX and setX; N uses rewritten in K files`.
+
+Refusals: a name that is not a field, a declaration of several fields, a final field that is written, a
+compound write (`+=`), `++` or `--`, a write inside an expression, a statement that also reads the
+field, and the gate's "would add compile errors".
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
