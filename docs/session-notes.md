@@ -29,6 +29,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Where the work stands
 
+- `Stubs.find` declares a stub for a call that fits no overload (`IProblem.ParameterMismatch`, roadmap order 48, 2026-11-03): an overload typed from the call. A wrong call to an existing method now gets a stub overload, not a refusal.
 - `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
   and `Extract.typeName` still differ on type variables and captures: a decision, not done.
 - `Edits.gated` fixes imports only for a file under a source root (roadmap order 47, 2026-11-03):
