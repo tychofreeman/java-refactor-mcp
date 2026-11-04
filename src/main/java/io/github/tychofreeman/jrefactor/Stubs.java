@@ -425,13 +425,34 @@ final class Stubs {
       return null;
     }
 
+    /**
+     * A functional interface that a lambda with as many parameters as {@code lambda} has can be
+     * passed as, with Object for each type. Object for more than two.
+     */
+    private String lambdaType(LambdaExpression lambda) {
+      return switch (lambda.parameters().size()) {
+        case 0 -> functional("Supplier", "Object");
+        case 1 -> functional("Function", "Object, Object");
+        case 2 -> functional("BiFunction", "Object, Object, Object");
+        default -> "Object";
+      };
+    }
+
+    private String functional(String name, String arguments) {
+      uses.add("java.util.function." + name);
+      return name + "<" + arguments + ">";
+    }
+
     /** "Type name, Type name" for {@code arguments}, adding each type to {@code types}. */
     private String params(List<?> arguments, List<String> types) {
       List<String> params = new ArrayList<>();
       Set<String> names = new HashSet<>();
       for (Object o : arguments) {
         Expression argument = (Expression) o;
-        String type = typeName(argument.resolveTypeBinding());
+        String type =
+            argument instanceof LambdaExpression lambda
+                ? lambdaType(lambda)
+                : typeName(argument.resolveTypeBinding());
         types.add(type);
         String name = paramName(argument, type);
         String unique = name;
