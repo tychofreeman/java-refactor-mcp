@@ -196,7 +196,9 @@ final class Stubs {
         ASTNode node =
             NodeFinder.perform(unit, p.getSourceStart(), p.getSourceEnd() - p.getSourceStart() + 1);
         switch (p.getID()) {
-          case IProblem.UndefinedMethod -> {
+          // A call that fits no overload of a project method: the stub is an overload, typed from
+          // the call.
+          case IProblem.UndefinedMethod, IProblem.ParameterMismatch -> {
             MethodInvocation call = ancestor(node, MethodInvocation.class);
             if (call != null) {
               method(unit, call);
