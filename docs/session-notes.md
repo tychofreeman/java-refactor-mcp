@@ -383,6 +383,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   into the output, which then does not parse as JSON (the cause of two "not
   JSON" probe outputs, in #6 and #19).
 
+- Tool count limit 50 (roadmap order 15, 2026-11-04): `ToolsTest` holds it. The user
+  raised it from the implied budget to add ten higher-level tools that replace
+  `replace_text` in the composites of the Fowler, Go and IntelliJ comparison.
+  Those ten are not built yet; each is its own PR, in the order the user gave.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
