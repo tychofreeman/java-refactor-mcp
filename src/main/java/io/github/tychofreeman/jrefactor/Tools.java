@@ -202,6 +202,33 @@ final class Tools {
           Kind.REFACTORING,
           Tools::inlineFunction);
 
+  static final Def CHANGE_TYPE =
+      new Def(
+          "change_type",
+          """
+          Change the declared type of a field, so that its uses must still compile: the field \
+          Price.total of type int becomes long. Identify the field as Type.field, a top-level \
+          class of the file.
+          Applies the edit, then type-checks the project: a change that a use no longer compiles \
+          with is rolled back and refused.
+          Refuses, saying why: a name that is not a field of the class, a declaration of several \
+          fields, or a change that adds compile errors, naming them.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the field."},
+              "name": {"type": "string", "description": "Type.field, the field whose type to change."},
+              "type": {"type": "string", "description": "The new type as written, such as long or List<String>."}
+            },
+            "required": ["file", "name", "type"]
+          }\
+          """,
+          Set.of("file", "name", "type"),
+          Kind.REFACTORING,
+          Tools::changeType);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -606,6 +633,7 @@ final class Tools {
           EXTRACT_VARIABLE,
           INLINE_VARIABLE,
           INLINE_FUNCTION,
+          CHANGE_TYPE,
           BATCH,
           UNDO);
 
@@ -662,6 +690,11 @@ final class Tools {
 
   private static Outcome inlineFunction(SourceProject project, Args args) throws Exception {
     return InlineFunction.run(project, args.required("file"), args.required("name"));
+  }
+
+  private static Outcome changeType(SourceProject project, Args args) throws Exception {
+    return ChangeType.run(
+        project, args.required("file"), args.required("name"), args.required("type"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
