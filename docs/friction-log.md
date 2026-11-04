@@ -566,3 +566,7 @@ were written by hand, as the earlier new tools were. The negation rules were the
 The eighth of the ten higher-level tools (`docs/sessions/remove-else.md`). The class and registration
 were written by hand, as the earlier new tools were. The rule (only when the then-branch cannot
 finish normally) keeps the code's meaning; the dedent is the one extra step beyond the plan.
+
+The ninth of the ten higher-level tools (`docs/sessions/move-member.md`). The class and registration
+were written by hand. The receiver parameter was the user's choice; the target limited to the same
+file is a default this PR took and the record names.

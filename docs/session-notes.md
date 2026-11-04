@@ -433,6 +433,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   higher-level tools. Only an if whose then-branch ends in a return, throw, break, continue or
   yield loses its else; the if must be directly in a block.
 
+- `move_member` exists (2026-11-04, `docs/sessions/move-member.md`): the ninth of the ten higher-level
+  tools. An instance method moves to a type of the same file as a static method with the instance as
+  its first parameter, `receiver` (the user's choice over refusing instance uses). A null instance now
+  fails inside the method, not at the call: a behavior difference no static check sees.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

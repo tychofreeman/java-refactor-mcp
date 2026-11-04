@@ -413,6 +413,21 @@ Refusals: no if on the line, several on it, an if with no else, an if not direct
 then-branch that can finish normally (it does not end in return, throw, break, continue or yield),
 and the gate's "would add compile errors".
 
+## `move_member` (built)
+
+Moves a method of a top-level class to another top-level class of the same file. Arguments: `file`,
+`name` (`Type.method`, or `Type.method(params)` for an overload), `to` (the target class).
+
+An instance method becomes static in the target and takes the source instance as its first parameter,
+named `receiver`; every call in the project passes it (`Type.m(instance, args)`). A private method is
+widened to package access (named in the result). Result: `moved Type.m to T in file; N calls rewritten
+in K files`, with `; private widened to package access` when so.
+
+Refusals: an override, a method another class overrides, a constructor, no body, a generic class, a
+method reference to it, a call of itself, super, an anonymous or local class in the body, a call from
+another class with no instance, a nested call inside an argument, and the gate's "would add compile
+errors". A null instance that the method dereferences fails inside it, not at the call.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
