@@ -450,6 +450,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   higher-level tools. Bean-style accessors with optional names (the user's choice). Writes it does not
   rewrite (compound, ++, in an expression, or reading the field too) are refused, not rewritten.
 
+- Effects and exceptions (the user, 2026-11-04; `docs/design.md`, Decisions): preserve every
+  effect in the normal logic flow. Exceptional behavior is not preserved by default, except a guard
+  or a try/catch (keep the source inside the try). A flag lets the model require it, and a tool that
+  changes it without the flag says so in its result. The flag's shape and the alert mechanism are
+  open (design.md, open question 0). `move_member`'s null-receiver change is the first case to
+  alert on.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

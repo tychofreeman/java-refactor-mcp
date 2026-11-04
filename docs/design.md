@@ -48,7 +48,31 @@ the result object. Not chosen: keep the side channel (the option it beats),
 which needs no change to handlers but hides their output from tests and from
 any caller that is not `Tools.call`.
 
+**Decided 2026-11-04: effects in normal flow are preserved; exceptional behavior is not, by default.**
+A refactoring keeps every effect that is part of the normal logic flow: calls, assignments and
+reads, and their order. Exceptional behavior (an exception thrown, a null dereference, an array
+index failing, anything outside the normal flow) is not preserved by default, with two exceptions
+that are kept without a flag:
+- a guard: a null check or condition that stops the exception before it happens (`if (x != null)
+  x.f()`), since the guard is part of the normal logic;
+- a try/catch: the source of an exception that is caught stays inside the `try` block.
+
+The model can require exceptional behavior to be preserved with a flag, for a tool that can
+change it. A tool that detects a change in exceptional behavior it did not preserve says so to the
+model in its result, so the model can decide whether the change is acceptable. Not chosen: always
+preserving exceptional behavior (it would refuse most moves that pass the normal-flow rule, such
+as an inlined initializer that may throw) and ignoring it (the model would not know).
+
 ## Open questions
+
+0. **How exceptional behavior is preserved and reported.** The policy above is decided; these
+   are not. Options: (a) one flag name on every refactoring (`preserve_exceptions=true`), or one
+   per kind of exceptional behavior (`preserve_null_checks`, ...); (b) the alert as text in the
+   result, or as a separate field the model must read. Detection is the hard part: a tool can
+   name what it moved past (a dereference, a call that may throw) without knowing whether it
+   throws. The first step would be a list of the exceptional behaviors each refactoring can
+   change, from the probes, and one tool (`move_member` already has a known null-receiver change)
+   as the test.
 
 1. ~~**Running JDT Core without OSGi.**~~ Answered by the spike in
    `spikes/jdt-headless/` (2026-11-02). Headless `ASTParser` with
