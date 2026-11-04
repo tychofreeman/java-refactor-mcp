@@ -595,7 +595,16 @@ final class Stubs {
       if (b.isTypeVariable() && inScope.contains(b.getName())) {
         return b.getName();
       }
-      if (b.isCapture() || b.isWildcardType() || b.isTypeVariable()) {
+      if (b.isCapture() && b.getWildcard() != null) {
+        return typeName(b.getWildcard());
+      }
+      if (b.isWildcardType()) {
+        ITypeBinding bound = b.getBound();
+        return bound == null
+            ? "?"
+            : (b.isUpperbound() ? "? extends " : "? super ") + typeName(bound);
+      }
+      if (b.isCapture() || b.isTypeVariable()) {
         return typeName(b.getErasure());
       }
       if (b.isAnonymous()) {

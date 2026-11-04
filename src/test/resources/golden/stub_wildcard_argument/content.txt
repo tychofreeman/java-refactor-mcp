@@ -1,0 +1,3 @@
+void run(List<? extends Number> xs) {
+  process(xs);
+}
