@@ -187,6 +187,28 @@ final class Stubs {
       return false;
     }
 
+    /**
+     * Whether an edit removed {@code name} from {@code owner} or, for an unqualified call, from a
+     * type around the call: the call may have meant that method.
+     */
+    private boolean removedAround(
+        MethodInvocation call, ITypeBinding owner, Path target, String name) {
+      if (removed(target, Names.typeLabel(owner), name)) {
+        return true;
+      }
+      if (call.getExpression() != null) {
+        return false;
+      }
+      for (ASTNode a = call.getParent(); a != null; a = a.getParent()) {
+        if (a instanceof AbstractTypeDeclaration t
+            && t.resolveBinding() != null
+            && removed(target, Names.typeLabel(t.resolveBinding()), name)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     /** Adds the stubs that the errors of {@code file} call for. */
     void find(Path file) throws IOException {
       CompilationUnit unit = Jdt.parse(project, file, Files.readString(file));
@@ -249,7 +271,7 @@ final class Stubs {
       }
       Path target = sourceOf(owner);
       String name = call.getName().getIdentifier();
-      if (target == null || owner.isInterface() || removed(target, Names.typeLabel(owner), name)) {
+      if (target == null || owner.isInterface() || removedAround(call, owner, target, name)) {
         return;
       }
       inScope = typeVariablesOf(owner);

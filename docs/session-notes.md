@@ -215,6 +215,9 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `docs/sessions/measure-imports-stubs.md`): a plain `add_declaration` 0.27 s;
   one needing a JDK import 0.96 s; one declaring a stub 0.47 s with a second
   parse.
+- A deleted member that an unqualified call in a nested class still uses is refused,
+  not declared back (2026-11-04, `docs/sessions/stub-after-delete.md`): `Stubs.removedAround`
+  checks the enclosing types too. A sibling nested class is not covered (not reproduced).
 - Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
   takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
   check, now timed apart. Measure undo with the harness, not from its old figures.
