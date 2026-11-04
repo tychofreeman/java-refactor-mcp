@@ -273,6 +273,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   by a stress run on a real project before it is merged, not after: #56's
   first rule missed three of 60 random edits on Commons Math, all through
   inheritance, though every example test passed (2026-11-03).
+- `RefactoringStressTest` (opt-in, `-Djrefactor.stress.root`, `.calls`,
+  `.seed`, `.counts`) calls rename, move_type and the signature and extract
+  tools on random targets of a real project. No failures in 160 calls on
+  Commons Lang and Math (2026-11-03). It prints refusals that the gate made
+  ("stress gated:") in full: those are code a tool wrote that did not
+  compile, a precondition the tool lacks.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
