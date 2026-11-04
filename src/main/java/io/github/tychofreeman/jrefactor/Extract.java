@@ -317,7 +317,7 @@ final class Extract {
     return out;
   }
 
-  static <T extends ASTNode> T ancestor(ASTNode n, Class<T> kind) {
+  static <T extends ASTNode> T ancestorAbove(ASTNode n, Class<T> kind) {
     for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
       if (kind.isInstance(p)) {
         return kind.cast(p);

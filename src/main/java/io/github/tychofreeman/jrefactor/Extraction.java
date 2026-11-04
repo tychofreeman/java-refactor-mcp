@@ -81,7 +81,7 @@ final class Extraction {
     this.sel = sel;
     this.name = name;
     this.doc = doc;
-    this.member = Extract.ancestor(sel.list().get(0), BodyDeclaration.class);
+    this.member = Extract.ancestorAbove(sel.list().get(0), BodyDeclaration.class);
   }
 
   Tools.Outcome apply() throws Exception {
@@ -357,7 +357,7 @@ final class Extraction {
             c.getLabel() != null ? labeled(c, c.getLabel().getIdentifier()) : nearest(c, false);
       } else if (n instanceof YieldStatement y) {
         what = "yield";
-        target = Extract.ancestor(y, SwitchExpression.class);
+        target = Extract.ancestorAbove(y, SwitchExpression.class);
       }
       if (target != null && !sel.contains(target)) {
         throw new Refusal(
@@ -667,7 +667,7 @@ final class Extraction {
 
   /** The enclosing method's type parameters, as written, or nothing. */
   String typeParameters() {
-    MethodDeclaration m = Extract.ancestor(sel.list().get(0), MethodDeclaration.class);
+    MethodDeclaration m = Extract.ancestorAbove(sel.list().get(0), MethodDeclaration.class);
     if (m == null || m.typeParameters().isEmpty()) {
       return "";
     }
