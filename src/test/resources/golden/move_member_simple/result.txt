@@ -1,0 +1,1 @@
+moved Price.charge to Fees in com/example/Price.java; 1 call rewritten in 1 file

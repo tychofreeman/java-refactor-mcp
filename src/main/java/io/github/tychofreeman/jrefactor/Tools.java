@@ -340,6 +340,35 @@ final class Tools {
           Kind.REFACTORING,
           Tools::removeElse);
 
+  static final Def MOVE_MEMBER =
+      new Def(
+          "move_member",
+          """
+          Move a method of a top-level class to another top-level class of the same file. An \
+          instance method becomes static in the target and takes the instance it used as its first \
+          parameter, named receiver; every call in the project passes that instance. A private \
+          method is widened to package access. The name is Type.method, or Type.method(params) for \
+          an overload; to is the target class.
+          Refuses, saying why: an override, a method another class overrides, a constructor, a \
+          method reference to it, a call of itself, super, an anonymous or local class in the body, \
+          a call from another class with no instance, or a change that adds compile errors, naming \
+          them. A null instance that the method dereferences fails inside it, not at the call.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares both classes."},
+              "name": {"type": "string", "description": "Type.method, or Type.method(params) for an overload: the method to move."},
+              "to": {"type": "string", "description": "The other top-level class of the file that the method moves to."}
+            },
+            "required": ["file", "name", "to"]
+          }\
+          """,
+          Set.of("file", "name", "to"),
+          Kind.REFACTORING,
+          Tools::moveMember);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -749,6 +778,7 @@ final class Tools {
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,
+          MOVE_MEMBER,
           BATCH,
           UNDO);
 
@@ -836,6 +866,11 @@ final class Tools {
 
   private static Outcome removeElse(SourceProject project, Args args) throws Exception {
     return RemoveElse.run(project, args.required("file"), args.integer("line"));
+  }
+
+  private static Outcome moveMember(SourceProject project, Args args) throws Exception {
+    return MoveMember.run(
+        project, args.required("file"), args.required("name"), args.required("to"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
