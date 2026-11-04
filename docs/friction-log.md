@@ -509,3 +509,11 @@ goldens and `InlineVariable` were written with Write, since the tool did not exi
 Nothing failed on the first real run, but the goldens were run against the refusal
 text they name, so the phrases are checked. The tool that would have written them:
 none yet; the case is the tool being built.
+
+## 2026-11-04: inline_function's cases and implementation written by hand (before the tool existed)
+
+The third of the ten higher-level tools (`docs/sessions/inline-function.md`). Its
+goldens and `InlineFunction` were written with Write, since the tool did not exist.
+The gate caught the first wrong substitution (the whole statement, not its expression)
+as a syntax error; the golden run caught the blank line left after the method. The tool
+that would have written them: none yet; the case is the tool being built.
