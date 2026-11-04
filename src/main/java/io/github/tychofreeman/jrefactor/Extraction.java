@@ -85,6 +85,68 @@ final class Extraction {
   }
 
   Tools.Outcome apply() throws Exception {
+    Plan p = plan();
+    String invocation = name + "(" + String.join(", ", names(p.params())) + ")";
+    Call c = callOf(p, invocation);
+    String method = methodText(p, c);
+
+    int insertAt = Extract.lineEndOffset(unit, text, line(Extract.endOf(member) - 1));
+    String callLine =
+        indentOf(lineStartOffset(sel.statements().get(0).getStartPosition())) + c.call() + "\n";
+    String edited =
+        text.substring(0, sel.startOffset())
+            + callLine
+            + text.substring(sel.endOffset(), insertAt)
+            + method
+            + text.substring(insertAt);
+    int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
+    Edits.Written written =
+        Edits.gated(
+            project,
+            path,
+            text,
+            edited,
+            List.of(),
+            "extracting " + sel.lines() + " into " + name,
+            "Nothing was changed. Choose lines whose variables and exceptions the new method can"
+                + " take, or adjust them first.");
+    Imports.Fixed fixed = written.fixed();
+    Stubs.Declared stubs = written.declared();
+    int shift = fixed.lineShift();
+    int first = Lines.number(edited, methodAt) + shift;
+    int last = Lines.number(edited, methodAt + method.length() - 2) + shift;
+    return new Tools.Outcome(
+        "extracted "
+            + sel.lines()
+            + " of "
+            + rel
+            + " into "
+            + signature(p)
+            + (p.results().isEmpty() ? "" : ", returning " + p.results().get(0).getName())
+            + ", at lines "
+            + first
+            + "-"
+            + last
+            + "; the call is line "
+            + (sel.startLine() + shift)
+            + (p.params().size() > 5
+                ? "; it takes " + p.params().size() + " parameters, and fewer lines may read better"
+                : "")
+            + fixed.said(),
+        stubs);
+  }
+
+  /** What the extraction works out before it writes: the parameters, the value and the returns. */
+  private record Plan(
+      Map<IVariableBinding, Boolean> used,
+      List<IVariableBinding> params,
+      List<IVariableBinding> results,
+      List<ReturnStatement> returns,
+      ITypeBinding enclosingResult,
+      boolean voidResult) {}
+
+  /** Refuses what the new method cannot be, and works out what it takes and returns. */
+  private Plan plan() throws Exception {
     refuseClash();
     refuseConstructorCalls();
     refuseJumps();
@@ -150,18 +212,19 @@ final class Extraction {
                 + " every path, or lines without a return.");
       }
     }
+    return new Plan(used, params, results, returns, enclosingResult, voidResult);
+  }
 
-    boolean isStatic = Modifier.isStatic(member.getModifiers());
-    String resultType;
-    String returnLine = null;
-    String call;
-    String invocation = name + "(" + String.join(", ", names(params)) + ")";
-    if (!results.isEmpty()) {
-      IVariableBinding r = results.get(0);
-      resultType = Extract.typeName(r.getType());
-      returnLine = "return " + r.getName() + ";";
-      call =
-          used.get(r)
+  /** The call that replaces the statements, with the new method's result type and return line. */
+  private record Call(String resultType, String returnLine, String call) {}
+
+  /** The call line for {@code invocation} (the new method's call), by what the method returns. */
+  private static Call callOf(Plan p, String invocation) {
+    if (!p.results().isEmpty()) {
+      IVariableBinding r = p.results().get(0);
+      String resultType = Extract.typeName(r.getType());
+      String call =
+          p.used().get(r)
               ? (Modifier.isFinal(r.getModifiers()) ? "final " : "")
                   + resultType
                   + " "
@@ -170,27 +233,37 @@ final class Extraction {
                   + invocation
                   + ";"
               : r.getName() + " = " + invocation + ";";
-    } else if (!returns.isEmpty() && !voidResult) {
-      resultType = Extract.typeName(enclosingResult);
-      call = "return " + invocation + ";";
-    } else {
-      resultType = "void";
-      call = invocation + ";";
+      return new Call(resultType, "return " + r.getName() + ";", call);
     }
+    if (!p.returns().isEmpty() && !p.voidResult()) {
+      return new Call(Extract.typeName(p.enclosingResult()), null, "return " + invocation + ";");
+    }
+    return new Call("void", null, invocation + ";");
+  }
 
+  /** The new method's signature, {@code name(T a, U b)}, from its parameters. */
+  private String signature(Plan p) {
     List<String> declared = new ArrayList<>();
-    for (IVariableBinding v : params) {
+    for (IVariableBinding v : p.params()) {
       declared.add(Extract.typeName(v.getType()) + " " + v.getName());
     }
-    String signature = name + "(" + String.join(", ", declared) + ")";
+    return name + "(" + String.join(", ", declared) + ")";
+  }
+
+  /**
+   * The new method's text, from its Javadoc through its closing brace, indented as the member
+   * around it, with the selected statements moved into it.
+   */
+  private String methodText(Plan p, Call c) throws Exception {
+    boolean isStatic = Modifier.isStatic(member.getModifiers());
     List<String> thrown = thrown();
     String header =
         "private "
             + (isStatic ? "static " : "")
             + typeParameters()
-            + resultType
+            + c.resultType()
             + " "
-            + signature
+            + signature(p)
             + (thrown.isEmpty() ? "" : " throws " + String.join(", ", thrown))
             + " {";
 
@@ -206,54 +279,11 @@ final class Extraction {
     }
     method.append(memberIndent).append(header).append("\n");
     method.append(reindent(statementIndent, bodyIndent));
-    if (returnLine != null) {
-      method.append(bodyIndent).append(returnLine).append("\n");
+    if (c.returnLine() != null) {
+      method.append(bodyIndent).append(c.returnLine()).append("\n");
     }
     method.append(memberIndent).append("}\n");
-
-    int insertAt = Extract.lineEndOffset(unit, text, line(Extract.endOf(member) - 1));
-    String callLine = statementIndent + call + "\n";
-    String edited =
-        text.substring(0, sel.startOffset())
-            + callLine
-            + text.substring(sel.endOffset(), insertAt)
-            + method
-            + text.substring(insertAt);
-    int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
-    Edits.Written written =
-        Edits.gated(
-            project,
-            path,
-            text,
-            edited,
-            List.of(),
-            "extracting " + sel.lines() + " into " + name,
-            "Nothing was changed. Choose lines whose variables and exceptions the new method can"
-                + " take, or adjust them first.");
-    Imports.Fixed fixed = written.fixed();
-    Stubs.Declared stubs = written.declared();
-    int shift = fixed.lineShift();
-    int first = Lines.number(edited, methodAt) + shift;
-    int last = Lines.number(edited, methodAt + method.length() - 2) + shift;
-    return new Tools.Outcome(
-        "extracted "
-            + sel.lines()
-            + " of "
-            + rel
-            + " into "
-            + signature
-            + (results.isEmpty() ? "" : ", returning " + results.get(0).getName())
-            + ", at lines "
-            + first
-            + "-"
-            + last
-            + "; the call is line "
-            + (sel.startLine() + shift)
-            + (params.size() > 5
-                ? "; it takes " + params.size() + " parameters, and fewer lines may read better"
-                : "")
-            + fixed.said(),
-        stubs);
+    return method.toString();
   }
 
   /** Refuses a name some method of the type, or of its supertypes, already has. */
