@@ -188,7 +188,8 @@ final class Tools {
           a call nested in another call's arguments; a parameter used twice when its argument \
           calls or assigns; a method with no calls; an argument that calls, assigns or reads a \
           field when an effect of the body runs before its use, or its use is in a lambda or \
-          (for one with an effect) a branch: put it in a variable first.\
+          (for one with an effect) a branch, or an argument with an effect and one that reads \
+          state used in the other order than passed: put it in a variable first.\
           """,
           """
           {

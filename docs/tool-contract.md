@@ -363,7 +363,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   that calls, assigns, or reads a field or array element, when an effect of the body
   (a call, an assignment, an increment) comes before its use, or its use is inside a
   lambda or anonymous class, or, for one with an effect, in a `?:` branch or right of
-  `&&` / `||` (it would run later, after the effect, or not at all).
+  `&&` / `||` (it would run later, after the effect, or not at all); two such
+  arguments, one with an effect, that the body first uses in the other order than the
+  call passes them (`f(bump(), count)` with `b + a`).
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
   several-statement bodies, inlining one call at a time.
 
