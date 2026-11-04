@@ -126,4 +126,36 @@ class TypeCheckTest {
     assertEquals(Map.of(), TypeCheck.errors(project));
     assertEquals(Set.of("C.java", "E.java"), lastParsed(project));
   }
+
+  /** From the stress test on Commons Math: a member change a subclass inherits. */
+  @Test
+  void aChangedMemberRechecksSubclassesThatDoNotNameIt(@TempDir Path root) throws Exception {
+    write(root, "I", "interface I {\n  boolean full();\n}");
+    write(
+        root,
+        "Base",
+        "abstract class Base implements I {\n  public boolean full() {\n    return true;\n  }\n}");
+    write(root, "Sub", "class Sub extends Base {}");
+    SourceProject project = SourceProject.of(root);
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    write(
+        root,
+        "Base",
+        "abstract class Base implements I {\n  public static boolean full() {\n    return true;\n  }\n}");
+
+    assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project));
+  }
+
+  /** From the stress test on Commons Math: a supertype change seen through a subclass only. */
+  @Test
+  void aChangedSupertypeRechecksUsersOfItsSubclasses(@TempDir Path root) throws Exception {
+    write(root, "Bad", "class Bad extends RuntimeException {}");
+    write(root, "Worse", "class Worse extends Bad {}");
+    write(root, "User", "class User {\n  void u() {\n    throw new Worse();\n  }\n}");
+    SourceProject project = SourceProject.of(root);
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    write(root, "Bad", "class Bad {}");
+
+    assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project));
+  }
 }

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import org.eclipse.jdt.core.compiler.IProblem;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -35,7 +37,7 @@ final class TypeCheck {
   record Counted(
       SourceProject project,
       Map<Path, String> hashes,
-      Map<Path, Map<String, String>> headers,
+      Map<Path, Map<String, Headers.Decl>> headers,
       Map<String, Integer> counts) {}
 
   /**
@@ -59,7 +61,7 @@ final class TypeCheck {
       session.lastCount = narrowed(project, files, hashes, last);
       return new TreeMap<>(session.lastCount.counts());
     }
-    Map<Path, Map<String, String>> headers = new HashMap<>();
+    Map<Path, Map<String, Headers.Decl>> headers = new HashMap<>();
     Map<String, Integer> counts = count(project, files, headers);
     session.lastParsed = files;
     session.lastCount = new Counted(project, hashes, headers, new TreeMap<>(counts));
@@ -67,20 +69,22 @@ final class TypeCheck {
   }
 
   /**
-   * The count after the files whose hashes differ from {@code last}'s changed: those files and the
-   * files that mention a name whose header changed are counted again, the rest kept.
+   * The count after the files whose hashes differ from {@code last}'s changed. Counted again: those
+   * files; the files that declare a subtype of a type whose header or member changed, or a type
+   * whose header names one, and so on; and the files that mention a name any of those changes
+   * touched, or create one of those types. The rest are kept.
    */
   private static Counted narrowed(
       SourceProject project, List<Path> files, Map<Path, String> hashes, Counted last)
       throws IOException {
-    Map<Path, Map<String, String>> headers = new HashMap<>(last.headers());
-    Set<String> names = new HashSet<>();
+    Map<Path, Map<String, Headers.Decl>> headers = new HashMap<>(last.headers());
+    Set<String> changed = new HashSet<>();
     Set<Path> recheck = new LinkedHashSet<>();
     for (Path f : files) {
       if (!hashes.get(f).equals(last.hashes().get(f))) {
         String text = Files.readString(f);
-        Map<String, String> now = Headers.of(text, Jdt.parseSyntax(text));
-        names.addAll(Headers.changed(headers.getOrDefault(f, Map.of()), now));
+        Map<String, Headers.Decl> now = Headers.of(text, Jdt.parseSyntax(text));
+        changed.addAll(Headers.changed(headers.getOrDefault(f, Map.of()), now));
         headers.put(f, now);
         recheck.add(f);
       }
@@ -88,15 +92,47 @@ final class TypeCheck {
     Set<String> gone = new HashSet<>();
     for (Path f : last.hashes().keySet()) {
       if (!hashes.containsKey(f)) {
-        names.addAll(headers.getOrDefault(f, Map.of()).keySet());
+        changed.addAll(headers.getOrDefault(f, Map.of()).keySet());
         headers.remove(f);
         gone.add(project.relative(f));
       }
     }
+    // The names to look for, and the types whose subtypes and dependents change with them.
+    Set<String> names = new HashSet<>();
+    Set<String> types = new HashSet<>();
+    for (String key : changed) {
+      int member = key.indexOf('#');
+      names.add(member < 0 ? key : key.substring(member + 1));
+      types.add(member < 0 ? key : key.substring(0, member));
+    }
+    for (boolean grew = !types.isEmpty(); grew; ) {
+      grew = false;
+      for (Map.Entry<Path, Map<String, Headers.Decl>> file : headers.entrySet()) {
+        for (Map.Entry<String, Headers.Decl> d : file.getValue().entrySet()) {
+          if (Collections.disjoint(d.getValue().types(), types)) {
+            continue;
+          }
+          String key = d.getKey();
+          int member = key.indexOf('#');
+          if (member >= 0) {
+            // A member whose header names a changed type changed too: its type's subtypes follow.
+            names.add(key.substring(member + 1));
+            grew |= types.add(key.substring(0, member));
+          } else {
+            grew |= types.add(key);
+            names.add(key);
+            recheck.add(file.getKey());
+          }
+        }
+      }
+    }
     if (!names.isEmpty()) {
       for (Path f : files) {
-        if (!recheck.contains(f) && Headers.mentions(Files.readString(f), names)) {
-          recheck.add(f);
+        if (!recheck.contains(f)) {
+          String text = Files.readString(f);
+          if (Headers.mentions(text, names) || Headers.creates(text, types)) {
+            recheck.add(f);
+          }
         }
       }
     }
@@ -136,7 +172,7 @@ final class TypeCheck {
    * headers}, unless it is null.
    */
   private static Map<String, Integer> count(
-      SourceProject project, List<Path> files, Map<Path, Map<String, String>> headers) {
+      SourceProject project, List<Path> files, Map<Path, Map<String, Headers.Decl>> headers) {
     Map<String, Integer> counts = new TreeMap<>();
     project.session().parses++;
     Jdt.parseAll(
@@ -195,7 +231,13 @@ final class TypeCheck {
           ObjectNode f = files.putObject(path.toString());
           f.put("hash", hash);
           ObjectNode names = f.putObject("headers");
-          last.headers().getOrDefault(path, Map.of()).forEach(names::put);
+          last.headers()
+              .getOrDefault(path, Map.of())
+              .forEach((key, d) -> {
+                ObjectNode decl = names.putObject(key);
+                decl.put("hash", d.hash());
+                d.types().forEach(decl.putArray("types")::add);
+              });
         });
     ObjectNode counts = out.putObject("counts");
     last.counts().forEach(counts::put);
@@ -217,13 +259,17 @@ final class TypeCheck {
       return;
     }
     Map<Path, String> hashes = new HashMap<>();
-    Map<Path, Map<String, String>> headers = new HashMap<>();
+    Map<Path, Map<String, Headers.Decl>> headers = new HashMap<>();
     for (Map.Entry<String, JsonNode> f : in.path("files").properties()) {
       Path path = Path.of(f.getKey());
       hashes.put(path, f.getValue().path("hash").asString());
-      Map<String, String> names = new TreeMap<>();
+      Map<String, Headers.Decl> names = new TreeMap<>();
       for (Map.Entry<String, JsonNode> n : f.getValue().path("headers").properties()) {
-        names.put(n.getKey(), n.getValue().asString());
+        Set<String> types = new TreeSet<>();
+        for (JsonNode t : n.getValue().path("types").values()) {
+          types.add(t.asString());
+        }
+        names.put(n.getKey(), new Headers.Decl(n.getValue().path("hash").asString(), types));
       }
       headers.put(path, names);
     }
@@ -237,7 +283,7 @@ final class TypeCheck {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   /** The version of what {@link #save} writes; a file of another version is not loaded. */
-  private static final int FORMAT = 2;
+  private static final int FORMAT = 3;
 
   /** What a count depends on besides the files: the source roots and the classpath. */
   private static String build(SourceProject project) {

@@ -136,7 +136,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records (`bin/session-log`, `bin/session-report`; the hook in Java from the jar, the user's choice of 2026-11-03 over shell and jq; tokens not yet) | Done | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
 | 12 | 14 | Golden cases also undo each applied step and compare with `in/`; incremental state compared with a fresh load | Done | `GoldenTest` undoes each write and checks `TypeCheck.errors` against `TypeCheck.uncached`; record in `docs/sessions/golden-undo-check.md` |
 | 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed |
-| 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Open | From gorefactor; compare versions on identical input |
+| 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Partly done | From gorefactor; compare versions on identical input; `NarrowCheckStressTest` for the narrowed type check (`-Djrefactor.stress.root`, `.edits`, `.seed`, `.counts=true` for counts only), record in `docs/sessions/stress-narrow-check.md` |
 | 15 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Open | gorefactor's tool budget |
 | 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
 | 17 | 25 | `pull_up` and `push_down` for methods (and fields): move a member to a supertype or to its subtypes, with the type-check gate behind it | Open | The user asked, 2026-11-03; no friction entry yet, so it waits for one. Also worth a look for gorefactor (Go has embedding, not inheritance: the nearest is moving a method between a struct and the one it embeds) and the TypeScript port |
@@ -171,7 +171,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 46 | 53 | Command line: `bin/jrefactor`, one tool call per run, the undo stack kept between runs (gorefactor's `cmd/refactor`) | Done | The user asked (2026-11-03): another session ran in a container where the MCP server cannot run, and made every edit by hand. Record in `docs/sessions/cli.md`. Runs made faster (a read 9.4 s to 0.3 s, an edit 4.7 s to 2.4 s) in `docs/sessions/cli-cache.md` |
 | 47 | 54 | Imports fixed only for a file under a source root: `create_file` of a file outside the source roots (a golden's expected file) was refused for an ambiguous name it does not need to resolve | Done | Friction log 2026-11-03 (the `move_type` golden). `Edits.gated` applies the text as written when `SourceProject.packageOf` is null. Record: `docs/sessions/imports-source-root.md` |
 | 48 | 55 | A stub for a call that fits no overload of a project method: `add_declaration` of a test calling `add("apple", quantity)` on a `Cart` with only `add(String)` was refused, where a new name would have got a stub | Done | Friction log 2026-11-03 (`docs/sessions/cli-cache.md`). `Stubs.find` handles `IProblem.ParameterMismatch` as an undefined method. Record: `docs/sessions/stub-overload.md` |
-| 49 | 56 | The check after an edit parses only the changed files and those that name a declaration whose header changed (`Headers`) | Done | Follow-up of #10 and the command line. Commons Math: one edit 2.1 s to 63 ms, `rename` 2.4 s to 0.9 s, `add_parameter` 3.2 s to 1.4 s. Record in `docs/sessions/narrow-check.md` |
+| 49 | 56 | The check after an edit parses only the changed files and those that name a declaration whose header changed (`Headers`) | Done | Follow-up of #10 and the command line. Commons Math: one edit 2.1 s to 64 ms, `rename` 2.4 s to 1.3 s, `add_parameter` 3.2 s to 1.9 s, after the stress test's fixes. Records in `docs/sessions/narrow-check.md` and `docs/sessions/stress-narrow-check.md` |
 
 ### Why this order
 
@@ -209,10 +209,17 @@ On Commons Math (990 files, 224k lines) one edit cost about 2 s (roadmap #10).
 The check after an edit is narrowed (roadmap #56): each file's `Headers` (for
 each simple name it declares, a hash of the declarations' text up to their
 bodies, with the package and the imports that text names) are kept with the
-count. Only the changed files are parsed again, plus the files that mention,
-as a whole identifier, a name whose header changed. A body change re-checks
-one file. A header change reaches another file only through a name that file
-writes, even through a chain (`b.a().m()` names `m`). On Commons Math, one
-edit takes 63 ms, a field rename in 10 files 0.9 s (34 files re-checked) and
-`add_parameter` 1.4 s (16 files). `GoldenTest` compares every step's count
-with a fresh one, and the opt-in `GateCostTest` does the same on a real project.
+count, members keyed by their type (`Shop#total`), with the type names each
+header mentions. Only the changed files are parsed again, plus: the files of
+every type that is "changed" (a type whose header or member changed, a type
+whose header names a changed type, as a subtype does, and the type of a member
+whose header names one), repeated until nothing grows; and the files that
+mention, as a whole identifier, a name any of those touched, or write `new T`
+of a changed type (an anonymous subclass). A body change re-checks one file.
+On Commons Math, one edit takes 64 ms, a field rename in 10 files 1.3 s (114
+files re-checked) and `add_parameter` 1.9 s (124 files). `GoldenTest`
+compares every step's count with a fresh one; `NarrowCheckStressTest` makes
+random declaration edits to a real project and compares each (roadmap #16):
+a first version, which followed names only, missed three of 60 on Commons
+Math, all through inheritance, and the rule above missed none of 240 there
+and 100 on Commons Lang.
