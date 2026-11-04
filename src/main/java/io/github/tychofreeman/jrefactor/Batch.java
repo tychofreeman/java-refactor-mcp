@@ -15,7 +15,7 @@ final class Batch {
 
   private Batch() {}
 
-  static Tools.Outcome run(SourceProject project, Args args) throws Exception {
+  static Outcome run(SourceProject project, Args args) throws Exception {
     List<Map<String, Object>> steps = args.objects("steps");
     if (steps.isEmpty()) {
       throw new Refusal("batch needs steps: a list of {\"tool\": ..., \"args\": {...}}.");
@@ -31,10 +31,10 @@ final class Batch {
               () -> steps(project, steps, true),
               "the batch",
               "Add the steps that fix them, or change the steps that cause them.");
-      return new Tools.Outcome(
+      return new Outcome(
           checked.result() + "\nchecked at the end: no new compile errors", checked.declared());
     }
-    return Tools.Outcome.of(steps(project, steps, false));
+    return Outcome.of(steps(project, steps, false));
   }
 
   /**

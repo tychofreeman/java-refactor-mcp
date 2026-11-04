@@ -93,7 +93,7 @@ final class SignatureChange {
   }
 
   /** Applies the edits, fixes each file's imports, and writes them all under the gate. */
-  Tools.Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
+  Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
     Map<Path, String> texts = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
     List<String> notes = new ArrayList<>();
@@ -132,7 +132,7 @@ final class SignatureChange {
                 + " that does.");
     int d = family.decls.size();
     int c = family.calls.size();
-    return new Tools.Outcome(
+    return new Outcome(
         what
             + " in "
             + d

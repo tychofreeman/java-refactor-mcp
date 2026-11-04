@@ -19,7 +19,7 @@ class ToolsCallTest {
     Files.writeString(cart, "package com.example;\n\npublic class Cart {\n}\n");
     SourceProject project = SourceProject.of(root);
 
-    Tools.Outcome outcome =
+    Outcome outcome =
         Tools.call(
             Tools.named("create_file"),
             project,
@@ -52,7 +52,7 @@ class ToolsCallTest {
           if (!check.introduced().isEmpty()) {
             throw new Refusal("writer: " + check.introduced());
           }
-          return new Tools.Outcome("wrote", check.declared());
+          return new Outcome("wrote", check.declared());
         });
   }
 
@@ -77,7 +77,7 @@ class ToolsCallTest {
   @Test
   void anEditGetsStubs(@TempDir Path root) throws Exception {
     SourceProject project = cartProject(root);
-    Tools.Outcome outcome = Tools.call(writer(Tools.Kind.EDIT), project, Map.of());
+    Outcome outcome = Tools.call(writer(Tools.Kind.EDIT), project, Map.of());
     assertEquals("com/example/Cart.java", outcome.declared().byFile().keySet().iterator().next());
   }
 }

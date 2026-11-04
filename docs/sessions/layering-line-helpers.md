@@ -31,3 +31,34 @@ are the last two copies, each a wrapper over `Lines` or its own duplicate.
 
 ## Notes
 
+- `plan:` the premise was stale. `Tools.lines` and `Edits.lineOf` are gone
+  (#27 left only `Lines`), and grep found no caller of either. The coupling that
+  remains: domain classes return `Tools.Outcome`, and `Declarations` and
+  `Extraction` call `Edits.gated`, `Edits.parses` and `Edits.Written`.
+- `decision:` the user chose "Outcome out of Tools" over moving the gate helpers
+  too, and over closing the item as stale. The gate helpers stay in `Edits`.
+
+## Measured
+
+Not measured: no session log for this branch (`bin/session-report` found none).
+Counted from the notes: 1 `move_type` call through `bin/jrefactor` (34 references
+in 11 files), 0 hand writes of Java, 1 `spotless:apply` run, 0 refusals.
+
+## Assessment
+
+- **Through the tools or around them:** through the tools. The move was one
+  `move_type` call; every reference followed.
+- **Large writes:** none.
+- **Did the plan hold?** No. The premise (`Tools.lines`, `Edits.lineOf`) was
+  stale, and the change became the one the user chose from the real coupling.
+  The first two operations of the plan were the check that found this.
+- **Reading:** none beyond grep for the callers.
+- **One change that would have helped:** the roadmap row should have been
+  checked against the code before the item was offered; a row that names
+  removed code is an open item that is already done.
+
+## Follow-ups
+
+- `Edits.gated`, `Edits.parses` and `Edits.Written` are still called by domain
+  classes (`Declarations`, `Extraction`). The user chose to keep them in
+  `Edits`; a later item may move them if the coupling is judged to matter.

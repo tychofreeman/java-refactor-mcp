@@ -27,7 +27,7 @@ final class Extract {
 
   private Extract() {}
 
-  static Tools.Outcome method(SourceProject project, Args args) throws Exception {
+  static Outcome method(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
     String name = args.required("name");
     Integer startArg = args.integer("start_line");

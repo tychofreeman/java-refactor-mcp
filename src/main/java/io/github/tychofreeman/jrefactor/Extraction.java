@@ -84,7 +84,7 @@ final class Extraction {
     this.member = Extract.ancestorAbove(sel.list().get(0), BodyDeclaration.class);
   }
 
-  Tools.Outcome apply() throws Exception {
+  Outcome apply() throws Exception {
     Plan p = plan();
     String invocation = name + "(" + String.join(", ", names(p.params())) + ")";
     Call c = callOf(p, invocation);
@@ -115,7 +115,7 @@ final class Extraction {
     int shift = fixed.lineShift();
     int first = Lines.number(edited, methodAt) + shift;
     int last = Lines.number(edited, methodAt + method.length() - 2) + shift;
-    return new Tools.Outcome(
+    return new Outcome(
         "extracted "
             + sel.lines()
             + " of "
