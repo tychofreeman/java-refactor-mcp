@@ -403,6 +403,16 @@ import is added. Refusals: no if on the line, several on it, an if with no else,
 (invert the inner if), an ordering comparison on a float or double (NaN), and the gate's "would add
 compile errors".
 
+## `remove_else` (built)
+
+Removes the else of an if whose then-branch cannot finish normally; the else's statements then follow
+the if, at its indentation. Arguments: `file`, `line` (the line the if starts on).
+
+Result: `removed the else of the if at line L in file`, with `; imported ...` when an import is added.
+Refusals: no if on the line, several on it, an if with no else, an if not directly in a block, a
+then-branch that can finish normally (it does not end in return, throw, break, continue or yield),
+and the gate's "would add compile errors".
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

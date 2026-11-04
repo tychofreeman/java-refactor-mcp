@@ -429,6 +429,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   tools. The negated condition simplifies comparisons (the user's choice over always `!(...)` and over
   refusing non-simple conditions). An ordering comparison on a float or double is refused (NaN).
 
+- `remove_else` exists (2026-11-04, `docs/sessions/remove-else.md`): the eighth of the ten
+  higher-level tools. Only an if whose then-branch ends in a return, throw, break, continue or
+  yield loses its else; the if must be directly in a block.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

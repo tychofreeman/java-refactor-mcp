@@ -1,0 +1,1 @@
+removed the else of the if at line 5 in com/example/Price.java

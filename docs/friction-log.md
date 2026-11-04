@@ -562,3 +562,7 @@ which the refactoring now does without it.
 The seventh of the ten higher-level tools (`docs/sessions/invert-if.md`). The class and registration
 were written by hand, as the earlier new tools were. The negation rules were the user's choice
 (simplify comparisons; refuse ordering comparisons on floats).
+
+The eighth of the ten higher-level tools (`docs/sessions/remove-else.md`). The class and registration
+were written by hand, as the earlier new tools were. The rule (only when the then-branch cannot
+finish normally) keeps the code's meaning; the dedent is the one extra step beyond the plan.
