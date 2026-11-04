@@ -1,0 +1,1 @@
+moving Shop.Line to com/example/Line.java would add compile errors, so nothing was changed

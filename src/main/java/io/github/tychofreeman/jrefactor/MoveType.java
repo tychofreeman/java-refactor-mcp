@@ -177,16 +177,13 @@ final class MoveType {
       changed.put(target, created);
     }
 
-    Stubs.Check check = Gate.apply(project, changed);
-    if (!check.introduced().isEmpty()) {
-      throw new Refusal(
-          "moving "
-              + name
-              + " to "
-              + project.relative(target)
-              + " would introduce compile errors, so nothing was changed:\n  "
-              + String.join("\n  ", check.introduced()));
-    }
+    Stubs.Declared declared =
+        Gate.applyOrRefuse(
+            project,
+            changed,
+            "moving " + name + " to " + project.relative(target),
+            "Rename one of the clashing types, or choose another name for the moved type, then"
+                + " move it again.");
     String result =
         "moved "
             + name
@@ -209,7 +206,7 @@ final class MoveType {
     if (!widened.isEmpty()) {
       result += "; widened " + joinAnd(new ArrayList<>(widened.values())) + " to package-private";
     }
-    return new Tools.Outcome(result, check.declared());
+    return new Tools.Outcome(result, declared);
   }
 
   /**
