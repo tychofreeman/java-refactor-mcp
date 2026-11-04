@@ -411,6 +411,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   tool working out the supertype's kind. Interfaces take `extends` into their list; a class's
   `extends` goes before any `implements` clause. No stubs: it is a refactoring.
 
+- `move_statement` exists (2026-11-04, `docs/sessions/move-statement.md`): the sixth of the ten
+  higher-level tools. Two adjacent statements in one block trade places. The default rule is
+  strict (no shared written name, at most one side effect); `names_only=true` relaxes it to the
+  shared-name rule. The user chose this over Names-only as the default and over a `force` flag.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

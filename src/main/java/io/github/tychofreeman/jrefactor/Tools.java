@@ -258,6 +258,37 @@ final class Tools {
           Kind.REFACTORING,
           Tools::addSupertype);
 
+  static final Def MOVE_STATEMENT =
+      new Def(
+          "move_statement",
+          """
+          Swap a statement with the one before it (direction up) or after it (direction down), in \
+          the same block. Identify the statement by the line it starts on.
+          The two statements must be independent. Strict (the default): they share no name that \
+          one of them writes, and at most one of them has a side effect (a call, an assignment, a \
+          new object). names_only=true relaxes that to the shared-name rule only, so two calls can \
+          swap order: pass it only when the order of the calls does not matter.
+          A return, break, continue, throw or yield never moves. Applies the edit, then type-checks \
+          the project: a swap that adds compile errors is rolled back and refused.
+          Refuses, saying why: no statement starts on the line, a statement with no neighbour in \
+          that direction, a shared name, two side effects under the strict rule, or a jump.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root."},
+              "line": {"type": "integer", "description": "The 1-based line the statement starts on."},
+              "direction": {"type": "string", "enum": ["up", "down"], "description": "up swaps with the statement before it; down with the one after."},
+              "names_only": {"type": "boolean", "description": "Relax the side-effect rule: only a shared name that one statement writes refuses the swap."}
+            },
+            "required": ["file", "line", "direction"]
+          }\
+          """,
+          Set.of("file", "line", "direction", "names_only"),
+          Kind.REFACTORING,
+          Tools::moveStatement);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -664,6 +695,7 @@ final class Tools {
           INLINE_FUNCTION,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
+          MOVE_STATEMENT,
           BATCH,
           UNDO);
 
@@ -734,6 +766,15 @@ final class Tools {
         args.required("name"),
         args.required("relation"),
         args.required("supertype"));
+  }
+
+  private static Outcome moveStatement(SourceProject project, Args args) throws Exception {
+    return MoveStatement.run(
+        project,
+        args.required("file"),
+        args.integer("line"),
+        args.required("direction"),
+        args.flag("names_only"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
