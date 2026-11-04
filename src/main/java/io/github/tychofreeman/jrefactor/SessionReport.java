@@ -24,7 +24,7 @@ final class SessionReport {
 
   private SessionReport() {}
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = SessionLog.JSON;
 
   /** The server's tools by name. */
   private static final Map<String, Tools.Kind> KINDS = kinds();
