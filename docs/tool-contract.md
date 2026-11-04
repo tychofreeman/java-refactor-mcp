@@ -102,7 +102,10 @@ package:
   becomes `import a.Inner` (removed in the same package), and a file in another
   package that wrote `Outer.Inner` gets `import a.Inner`;
 - inside the moved type, unqualified uses of the outer type's static methods,
-  static fields and other member types are qualified with `Outer.`;
+  static fields and other member types are qualified with `Outer.`, and those
+  the outer type (or a type enclosing it) inherits with the declaring type's
+  name (`Base.Helper`), keeping its import; what the moved type reaches
+  through its own supertypes is left alone;
 - a private member that the moved type uses from the outer file, or that the
   outer file uses from the moved type, becomes package-private (the user's
   choice, 2026-11-03, over refusing with their names).

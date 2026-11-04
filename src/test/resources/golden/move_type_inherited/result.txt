@@ -1,0 +1,1 @@
+moved Outer.Inner to com/example/Inner.java (11 lines)
