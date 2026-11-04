@@ -217,7 +217,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   parse.
 - A deleted member that an unqualified call in a nested class still uses is refused,
   not declared back (2026-11-04, `docs/sessions/stub-after-delete.md`): `Stubs.removedAround`
-  checks the enclosing types too. A sibling nested class is not covered (not reproduced).
+  checks the enclosing types too. The removal check also reads the supertypes of the
+  owner and of each enclosing type, each in its own file (2026-11-04,
+  `docs/sessions/stub-after-delete-inherited.md`): an inherited method deleted from a
+  superclass in another file is refused. A sibling nested class is not covered (not reproduced).
 - A stub that is the expression of an enhanced `for` is typed `List<` the loop
   variable's type `>` (2026-11-04, `docs/sessions/stub-enhanced-for.md`). A primitive
   loop variable is boxed (`List<Integer>`, 2026-11-04, `docs/sessions/stub-enhanced-for-primitive.md`);

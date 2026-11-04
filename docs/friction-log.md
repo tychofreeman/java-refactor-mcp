@@ -477,3 +477,5 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: declare stubs only for edits (code the model wrote), not for a
   refactoring's own output, which changes no behavior and so needs none; a
   name a refactoring leaves unresolved is its bug, and should be refused.
+
+2026-11-04: a method deleted from a superclass in another file was still stubbed in a subclass that inherits it (`docs/sessions/stub-after-delete-inherited.md`). The Java was written by Edit (`removedAround` gained a supertype check, `removedInSupertypes` added), not by a tool: `replace_declaration` would fit `removedAround` and `add_declaration` the new method. The tool server was not loaded in that session, so no tool was tried; the gap is the session, recorded in the record.
