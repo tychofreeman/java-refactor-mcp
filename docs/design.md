@@ -49,6 +49,12 @@ which needs no change to handlers but hides their output from tests and from
 any caller that is not `Tools.call`.
 
 **Decided 2026-11-04: effects in normal flow are preserved; exceptional behavior is not, by default.**
+
+This extends the definition of refactoring as a behavior-preserving transformation. A
+transformation cannot preserve every kind of behavior, so a refactoring is defined by the kinds it
+keeps, and choosing those kinds is part of the design. Normal logic flow is the kind kept by
+default. Exceptional behavior is kept only where a guard or a try/catch makes it part of the normal
+logic; elsewhere it is a concession, made knowingly and reported.
 A refactoring keeps every effect that is part of the normal logic flow: calls, assignments and
 reads, and their order. Exceptional behavior (an exception thrown, a null dereference, an array
 index failing, anything outside the normal flow) is not preserved by default, with two exceptions
