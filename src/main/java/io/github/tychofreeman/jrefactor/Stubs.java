@@ -87,6 +87,9 @@ final class Stubs {
   static Check declare(SourceProject project, Map<String, Integer> before, Map<Path, String> old)
       throws IOException {
     List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
+    if (!project.session().editing) {
+      return new Check(introduced, Declared.NONE);
+    }
     Round round = new Round(project, old);
     for (int i = 0; i < ROUNDS && !introduced.isEmpty(); i++) {
       round.wanted.clear();
