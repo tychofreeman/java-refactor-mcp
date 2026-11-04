@@ -20,3 +20,21 @@ Operations, in order:
 
 ## Notes
 
+- `tool:` the rename went through `bin/jrefactor rename` (3 occurrences, one file),
+  not by hand. No Java was written by hand.
+- `plan:` held; no operation was needed beyond the rename.
+
+## Measured
+
+Not measured: no session log for this branch. Counted from the notes: 1 `rename`
+call, 0 hand writes, 1 `spotless:apply` run, 0 refusals.
+
+## Assessment
+
+- **Through the tools or around them:** through the tools.
+- **Did the plan hold?** Yes.
+
+## Follow-ups
+
+- The `Extract` half of the row (`declaredInside`) was done earlier; this closes the
+  `Stubs` half.
