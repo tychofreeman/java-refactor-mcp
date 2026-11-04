@@ -197,7 +197,7 @@ final class Stubs {
      */
     private boolean removedAround(
         MethodInvocation call, ITypeBinding owner, Path target, String name) {
-      if (removed(target, Names.typeLabel(owner), name)) {
+      if (removed(target, Names.typeLabel(owner), name) || removedInSupertypes(owner, name)) {
         return true;
       }
       if (call.getExpression() != null) {
@@ -206,7 +206,30 @@ final class Stubs {
       for (ASTNode a = call.getParent(); a != null; a = a.getParent()) {
         if (a instanceof AbstractTypeDeclaration t
             && t.resolveBinding() != null
-            && removed(target, Names.typeLabel(t.resolveBinding()), name)) {
+            && (removed(target, Names.typeLabel(t.resolveBinding()), name)
+                || removedInSupertypes(t.resolveBinding(), name))) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Whether an edit removed {@code name} from a supertype of {@code type}. Each supertype is read
+     * in its own file, since a call inside a subclass has no file of the supertype's.
+     */
+    private boolean removedInSupertypes(ITypeBinding type, String name) {
+      List<ITypeBinding> supertypes = new ArrayList<>();
+      if (type.getSuperclass() != null) {
+        supertypes.add(type.getSuperclass());
+      }
+      supertypes.addAll(List.of(type.getInterfaces()));
+      for (ITypeBinding s : supertypes) {
+        Path file = sourceOf(s);
+        if (file != null && removed(file, Names.typeLabel(s.getErasure()), name)) {
+          return true;
+        }
+        if (removedInSupertypes(s, name)) {
           return true;
         }
       }
