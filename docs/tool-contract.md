@@ -261,8 +261,10 @@ Java's name for gorefactor's `extract_function` (roadmap #23).
   list), no statements, not in a body, two or more results (named), a return
   and a result, a `break`/`continue`/`yield` whose target is outside, a return
   on some paths only, a return mid-way through a void method (with the range to
-  the end of the body), `this(...)`/`super(...)`, a name a method of the type
-  or a supertype has; then the gate.
+  the end of the body), `this(...)`/`super(...)`, an assignment to a final
+  field ("line 9 assigns the final field upper, which only a constructor or
+  initializer may do"), a name a method of the type or a supertype has; then
+  the gate.
 - Result: `extracted lines 9-12 of a/B.java into sum(List<Integer> values),
   returning total, at lines 14-20; the call is line 9`, a note past five
   parameters, then import notes.

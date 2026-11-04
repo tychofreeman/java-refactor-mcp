@@ -372,7 +372,8 @@ final class Tools {
           the statements throw. doc becomes its Javadoc.
           Refuses, saying why: a range that cuts a statement (with the statement lines there), \
           two or more results, a break, continue or yield that leaves the statements, a return \
-          in the middle of a void method, a name the type already has.\
+          in the middle of a void method, this(...) or super(...), an assignment to a final \
+          field, a name the type already has.\
           """,
           """
           {
