@@ -186,7 +186,9 @@ final class Tools {
           Refuses, saying why: an instance, varargs, generic or abstract method; a body that is \
           not one return or one statement; a method that calls itself; a method used as Type::name; \
           a call nested in another call's arguments; a parameter used twice when its argument \
-          calls or assigns; a method with no calls.\
+          calls or assigns; a method with no calls; an argument that calls, assigns or reads a \
+          field when an effect of the body runs before its use, or its use is in a lambda or \
+          (for one with an effect) a branch: put it in a variable first.\
           """,
           """
           {

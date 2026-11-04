@@ -357,7 +357,11 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   an argument with effects for a parameter the body does not use (the call would drop
   it); two arguments with effects (they would run in another order); an argument whose
   type differs from its parameter's, where the call converts (`half(3)` for `double`);
-  a body that names a member of its class when a call is in another class.
+  a body that names a member of its class when a call is in another class; an argument
+  that calls, assigns, or reads a field or array element, when an effect of the body
+  (a call, an assignment, an increment) comes before its use, or its use is inside a
+  lambda or anonymous class, or, for one with an effect, in a `?:` branch or right of
+  `&&` / `||` (it would run later, after the effect, or not at all).
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
   several-statement bodies, inlining one call at a time.
 

@@ -483,3 +483,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   docs-only changes. Dependabot opens weekly PRs for Maven and Actions. As of
   2026-11-02: JUnit 6.1.3, `actions/checkout@v7`, `actions/setup-java@v6`. The
   first runs on `main` passed (2026-11-02).
+
+- `inline_function` also refuses an argument that is not fixed (it calls,
+  assigns, or reads a field or array element) when an effect of the body
+  runs before its use, or its use is in a lambda or anonymous class, or, for
+  one with an effect, a branch (2026-11-04,
+  `docs/sessions/inline-function-effect-gaps.md`). Two sessions fixed #67
+  at once; the user kept the other session's refusals for conversions and
+  the class's own members over this session's casts and qualification
+  (closed PR #118). Before fixing a planned roadmap row, check `main`
+  and the open branches for the same row.
