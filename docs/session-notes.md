@@ -60,7 +60,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   package-private for it. `Signatures`, `Declarations` and `Tools` are still whole;
   split them when a change needs it.
 - Signature tools parse only the files that can hold the method (roadmap
-  order 44, 2026-11-03): `Signatures.Family.of` reads every file's text and parses
+  order 44, 2026-11-03): `MethodFamily.of` (was `Signatures.Family.of`) reads every file's text and parses
   only those containing the method's simple name. A family member and a call of
   one share that name, so nothing is missed; `add_parameter` on Commons Math went
   from 6.5 s to 2.9 s. The summary's option (reuse the gate's parse across calls)
@@ -202,7 +202,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   no undo history (`JournalTest.aProjectOpenedAgainHasNoHistory`).
 - Call costs on Commons Math 3.6.1 (roadmap #44, 2026-11-03, `docs/sessions/measure-call-cost.md`):
   one whole-project parse is about 3.5 s; rename, replace_text and create_file each
-  make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `Signatures.Family.of`
+  make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `MethodFamily.of`
   parses every file before the gate. `GateCostTest.timesACall` prints the parse count.
 - Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
   returns a `Tools.Outcome` (text and `Stubs.Declared`); `render()` gives the text
@@ -236,6 +236,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   were 9.4 s and 4.7 s): `bin/jrefactor` had rebuilt the jar after each of
   its own edits to `src/main`, so it now rebuilds only for a commit newer
   than the jar.
+- `Signatures` is split (order 25, 2026-11-03): `MethodFamily` (the family
+  search, `MethodFamily.of`) and `SignatureChange` (the edits of one change)
+  are top-level, moved by `move_type` and renamed by `rename`; `Signatures`
+  keeps the three tools' entry points, `Source`, `Decl`, `Call` and the
+  helpers the three share.
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
