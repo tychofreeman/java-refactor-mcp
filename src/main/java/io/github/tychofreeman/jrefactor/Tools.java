@@ -315,6 +315,31 @@ final class Tools {
           Kind.REFACTORING,
           Tools::invertIf);
 
+  static final Def REMOVE_ELSE =
+      new Def(
+          "remove_else",
+          """
+          Remove the else of an if whose then-branch cannot finish normally (it ends in a return, \
+          throw, break, continue or yield). The else's statements then follow the if, at its \
+          indentation, so the code runs the same. Identify the if by the line it starts on.
+          Refuses, saying why: no if on the line, an if with no else, an if that is not directly \
+          in a block, a then-branch that can finish normally (the else's statements would then run \
+          after it too), or a change that adds compile errors, naming them.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root."},
+              "line": {"type": "integer", "description": "The 1-based line the if starts on."}
+            },
+            "required": ["file", "line"]
+          }\
+          """,
+          Set.of("file", "line"),
+          Kind.REFACTORING,
+          Tools::removeElse);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -723,6 +748,7 @@ final class Tools {
           ADD_SUPERTYPE,
           MOVE_STATEMENT,
           INVERT_IF,
+          REMOVE_ELSE,
           BATCH,
           UNDO);
 
@@ -806,6 +832,10 @@ final class Tools {
 
   private static Outcome invertIf(SourceProject project, Args args) throws Exception {
     return InvertIf.run(project, args.required("file"), args.integer("line"));
+  }
+
+  private static Outcome removeElse(SourceProject project, Args args) throws Exception {
+    return RemoveElse.run(project, args.required("file"), args.integer("line"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {
