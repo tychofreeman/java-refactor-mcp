@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** What a Maven project's build says about its sources: its roots and its test classpath. */
 final class MavenBuild {
@@ -110,14 +112,44 @@ final class MavenBuild {
     return entries;
   }
 
+  /**
+   * A hash of the {@code pom.xml} of {@code root} and of each parent pom it names, since a parent's
+   * dependency versions are part of the build; a parent outside the tree is covered by its version.
+   */
   private static String pomHash(Path root) throws IOException {
     try {
-      byte[] hash =
-          MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("pom.xml")));
-      return "pom " + HexFormat.of().formatHex(hash);
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      Path pom = root.resolve("pom.xml");
+      for (int depth = 0; pom != null && Files.isRegularFile(pom) && depth < PARENTS; depth++) {
+        digest.update(Files.readAllBytes(pom));
+        pom = parentPom(pom);
+      }
+      return "pom " + HexFormat.of().formatHex(digest.digest());
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e);
     }
+  }
+
+  /** How many parent poms a build may name before the hash stops following them. */
+  private static final int PARENTS = 20;
+
+  /**
+   * The parent pom that {@code pom} names with its {@code relativePath} (default {@code
+   * ../pom.xml}), or null when it names no parent. A regular expression reads the pom, not a full
+   * XML parse.
+   */
+  private static Path parentPom(Path pom) throws IOException {
+    Matcher parent =
+        Pattern.compile("<parent>(.*?)</parent>", Pattern.DOTALL).matcher(Files.readString(pom));
+    if (!parent.find()) {
+      return null;
+    }
+    Matcher relative =
+        Pattern.compile("<relativePath>\\s*(.*?)\\s*</relativePath>", Pattern.DOTALL)
+            .matcher(parent.group(1));
+    Path path =
+        pom.getParent().resolve(relative.find() ? relative.group(1) : "../pom.xml").normalize();
+    return Files.isDirectory(path) ? path.resolve("pom.xml") : path;
   }
 
   private static List<String> maven(Path root) throws IOException {
