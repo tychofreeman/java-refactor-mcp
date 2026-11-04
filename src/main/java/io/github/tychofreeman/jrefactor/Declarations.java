@@ -4,7 +4,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -161,6 +163,21 @@ final class Declarations {
     int firstLine = Lines.number(text, decl.getStartPosition());
     int lastLine = Lines.number(text, end(decl));
 
+    if (content.isBlank()
+        && decl instanceof AbstractTypeDeclaration
+        && decl.getParent() == unit
+        && unit.types().size() == 1) {
+      // The file's only type: the file goes with it (a null text deletes it; undo restores it).
+      Map<Path, String> gone = new HashMap<>();
+      gone.put(path, null);
+      Stubs.Declared stubs =
+          Gate.applyOrRefuse(
+              project, gone, "deleting " + target.label(), "Remove or change its uses first.");
+      return new Outcome(
+          "deleted %s and its file %s (was lines %d-%d)"
+              .formatted(target.label(), rel, firstLine, lastLine),
+          stubs);
+    }
     if (content.isBlank()) {
       int start = Lines.start(text, decl.getStartPosition());
       int end = Lines.end(text, end(decl));

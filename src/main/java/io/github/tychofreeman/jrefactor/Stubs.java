@@ -370,7 +370,8 @@ final class Stubs {
         dir = dir.resolve(pkg.replace('.', '/'));
       }
       Path target = dir.resolve(name + ".java");
-      if (Files.exists(target)) {
+      // A file the edit deleted held the class: it was removed, not missing.
+      if (Files.exists(target) || old.get(target) != null) {
         return;
       }
       created.add(pkg.isEmpty() ? name : pkg + "." + name);

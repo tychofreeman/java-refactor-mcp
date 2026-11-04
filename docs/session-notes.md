@@ -323,6 +323,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   structure). Each roadmap row's status names its session; see "Split
   between sessions" in `docs/design.md`. Take another session's item only
   when the user says so.
+- `replace_declaration` with empty content deletes the file when it removes
+  the file's only top-level type (2026-11-04), through the gate and the
+  journal; the stubs do not declare a class whose file the edit deleted.
+  Before, the file was left with its package line, and removing it took
+  `rm` (friction log, twice).
 - Pull up / push down (roadmap #25) was added at the user's request
   (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same; it waits for friction evidence.
