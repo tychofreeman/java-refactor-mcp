@@ -52,14 +52,9 @@ final class MoveType {
   static Outcome run(SourceProject project, String rel, String name) throws IOException {
     Path file = project.javaFile(rel);
     String simple = name.substring(name.lastIndexOf('.') + 1);
-    Map<Path, String> held = new LinkedHashMap<>();
-    for (Path f : project.javaFiles()) {
-      String text = Files.readString(f);
-      if (f.equals(file) || text.contains(simple)) {
-        held.put(f, text);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(held.keySet()));
+    Holding holding = Holding.of(project, simple, file);
+    Map<Path, String> held = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
     String source = held.get(file);
     CompilationUnit unit = parsed.get(file);
     AbstractTypeDeclaration decl = find(unit, name, rel);
