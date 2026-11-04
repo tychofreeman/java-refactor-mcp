@@ -369,6 +369,34 @@ final class Tools {
           Kind.REFACTORING,
           Tools::moveMember);
 
+  static final Def ENCAPSULATE_FIELD =
+      new Def(
+          "encapsulate_field",
+          """
+          Encapsulate a field: it becomes private, with a getter and a setter (getX and setX, or the \
+          names given), and every use in the project goes through them. A read becomes the getter \
+          call; a plain assignment statement x = value becomes setX(value). A final field gets a \
+          getter only. Identify the field as Type.field, a top-level class of the file.
+          Refuses, saying why: a name that is not a field, a declaration of several fields, a final \
+          field that is written, a compound write (+=) or ++ or --, a write inside an expression, a \
+          statement that also reads the field, or a change that adds compile errors, naming them.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the field."},
+              "name": {"type": "string", "description": "Type.field, the field to encapsulate."},
+              "getter": {"type": "string", "description": "The getter's name; default get plus the field's name capitalized."},
+              "setter": {"type": "string", "description": "The setter's name; default set plus the field's name capitalized."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name", "getter", "setter"),
+          Kind.REFACTORING,
+          Tools::encapsulateField);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -779,6 +807,7 @@ final class Tools {
           INVERT_IF,
           REMOVE_ELSE,
           MOVE_MEMBER,
+          ENCAPSULATE_FIELD,
           BATCH,
           UNDO);
 
@@ -871,6 +900,15 @@ final class Tools {
   private static Outcome moveMember(SourceProject project, Args args) throws Exception {
     return MoveMember.run(
         project, args.required("file"), args.required("name"), args.required("to"));
+  }
+
+  private static Outcome encapsulateField(SourceProject project, Args args) throws Exception {
+    return EncapsulateField.run(
+        project,
+        args.required("file"),
+        args.required("name"),
+        args.has("getter") ? args.required("getter") : null,
+        args.has("setter") ? args.required("setter") : null);
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {

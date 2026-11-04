@@ -438,6 +438,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   its first parameter, `receiver` (the user's choice over refusing instance uses). A null instance now
   fails inside the method, not at the call: a behavior difference no static check sees.
 
+- `encapsulate_field` exists (2026-11-04, `docs/sessions/encapsulate-field.md`): the tenth of the ten
+  higher-level tools. Bean-style accessors with optional names (the user's choice). Writes it does not
+  rewrite (compound, ++, in an expression, or reading the field too) are refused, not rewritten.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,

@@ -1,0 +1,1 @@
+encapsulated Price.rate in com/example/Price.java with getRate and setRate; 3 uses rewritten in 1 file
