@@ -67,7 +67,7 @@ final class PushDown {
                 .equals(subType.getErasure().getQualifiedName())) {
           continue;
         }
-        if (MemberMove.declares(t, member)) {
+        if (MemberMove.declares(t, moved)) {
           throw new Refusal(
               t.getName().getIdentifier()
                   + " already declares "
@@ -126,9 +126,13 @@ final class PushDown {
       }
     }
     ITypeBinding superclass = subType.getSuperclass();
-    if (superclass != null && !"java.lang.Object".equals(superclass.getQualifiedName())) {
+    IMethodBinding mine = m.resolveBinding();
+    if (mine != null
+        && superclass != null
+        && !"java.lang.Object".equals(superclass.getQualifiedName())) {
       for (IMethodBinding b : superclass.getDeclaredMethods()) {
-        if (b.getName().equals(method)) {
+        if (b.getName().equals(method)
+            && MemberMove.erasedParams(b).equals(MemberMove.erasedParams(mine))) {
           throw new Refusal(
               superclass.getErasure().getName()
                   + " declares "

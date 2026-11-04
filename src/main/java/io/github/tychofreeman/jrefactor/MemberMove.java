@@ -11,6 +11,9 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -24,32 +27,67 @@ final class MemberMove {
   private MemberMove() {}
 
   /**
-   * The method or field {@code name} that {@code t} declares, for {@code tool} to move. A method
-   * when there is one of that name, else a field; refused when there is neither, when both exist,
-   * when there are overloads, or when the field shares its declaration with other variables.
+   * The method or field that {@code t} declares, for {@code tool} to move. The name is {@code m},
+   * {@code m(int)} or {@code m(Map<String, Integer>)}: a parameter list picks an overload; without
+   * one, a method of that name, else a field. Refused when there is neither, when both exist, when
+   * a bare name matches several overloads (listing them), or when the field shares its declaration
+   * with other variables.
    */
   static BodyDeclaration member(
       TypeDeclaration t, String subName, String name, String rel, String tool) {
-    List<MethodDeclaration> methods = new ArrayList<>();
+    String base = name;
+    List<String> params = null;
+    int paren = name.indexOf('(');
+    if (paren >= 0) {
+      if (!name.endsWith(")")) {
+        throw new Refusal("name " + name + " has an unclosed parenthesis.");
+      }
+      base = name.substring(0, paren).strip();
+      String inside = name.substring(paren + 1, name.length() - 1).strip();
+      params = new ArrayList<>();
+      for (String p : inside.isEmpty() ? List.<String>of() : Declarations.topLevelCommas(inside)) {
+        params.add(p.replace(" ", ""));
+      }
+    }
+    List<MethodDeclaration> named = new ArrayList<>();
     for (MethodDeclaration m : t.getMethods()) {
-      if (m.getName().getIdentifier().equals(name)) {
+      if (m.getName().getIdentifier().equals(base)) {
+        named.add(m);
+      }
+    }
+    List<MethodDeclaration> methods = new ArrayList<>();
+    for (MethodDeclaration m : named) {
+      if (params == null || Declarations.types(m).equals(params)) {
         methods.add(m);
       }
     }
     List<FieldDeclaration> fields = new ArrayList<>();
-    for (FieldDeclaration f : t.getFields()) {
-      if (declaresField(f, name)) {
-        fields.add(f);
+    if (params == null) {
+      for (FieldDeclaration f : t.getFields()) {
+        if (declaresField(f, base)) {
+          fields.add(f);
+        }
       }
     }
     if (methods.isEmpty() && fields.isEmpty()) {
-      throw new Refusal(subName + " declares no method or field " + name + " in " + rel + ".");
+      if (!named.isEmpty()) {
+        throw new Refusal(
+            subName
+                + " declares no "
+                + name
+                + ". Its methods named "
+                + base
+                + " are "
+                + labels(named)
+                + ".");
+      }
+      throw new Refusal(subName + " declares no method or field " + base + " in " + rel + ".");
     }
     if (!methods.isEmpty() && !fields.isEmpty()) {
       throw new Refusal(
           subName
               + " declares both a field and a method named "
-              + name
+              + base
               + "; "
               + tool
               + " cannot tell which to move.");
@@ -58,10 +96,14 @@ final class MemberMove {
       throw new Refusal(
           subName
               + " has several methods named "
-              + name
-              + "; "
-              + tool
-              + " moves one method, and overloads are not supported yet.");
+              + base
+              + ": "
+              + labels(methods)
+              + ". Pick one: name one with its parameter types, as "
+              + subName
+              + "."
+              + label(methods.get(0))
+              + ".");
     }
     if (!methods.isEmpty()) {
       return methods.get(0);
@@ -71,7 +113,7 @@ final class MemberMove {
       throw new Refusal(
           subName
               + "."
-              + name
+              + base
               + " shares its declaration with other variables; "
               + tool
               + " moves one variable per declaration.");
@@ -79,19 +121,59 @@ final class MemberMove {
     return field;
   }
 
-  /** Whether {@code t} declares a method or a field named {@code name}. */
-  static boolean declares(TypeDeclaration t, String name) {
-    for (MethodDeclaration m : t.getMethods()) {
-      if (m.getName().getIdentifier().equals(name)) {
-        return true;
-      }
+  /**
+   * Whether {@code t} already declares {@code moved}: a method with the same name and parameter
+   * types (an overload with other parameters is not the same), or a field of the same name.
+   */
+  static boolean declares(TypeDeclaration t, BodyDeclaration moved) {
+    ITypeBinding type = t.resolveBinding();
+    if (type == null) {
+      return false;
     }
-    for (FieldDeclaration f : t.getFields()) {
-      if (declaresField(f, name)) {
+    if (moved instanceof MethodDeclaration m) {
+      IMethodBinding mine = m.resolveBinding();
+      for (IMethodBinding b : type.getDeclaredMethods()) {
+        if (mine != null
+            && b.getName().equals(mine.getName())
+            && erasedParams(b).equals(erasedParams(mine))) {
+          return true;
+        }
+      }
+      return false;
+    }
+    String name = fieldName((FieldDeclaration) moved);
+    for (IVariableBinding v : type.getDeclaredFields()) {
+      if (v.getName().equals(name)) {
         return true;
       }
     }
     return false;
+  }
+
+  /** The erased qualified names of {@code b}'s parameter types, for comparing signatures. */
+  static List<String> erasedParams(IMethodBinding b) {
+    List<String> out = new ArrayList<>();
+    for (ITypeBinding p : b.getParameterTypes()) {
+      out.add(p.getErasure().getQualifiedName());
+    }
+    return out;
+  }
+
+  /** "m(int)" for a method, as {@code member} reads a name. */
+  static String label(MethodDeclaration m) {
+    return m.getName().getIdentifier() + "(" + String.join(", ", Declarations.types(m)) + ")";
+  }
+
+  private static String labels(List<MethodDeclaration> methods) {
+    List<String> out = new ArrayList<>();
+    for (MethodDeclaration m : methods) {
+      out.add(label(m));
+    }
+    return String.join(", ", out);
+  }
+
+  private static String fieldName(FieldDeclaration f) {
+    return ((VariableDeclarationFragment) f.fragments().get(0)).getName().getIdentifier();
   }
 
   private static boolean declaresField(FieldDeclaration f, String name) {

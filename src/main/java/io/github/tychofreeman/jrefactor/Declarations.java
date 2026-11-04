@@ -463,7 +463,7 @@ final class Declarations {
     return String.join(", ", names(d));
   }
 
-  private static List<String> types(MethodDeclaration m) {
+  static List<String> types(MethodDeclaration m) {
     List<String> types = new ArrayList<>();
     for (Object o : m.parameters()) {
       SingleVariableDeclaration p = (SingleVariableDeclaration) o;

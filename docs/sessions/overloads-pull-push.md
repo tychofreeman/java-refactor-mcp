@@ -36,4 +36,30 @@ The one edit that changes behaviour: a name with a parameter list is now accepte
 
 ## Notes
 
-- `plan:` the record was written before reading the code.
+- `plan:` the record was written before reading the code. The three goldens went
+  red ("No tool" for the bare errors, and the ambiguous one lacked the listing).
+- `hand:` `Declarations.types` was made package-private, so `MemberMove` could use
+  it. The goldens, `MemberMove`, `PullUp`, `PushDown` and the `Tools` descriptions
+  were written by hand (a heredoc, and Python replaces), as in the earlier items.
+- `refactor:` `declares` now compares signatures by binding (`erasedParams`), not by
+  name, in both tools, so an overload with other parameters is not "already declares".
+- `read:` `Declarations.find` (lines 270-305), to reuse its parameter-list parsing.
+- `refusal:` none from the tools.
+
+## Measured
+
+Not measured: no session log for this branch.
+Verify: `./mvnw verify` passed, 210 tests, 0 failures, 4 skipped.
+
+## Assessment
+
+- **Through the tools or around them:** around, as in the earlier items: the
+  java-refactor-mcp tools were not loaded in this session.
+- **Did the plan hold?** Yes. The goldens went red for the stated reasons. The
+  signature comparison went one step further than the plan: the name-only check
+  was replaced, not just joined by a parameter list.
+
+## Follow-ups
+
+- A subclass nested in another type is still not found by `push_down` (top-level
+  subclasses only).
