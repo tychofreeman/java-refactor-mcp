@@ -16,6 +16,7 @@ import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -23,6 +24,7 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.WhileStatement;
 
 /**
@@ -57,6 +59,7 @@ final class ExtractVariable {
               + expression.strip()
               + " does not resolve, so its declaration cannot be written. Declare the type first.");
     }
+    checkFieldName(e, name);
     String typeName = Extract.typeName(type);
     String source = expression.strip();
     String decl = typeName + " " + name + " = " + source + ";";
@@ -201,11 +204,63 @@ final class ExtractVariable {
                 + " name the statement that tests it.");
       }
     }
+    checkEarlierEffects(e, s, source);
     if (hasEffect(e)) {
       throw new Refusal(
           source
               + " calls, assigns or changes a variable, and moving it before its statement could"
               + " change the order of those effects. Extract the statement's other parts first.");
+    }
+  }
+
+  /** Refuses an effect that comes earlier in the statement: the read would move ahead of it. */
+  private static void checkEarlierEffects(Expression e, Statement s, String source) {
+    boolean[] found = {false};
+    s.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean preVisit2(ASTNode node) {
+            if (node instanceof Expression x
+                && x.getStartPosition() + x.getLength() <= e.getStartPosition()
+                && hasEffect(x)) {
+              found[0] = true;
+            }
+            return !found[0];
+          }
+        });
+    if (found[0]) {
+      throw new Refusal(
+          source
+              + " comes after an effect before it in the same statement (a call, an assignment or"
+              + " a ++ or --), so declaring it earlier would move its read ahead of that effect."
+              + " Name the part of the statement before it first.");
+    }
+  }
+
+  /** Refuses a name that a field of the enclosing class, or of a superclass, already has. */
+  private static void checkFieldName(Expression e, String name) {
+    ASTNode n = e;
+    while (n != null && !(n instanceof TypeDeclaration)) {
+      n = n.getParent();
+    }
+    if (n == null) {
+      return;
+    }
+    for (ITypeBinding c = ((TypeDeclaration) n).resolveBinding();
+        c != null;
+        c = c.getSuperclass()) {
+      for (IVariableBinding f : c.getDeclaredFields()) {
+        if (f.getName().equals(name)) {
+          throw new Refusal(
+              name
+                  + " hides the field "
+                  + name
+                  + " of "
+                  + c.getName()
+                  + ", so a use of the field in this method would read the new variable. Use"
+                  + " another name.");
+        }
+      }
     }
   }
 
