@@ -181,7 +181,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 56 | 63 | The server uses the command line's classpath cache at start (about 3 s each start) | Open, cloud session | Follow-up of `docs/sessions/cli-cache.md`. `Server`, `SourceProject` |
 | 57 | 64 | The classpath cache notices a change to a parent pom (it is keyed by `pom.xml` alone) | Done | Follow-up of `docs/sessions/cli-cache.md`. `MavenBuild.pomHash` hashes the child's `pom.xml` and each parent pom it names. Record: `docs/sessions/classpath-cache-parent-pom.md` |
 | 58 | 65 | `move_type` imports the moved type into a file of another package that names it unqualified through inheritance (`OutlineExtractor` implements `BSPTreeVisitor` and writes `Order`) | Done, local session | Found by `RefactoringStressTest` on Commons Math, seed 7 (`docs/sessions/stress-weighted-targets.md`). `MoveType`; also `public` for an interface\'s member type; record in `docs/sessions/move-type-inherited-users.md` |
-| 59 | 66 | `extract_method` refuses statements that assign a blank final field (in a constructor or initializer) | Open | Found by `RefactoringStressTest` on Commons Math, seed 7: `Interval`'s `upper` was refused by the gate ("may not have been initialized"). `Extraction`; not on either session's list |
+| 59 | 66 | `extract_method` refuses statements that assign a blank final field (in a constructor or initializer) | Done | Found by `RefactoringStressTest` on Commons Math, seed 7: `Interval`'s `upper` was refused by the gate ("may not have been initialized"). `Extraction`; not on either session's list; record in `docs/sessions/extract-blank-final.md` |
 
 ### Split between sessions (2026-11-03)
 

@@ -22,6 +22,8 @@ import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
+import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -32,6 +34,7 @@ import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
@@ -149,6 +152,7 @@ final class Extraction {
   private Plan plan() throws Exception {
     refuseClash();
     refuseConstructorCalls();
+    refuseFinalFields();
     refuseJumps();
     Map<IVariableBinding, Boolean> used = variables();
     List<IVariableBinding> params = new ArrayList<>();
@@ -340,6 +344,54 @@ final class Extraction {
                 + " calls a constructor (this(...) or super(...)), which must stay first in"
                 + " the constructor. Start the range after it.");
       }
+    }
+  }
+
+  /**
+   * Refuses statements that assign a final field: in code that compiles, a blank final in a
+   * constructor or initializer, which a method may not assign.
+   */
+  void refuseFinalFields() {
+    for (Statement s : sel.statements()) {
+      s.accept(
+          new ASTVisitor() {
+            @Override
+            public boolean visit(Assignment a) {
+              check(a.getLeftHandSide());
+              return true;
+            }
+
+            @Override
+            public boolean visit(PrefixExpression p) {
+              if (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                  || p.getOperator() == PrefixExpression.Operator.DECREMENT) {
+                check(p.getOperand());
+              }
+              return true;
+            }
+
+            @Override
+            public boolean visit(PostfixExpression p) {
+              check(p.getOperand());
+              return true;
+            }
+
+            private void check(Expression target) {
+              IVariableBinding field =
+                  target instanceof Name n && n.resolveBinding() instanceof IVariableBinding v
+                      ? v
+                      : target instanceof FieldAccess f ? f.resolveFieldBinding() : null;
+              if (field != null && field.isField() && Modifier.isFinal(field.getModifiers())) {
+                throw new Refusal(
+                    "line "
+                        + line(target)
+                        + " assigns the final field "
+                        + field.getName()
+                        + ", which only a constructor or initializer may do. Leave that line out"
+                        + " of the range.");
+              }
+            }
+          });
     }
   }
 
