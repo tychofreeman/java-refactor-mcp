@@ -107,8 +107,13 @@ final class Imports {
       }
     }
     TreeMap<Integer, StringBuilder> inserts = new TreeMap<>();
+    // With every import removed, the new ones take the first removed one's place.
+    int replacing =
+        kept.isEmpty() && !remove.isEmpty()
+            ? Lines.start(after, remove.get(0).getStartPosition())
+            : -1;
     for (String name : add) {
-      int at = insertionPoint(after, unit, kept, name);
+      int at = replacing >= 0 ? replacing : insertionPoint(after, unit, kept, name);
       inserts
           .computeIfAbsent(at, k -> new StringBuilder())
           .append("import ")
@@ -140,7 +145,7 @@ final class Imports {
     for (int[] edit : edits) {
       if (edit.length == 3) {
         String lines = inserts.get(edit[0]).toString();
-        boolean first = kept.isEmpty() && edit[0] == packageEnd && packageEnd > 0;
+        boolean first = kept.isEmpty() && replacing < 0 && edit[0] == packageEnd && packageEnd > 0;
         text.insert(edit[0], first ? "\n" + lines : lines);
       } else {
         text.delete(edit[0], edit[1]);
