@@ -1,0 +1,1 @@
+deleting Base.g() would add compile errors
