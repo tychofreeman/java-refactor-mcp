@@ -282,8 +282,8 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   Math: one edit 64 ms (was 2.1 s), `rename` 1.3 s, `add_parameter` 1.9 s.
   Soundness rests on `GoldenTest`'s comparison with `uncached` at every
   step, `GateCostTest`'s on a real project, and the opt-in
-  `NarrowCheckStressTest` (random declaration edits; run it on a copy, since
-  a killed run leaves the file it was editing changed). Following names
+  `NarrowCheckStressTest` (random declaration edits; a killed run is put back
+  by the next one from `.jrefactor-stress-snapshot.json`, `StressSnapshot`). Following names
   alone missed edits seen through inheritance; the rule now follows
   subtypes and headers that name a changed type. A cache file of another
   `version` is ignored.

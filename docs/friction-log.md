@@ -479,3 +479,15 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   name a refactoring leaves unresolved is its bug, and should be refused.
 
 2026-11-04: a method deleted from a superclass in another file was still stubbed in a subclass that inherits it (`docs/sessions/stub-after-delete-inherited.md`). The Java was written by Edit (`removedAround` gained a supertype check, `removedInSupertypes` added), not by a tool: `replace_declaration` would fit `removedAround` and `add_declaration` the new method. The tool server was not loaded in that session, so no tool was tried; the gap is the session, recorded in the record.
+
+## 2026-11-04: a test helper's stub went to src/main, and no tool deletes a file
+- Task: roadmap #61 (`docs/sessions/stress-restore.md`).
+- Tool: `create_file` of `StressSnapshotTest` declared the class it uses,
+  `StressSnapshot`, as a stub in `src/main/java`. The class is a test
+  helper. Moving it took a batch (delete the declaration, create the class
+  in `src/test/java`), then `rm` of the file left with only its package
+  line: `replace_declaration` with empty content deletes a declaration, not
+  its file, and no tool deletes a file.
+- Idea: a stub for a class that only a test file uses goes in the test
+  tree; `replace_declaration` deletes the file when it removes its only
+  type.
