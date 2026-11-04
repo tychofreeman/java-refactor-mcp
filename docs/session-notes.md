@@ -388,6 +388,11 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `replace_text` in the composites of the Fowler, Go and IntelliJ comparison.
   Those ten are not built yet; each is its own PR, in the order the user gave.
 
+- `extract_variable` exists (2026-11-04, `docs/sessions/extract-variable.md`): the first of the
+  ten higher-level tools the user asked for (option B of the 2026-11-04 choice). It names an
+  expression by line and exact text, and by column when the text occurs twice. Its implementation
+  is `ExtractVariable`; its refusals match gorefactor's conditions.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
