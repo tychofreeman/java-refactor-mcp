@@ -101,10 +101,7 @@ final class MoveType {
       boolean samePackage = packageOf(u).equals(pkg);
       List<TextEdit> edits = new ArrayList<>();
       List<ASTNode> refs = new ArrayList<>();
-      boolean needsImport = references(u, text, key, pkg, simple, samePackage, edits, refs);
-      if (needsImport && !imports(u, qualified(pkg, simple))) {
-        edits.add(importEdit(text, u, qualified(pkg, simple)));
-      }
+      references(u, text, key, pkg, simple, samePackage, edits, refs);
       if (!refs.isEmpty()) {
         Set<Integer> at = new TreeSet<>();
         for (ASTNode r : refs) {
@@ -115,7 +112,12 @@ final class MoveType {
       }
       if (!f.equals(file)) {
         if (!edits.isEmpty()) {
-          changed.put(f, apply(text, 0, edits));
+          String after = apply(text, 0, edits);
+          // Another package's file imports the moved type, and drops an import it no longer uses.
+          if (!samePackage) {
+            after = Imports.fix(project, f, text, after, List.of(qualified(pkg, simple))).text();
+          }
+          changed.put(f, after);
         }
         continue;
       }
@@ -253,10 +255,9 @@ final class MoveType {
 
   /**
    * Adds to {@code edits} the changes that make {@code u}'s references to the type with key {@code
-   * key} name it as a top-level type, and to {@code refs} those references; true when a short
-   * reference ({@code Outer.Inner}) in another package now needs an import.
+   * key} name it as a top-level type, and to {@code refs} those references.
    */
-  private static boolean references(
+  private static void references(
       CompilationUnit u,
       String text,
       String key,
@@ -265,7 +266,6 @@ final class MoveType {
       boolean samePackage,
       List<TextEdit> edits,
       List<ASTNode> refs) {
-    boolean[] needsImport = {false};
     u.accept(
         new ASTVisitor(true) {
           @Override
@@ -308,15 +308,11 @@ final class MoveType {
                       q.getStartPosition(),
                       q.getStartPosition() + q.getLength(),
                       short_ ? simple : qualified(pkg, simple)));
-              if (short_ && !samePackage) {
-                needsImport[0] = true;
-              }
               return false;
             }
             return true;
           }
         });
-    return needsImport[0];
   }
 
   /**
@@ -524,43 +520,6 @@ final class MoveType {
             return true;
           }
         });
-  }
-
-  /** Whether {@code u} imports {@code name} already. */
-  private static boolean imports(CompilationUnit u, String name) {
-    for (Object o : u.imports()) {
-      ImportDeclaration i = (ImportDeclaration) o;
-      if (!i.isStatic() && i.getName().getFullyQualifiedName().equals(name)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /** An import of {@code name}, in order among {@code u}'s non-static imports. */
-  private static TextEdit importEdit(String text, CompilationUnit u, String name) {
-    String line = "import " + name + ";\n";
-    ImportDeclaration last = null;
-    for (Object o : u.imports()) {
-      ImportDeclaration i = (ImportDeclaration) o;
-      if (i.isStatic()) {
-        continue;
-      }
-      if (i.getName().getFullyQualifiedName().compareTo(name) > 0) {
-        int at = Lines.start(text, i.getStartPosition());
-        return new TextEdit(at, at, line);
-      }
-      last = i;
-    }
-    if (last != null) {
-      int at = Lines.end(text, last.getStartPosition());
-      return new TextEdit(at, at, line);
-    }
-    int at =
-        u.getPackage() == null
-            ? 0
-            : Lines.end(text, u.getPackage().getStartPosition() + u.getPackage().getLength());
-    return new TextEdit(at, at, "\n" + line);
   }
 
   /** Removes modifier {@code m} and the spaces after it. */
