@@ -172,6 +172,36 @@ final class Tools {
           Kind.REFACTORING,
           Tools::inlineVariable);
 
+  static final Def INLINE_FUNCTION =
+      new Def(
+          "inline_function",
+          """
+          Replace every call of a static method in the project with its body, the arguments put \
+          in place of the parameters, then delete the method. return a + tax(a) with \
+          static double tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);.
+          Identify the method as Type.method, a top-level class of the file that declares it.
+          The first version takes a body that is one return or one statement.
+          Applies the edit, then type-checks the project: an edit that adds compile errors is \
+          rolled back and refused.
+          Refuses, saying why: an instance, varargs, generic or abstract method; a body that is \
+          not one return or one statement; a method that calls itself; a method used as Type::name; \
+          a call nested in another call's arguments; a parameter used twice when its argument \
+          calls or assigns; a method with no calls.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the method."},
+              "name": {"type": "string", "description": "Type.method, the static method to inline."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name"),
+          Kind.REFACTORING,
+          Tools::inlineFunction);
+
   static final Def MOVE_TYPE =
       new Def(
           "move_type",
@@ -575,6 +605,7 @@ final class Tools {
           EXTRACT_METHOD,
           EXTRACT_VARIABLE,
           INLINE_VARIABLE,
+          INLINE_FUNCTION,
           BATCH,
           UNDO);
 
@@ -627,6 +658,10 @@ final class Tools {
     }
     return InlineVariable.run(
         project, args.required("file"), line, args.required("name"), args.integer("column"));
+  }
+
+  private static Outcome inlineFunction(SourceProject project, Args args) throws Exception {
+    return InlineFunction.run(project, args.required("file"), args.required("name"));
   }
 
   private static Outcome pullUp(SourceProject project, Args args) throws Exception {

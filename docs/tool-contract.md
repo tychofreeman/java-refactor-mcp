@@ -338,6 +338,21 @@ and `column` (only when the line has two variables of that name).
   assigned after the declaration; a declared type that differs from the
   initializer's. `function` (inline by a function's name) is not built yet.
 
+## `inline_function` (built)
+
+Replaces every call of a static method in the project with its body, the
+arguments put in place of the parameters, then deletes the method. gorefactor's
+`inline_function` takes more; this first version takes `file` (the file that
+declares the method) and `name` (`Type.method`), and inlines every call.
+
+- Result: `inlined Type.method into N calls and deleted the method in <file>`.
+- Refuses: an instance, varargs, generic or abstract method; a body that is not one
+  `return` or one statement; a method that calls itself; a method used as
+  `Type::name`; a call nested in another call's arguments; a parameter used more than
+  once when its argument calls, assigns or changes a variable; a method with no calls.
+- Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
+  several-statement bodies, inlining one call at a time.
+
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

@@ -273,7 +273,7 @@ final class InlineVariable {
   }
 
   /** Whether {@code e} needs parentheses where it replaces a name. */
-  private static boolean needsParentheses(Expression e) {
+  static boolean needsParentheses(Expression e) {
     return !(e instanceof SimpleName
         || e instanceof org.eclipse.jdt.core.dom.QualifiedName
         || e instanceof org.eclipse.jdt.core.dom.NumberLiteral

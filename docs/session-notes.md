@@ -398,6 +398,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   one with several uses: the first version is the simplest safe rule. Uses are parenthesized
   unless the initializer is primary.
 
+- `inline_function` exists (2026-11-04, `docs/sessions/inline-function.md`): static methods only,
+  a body that is one return or one statement, every call in the project. An instance method is
+  refused for its receiver, not inlined. The method is removed with the blank line after it.
+
 ## Why past choices were made
 
 - JDT Core headless, not JavaLens: JavaLens returns edits for the model to apply,
