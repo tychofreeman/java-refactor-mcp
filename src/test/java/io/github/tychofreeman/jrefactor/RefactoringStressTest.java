@@ -5,26 +5,43 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.ArrayAccess;
+import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.CastExpression;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
@@ -46,7 +63,12 @@ class RefactoringStressTest {
           "add_parameter",
           "remove_parameter",
           "move_parameter",
-          "extract_method");
+          "extract_method",
+          "extract_variable",
+          "inline_variable",
+          "inline_function",
+          "pull_up",
+          "push_down");
 
   @Test
   @EnabledIfSystemProperty(named = "jrefactor.stress.root", matches = ".+")
@@ -67,12 +89,14 @@ class RefactoringStressTest {
     Map<String, Map<String, Integer>> outcomes = new TreeMap<>();
     List<String> failures = new ArrayList<>();
     int made = 0;
-    for (int tries = 0; made < calls && tries < calls * 20; tries++) {
+    Hierarchy hierarchy = Hierarchy.of(texts.values());
+    for (int tries = 0; made < calls && tries < calls * 200; tries++) {
       Path file = files.get(random.nextInt(files.size()));
-      String tool = TOOLS.get(random.nextInt(TOOLS.size()));
+      // Each tool in turn, so a tool with few targets is still called.
+      String tool = TOOLS.get(made % TOOLS.size());
       String text = texts.get(file);
       Map<String, Object> args =
-          target(tool, project.relative(file), Jdt.parseSyntax(text), random);
+          target(tool, project.relative(file), Jdt.parseSyntax(text), text, hierarchy, random);
       if (args == null) {
         continue;
       }
@@ -133,7 +157,12 @@ class RefactoringStressTest {
 
   /** Arguments for {@code tool} on a random fitting target in {@code unit}, or null if none. */
   private static Map<String, Object> target(
-      String tool, String rel, CompilationUnit unit, Random random) {
+      String tool,
+      String rel,
+      CompilationUnit unit,
+      String text,
+      Hierarchy hierarchy,
+      Random random) {
     Map<String, Object> args = new LinkedHashMap<>();
     args.put("file", rel);
     switch (tool) {
@@ -241,6 +270,102 @@ class RefactoringStressTest {
         args.put("end_line", unit.getLineNumber(b.getStartPosition() + b.getLength() - 1));
         args.put("name", "extractedZq");
       }
+      case "extract_variable" -> {
+        List<Expression> found = new ArrayList<>();
+        unit.accept(
+            new ASTVisitor() {
+              @Override
+              public void preVisit(ASTNode n) {
+                if ((n instanceof InfixExpression
+                        || n instanceof CastExpression
+                        || n instanceof FieldAccess
+                        || n instanceof ArrayAccess)
+                    && pure(n)
+                    && statementOf(n) != null
+                    && statementOf(n).getParent() instanceof Block) {
+                  found.add((Expression) n);
+                }
+              }
+            });
+        if (found.isEmpty()) {
+          return null;
+        }
+        Expression e = found.get(random.nextInt(found.size()));
+        int start = e.getStartPosition();
+        args.put("line", unit.getLineNumber(start));
+        args.put("column", unit.getColumnNumber(start) + 1);
+        args.put("expression", text.substring(start, start + e.getLength()));
+        args.put("name", "varZq");
+      }
+      case "inline_variable" -> {
+        List<VariableDeclarationFragment> locals = new ArrayList<>();
+        unit.accept(
+            new ASTVisitor() {
+              @Override
+              public boolean visit(VariableDeclarationStatement s) {
+                for (Object f : s.fragments()) {
+                  if (((VariableDeclarationFragment) f).getInitializer() != null
+                      && pure(((VariableDeclarationFragment) f).getInitializer())) {
+                    locals.add((VariableDeclarationFragment) f);
+                  }
+                }
+                return true;
+              }
+            });
+        if (locals.isEmpty()) {
+          return null;
+        }
+        VariableDeclarationFragment f = locals.get(random.nextInt(locals.size()));
+        args.put("line", unit.getLineNumber(f.getName().getStartPosition()));
+        args.put("name", f.getName().getIdentifier());
+      }
+      case "inline_function" -> {
+        List<MethodDeclaration> statics = new ArrayList<>();
+        for (MethodDeclaration m : methods(unit)) {
+          if (Modifier.isStatic(m.getModifiers())
+              && !m.isConstructor()
+              && m.getBody() != null
+              && m.getBody().statements().size() == 1
+              && m.getParent().getParent() == unit) {
+            statics.add(m);
+          }
+        }
+        if (statics.isEmpty()) {
+          return null;
+        }
+        MethodDeclaration m = statics.get(random.nextInt(statics.size()));
+        args.put("name", typePath(m.getParent()) + "." + m.getName().getIdentifier());
+      }
+      case "pull_up", "push_down" -> {
+        // Members of a top-level class: push_down's one that a project class extends, pull_up's
+        // one that extends a project class.
+        List<String> members = new ArrayList<>();
+        for (Object t : unit.types()) {
+          if (t instanceof TypeDeclaration c
+              && !c.isInterface()
+              && (tool.equals("push_down")
+                  ? hierarchy.extended().contains(c.getName().getIdentifier())
+                  : hierarchy.superclassIn(c))) {
+            for (MethodDeclaration m : c.getMethods()) {
+              if (!m.isConstructor()) {
+                members.add(methodName(m));
+              }
+            }
+            for (FieldDeclaration fd : c.getFields()) {
+              for (Object v : fd.fragments()) {
+                members.add(
+                    c.getName().getIdentifier()
+                        + "."
+                        + ((VariableDeclarationFragment) v).getName().getIdentifier());
+              }
+            }
+          }
+        }
+        if (members.isEmpty()) {
+          return null;
+        }
+        args.put("name", members.get(random.nextInt(members.size())));
+      }
       default -> throw new IllegalArgumentException(tool);
     }
     return args;
@@ -275,6 +400,36 @@ class RefactoringStressTest {
           }
         });
     return out;
+  }
+
+  /** The statement {@code n} is in, or null outside one (a field's initializer). */
+  private static Statement statementOf(ASTNode n) {
+    while (n != null && !(n instanceof Statement)) {
+      n = n.getParent();
+    }
+    return (Statement) n;
+  }
+
+  /** Whether {@code n} holds no call, assignment, increment or object creation. */
+  private static boolean pure(ASTNode n) {
+    boolean[] pure = {true};
+    n.accept(
+        new ASTVisitor() {
+          @Override
+          public void preVisit(ASTNode inner) {
+            if (inner instanceof MethodInvocation
+                || inner instanceof SuperMethodInvocation
+                || inner instanceof ClassInstanceCreation
+                || inner instanceof Assignment
+                || inner instanceof PostfixExpression
+                || (inner instanceof PrefixExpression p
+                    && (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                        || p.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+              pure[0] = false;
+            }
+          }
+        });
+    return pure[0];
   }
 
   /** "Outer.Inner" for a member type. */
@@ -343,6 +498,35 @@ class RefactoringStressTest {
       if (!texts.containsKey(p)) {
         Files.delete(p);
       }
+    }
+  }
+
+  /** The project's top-level class names, and the simple names its classes extend. */
+  private record Hierarchy(Set<String> classes, Set<String> extended) {
+    static Hierarchy of(Collection<String> texts) {
+      Set<String> classes = new HashSet<>();
+      Set<String> extended = new HashSet<>();
+      for (String text : texts) {
+        for (Object t : Jdt.parseSyntax(text).types()) {
+          if (t instanceof TypeDeclaration c && !c.isInterface()) {
+            classes.add(c.getName().getIdentifier());
+            if (c.getSuperclassType() != null) {
+              extended.add(simple(c.getSuperclassType()));
+            }
+          }
+        }
+      }
+      return new Hierarchy(classes, extended);
+    }
+
+    /** Whether {@code c} extends a class of the project. */
+    boolean superclassIn(TypeDeclaration c) {
+      return c.getSuperclassType() != null && classes.contains(simple(c.getSuperclassType()));
+    }
+
+    private static String simple(Type type) {
+      String name = type.toString().replaceAll("<.*", "");
+      return name.substring(name.lastIndexOf('.') + 1);
     }
   }
 }

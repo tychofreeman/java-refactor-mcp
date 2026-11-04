@@ -518,6 +518,27 @@ The gate caught the first wrong substitution (the whole statement, not its expre
 as a syntax error; the golden run caught the blank line left after the method. The tool
 that would have written them: none yet; the case is the tool being built.
 
+## 2026-11-04: the new refactorings change behavior and still type-check
+- Task: `docs/sessions/stress-new-tools.md` (the five new refactorings in
+  `RefactoringStressTest`).
+- Tool: the stress run found no failure in 220 calls on Commons Lang and
+  Math, but it sees only compile errors. Probes on a scratch project found
+  seven edits that applied, type-checked, and changed what the code does:
+  `inline_function` dropped an argument with effects, reordered two,
+  lost a conversion (`3 / 2`) and rebound `FACTOR` to the caller's field;
+  `extract_variable` moved `i * 2` ahead of `i++` and let a new local hide
+  a field; `inline_variable` put a field where a local hides it; `pull_up`
+  made a sibling subclass run the pulled body. Separately, `pull_up` into a
+  one-line `{}` body wrote a syntax error.
+- Idea: roadmap #67-#70. For the name cases, one mechanism: check that
+  every name in moved text resolves to the same binding after the edit.
+- Also: an ambiguous-import refusal names one simple name per call
+  (`Expression`, then `MethodInvocation`), and suggested JUnit's
+  `org.junit.jupiter.engine.execution.MethodInvocation` in a file that
+  imports only `org.eclipse.jdt.core.dom` classes. Listing every
+  ambiguous name, and preferring a package the file already imports from,
+  would have saved two calls.
+
 ## 2026-11-04: change_type's cases written by hand (before the tool existed)
 
 The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The goldens and
