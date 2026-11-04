@@ -803,14 +803,14 @@ public final class Rename {
     return new Collected(occurrences, clash[0]);
   }
 
-  /** Replaces each occurrence, working from the end so earlier offsets stay valid. */
+  /** Replaces each occurrence with {@code newName}. */
   private static String apply(String source, List<SimpleName> occurrences, String newName) {
-    StringBuilder out = new StringBuilder(source);
-    for (int i = occurrences.size() - 1; i >= 0; i--) {
-      SimpleName node = occurrences.get(i);
-      int start = node.getStartPosition();
-      out.replace(start, start + node.getLength(), newName);
-    }
-    return out.toString();
+    return TextEdit.apply(
+        source,
+        occurrences.stream()
+            .map(n ->
+                new TextEdit(n.getStartPosition(), n.getStartPosition() + n.getLength(), newName))
+            .toList(),
+        0);
   }
 }
