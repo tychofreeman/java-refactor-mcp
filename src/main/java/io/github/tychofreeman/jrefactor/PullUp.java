@@ -64,7 +64,7 @@ final class PullUp {
               + member
               + " cannot be pulled into it.");
     }
-    if (MemberMove.declares(superDecl, member)) {
+    if (MemberMove.declares(superDecl, moved)) {
       throw new Refusal(
           superName
               + " already declares "

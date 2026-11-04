@@ -140,11 +140,11 @@ Calls need no change, since `Sub` inherits the method.
 
 - Refused: no superclass and no `to`; `to` that is not a direct supertype; a
   supertype outside the project's sources; a method the supertype already
-  declares; overloads of the method; a class that is not top-level.
+  declares (the same signature); a bare name that matches several overloads,
+  which are listed (name one with its parameter types, `Sub.hello(int)`); a
+  class that is not top-level.
 - Type-checks the project: a method that uses what only `Sub` has is rolled
   back and refused, with the gate's "would add" wording.
-
-Overloads are not built yet (roadmap order 25).
 
 ## `push_down` (built)
 
@@ -156,13 +156,12 @@ project: the declaration, with its Javadoc, is removed from `Sub` and added at t
 end of each subclass's body; imports are fixed in every file touched.
 
 - Refused: no direct subclass in the project; a subclass that already declares
-  the method; a method that overrides a method of a supertype (`@Override`, or a
-  superclass that declares the name); overloads of the method; a class that is
+  the member; a method that overrides a method of a supertype (`@Override`, or a
+  superclass that declares the same signature); a bare name that matches several
+  overloads, which are listed (name one with its parameter types); a class that is
   not top-level.
 - Type-checks the project: a caller that uses the method through `Sub` (say
   `Sub s; s.hello()`) no longer compiles, so the move is rolled back and refused.
-
-Overloads are not built yet (roadmap order 25).
 
 ## Edits (built)
 

@@ -146,8 +146,9 @@ final class Tools {
           Type-checks the project: a move that adds compile errors (the method uses a field only Sub \
           has, say) is rolled back and refused.
           Refuses, saying why: no superclass or to that is not a direct supertype, a supertype that \
-          is not in the project's sources, a member the supertype already declares, overloads of \
-          the method, a class that is not top-level.\
+          is not in the project's sources, a member the supertype already declares, a bare name \
+          that matches several overloads (they are listed; name one with its parameter types, as \
+          Sub.hello(int)), a class that is not top-level.\
           """,
           """
           {
@@ -173,8 +174,8 @@ final class Tools {
           Type-checks the project: a caller that uses the method through Sub (Sub s; s.hello()) \
           no longer compiles, so the move is rolled back and refused.
           Refuses, saying why: no direct subclass in the project, a subclass that already declares \
-          the member, a method that overrides a supertype's method, overloads of the method, a \
-          class that is not top-level.\
+          the member, a method that overrides a supertype's method, a bare name that matches several \
+          overloads (they are listed; name one with its parameter types), a class that is not top-level.\
           """,
           """
           {

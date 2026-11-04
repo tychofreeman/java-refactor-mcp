@@ -341,7 +341,7 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the gate refuses a move that leaves a name unresolved (no stubs, since a refactoring
   has `Session.editing` false). `push_down` (2026-11-04, `docs/sessions/push-down.md`) moves
   a method to every direct subclass, and refuses an override, since moving it would change what
-  the class runs. Both share `MemberMove`, which also lifts a field (2026-11-04, `docs/sessions/fields-pull-push.md`). Overloads are open. Originally added at the
+  the class runs. Both share `MemberMove`, which also lifts a field (2026-11-04, `docs/sessions/fields-pull-push.md`) and picks an overload by its parameter list, as `replace_declaration` does (`docs/sessions/overloads-pull-push.md`). Signatures are compared by binding, not by name. Originally added at the
   user's request (2026-11-03), with a note that gorefactor and the TypeScript port may want
   the same.
 - The session log (roadmap #18, 2026-11-03): `SessionLog` is the hook, run
