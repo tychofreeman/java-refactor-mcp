@@ -807,16 +807,18 @@ final class Tools {
           Replace exact text in a file: an edit, for what the other tools do not cover: string \
           literals, comments, a few lines of code, and files that are not Java (pom.xml, \
           fixtures, docs).
-          old must be as in the file and occur once, or set all_occurrences. In a .java file the \
+          old must be as in the file and occur once, or set all_occurrences. append, in place of \
+          old, adds new at the end of the file (a friction-log entry, a CI job). In a .java file the \
           project must type-check no worse after, or nothing changes; what it calls that nothing \
           declares is declared as stubs, as by add_declaration. Imports the new text needs \
           are added and those it leaves unused removed; imports chooses an ambiguous name.\
           """,
           List.of(
               Arg.FILE.described("Path relative to the project root."),
-              Arg.string("old", "Text as it is in the file.").required(),
+              Arg.string("old", "Text as it is in the file."),
               Arg.string("new", "The text to put in its place.").required(),
               Arg.bool("all_occurrences", "Replace every occurrence, not only one."),
+              Arg.bool("append", "Instead of old: add new at the end of the file."),
               Arg.IMPORTS),
           Kind.EDIT,
           (project, args) -> Edits.replaceText(project, args));

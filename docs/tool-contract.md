@@ -418,10 +418,13 @@ in the same turn only if it is sent after it.
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;
     after the last element (on a new line when the elements are one per line).
-- `replace_text`: `file`, `old`, `new`, `all_occurrences`. `old` must occur once
-  unless `all_occurrences`; refused with the lines it occurs on. Result:
-  `replaced <n> occurrence(s) in <file>, line(s) ...`. gorefactor's `files`,
-  `function` and `append` are not built.
+- `replace_text`: `file`, `old`, `new`, `all_occurrences`, `append`. `old` must occur
+  once unless `all_occurrences`; refused with the lines it occurs on. Result:
+  `replaced <n> occurrence(s) in <file>, line(s) ...`. `append=true` in place of `old`
+  adds `new` at the end of the file, after a line break when the file does not end in
+  one (gorefactor's `append`, 2026-11-05): `appended <n> line(s) to <file>, line(s) ...`;
+  refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused.
+  gorefactor's `files` and `function` are not built.
 - `add_declaration`: `file`, `content` (members), `type` (`Outer` or
   `Outer.Inner`; default the file's only top-level type), `after` / `before` (a
   member name). Members are re-indented to match. A method with the same name

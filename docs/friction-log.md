@@ -659,3 +659,13 @@ dropped argument) would need the evaluation order named first, which no tool giv
   in `serverInfo`, then its test written and failing, then the method replaced
   to read the manifest and the constant deleted (a safe delete).
 - Idea: `replace_text` with `append`, as gorefactor's.
+  Done: `replace_text` with `append` (2026-11-05,
+  `docs/sessions/replace-text-append.md`).
+
+## 2026-11-05: friction-log entries appended by heredoc
+- Task: the A/B and fold work of `docs/sessions/ab-warehouse.md` and after.
+- Tool: three entries were appended with `cat >> docs/friction-log.md`, since
+  `replace_text` could not add at the end of a file; another session hit the same
+  for a CI job (its own entry, PR #182).
+- Done: `replace_text` with `append` (2026-11-05,
+  `docs/sessions/replace-text-append.md`); this entry was appended with it.

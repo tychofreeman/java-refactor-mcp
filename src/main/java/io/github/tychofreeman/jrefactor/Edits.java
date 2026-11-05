@@ -67,13 +67,26 @@ final class Edits {
 
   static Outcome replaceText(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    String old = args.required("old");
+    String old = args.string("old");
+    boolean append = args.flag("append");
+    Precondition.require(
+        Precondition.that(
+            () -> !append || (old == null && !args.flag("all_occurrences")),
+            () -> "append adds new at the end of the file; leave out old and all_occurrences."),
+        Precondition.that(
+            () -> append || old != null,
+            () ->
+                "replace_text needs old, the text to replace, or append=true to add new at the end"
+                    + " of the file."));
     String replacement = args.string("new");
     if (replacement == null) {
       throw new Refusal("replace_text needs new (it may be empty, to delete old).");
     }
     Path path = project.existingFile(rel);
     String text = Files.readString(path);
+    if (append) {
+      return append(project, path, rel, text, replacement, args);
+    }
 
     List<Integer> at = new ArrayList<>();
     for (int i = text.indexOf(old); i >= 0; i = text.indexOf(old, i + old.length())) {
@@ -140,6 +153,42 @@ final class Edits {
                 one ? "line" : "lines",
                 String.join(", ", ranges),
                 fixed.said()),
+        written.declared());
+  }
+
+  /**
+   * replace_text with append: {@code added} after the end of {@code text}, a line break first when
+   * the file does not end in one.
+   */
+  private static Outcome append(
+      SourceProject project, Path path, String rel, String text, String added, Args args)
+      throws Exception {
+    String start = text.isEmpty() || text.endsWith("\n") ? text : text + "\n";
+    String after = start + added;
+    int first = Lines.number(after, start.length());
+    int last = added.isEmpty() ? first : Lines.number(after, after.length() - 1);
+    Written written =
+        write(
+            project,
+            path,
+            rel,
+            text,
+            after,
+            args.list("imports"),
+            "appending to " + rel,
+            "Nothing was changed; adjust and retry.");
+    int shift = written.fixed().lineShift();
+    int lines = last - first + 1;
+    return new Outcome(
+        "appended "
+            + lines
+            + (lines == 1 ? " line to " : " lines to ")
+            + rel
+            + ", "
+            + (lines == 1
+                ? "line " + (first + shift)
+                : "lines " + (first + shift) + "-" + (last + shift))
+            + written.fixed().said(),
         written.declared());
   }
 
