@@ -123,8 +123,10 @@ final class Gate {
   /** Writes a file that is not Java, which the gate does not check, creating its directories. */
   static void write(SourceProject project, Path file, String text) throws IOException {
     String before = Files.exists(file) ? Files.readString(file) : null;
+    String mode = Journal.modeOf(file);
     Journal.put(file, text);
     Journal.wrote(project, file, before, text);
+    Journal.mode(project, file, mode);
   }
 
   /** Records each file in {@code old} as written: from its old text to what it holds now. */

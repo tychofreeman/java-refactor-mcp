@@ -398,7 +398,9 @@ in the same turn only if it is sent after it.
 - `move_file` (roadmap #81, 2026-11-04, gorefactor's name): `file` (a file or
   directory), `to`, `copy`, `delete` (instead of `to`). Text files that are not
   Java under a source root; each goes through the journal, so `undo` puts it
-  back, and directories a move or delete empties are removed. Result: `moved
+  back, and directories a move or delete empties are removed. A moved or copied
+  file keeps its mode (`mvnw` stays executable), and `undo` gives a file it puts
+  back the mode it had (2026-11-05). Result: `moved
   docs/a.md to notes/a.md`, `copied ...`, `deleted cases/one (2 files)` (a
   directory names its file count). Refused: a path that does not exist, a `to`
   that does or that is inside `file`, Java under a source root ("Use move_type

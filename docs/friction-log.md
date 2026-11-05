@@ -632,6 +632,8 @@ dropped argument) would need the evaluation order named first, which no tool giv
   through the journal, without its mode, so `./mvnw` was "permission denied"
   until a `chmod +x` by hand.
 - Idea: the journal keeps a file's permissions when it moves or copies it.
+  Done: `Journal.copyMode`, and the journal's modes for undo (2026-11-05,
+  `docs/sessions/move-file-mode.md`).
 
 ## 2026-11-05: a stub for a call in an anonymous class of a static method is an instance method
 - Task: `docs/sessions/namecheck-positions.md`.
