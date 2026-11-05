@@ -255,6 +255,23 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
   in <file>; it now has the record's equals, hashCode and toString; made x()
   public`.
 
+## `extract_struct` (built: parameter object)
+
+Roadmap #89, 2026-11-04, gorefactor's name. Arguments: `file`, `name` (the method,
+as the signature tools take it), `parameters` (next to each other), `struct` (the
+new record), `parameter` (the new parameter's name), `imports`.
+
+- `public record Size(int width, int height) {}` goes in a new file beside the
+  method's class; the parameters become `Size size` in every declaration of the
+  family; each body reads `size.width()` where it read `width`; every call passes
+  `new Size(3, 4)` of its arguments. Result: `grouped width and height of
+  Shipping.cost(int, int, int) into Size size (com/example/Size.java) ...`.
+- Refused: parameters not next to each other (their arguments would run in
+  another order; move them first); a body that assigns one; a family lambdas
+  implement; a varargs parameter; a body that already names the new parameter; a
+  record file that exists.
+- Not built yet: extract class (`fields`).
+
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`
