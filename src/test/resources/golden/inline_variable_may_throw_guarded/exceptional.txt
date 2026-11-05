@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- the initializer of a may throw (p.cost), and inlining moves it into code that runs only sometimes or catches exceptions (the if at line 6): an exception would come there, if at all

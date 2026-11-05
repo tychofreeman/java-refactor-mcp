@@ -8,12 +8,23 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SwitchExpression;
+import org.eclipse.jdt.core.dom.SwitchStatement;
+import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import org.eclipse.jdt.core.dom.WhileStatement;
 
 /**
  * inline_variable: a local variable is replaced by its initializer at each use, and its declaration
@@ -175,6 +186,53 @@ final class InlineVariable {
         return;
       }
     }
+    for (SimpleName use : uses) {
+      ASTNode child = use;
+      for (ASTNode p = use.getParent(); p != null && p != block; child = p, p = p.getParent()) {
+        String where = sometimes(p, child);
+        if (where != null) {
+          Exceptional.change(
+              project,
+              "the initializer of "
+                  + name
+                  + " may throw ("
+                  + throwing.get(0)
+                  + "), and inlining moves it into code that runs only sometimes or catches"
+                  + " exceptions (the "
+                  + where
+                  + " at line "
+                  + Lines.number(text, p.getStartPosition())
+                  + "): an exception would come there, if at all",
+              "keep the variable");
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * What {@code p} is when its {@code child} runs only sometimes, many times, or under a catch:
+   * "if", "loop", "try" and the like; null when it runs once, as {@code p} does.
+   */
+  private static String sometimes(ASTNode p, ASTNode child) {
+    return switch (p) {
+      case IfStatement s when s.getExpression() != child -> "if";
+      case ConditionalExpression c when c.getExpression() != child -> "?:";
+      case InfixExpression in
+          when in.getLeftOperand() != child
+              && (in.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
+                  || in.getOperator() == InfixExpression.Operator.CONDITIONAL_OR) ->
+          "&& or ||";
+      case ForStatement f -> "loop";
+      case EnhancedForStatement f when f.getExpression() != child -> "loop";
+      case WhileStatement w -> "loop";
+      case DoStatement d -> "loop";
+      case LambdaExpression l -> "lambda";
+      case TryStatement t -> "try";
+      case SwitchStatement s when s.getExpression() != child -> "switch";
+      case SwitchExpression s when s.getExpression() != child -> "switch";
+      default -> null;
+    };
   }
 
   /** The one variable named {@code name} on {@code line}, by column if it is needed. */
