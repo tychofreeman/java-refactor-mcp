@@ -122,8 +122,9 @@ final class Tools {
           rolled back and refused. Returns the lines changed in each file.
           Refuses, saying why: a declaration of a library, a method that overrides a library \
           method, a new name that is not a valid Java name, that the type already has, that it \
-          or a supertype has for a method of as many parameters (an overload), or that a local \
-          would hide at a use of the field.\
+          or a supertype has for a method of as many parameters (an overload), that a local \
+          would hide at a use of the field, or that a nested, enclosing or subclass declaration \
+          would capture (a renamed use would mean it, or a use of it the renamed one).\
           """,
           List.of(
               Arg.FILE,

@@ -716,3 +716,5 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   refusal instead.
 - Idea: find the declaring file through the binding (`Holding` by the type's name,
   then `findDeclaringNode` by key), as `move_type` with `package` does.
+  Done: `Signatures.projects` accepts a type parsed from source (2026-11-05,
+  `docs/sessions/rename-secondary-and-nested.md`).

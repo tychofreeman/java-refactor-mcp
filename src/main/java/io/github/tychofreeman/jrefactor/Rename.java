@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -400,6 +402,8 @@ public final class Rename {
 
     Map<Path, String> texts = new java.util.TreeMap<>();
     Map<String, List<Integer>> lines = new java.util.TreeMap<>();
+    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
+    Map<Path, Map<Integer, String>> existing = meanings(project, newName);
     int occurrences = 0;
     Holding holding = Holding.of(project, oldName, null);
     Map<Path, String> held = holding.texts();
@@ -462,10 +466,12 @@ public final class Rename {
       }
       texts.put(f, apply(text, uses, newName));
       lines.put(project.relative(f), lineNumbers(unit, uses));
+      renamedAt.put(f, uses.stream().map(ASTNode::getStartPosition).toList());
       occurrences += uses.size();
     }
 
     Stubs.Declared stubs = gate(project, texts, oldName, newName);
+    checkMeanings(project, renamedAt, existing, oldName, newName);
     return summary(
         "renamed the field " + owner + "." + oldName + " to " + newName, lines, occurrences, stubs);
   }
@@ -486,6 +492,8 @@ public final class Rename {
 
     TreeSet<String> others = new TreeSet<>();
     Map<Path, String> changed = new TreeMap<>();
+    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
+    Map<Path, Map<Integer, String>> existing = meanings(project, newName);
     Map<String, List<Integer>> lines = new TreeMap<>();
     int occurrences = 0;
     for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
@@ -519,15 +527,127 @@ public final class Rename {
       uses.sort(Comparator.comparingInt(ASTNode::getStartPosition));
       changed.put(e.getKey(), apply(texts.get(e.getKey()), uses, newName));
       lines.put(project.relative(e.getKey()), lineNumbers(unit, uses));
+      renamedAt.put(e.getKey(), uses.stream().map(ASTNode::getStartPosition).toList());
       occurrences += uses.size();
     }
 
     Stubs.Declared stubs = gate(project, changed, oldName, newName);
+    checkMeanings(project, renamedAt, existing, oldName, newName);
     List<String> names = new ArrayList<>(List.of(Signatures.label(method)));
     others.remove(names.get(0));
     names.addAll(others);
     return summary(
         "renamed the method " + joinAnd(names) + " to " + newName, lines, occurrences, stubs);
+  }
+
+  /**
+   * What each name {@code newName} means before the rename, by file and position: what an existing
+   * use of the new name must still mean after it.
+   */
+  private static Map<Path, Map<Integer, String>> meanings(SourceProject project, String newName)
+      throws IOException {
+    Map<Path, Map<Integer, String>> out = new TreeMap<>();
+    Holding holding = Holding.of(project, newName, null);
+    for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+      for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
+        String key = meaning(n.resolveBinding());
+        if (n.getIdentifier().equals(newName) && key != null) {
+          out.computeIfAbsent(e.getKey(), k -> new HashMap<>()).put(n.getStartPosition(), key);
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Refuses, once the rename is written (the refusal puts the files back), when a name it wrote
+   * means another declaration than a renamed one, or a name that was already {@code newName} means
+   * something else now: a closer, inherited or nested declaration of the new name captured it, or
+   * the renamed one did.
+   */
+  private static void checkMeanings(
+      SourceProject project,
+      Map<Path, List<Integer>> renamedAt,
+      Map<Path, Map<Integer, String>> existing,
+      String oldName,
+      String newName)
+      throws IOException {
+    Set<Path> files = new TreeSet<>(renamedAt.keySet());
+    files.addAll(existing.keySet());
+    Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(files));
+    int delta = newName.length() - oldName.length();
+    Set<String> renamed = new HashSet<>();
+    for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
+      List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
+      for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
+        if (n.isDeclaration()
+            && n.getIdentifier().equals(newName)
+            && at.contains(before(at, n.getStartPosition(), delta))) {
+          renamed.add(meaning(n.resolveBinding()));
+        }
+      }
+    }
+    for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
+      CompilationUnit unit = e.getValue();
+      List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
+      Map<Integer, String> was = existing.getOrDefault(e.getKey(), Map.of());
+      for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
+        String key = meaning(n.resolveBinding());
+        if (!n.getIdentifier().equals(newName) || key == null) {
+          continue;
+        }
+        int b = before(at, n.getStartPosition(), delta);
+        boolean wrote = at.contains(b);
+        if ((wrote && !renamed.contains(key))
+            || (!wrote && was.containsKey(b) && !was.get(b).equals(key))) {
+          throw new Refusal(
+              "renaming "
+                  + oldName
+                  + " to "
+                  + newName
+                  + " would change what "
+                  + newName
+                  + " at line "
+                  + unit.getLineNumber(n.getStartPosition())
+                  + " of "
+                  + project.relative(e.getKey())
+                  + " means: it would mean "
+                  + describe(n.resolveBinding())
+                  + (wrote ? ", not the renamed one" : ", not what it meant before")
+                  + ". A declaration of that name in a class around it, a nested class or a"
+                  + " subclass captures it. Choose another name.");
+        }
+      }
+    }
+  }
+
+  /**
+   * The position before the rename of {@code after}, a position in the renamed file whose
+   * occurrences, at {@code at} before it (sorted), each grew by {@code delta}.
+   */
+  private static int before(List<Integer> at, int after, int delta) {
+    int k = 0;
+    for (int i = 0; i < at.size(); i++) {
+      int moved = at.get(i) + i * delta;
+      if (moved == after) {
+        return at.get(i);
+      }
+      if (moved < after) {
+        k = i + 1;
+      }
+    }
+    return after - k * delta;
+  }
+
+  /** The key that names what {@code b} refers to, in every parse; null for none. */
+  private static String meaning(IBinding b) {
+    return switch (b) {
+      case null -> null;
+      case IVariableBinding v -> v.getVariableDeclaration().getKey();
+      case IMethodBinding m -> m.getMethodDeclaration().getKey();
+      case ITypeBinding t -> t.getTypeDeclaration().getKey();
+      default -> b.getKey();
+    };
   }
 
   /**
