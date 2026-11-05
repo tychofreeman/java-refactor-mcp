@@ -90,14 +90,17 @@ class GuardTest {
     }
   }
 
-  /** A grep that prints no text of the file (a count, a file name, a status) is not a read. */
+  /**
+   * A grep of Java is refused whatever its flags, a count or a file name too: inspect's pattern
+   * gives both.
+   */
   @Test
-  void aGrepThatShowsNoTextIsAllowed() {
+  void aGrepOfJavaIsRefusedWhateverItsFlags() {
     for (String flags :
-        List.of("-c", "-l", "-L", "-q", "--count", "--files-with-matches", "-rlq")) {
-      assertEquals("", Guard.each("grep " + flags + " DEBUG " + MAIN, "/home/u/p", false), flags);
+        List.of("-n", "-c", "-l", "-L", "-q", "--count", "--files-with-matches", "-rlq")) {
+      assertNotEquals(
+          "", Guard.each("grep " + flags + " DEBUG " + MAIN, "/home/u/p", false), flags);
     }
-    assertNotEquals("", Guard.each("grep -n DEBUG " + MAIN, "/home/u/p", false));
   }
 
   /** A path a variable hides cannot be judged: refused, saying to write it out. */

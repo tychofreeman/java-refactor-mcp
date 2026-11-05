@@ -729,3 +729,11 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   other refusals that day were `grep` printing Java lines, which the rule means.
 - Done: `Guard.showsNoText` and the hidden-path reason (2026-11-05,
   `docs/sessions/read-guard-false-refusals.md`).
+
+## 2026-11-05: the guard's grep relaxation reverted; the search is in inspect
+- Task: the read-guard follow-up to the entry "the read guard refused a grep -c and
+  a hidden path" above.
+- Tool: allowing `grep -c/-l/-q` of Java (#201) removed the friction without
+  routing the search through a tool, and `inspect | grep` saved nothing over grep.
+- Done: `inspect` `pattern` and `names` (#202, #203), and the guard refuses a grep
+  of Java again (`docs/sessions/read-guard-to-inspect.md`); gorefactor the same.

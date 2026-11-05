@@ -191,3 +191,36 @@ refused each unsafe step (the reordered `p.bin()` calls, the short-circuited
 extraction the refusal asked for, because `extract_variable` refused that
 too. As in gorefactor, the run's value was the list of mechanisms it found
 (#99-#101), not the verdict. Details in `docs/sessions/ab-warehouse.md`.
+
+## A guard relaxed, then the search moved into the tool (2026-11-05)
+
+The read guard (roadmap #16) denies reading a `.java` file other than
+through `inspect`, `grep` included. On 2026-11-05 a session hit it five
+times and logged the friction: a `grep -c DEBUG` of `Rename.java` (to
+confirm a temporary debug line was gone, a count with no source text), a
+`cat` of golden Java through a shell variable, and three `grep -n` lookups
+for a line number (where `Stubs` decides `static`, a description in
+`Tools`, the overload check in `Fold`). The session offered three rules:
+allow only the greps that print no text and explain the hidden path
+(recommended), allow `grep -n` of Java too, or add a search to `inspect`
+and point the refusal at it. The user accepted the recommendation, and the
+session made it in both guards: #201 here, gorefactor's #559.
+
+The user then asked which greps had prompted the change, and whether
+`inspect` did not cover that use. It did not: `inspect` took a file and
+gave an outline or a range, so a search took two calls, and in practice
+the session had piped `bin/jrefactor inspect` through `grep`, which the
+guard allowed and which saved nothing. The user decided to undo the
+relaxation and move what it allowed into the tool: `inspect` gained
+`pattern` (#202: the lines that match, in a file or the project, each
+file's count first, which covers `grep -n`, `-c` and `-l`) and `names`
+(#203: a declaration by name, wherever it is), gorefactor's `inspect`
+gained `pattern` (its #560), and both guards went back to refusing every
+grep of source, with advice naming `pattern`. Only the clearer refusal
+of a hidden path was kept.
+
+The lesson matches gorefactor's: when a guard gets in the way, the first
+question is what the blocked command was for, and whether the tool should
+answer it. Relaxing the guard made the friction go away without making the
+work go through the tools; the tool option, which the session had ranked
+last as "more work", cost two small PRs.
