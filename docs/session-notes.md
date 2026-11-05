@@ -153,7 +153,9 @@ Each was chosen from options; the record named beside it has the options it beat
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the
   edits, and the call sites' arguments when the tool rewrites calls); `inline_function`,
-  `inline_variable`, `convert_lambda`, `pull_up`, `push_down` and `move_member` do.
+  `inline_variable`, `convert_lambda`, `pull_up`, `push_down`, `move_member`,
+  `extract_method` and `move_type` do. It skips qualified names, recovered bindings
+  and type variables.
 
 ## Testing
 

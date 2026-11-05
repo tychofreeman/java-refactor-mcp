@@ -13,11 +13,17 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.MethodReference;
+import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 
 /**
  * The check that code a tool moves keeps its meaning: each name in the text an edit writes must
@@ -87,7 +93,9 @@ final class NameCheck {
           new ASTVisitor() {
             @Override
             public boolean visit(SimpleName n) {
-              if (!inside(written, n.getStartPosition())) {
+              // A qualified name (a.x, e.m()) resolves through its qualifier, not through
+              // scope, so no closer declaration can capture it.
+              if (!inside(written, n.getStartPosition()) || qualified(n)) {
                 return true;
               }
               IBinding b = n.resolveBinding();
@@ -130,6 +138,17 @@ final class NameCheck {
       }
     }
     return false;
+  }
+
+  /** Whether {@code n} is the name part of a qualified name, field access, call or reference. */
+  private static boolean qualified(SimpleName n) {
+    ASTNode p = n.getParent();
+    return (p instanceof QualifiedName q && q.getName() == n)
+        || (p instanceof FieldAccess f && f.getName() == n)
+        || (p instanceof MethodInvocation m && m.getName() == n && m.getExpression() != null)
+        || p instanceof SuperMethodInvocation
+        || p instanceof SuperFieldAccess
+        || p instanceof MethodReference;
   }
 
   private static String key(IBinding b) {
