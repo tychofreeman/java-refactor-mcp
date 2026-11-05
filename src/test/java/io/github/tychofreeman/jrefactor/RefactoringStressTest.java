@@ -28,9 +28,12 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
@@ -68,7 +71,14 @@ class RefactoringStressTest {
           "inline_variable",
           "inline_function",
           "pull_up",
-          "push_down");
+          "push_down",
+          "convert_lambda",
+          "function_to_method",
+          "extract_struct",
+          "convert_to_record",
+          "extract_supertype",
+          "move_type_package",
+          "extract_variable_constant");
 
   @Test
   @EnabledIfSystemProperty(named = "jrefactor.stress.root", matches = ".+")
@@ -104,7 +114,14 @@ class RefactoringStressTest {
       String what = tool + " " + args;
       Map<String, Integer> tally = outcomes.computeIfAbsent(tool, k -> new TreeMap<>());
       try {
-        Tools.call(Tools.named(tool), project, args);
+        // Two entries are another tool with an option: move_type with package, extract_variable as.
+        String real =
+            switch (tool) {
+              case "move_type_package" -> "move_type";
+              case "extract_variable_constant" -> "extract_variable";
+              default -> tool;
+            };
+        Tools.call(Tools.named(real), project, args);
       } catch (Refusal r) {
         String reason = r.getMessage().replaceAll("'[^']*'|\"[^\"]*\"|\\b\\w*Zq\\b", "_");
         reason = reason.substring(0, Math.min(60, reason.length())).replaceAll("\\s+", " ");
@@ -322,11 +339,7 @@ class RefactoringStressTest {
       case "inline_function" -> {
         List<MethodDeclaration> statics = new ArrayList<>();
         for (MethodDeclaration m : methods(unit)) {
-          if (Modifier.isStatic(m.getModifiers())
-              && !m.isConstructor()
-              && m.getBody() != null
-              && m.getBody().statements().size() == 1
-              && m.getParent().getParent() == unit) {
+          if (!m.isConstructor() && m.getBody() != null && m.getParent().getParent() == unit) {
             statics.add(m);
           }
         }
@@ -365,6 +378,126 @@ class RefactoringStressTest {
           return null;
         }
         args.put("name", members.get(random.nextInt(members.size())));
+      }
+      case "convert_lambda" -> {
+        List<ASTNode> found = new ArrayList<>();
+        unit.accept(
+            new ASTVisitor() {
+              @Override
+              public void preVisit(ASTNode n) {
+                if (n instanceof LambdaExpression
+                    || n instanceof MethodReference
+                    || (n instanceof ClassInstanceCreation c
+                        && c.getAnonymousClassDeclaration() != null)) {
+                  found.add(n);
+                }
+              }
+            });
+        if (found.isEmpty()) {
+          return null;
+        }
+        ASTNode n = found.get(random.nextInt(found.size()));
+        args.put("line", unit.getLineNumber(n.getStartPosition()));
+        args.put("column", unit.getColumnNumber(n.getStartPosition()) + 1);
+        args.put(
+            "to",
+            n instanceof LambdaExpression
+                ? (random.nextBoolean() ? "method_reference" : "anonymous")
+                : "lambda");
+      }
+      case "function_to_method" -> {
+        List<MethodDeclaration> candidates = new ArrayList<>();
+        for (MethodDeclaration m : methods(unit)) {
+          if (Modifier.isStatic(m.getModifiers())
+              && !m.parameters().isEmpty()
+              && m.getParent() instanceof TypeDeclaration t
+              && t.getParent() == unit
+              && ((SingleVariableDeclaration) m.parameters().get(0))
+                  .getType()
+                  .toString()
+                  .equals(t.getName().getIdentifier())) {
+            candidates.add(m);
+          }
+        }
+        if (candidates.isEmpty()) {
+          return null;
+        }
+        args.put("name", methodName(candidates.get(random.nextInt(candidates.size()))));
+      }
+      case "extract_struct" -> {
+        List<MethodDeclaration> candidates = new ArrayList<>();
+        for (MethodDeclaration m : methods(unit)) {
+          if (m.parameters().size() >= 2) {
+            candidates.add(m);
+          }
+        }
+        if (candidates.isEmpty()) {
+          return null;
+        }
+        MethodDeclaration m = candidates.get(random.nextInt(candidates.size()));
+        int at = random.nextInt(m.parameters().size() - 1);
+        args.put("name", methodName(m));
+        args.put(
+            "parameters",
+            List.of(paramName(m.parameters().get(at)), paramName(m.parameters().get(at + 1))));
+        args.put("struct", "PairZq");
+        args.put("parameter", "pairZq");
+      }
+      case "convert_to_record", "extract_supertype", "move_type_package" -> {
+        List<TypeDeclaration> classes = new ArrayList<>();
+        for (Object t : unit.types()) {
+          if (t instanceof TypeDeclaration c && !c.isInterface()) {
+            classes.add(c);
+          }
+        }
+        if (classes.isEmpty() || unit.getPackage() == null) {
+          return null;
+        }
+        TypeDeclaration c = classes.get(random.nextInt(classes.size()));
+        args.put("name", c.getName().getIdentifier());
+        switch (tool) {
+          case "convert_to_record" -> args.put("value_semantics", true);
+          case "extract_supertype" -> {
+            List<String> publics = new ArrayList<>();
+            for (MethodDeclaration m : c.getMethods()) {
+              if (Modifier.isPublic(m.getModifiers())
+                  && !Modifier.isStatic(m.getModifiers())
+                  && !m.isConstructor()) {
+                publics.add(m.getName().getIdentifier());
+              }
+            }
+            if (publics.isEmpty()) {
+              return null;
+            }
+            args.put("supertype", "IfaceZq");
+            args.put("kind", "interface");
+            args.put("members", List.of(publics.get(random.nextInt(publics.size()))));
+          }
+          default ->
+              args.put("package", unit.getPackage().getName().getFullyQualifiedName() + ".zq");
+        }
+      }
+      case "extract_variable_constant" -> {
+        List<NumberLiteral> literals = new ArrayList<>();
+        unit.accept(
+            new ASTVisitor() {
+              @Override
+              public boolean visit(NumberLiteral n) {
+                if (statementOf(n) != null && statementOf(n).getParent() instanceof Block) {
+                  literals.add(n);
+                }
+                return true;
+              }
+            });
+        if (literals.isEmpty()) {
+          return null;
+        }
+        NumberLiteral n = literals.get(random.nextInt(literals.size()));
+        args.put("line", unit.getLineNumber(n.getStartPosition()));
+        args.put("column", unit.getColumnNumber(n.getStartPosition()) + 1);
+        args.put("expression", n.getToken());
+        args.put("name", "CONST_ZQ");
+        args.put("as", "constant");
       }
       default -> throw new IllegalArgumentException(tool);
     }
