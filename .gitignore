@@ -14,3 +14,6 @@ target/
 
 # Session logs of bin/session-log (the whats-next skill)
 /.claude/session-log/
+
+# A/B runs (gorefactor's cmd/refactor-ab); the results go in docs/sessions/
+/eval-runs/

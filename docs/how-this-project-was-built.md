@@ -178,3 +178,16 @@ and the text it said twice.
   rests on reading the composites.
 - Follow-ups that lived only in records are now roadmap rows #74-#79.
 - The A/B harness (roadmap #13) waits for the user's yes, since it costs money.
+
+## The first A/B run (2026-11-05)
+
+The user asked for it. gorefactor's harness ran this server with no change
+but a two-line Bash allowlist and a wrapper for its `-C` flag, on a Java port
+of gorefactor's warehouse traps. Sonnet passed every trap in both arms; the
+tools cost about a third more per run ($0.12 against $0.09). The traps were
+where the tools paid their way in correctness and lost in cost: they
+refused each unsafe step (the reordered `p.bin()` calls, the short-circuited
+`charge`, the captured `markup`), and the model then did by hand the
+extraction the refusal asked for, because `extract_variable` refused that
+too. As in gorefactor, the run's value was the list of mechanisms it found
+(#99-#101), not the verdict. Details in `docs/sessions/ab-warehouse.md`.

@@ -625,3 +625,10 @@ dropped argument) would need the evaluation order named first, which no tool giv
 - Idea: the journal removes directories that a refused or undone call created
   and left empty.
   Done: `Journal.put` (2026-11-04, `docs/sessions/journal-empty-dirs.md`).
+
+## 2026-11-05: move_file drops the executable bit
+- Task: `docs/sessions/ab-warehouse.md`.
+- Tool: `move_file` with `copy` copied `mvnw` into the A/B fixture as text
+  through the journal, without its mode, so `./mvnw` was "permission denied"
+  until a `chmod +x` by hand.
+- Idea: the journal keeps a file's permissions when it moves or copies it.
