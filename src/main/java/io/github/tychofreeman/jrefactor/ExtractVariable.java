@@ -18,6 +18,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.WhileStatement;
 
@@ -53,6 +54,7 @@ final class ExtractVariable {
     Expression e = find(unit, text, expression.strip(), lineStart, lineEnd, line, column);
     Statement statement = enclosingStatement(e);
     checkPlace(e, statement, expression.strip());
+    checkTryResources(project, e, statement, expression.strip(), text);
 
     ITypeBinding type = e.resolveTypeBinding();
     if (type == null || type.isRecovered() || type.isNullType()) {
@@ -297,5 +299,33 @@ final class ExtractVariable {
       }
     }
     return line;
+  }
+
+  /**
+   * Reports, or under preserve_exceptions refuses, an expression that may throw taken out of the
+   * resources of a try: that try's catch clauses caught what it threw, and its finally ran after.
+   */
+  private static void checkTryResources(
+      SourceProject project, Expression e, Statement s, String source, String text) {
+    if (!(s instanceof TryStatement t)
+        || (t.catchClauses().isEmpty() && t.getFinally() == null)
+        || Effects.of(e).mayThrow().isEmpty()) {
+      return;
+    }
+    for (Object r : t.resources()) {
+      if (within(e, (ASTNode) r)) {
+        Exceptional.change(
+            project,
+            source
+                + " may throw, and moves out of the resources of the try at line "
+                + Lines.number(text, t.getStartPosition())
+                + ", whose "
+                + (t.catchClauses().isEmpty()
+                    ? "finally no longer runs after it"
+                    : "catch clauses no longer catch it"),
+            "leave it in the try");
+        return;
+      }
+    }
   }
 }

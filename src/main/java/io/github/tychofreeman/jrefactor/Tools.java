@@ -624,10 +624,13 @@ final class Tools {
           one of them writes, and at most one of them has a side effect (a call, an assignment, a \
           new object). names_only=true relaxes that to the shared-name rule only, so two calls can \
           swap order: pass it only when the order of the calls does not matter.
-          A return, break, continue, throw or yield never moves. Applies the edit, then type-checks \
-          the project: a swap that adds compile errors is rolled back and refused.
+          A return, break, continue, throw or yield never moves, and a statement with a side \
+          effect never moves past one that may leave the block early (an if that returns); one \
+          that may throw is reported. Applies the edit, then type-checks the project: a swap that \
+          adds compile errors is rolled back and refused.
           Refuses, saying why: no statement starts on the line, a statement with no neighbour in \
-          that direction, a shared name, two side effects under the strict rule, or a jump.\
+          that direction, a shared name, two side effects under the strict rule, a jump, or a side \
+          effect past an early exit.\
           """,
           """
           {

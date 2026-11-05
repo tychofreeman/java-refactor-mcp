@@ -37,6 +37,10 @@ default (`docs/design.md`, Decisions).
   swapped with one that changes state (refused). "May throw" is a dereference
   of a variable or expression, an array element, an integer `/` or `%`, a
   reference cast, a call or a new object.
+- Also detected (roadmap #75, 2026-11-05): `move_statement`, a statement that
+  may throw swapped with a guard (a statement that may return, or break,
+  continue or yield out of itself); `extract_variable`, an expression that may
+  throw taken out of a try's resources, out of its `catch` and `finally`.
 - Also detected (roadmap #75, 2026-11-04): `inline_function`, an argument that
   may throw whose parameter the body does not use, or uses only in a branch, a
   lambda or an anonymous class (it would throw only sometimes, or never);
@@ -647,7 +651,11 @@ order.
 Result: `moved the statement at line L up|down, past the statement at line M in file`, with
 `; imported ...` when an import is added. Refusals: no statement starts on the line, several do, a
 return, break, continue, throw or yield (on either side), no neighbour in that direction, a shared
-name, two side effects under the strict rule, and the gate's "would add compile errors".
+name, two side effects under the strict rule, a statement with a side effect and one that may leave
+the block early (a `return`, or a `break`, `continue` or `yield` that leaves it: an `if` that
+returns is a guard), and the gate's "would add compile errors". A statement that may throw swapped
+with such a guard is a change to exceptional behavior (reported, or refused under
+`preserve_exceptions`).
 
 ## `invert_if` (built)
 
