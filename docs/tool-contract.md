@@ -228,7 +228,8 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
 - Anonymous class to lambda: a functional interface's anonymous class with its
   one method; its body re-indented. Lambda to anonymous class: `new T() {
   @Override public R m(P p) { ... } }`, from the lambda's resolved types.
-- Refused: `this`, or a bare call of the interface's or `Object`'s methods, in
+- Refused: `this`, or a bare call of a method of the interface, of its supertypes (an
+  inherited default, roadmap #94) or of `Object`, in
   the code that moves (it would mean another object); an anonymous class with
   fields or other methods; a type with a wildcard; a form that does not compile
   there (the gate). Result: `converted the lambda at line 7 of <file> to
