@@ -407,6 +407,36 @@ final class Fold {
             + " times, and a call would evaluate it once";
       }
     }
+    if (overloaded(mb)) {
+      // Another method of the name and arity may be more specific for an argument of a subtype
+      // (or null); for arguments of the parameters' own types, this method is the one chosen.
+      for (int i = 0; i < params.size(); i++) {
+        Expression a = c.args()[i];
+        ITypeBinding p = mb.getParameterTypes()[i];
+        String type =
+            made(a)
+                ? "java.lang.String"
+                : a.resolveTypeBinding() == null || a.resolveTypeBinding().isNullType()
+                    ? null
+                    : a.resolveTypeBinding().getErasure().getQualifiedName();
+        if (!p.getErasure().getQualifiedName().equals(type)) {
+          return "the argument "
+              + source(a, text)
+              + " is a "
+              + (made(a) ? "String" : a.resolveTypeBinding().getName())
+              + ", not the parameter's "
+              + p.getName()
+              + ", and "
+              + mb.getDeclaringClass().getName()
+              + " has another "
+              + mb.getName()
+              + " of "
+              + params.size()
+              + (params.size() == 1 ? " parameter" : " parameters")
+              + " that the call could resolve to";
+        }
+      }
+    }
     for (int x = 0; x < order.size(); x++) {
       for (int y = x + 1; y < order.size(); y++) {
         int i = order.get(x);
@@ -457,6 +487,30 @@ final class Fold {
       before.add(a);
     }
     return null;
+  }
+
+  /**
+   * Whether a method other than {@code m}, of its name and number of parameters, is in its class or
+   * a supertype: a call could resolve to it.
+   */
+  private static boolean overloaded(IMethodBinding m) {
+    String key = m.getMethodDeclaration().getKey();
+    List<ITypeBinding> todo = new ArrayList<>(List.of(m.getDeclaringClass()));
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      for (IMethodBinding other : t.getDeclaredMethods()) {
+        if (other.getName().equals(m.getName())
+            && other.getParameterTypes().length == m.getParameterTypes().length
+            && !other.getMethodDeclaration().getKey().equals(key)) {
+          return true;
+        }
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(List.of(t.getInterfaces()));
+    }
+    return false;
   }
 
   /**
