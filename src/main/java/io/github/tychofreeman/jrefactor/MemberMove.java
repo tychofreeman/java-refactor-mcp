@@ -186,10 +186,25 @@ final class MemberMove {
   }
 
   /**
-   * The edit that removes {@code m}, with its Javadoc, and the line it ends on, from {@code text}.
+   * The edit that removes {@code m}'s lines, and one blank line beside them: the one after it, or
+   * for the last member the one before, so the members left keep one blank line between them.
    */
   static TextEdit removal(String text, BodyDeclaration m) {
-    return new TextEdit(Lines.start(text, m.getStartPosition()), Lines.end(text, end(m) - 1), "");
+    int start = Lines.start(text, m.getStartPosition());
+    int end = Lines.end(text, end(m) - 1);
+    if (end < text.length() && text.charAt(end) == '\n') {
+      end++;
+    }
+    int next = text.indexOf('\n', end);
+    if (next >= 0 && text.substring(end, next).isBlank()) {
+      end = next + 1;
+    } else if (start >= 2 && text.charAt(start - 1) == '\n') {
+      int before = Lines.start(text, start - 2);
+      if (text.substring(before, start - 1).isBlank()) {
+        start = before;
+      }
+    }
+    return new TextEdit(start, end, "");
   }
 
   /**
