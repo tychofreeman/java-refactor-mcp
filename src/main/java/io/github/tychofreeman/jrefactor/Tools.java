@@ -121,8 +121,9 @@ final class Tools {
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused. Returns the lines changed in each file.
           Refuses, saying why: a declaration of a library, a method that overrides a library \
-          method, a new name that is not a valid Java name, that the type already has, or that \
-          a local would hide at a use of the field.\
+          method, a new name that is not a valid Java name, that the type already has, that it \
+          or a supertype has for a method of as many parameters (an overload), or that a local \
+          would hide at a use of the field.\
           """,
           List.of(
               Arg.FILE,
