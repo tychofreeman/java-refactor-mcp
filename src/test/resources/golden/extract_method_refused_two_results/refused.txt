@@ -1,1 +1,0 @@
-lines 5-6 set x and y, which the code after them uses, and a method returns one value

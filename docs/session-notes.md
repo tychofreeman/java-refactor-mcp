@@ -47,8 +47,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".
-- `extract_method` refuses two or more results rather than returning a record,
-  and the new method is static exactly when the enclosing member is.
+- `extract_method` returns several results in a record named after the method
+  (`BothResult`), declared after it (the user, 2026-11-04, reversing the 2026-11-03
+  choice to refuse them, over an out-parameter holder); the new method is static
+  exactly when the enclosing member is.
 - `move_type` is its own tool, and widens private members used across the
   boundary rather than refusing.
 - A failed Maven classpath keeps the server serving and names the cause in
