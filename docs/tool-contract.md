@@ -595,7 +595,9 @@ of `in`, or of `file`). The method stays.
   order than the parameters; a parameter used several times whose argument is not fixed
   and has an effect, or that the body could change between its uses; an argument the
   behavior gate refuses to move to the call (out of a branch or guard, past an effect); a
-  private method and code in another top-level class; a type that does not fit.
+  private method and code in another top-level class; a type that does not fit; an
+  argument of a subtype (or `null`) when the method's class or a supertype has another
+  method of its name and arity, which the call could resolve to (`fold_left_overload`).
 - Result: `folded N matches of T.m into calls: <file> lines a, b; left K: <file> line L
   (reason), ...`. The call is unqualified in the method's own class, `T.m(...)` elsewhere,
   with an import when needed.
