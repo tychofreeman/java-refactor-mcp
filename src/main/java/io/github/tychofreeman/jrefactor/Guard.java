@@ -113,6 +113,13 @@ final class Guard {
         continue;
       }
       String f = write ? writes(words, at) : reads(words, at);
+      if (!f.isEmpty() && f.contains("$")) {
+        return words.get(0)
+            + (write ? " writing " : " of ")
+            + f
+            + " refused: a shell variable hides where the path goes, so it cannot be told from"
+            + " Java source; write the path out (a file under resources/ may be read).";
+      }
       if (!f.isEmpty()) {
         return words.get(0) + (write ? " writing " : " of ") + f + " refused.";
       }
@@ -140,6 +147,9 @@ final class Guard {
       return "";
     }
     boolean grep = name.endsWith("grep") || name.equals("rg");
+    if (grep && words.stream().anyMatch(w -> showsNoText(w, name.equals("rg")))) {
+      return "";
+    }
     boolean pattern = grep;
     List<String> operands = new ArrayList<>();
     for (int i = 1; i < words.size(); i++) {
@@ -167,6 +177,23 @@ final class Guard {
       }
     }
     return "";
+  }
+
+  /**
+   * Whether a grep flag makes it print no text of the files: a count, file names, or only its exit
+   * status ({@code -c}, {@code -l}, {@code -L}, {@code -q}, alone or among other short flags). For
+   * {@code rg}, {@code -L} follows links instead, so it does not count.
+   */
+  private static boolean showsNoText(String w, boolean rg) {
+    if (w.startsWith("--")) {
+      return Set.of(
+              "--count", "--files-with-matches", "--files-without-match", "--quiet", "--silent")
+          .contains(w);
+    }
+    String any = rg ? "[clq]" : "[clLq]";
+    return w.startsWith("-")
+        && w.length() > 1
+        && w.substring(1).matches("[a-zA-Z]*" + any + "[a-zA-Z]*");
   }
 
   /** The Java source file the command writes, or "". */

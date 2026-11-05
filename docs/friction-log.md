@@ -721,3 +721,11 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   then `findDeclaringNode` by key), as `move_type` with `package` does.
   Done: `Signatures.projects` accepts a type parsed from source (2026-11-05,
   `docs/sessions/rename-secondary-and-nested.md`).
+
+## 2026-11-05: the read guard refused a grep -c and a hidden path
+- Task: the probe and rename work of 2026-11-05.
+- Tool: the read guard refused a `grep -c DEBUG` of a `.java` file (a count, no text)
+  and a `cat` of golden Java through a shell variable path; each cost a retry. Three
+  other refusals that day were `grep` printing Java lines, which the rule means.
+- Done: `Guard.showsNoText` and the hidden-path reason (2026-11-05,
+  `docs/sessions/read-guard-false-refusals.md`).
