@@ -1,0 +1,8 @@
+package com.example;
+
+public class Price {
+  int f(int a) {
+    int b = a + 1;
+    return b;
+  }
+}

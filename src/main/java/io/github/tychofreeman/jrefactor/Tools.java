@@ -478,6 +478,134 @@ final class Tools {
           Kind.REFACTORING,
           FunctionToMethod::run);
 
+  static final Def REPLACE_EXPRESSION =
+      new Def(
+          "replace_expression",
+          """
+          Replace one expression with new text: an edit. Find it by file, the line it starts on \
+          and its exact source text (column when the text occurs twice on the line), as \
+          extract_variable does. The project must type-check no worse after; what new calls that \
+          nothing declares is declared as stubs; imports are added and removed.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":       {"type": "string", "description": "Java file path relative to the project root."},
+              "line":       {"type": "integer", "description": "1-based line the expression starts on."},
+              "expression": {"type": "string", "description": "Its exact source text."},
+              "column":     {"type": "integer", "description": "Optional 1-based column, when the text occurs twice on the line."},
+              "new":        {"type": "string", "description": "The expression to put in its place."},
+              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "line", "expression", "new"]
+          }\
+          """,
+          Set.of("file", "line", "expression", "column", "new", "imports"),
+          Kind.EDIT,
+          Primitives::replaceExpression);
+
+  static final Def INSERT_STATEMENTS =
+      new Def(
+          "insert_statements",
+          """
+          Insert statements before or after the statement that starts on a line (directly in a \
+          block): an edit. content is the statements, at any indentation; they are indented as \
+          that statement is. The project must type-check no worse after; stubs and imports as \
+          for every edit.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":    {"type": "string", "description": "Java file path relative to the project root."},
+              "line":    {"type": "integer", "description": "1-based line a statement starts on."},
+              "where":   {"type": "string", "enum": ["before", "after"], "description": "Before or after it (default after)."},
+              "content": {"type": "string", "description": "The statements."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "line", "content"]
+          }\
+          """,
+          Set.of("file", "line", "where", "content", "imports"),
+          Kind.EDIT,
+          Primitives::insertStatements);
+
+  static final Def REPLACE_STATEMENTS =
+      new Def(
+          "replace_statements",
+          """
+          Replace whole statements of one block, from the one starting on start_line to the one \
+          ending on end_line, with content (statements, re-indented); empty content deletes them: \
+          an edit. The project must type-check no worse after; stubs and imports as for every \
+          edit.
+          Refuses an end_line that does not end a statement of that block, naming the lines that do.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":       {"type": "string", "description": "Java file path relative to the project root."},
+              "start_line": {"type": "integer", "description": "1-based line the first statement starts on."},
+              "end_line":   {"type": "integer", "description": "1-based line the last statement ends on."},
+              "content":    {"type": "string", "description": "The new statements; empty to delete."},
+              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "start_line", "end_line", "content"]
+          }\
+          """,
+          Set.of("file", "start_line", "end_line", "content", "imports"),
+          Kind.EDIT,
+          Primitives::replaceStatements);
+
+  static final Def ADD_CASE =
+      new Def(
+          "add_case",
+          """
+          Add a case to the switch (statement or expression) that starts on a line: before its \
+          default, or at its end: an edit. content is the case with its statements \
+          (case 2: return "two"; or case 2 -> "two";), indented as the other cases.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":    {"type": "string", "description": "Java file path relative to the project root."},
+              "line":    {"type": "integer", "description": "1-based line the switch starts on."},
+              "content": {"type": "string", "description": "The case."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "line", "content"]
+          }\
+          """,
+          Set.of("file", "line", "content", "imports"),
+          Kind.EDIT,
+          Primitives::addCase);
+
+  static final Def ADD_ELEMENT =
+      new Def(
+          "add_element",
+          """
+          Add an element at the end of the array initializer ({1, 2}) or the enum constants that \
+          start on a line: an edit. content is the element (3, or RED). An element on a line of \
+          its own goes on a new line, as the others.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":    {"type": "string", "description": "Java file path relative to the project root."},
+              "line":    {"type": "integer", "description": "1-based line the initializer or enum starts on."},
+              "content": {"type": "string", "description": "The element."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "line", "content"]
+          }\
+          """,
+          Set.of("file", "line", "content", "imports"),
+          Kind.EDIT,
+          Primitives::addElement);
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -1072,6 +1200,11 @@ final class Tools {
           CONVERT_TO_RECORD,
           EXTRACT_STRUCT,
           FUNCTION_TO_METHOD,
+          REPLACE_EXPRESSION,
+          INSERT_STATEMENTS,
+          REPLACE_STATEMENTS,
+          ADD_CASE,
+          ADD_ELEMENT,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,
