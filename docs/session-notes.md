@@ -131,6 +131,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
 
+- `convert_lambda` (#87, 2026-11-04) is `ConvertLambda`: lambda, method reference and
+  anonymous class to one another; the type check catches an ambiguous overload.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the
