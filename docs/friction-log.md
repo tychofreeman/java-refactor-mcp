@@ -707,6 +707,7 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   through the tools.
 - Idea: the report counts a Bash command that runs `bin/jrefactor` as tool steps
   (its tool, or the batch's steps), as it does the MCP calls.
+  Done: `SessionReport.cli` (2026-11-05, `docs/sessions/session-report-cli.md`).
 
 ## 2026-11-05: rename refuses a member of a second top-level class of a file
 - Task: `docs/sessions/probes-remaining.md`.

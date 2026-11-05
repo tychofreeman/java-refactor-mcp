@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -127,5 +128,31 @@ class SessionReportTest {
     String report = SessionReport.report(log);
     assertTrue(report.contains("- by hand: 1\n"), report);
     assertTrue(report.contains("in one call): 0\n"), report);
+  }
+
+  /** A Bash command that runs bin/jrefactor is a call through the tools, not a write by hand. */
+  @Test
+  void aCallOfBinJrefactorCountsAsTheTools() throws Exception {
+    String post = "PostToolUse";
+    String batch =
+        "{\"steps\": [{\"tool\": \"create_file\", \"args\": {\"file\": \"src/A.java\"}},"
+            + " {\"tool\": \"rename\", \"args\": {\"file\": \"src/A.java\"}}]}";
+    call(
+        post,
+        "Bash",
+        JSON.writeValueAsString(
+            Map.of("command", "bin/jrefactor --rebuild batch '" + batch + "' 2>&1 | tail -2")),
+        "batch of 2 steps: ...");
+    call(
+        post,
+        "Bash",
+        "{\"command\": \"bin/jrefactor -C /tmp/x rename file=p/A.java line=3 name=a new_name=b\"}",
+        "refused: 'a' is not on line 3.");
+    call(post, "Bash", "{\"command\": \"bin/jrefactor @$S/steps.json\"}", "created ...");
+    String report = SessionReport.report(log);
+    assertTrue(report.contains("through jrefactor: 1 refactoring step, 1 edit step"), report);
+    assertTrue(report.contains("bin/jrefactor calls (in Bash): 3"), report);
+    assertTrue(report.contains("refused by jrefactor: 1"), report);
+    assertTrue(report.contains("- by hand: 0"), report);
   }
 }
