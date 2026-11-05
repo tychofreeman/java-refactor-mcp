@@ -98,6 +98,8 @@ final class Tools {
           - pattern (a Java regular expression), with file or without: the lines that match, \
           numbered, file by file over the project's Java files (at most 100): where a name is \
           used, which line to edit. Use it rather than grep.
+          - names, alone: declarations by name, wherever they are: ["Fold"] the class with its \
+          bodies elided, ["Fold.leave", "Cart.total"] each method's overloads or field in full.
           Paths are relative to the project root; lines are 1-based.\
           """,
           List.of(
@@ -108,7 +110,12 @@ final class Tools {
               Arg.integer("start_line", "First line to show (1-based)."),
               Arg.integer("end_line", "Last line to show (inclusive)."),
               Arg.string(
-                  "pattern", "Optional: show the lines that match this Java regular expression.")),
+                  "pattern", "Optional: show the lines that match this Java regular expression."),
+              Arg.strings(
+                  "names",
+                  "Optional, alone: read declarations by name, anywhere in the project: Type (its"
+                      + " outline) or Type.member (each overload of a method, a field, a nested"
+                      + " type).")),
           Kind.READ,
           Tools::inspect);
 
@@ -1143,6 +1150,15 @@ final class Tools {
     String pattern = args.string("pattern");
     Integer start = args.integer("start_line");
     Integer end = args.integer("end_line");
+    List<String> names = args.list("names");
+    if (!names.isEmpty()) {
+      if (pattern != null || start != null || end != null || args.string("file") != null) {
+        throw new Refusal(
+            "names finds each declaration anywhere in the project; leave out file, pattern,"
+                + " start_line and end_line, or names.");
+      }
+      return Outcome.of(Inspect.names(project, names));
+    }
     if (pattern != null) {
       if (start != null || end != null) {
         throw new Refusal(

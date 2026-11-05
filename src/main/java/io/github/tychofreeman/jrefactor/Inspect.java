@@ -5,14 +5,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /** Reads Java source for a model: a file with method bodies elided, or a range of its lines. */
 public final class Inspect {
@@ -36,8 +43,21 @@ public final class Inspect {
     }
     out.append(lines.size()).append(" lines)\n\n");
     out.append("source, method bodies elided (inspect with start_line/end_line, to read one):\n");
+    outline(lines, elided, out, width, 1, lines.size());
+    return out.toString();
+  }
+
+  /**
+   * Appends lines {@code from} to {@code to} of {@code lines} to {@code out}, numbered, each elided
+   * range shown as its line span.
+   */
+  private static void outline(
+      List<String> lines, List<int[]> elided, StringBuilder out, int width, int from, int to) {
     int next = 0;
-    for (int line = 1; line <= lines.size(); line++) {
+    while (next < elided.size() && elided.get(next)[0] < from) {
+      next++;
+    }
+    for (int line = from; line <= to; line++) {
       if (next < elided.size() && elided.get(next)[0] == line) {
         int[] range = elided.get(next++);
         out.append(" ".repeat(width + 6))
@@ -53,7 +73,6 @@ public final class Inspect {
       }
       appendLine(out, width, line, lines.get(line - 1));
     }
-    return out.toString();
   }
 
   /** Lines {@code start} to {@code end} of the file (1-based, inclusive; end is clamped). */
@@ -167,6 +186,131 @@ public final class Inspect {
       out.append("... and ").append(more).append(" more; narrow the pattern, or give file.\n");
     }
     return out.toString();
+  }
+
+  /**
+   * The declarations {@code names} name, found anywhere in the project: "Type" for a type, its
+   * bodies elided as {@link #file} shows them; "Type.member" for each method of that name (every
+   * overload), a field, an enum constant, in full, or a nested type, its bodies elided.
+   * "Outer.Inner" names a nested type as a member of Outer.
+   */
+  public static String names(SourceProject project, List<String> names) throws IOException {
+    StringBuilder out = new StringBuilder();
+    for (String name : names) {
+      int dot = name.lastIndexOf('.');
+      String type = dot > 0 ? name.substring(0, dot) : name;
+      String member = dot > 0 ? name.substring(dot + 1) : null;
+      Holding holding = Holding.of(project, type.substring(type.lastIndexOf('.') + 1), null);
+      boolean typeFound = false;
+      int before = out.length();
+      for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+        CompilationUnit unit = e.getValue();
+        List<String> lines = holding.texts().get(e.getKey()).lines().toList();
+        String rel = project.relative(e.getKey()).toString();
+        for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+          String chain = chain(t);
+          if (!chain.equals(type) && !chain.endsWith("." + type)) {
+            continue;
+          }
+          typeFound = true;
+          if (member == null) {
+            appendType(out, rel, lines, unit, t, name);
+            continue;
+          }
+          for (Object o : t.bodyDeclarations()) {
+            if (o instanceof MethodDeclaration m && m.getName().getIdentifier().equals(member)) {
+              appendWhole(out, rel, lines, unit, m, name);
+            } else if (o instanceof FieldDeclaration f
+                && ((List<?>) f.fragments())
+                    .stream()
+                        .anyMatch(v ->
+                            ((VariableDeclarationFragment) v)
+                                .getName()
+                                .getIdentifier()
+                                .equals(member))) {
+              appendWhole(out, rel, lines, unit, f, name);
+            } else if (o instanceof AbstractTypeDeclaration nested
+                && nested.getName().getIdentifier().equals(member)) {
+              appendType(out, rel, lines, unit, nested, name);
+            }
+          }
+          if (t instanceof EnumDeclaration en) {
+            for (Object o : en.enumConstants()) {
+              if (((EnumConstantDeclaration) o).getName().getIdentifier().equals(member)) {
+                appendWhole(out, rel, lines, unit, (BodyDeclaration) o, name);
+              }
+            }
+          }
+        }
+      }
+      if (!typeFound) {
+        throw new Refusal(
+            "no type "
+                + type
+                + " in the project. Name a type as Type or Outer.Inner, and a member as"
+                + " Type.member.");
+      }
+      if (out.length() == before) {
+        throw new Refusal(
+            type
+                + " has no member "
+                + member
+                + ". inspect it by name (names: [\""
+                + type
+                + "\"]) to see what it declares.");
+      }
+    }
+    return out.toString();
+  }
+
+  /** "Outer.Inner": the names of {@code t} and the types around it. */
+  private static String chain(AbstractTypeDeclaration t) {
+    String out = t.getName().getIdentifier();
+    for (ASTNode p = t.getParent(); p != null; p = p.getParent()) {
+      if (p instanceof AbstractTypeDeclaration outer) {
+        out = outer.getName().getIdentifier() + "." + out;
+      }
+    }
+    return out;
+  }
+
+  /** Appends {@code node}'s lines in full, under a header naming them. */
+  private static void appendWhole(
+      StringBuilder out,
+      String rel,
+      List<String> lines,
+      CompilationUnit unit,
+      ASTNode node,
+      String label) {
+    int first = unit.getLineNumber(node.getStartPosition());
+    int last = unit.getLineNumber(Nodes.end(node) - 1);
+    header(out, rel, first, last, label);
+    int width = String.valueOf(last).length();
+    for (int line = first; line <= last; line++) {
+      appendLine(out, width, line, lines.get(line - 1));
+    }
+  }
+
+  /** Appends type {@code t}'s lines with its bodies elided, under a header naming them. */
+  private static void appendType(
+      StringBuilder out,
+      String rel,
+      List<String> lines,
+      CompilationUnit unit,
+      AbstractTypeDeclaration t,
+      String label) {
+    int first = unit.getLineNumber(t.getStartPosition());
+    int last = unit.getLineNumber(Nodes.end(t) - 1);
+    header(out, rel, first, last, label + ", bodies elided");
+    outline(lines, bodies(unit), out, String.valueOf(last).length(), first, last);
+  }
+
+  private static void header(StringBuilder out, String rel, int first, int last, String label) {
+    out.append(rel)
+        .append(first == last ? "  line " + first : "  lines " + first + "-" + last)
+        .append(" (")
+        .append(label)
+        .append("):\n");
   }
 
   private static void appendLine(StringBuilder out, int width, int number, String text) {

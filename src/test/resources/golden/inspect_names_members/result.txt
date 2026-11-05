@@ -1,0 +1,11 @@
+com/example/Cart.java  lines 6-9 (Cart.add):
+6    /** Adds a price. */
+7    void add(int price) {
+8      total += price;
+9    }
+com/example/Cart.java  lines 11-13 (Cart.add):
+11    void add(int price, int qty) {
+12      total += price * qty;
+13    }
+com/example/Cart.java  line 4 (Cart.total):
+4    private int total;

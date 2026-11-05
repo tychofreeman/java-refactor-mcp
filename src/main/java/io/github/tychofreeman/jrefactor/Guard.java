@@ -43,9 +43,10 @@ final class Guard {
 
   private static final String READ_ADVICE =
       "Read Java through inspect: a file's outline (inspect with file), lines (start_line and"
-          + " end_line), or the lines that match a regular expression, to find one (pattern, with"
-          + " or without file); from a shell, bin/jrefactor inspect file=PATH pattern=REGEX. Files"
-          + " under a resources directory may be read directly.";
+          + " end_line), a declaration by name (names: [\"Type.method\"]), or the lines that match"
+          + " a regular expression, to find one (pattern, with or without file); from a shell,"
+          + " bin/jrefactor inspect file=PATH pattern=REGEX. Files under a resources directory may"
+          + " be read directly.";
 
   private static final String WRITE_ADVICE =
       "Change Java through the tools: a refactoring, or an edit (add_declaration,"
