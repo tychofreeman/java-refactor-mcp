@@ -71,8 +71,10 @@ as an inlined initializer that may throw) and ignoring it (the model would not k
 
 ## Open questions
 
-0. **How exceptional behavior is preserved and reported.** The policy above is decided; these
-   are not. Options: (a) one flag name on every refactoring (`preserve_exceptions=true`), or one
+0. **How exceptional behavior is preserved and reported.** Answered 2026-11-04 by the user: one
+   `preserve_exceptions` flag on every refactoring (option a's first form), and the alert as a
+   separate field in the result (option b's second). Detection starts with the syntactically clear
+   cases below; roadmap #73, after #71 and #72. The options as first set out: Options: (a) one flag name on every refactoring (`preserve_exceptions=true`), or one
    per kind of exceptional behavior (`preserve_null_checks`, ...); (b) the alert as text in the
    result, or as a separate field the model must read. Detection is the hard part: a tool can
    name what it moved past (a dereference, a call that may throw) without knowing whether it
@@ -216,6 +218,9 @@ friction log; reorder when this repo's own log says otherwise.
 | 61 | 68 | `extract_variable` and `inline_variable` refuse what moves a read across an effect or a name across a declaration: extracting `i * 2` from `i++ + (i * 2)` (read moved before `i++`), a new name that hides a field the rest of the method reads, an inlined initializer whose field a closer local hides at the use | Done | Found by probes after `docs/sessions/stress-new-tools.md`; each applied and type-checked. `ExtractVariable`, `InlineVariable` |
 | 62 | 69 | `pull_up` refuses a method that, in the supertype, overrides one the supertype inherits: every other subclass then runs the pulled body (`Other.name()` returned "root", then "sub") | Done (2026-11-04), local session; record in `docs/sessions/pull-up-inherited-override.md` | Found by a probe after `docs/sessions/stress-new-tools.md`; applied and type-checked. `PullUp`, `MemberMove` |
 | 63 | 70 | `pull_up` into a class whose body is `{}` on one line writes a syntax error, and the refusal blames the member ("Move only a member that uses nothing the subclass has") | Done (2026-11-04), local session; `push_down` had it too; record in `docs/sessions/member-move-one-line-body.md` | Found by a probe after `docs/sessions/stress-new-tools.md`. `MemberMove`; `push_down` into such a subclass was not tried |
+| 64 | 71 | One shape for a refactoring: a shared target resolver (file, line, name, column to a type, member, statement or expression, with one refusal wording) and preconditions as values a tool lists, not `if`/`throw` in each `run`, so a check can refuse or report | Planned | Review of the abstractions, 2026-11-04 (the user agreed to put it ahead of #73): 14 tool classes repeat the parse-and-locate preamble (13 copy `project.javaFile(rel)` then `Jdt.parse`), resolve targets their own way (`MemberMove.typeNamed`, `ExtractVariable.find`, `InlineVariable.variableAt`, `Rename.Query`), and refuse inline (22 refusals each in `MoveMember` and `InlineFunction`). A cross-cutting flag has no one place to attach. No behavior change; the goldens are the check |
+| 65 | 72 | One effects analysis: what an expression or statement reads, writes and calls, in order, shared by the tools that move code; it replaces `ExtractVariable.hasEffect`, `MoveStatement.Effects`, `InlineVariable.assigns`/`readsIn` and `InlineFunction`'s argument checks, and has room for what may throw | Planned | Same review: four partial models of effects, none knowing exceptions. #73 needs a fifth unless they become one. No behavior change; the goldens and the effect-order probes are the check |
+| 66 | 73 | `preserve_exceptions` on every refactoring, and a separate section in the result naming each change to exceptional behavior (a dereference moved past a guard, a call declaring a checked exception moved, an expression moved into or out of a `try`) | Planned, after #71 and #72 | The user's decision, 2026-11-04 (Decisions, and open question 0: one flag, a separate field). First case: `move_member`'s null receiver |
 
 ### Split between sessions (2026-11-03)
 
