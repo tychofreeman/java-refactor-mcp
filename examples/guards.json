@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Read|Bash", "hooks": [{"type": "command", "command": "/path/to/java-refactor-mcp/bin/read-guard"}]},
+      {"matcher": "Edit|Write|MultiEdit|Bash", "hooks": [{"type": "command", "command": "/path/to/java-refactor-mcp/bin/write-guard"}]}
+    ]
+  }
+}

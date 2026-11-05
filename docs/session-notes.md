@@ -33,6 +33,14 @@ fact here becomes wrong, fix or remove it in the same PR.
   outside `resources/`. The write guard is an experiment. With both on, a change
   no tool makes is logged and asked of the user, not made by hand.
   A session started before they existed has neither (hooks load at start).
+- The README (2026-11-05, the user asked for a review for programmers who let
+  models do most of the work): what you get today and what is not proven, the
+  tools, requirements (a single-module Maven project), install, Claude Code,
+  using the tools well, troubleshooting, the CLI; contributor links at the end.
+  `examples/CLAUDE.md` is `eval-tasks/claude-md/mcp.md`, the instructions the
+  A/B runs measured, with a general test command: when a run finds better
+  instructions, update both. Keep the README's evidence sentence and tool list
+  current with `docs/design.md` and `Tools.ALL`.
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log
   (`bin/session-log`, `bin/session-report`) is the measured part.
