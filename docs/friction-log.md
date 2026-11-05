@@ -606,3 +606,11 @@ dropped argument) would need the evaluation order named first, which no tool giv
   a soft reset.
 - Idea: a `--rebuild` option (or `JREFACTOR_REBUILD=1`) that builds from the
   working tree first.
+
+## 2026-11-04: a batch removes an import a later step needs
+- Task: `docs/sessions/inline-function-instance.md` (and `refactoring-shape.md`).
+- Tool: in one batch, a step that removed the last use of `Modifier` (and, in
+  #71, of `Annotation`) also removed its import; a later step that used the name
+  again was refused as ambiguous, with a suggestion from another package.
+- Idea: in a batch, when a name a step needs was imported by the file before
+  the batch, choose that import rather than refuse.

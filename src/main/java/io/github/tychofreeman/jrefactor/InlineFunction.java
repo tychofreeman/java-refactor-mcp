@@ -16,10 +16,12 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -33,10 +35,14 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
@@ -73,12 +79,6 @@ final class InlineFunction {
     IMethodBinding method = m.resolveBinding();
     Precondition.require(
         Precondition.that(() -> method != null, () -> name + " does not resolve."),
-        Precondition.that(
-            () -> Modifier.isStatic(m.getModifiers()),
-            () ->
-                name
-                    + " is not static. inline_function inlines static methods in this first"
-                    + " version; an instance method needs its receiver."),
         Precondition.that(
             () -> !m.isVarargs() && m.typeParameters().isEmpty(),
             () -> name + " is varargs or generic, which inline_function does not inline yet."),
@@ -145,6 +145,14 @@ final class InlineFunction {
     }
 
     boolean usesOwnMembers = usesMembersOf(m.getBody(), type.resolveBinding());
+    boolean instance = !Modifier.isStatic(m.getModifiers());
+    List<ASTNode> thisUses = new ArrayList<>();
+    List<SimpleName> implicit = new ArrayList<>();
+    if (instance) {
+      receiverUses(m.getBody(), type.resolveBinding(), name, thisUses, implicit);
+      refuseOverridden(parsed, file, method, name);
+    }
+    List<String> nullable = new ArrayList<>();
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -199,6 +207,13 @@ final class InlineFunction {
                   + " method, or qualify its uses in the body first.");
         }
         checkNesting(site, sites, name);
+        Expression receiver = site.getExpression();
+        if (instance
+            && receiver != null
+            && !(receiver instanceof ThisExpression)
+            && !(receiver instanceof ClassInstanceCreation)) {
+          nullable.add(receiver + " in " + project.relative(p));
+        }
         list.addAll(
             replacementFor(
                 site,
@@ -206,6 +221,8 @@ final class InlineFunction {
                 m.getBody(),
                 prefix,
                 bodyLocals,
+                instance ? thisUses : List.of(),
+                instance ? implicit : List.of(),
                 bodyStart,
                 bodyEnd,
                 uses,
@@ -221,6 +238,15 @@ final class InlineFunction {
     if (calls == 0) {
       throw new Refusal(
           name + " has no calls in the project. Delete it with replace_declaration instead.");
+    }
+    if (!nullable.isEmpty()) {
+      Exceptional.change(
+          project,
+          "a null receiver of "
+              + name
+              + " now fails where the inlined body uses it (or not at all), not at the call: "
+              + String.join(", ", nullable),
+          "keep the method");
     }
     edits.computeIfAbsent(declaringFile, k -> new ArrayList<>()).add(removal(declaringText, m));
 
@@ -253,6 +279,8 @@ final class InlineFunction {
       Block whole,
       List<Statement> prefix,
       Set<String> bodyLocals,
+      List<ASTNode> thisUses,
+      List<SimpleName> implicit,
       int bodyStart,
       int bodyEnd,
       List<ParamUse> uses,
@@ -279,6 +307,7 @@ final class InlineFunction {
       }
     }
     checkLocals(site, bodyLocals, name);
+    List<TextEdit> receiver = receiverEdits(site, thisUses, implicit, siteText, name);
     if (value != null) {
       if (site.getParent() instanceof ExpressionStatement) {
         throw new Refusal(
@@ -286,7 +315,8 @@ final class InlineFunction {
                 + " returns a value, and a call of it is a statement. Use its result, or keep the"
                 + " method.");
       }
-      String replaced = substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText);
+      String replaced =
+          substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText, receiver);
       // A call that is all of an initializer, a return or an assignment's value needs none.
       boolean entire =
           site.getParent() instanceof VariableDeclarationFragment
@@ -312,7 +342,8 @@ final class InlineFunction {
                   end.getStartPosition() + end.getLength(),
                   uses,
                   args,
-                  siteText),
+                  siteText,
+                  receiver),
               indentOf(declaringText, from),
               indentOf(siteText, statement.getStartPosition()));
       int at = statement.getStartPosition();
@@ -323,7 +354,7 @@ final class InlineFunction {
     }
     String replaced =
         reindent(
-            substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText),
+            substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText, receiver),
             indentOf(declaringText, bodyStart),
             indentOf(siteText, stmt.getStartPosition()));
     return List.of(
@@ -333,7 +364,7 @@ final class InlineFunction {
 
   /**
    * The text of {@code start}-{@code end} of the declaring file, each parameter use given its
-   * argument.
+   * argument, and the receiver's edits ({@code receiver}, at positions of the declaring file) made.
    */
   private static String substituted(
       String declaringText,
@@ -341,23 +372,185 @@ final class InlineFunction {
       int end,
       List<ParamUse> uses,
       List<Expression> args,
-      String siteText) {
-    StringBuilder out = new StringBuilder(declaringText.substring(start, end));
-    List<ParamUse> sorted = new ArrayList<>(uses);
-    sorted.sort((a, b) -> Integer.compare(b.start(), a.start()));
-    for (ParamUse u : sorted) {
-      if (u.start() < start || u.end() > end) {
-        continue;
-      }
+      String siteText,
+      List<TextEdit> receiver) {
+    List<TextEdit> all = new ArrayList<>(receiver);
+    for (ParamUse u : uses) {
       Expression arg = args.get(u.index());
       String argText =
           siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
       if (InlineVariable.needsParentheses(arg)) {
         argText = "(" + argText + ")";
       }
-      out.replace(u.start() - start, u.end() - start, argText);
+      all.add(new TextEdit(u.start(), u.end(), argText));
+    }
+    all.sort((a, b) -> Integer.compare(b.start(), a.start()));
+    StringBuilder out = new StringBuilder(declaringText.substring(start, end));
+    for (TextEdit e : all) {
+      if (e.start() >= start && e.end() <= end) {
+        out.replace(e.start() - start, e.end() - start, e.text());
+      }
     }
     return out.toString();
+  }
+
+  /**
+   * The receiver's edits for one call: each {@code this} of the body becomes the receiver, and each
+   * of its members the body names bare gets the receiver before it. None for a call with no
+   * receiver or {@code this}. A receiver that is not fixed is refused: the body would evaluate it
+   * at each use.
+   */
+  private static List<TextEdit> receiverEdits(
+      MethodInvocation site,
+      List<ASTNode> thisUses,
+      List<SimpleName> implicit,
+      String siteText,
+      String name) {
+    Expression receiver = site.getExpression();
+    if (receiver == null || receiver instanceof ThisExpression) {
+      return List.of();
+    }
+    String text =
+        siteText.substring(
+            receiver.getStartPosition(), receiver.getStartPosition() + receiver.getLength());
+    if (!thisUses.isEmpty() || !implicit.isEmpty()) {
+      Precondition.require(
+          Precondition.that(
+              () -> Effects.of(receiver).fixed(),
+              () ->
+                  "the receiver "
+                      + text
+                      + " of a call of "
+                      + name
+                      + " calls, assigns or reads changing state, and inlined, the body would"
+                      + " evaluate it at each use. Put it in a variable first."));
+    }
+    String as = InlineVariable.needsParentheses(receiver) ? "(" + text + ")" : text;
+    List<TextEdit> edits = new ArrayList<>();
+    for (ASTNode t : thisUses) {
+      edits.add(new TextEdit(t.getStartPosition(), t.getStartPosition() + t.getLength(), as));
+    }
+    for (SimpleName n : implicit) {
+      edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), as + "."));
+    }
+    return edits;
+  }
+
+  /**
+   * The {@code this} expressions of {@code body}, and the names of {@code owner}'s instance members
+   * (inherited ones too) it uses bare, outside anonymous and local classes. Refuses {@code super}.
+   */
+  private static void receiverUses(
+      Block body,
+      ITypeBinding owner,
+      String name,
+      List<ASTNode> thisUses,
+      List<SimpleName> implicit) {
+    body.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(AnonymousClassDeclaration a) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(TypeDeclarationStatement t) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(ThisExpression t) {
+            if (t.getQualifier() == null) {
+              thisUses.add(t);
+            }
+            return false;
+          }
+
+          @Override
+          public boolean visit(SuperMethodInvocation s) {
+            throw superRefusal();
+          }
+
+          @Override
+          public boolean visit(SuperFieldAccess s) {
+            throw superRefusal();
+          }
+
+          private Refusal superRefusal() {
+            return new Refusal(
+                "the body of "
+                    + name
+                    + " uses super, which means "
+                    + owner.getName()
+                    + "'s superclass only inside it. Keep the method.");
+          }
+
+          @Override
+          public boolean visit(SimpleName n) {
+            if (n.isDeclaration() || qualified(n)) {
+              return true;
+            }
+            IBinding b = n.resolveBinding();
+            ITypeBinding declaring =
+                b instanceof IVariableBinding v && v.isField()
+                    ? v.getDeclaringClass()
+                    : b instanceof IMethodBinding mb
+                            && n.getParent() instanceof MethodInvocation mi
+                            && mi.getName() == n
+                        ? mb.getDeclaringClass()
+                        : null;
+            if (declaring != null
+                && !Modifier.isStatic(b.getModifiers())
+                && owner.isSubTypeCompatible(declaring.getErasure())) {
+              implicit.add(n);
+            }
+            return true;
+          }
+        });
+  }
+
+  /** Whether {@code n} has a qualifier before it: {@code a.n}, {@code e.n}, {@code e.n()}. */
+  private static boolean qualified(SimpleName n) {
+    ASTNode p = n.getParent();
+    return (p instanceof QualifiedName q && q.getName() == n)
+        || (p instanceof FieldAccess f && f.getName() == n)
+        || (p instanceof MethodInvocation mi && mi.getName() == n && mi.getExpression() != null);
+  }
+
+  /**
+   * Refuses a method that a declaration in {@code parsed} overrides: a call might run that one. The
+   * method's binding is taken from {@code parsed}'s own parse of {@code file}, since bindings of
+   * two parses do not compare.
+   */
+  private static void refuseOverridden(
+      Map<Path, CompilationUnit> parsed, Path file, IMethodBinding method, String name) {
+    CompilationUnit home = parsed.get(file);
+    if (home == null
+        || !(home.findDeclaringNode(method.getKey()) instanceof MethodDeclaration local)
+        || local.resolveBinding() == null) {
+      return;
+    }
+    IMethodBinding target = local.resolveBinding();
+    for (CompilationUnit u : parsed.values()) {
+      u.accept(
+          new ASTVisitor() {
+            @Override
+            public boolean visit(MethodDeclaration d) {
+              IMethodBinding b = d.resolveBinding();
+              if (b != null && !b.getKey().equals(target.getKey()) && b.overrides(target)) {
+                throw new Refusal(
+                    name
+                        + " is overridden by "
+                        + b.getDeclaringClass().getName()
+                        + "."
+                        + b.getName()
+                        + "(), so a call of it may run that one; inlined, it would not. Keep the"
+                        + " method.");
+              }
+              return true;
+            }
+          });
+    }
   }
 
   /**
@@ -688,7 +881,7 @@ final class InlineFunction {
     return null;
   }
 
-  /** Whether {@code node} names a field or method that {@code owner} declares. */
+  /** Whether {@code node} names a static field or method that {@code owner} declares. */
   private static boolean usesMembersOf(ASTNode node, ITypeBinding owner) {
     boolean[] found = {false};
     node.accept(
@@ -696,12 +889,16 @@ final class InlineFunction {
           @Override
           public boolean visit(SimpleName n) {
             IBinding b = n.resolveBinding();
+            // Instance members get the receiver before them; statics would mean another class's.
             if (b instanceof IVariableBinding v
                 && v.isField()
+                && Modifier.isStatic(v.getModifiers())
                 && owner.isEqualTo(v.getDeclaringClass())) {
               found[0] = true;
             }
-            if (b instanceof IMethodBinding m && owner.isEqualTo(m.getDeclaringClass())) {
+            if (b instanceof IMethodBinding m
+                && Modifier.isStatic(m.getModifiers())
+                && owner.isEqualTo(m.getDeclaringClass())) {
               found[0] = true;
             }
             return true;

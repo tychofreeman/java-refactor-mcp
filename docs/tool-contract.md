@@ -405,13 +405,21 @@ and `column` (only when the line has two variables of that name).
 
 ## `inline_function` (built)
 
-Replaces every call of a static method in the project with its body, the
+Replaces every call of a method in the project with its body, the
 arguments put in place of the parameters, then deletes the method. gorefactor's
 `inline_function` takes more; this first version takes `file` (the file that
 declares the method) and `name` (`Type.method`), and inlines every call.
 
 - Result: `inlined Type.method into N calls and deleted the method in <file>`.
-- Refuses: an instance, varargs, generic or abstract method; a body that returns
+- Instance methods (roadmap #84, 2026-11-04): the call's receiver replaces `this`, and
+  goes before each instance member the body names bare (`c.total()` with `return count
+  * 2` becomes `c.count * 2`); a call with no receiver, or `this`, keeps the body as it
+  is. Refused: a method a declaration in the project overrides ("is overridden by
+  Sub.total(), so a call of it may run that one"), a receiver that is not fixed ("Put
+  it in a variable first"), a body that uses `super`. A receiver that may be null is
+  reported as a change to exceptional behavior (it now fails where the body uses it),
+  and refused under `preserve_exceptions`.
+- Refuses: a varargs, generic or abstract method; a body that returns
   before its last statement; a method that calls itself; a method used as
   `Type::name`; a call nested in another call's arguments; a parameter used more than
   once when its argument calls, assigns or changes a variable; a method with no calls;
@@ -431,7 +439,7 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   other statements go before that statement ("part of a larger expression" otherwise).
   Refused also: a `return` before the last statement; a body that assigns a parameter;
   a body local whose name the calling member uses.
-- Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
+- Not built yet: `line` and `column` addressing, `keep_function`,
   inlining one call at a time.
 
 ## `change_type` (built)
