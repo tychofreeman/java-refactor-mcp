@@ -529,8 +529,10 @@ arguments.
   (its exact source text), `name`, and `column` (1-based, only when the text
   occurs twice on that line).
 - Result: `extracted <expression> as <name>, declared at line N of <file>`.
-- Refuses: an expression in a loop condition or update; below `&&` or `||`;
-  inside a conditional or lambda; assigned to; one that calls, assigns or
+- Refuses: an expression that runs only sometimes or more than once (a loop
+  condition or update, right of `&&` or `||`, a branch of `?:`; the condition
+  of a `?:` and the left of `&&` are allowed) or later (a lambda or anonymous
+  class); assigned to; one that calls, assigns or
   changes a variable; a statement not directly in a block; a type that does
   not resolve; an effect (a call, assignment or `++`/`--`) earlier in the same
   statement, which the read would move ahead of; a new name that a field of the
@@ -594,8 +596,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   a body that names a member of its class when a call is in another class; an argument
   that calls, assigns, or reads a field or array element, when an effect of the body
   (a call, an assignment, an increment) comes before its use, or its use is inside a
-  lambda or anonymous class, or, for one with an effect, in a `?:` branch or right of
-  `&&` / `||` (it would run later, after the effect, or not at all); two such
+  lambda or anonymous class, or, for one with an effect, in a `?:` branch, right of
+  `&&` / `||`, in a branch of an `if`, a loop, a `switch` case or a `catch` (it would run
+  later, after the effect, more than once, or not at all); two such
   arguments, one with an effect, that the body first uses in the other order than the
   call passes them (`f(bump(), count)` with `b + a`).
 - A body of several statements (roadmap #84, 2026-11-04): a void method's call statement

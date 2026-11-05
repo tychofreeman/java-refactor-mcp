@@ -9,18 +9,12 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ConditionalExpression;
-import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.InfixExpression;
-import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.core.dom.WhileStatement;
 
 /**
  * extract_variable: an expression is named. A declaration of it is inserted just before its
@@ -181,35 +175,20 @@ final class ExtractVariable {
               + source
               + " is not directly in a block. Put it in braces first, then extract.");
     }
-    if (s instanceof WhileStatement w && within(e, w.getExpression())) {
-      throw new Refusal(
-          source + " is in a loop condition, which runs more than once. Name it inside the loop.");
-    }
-    if (s instanceof DoStatement d && within(e, d.getExpression())) {
-      throw new Refusal(
-          source + " is in a loop condition, which runs more than once. Name it inside the loop.");
-    }
-    if (s instanceof ForStatement f && (within(e, f.getExpression()) || updates(f, e))) {
-      throw new Refusal(source + " is in a loop condition or update, which runs more than once.");
-    }
     if (e.getParent() instanceof Assignment a && a.getLeftHandSide() == e) {
       throw new Refusal(source + " is assigned to, so it cannot be named as a value.");
     }
-    for (ASTNode n = e.getParent(); n != null && n != s; n = n.getParent()) {
-      if (n instanceof ConditionalExpression || n instanceof LambdaExpression) {
-        throw new Refusal(
-            source
-                + " is inside a conditional or a lambda, so it may not run where the statement does."
-                + " Extract it by hand, or pass the branch's own statement.");
-      }
-      if (n instanceof InfixExpression x
-          && (x.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
-              || x.getOperator() == InfixExpression.Operator.CONDITIONAL_OR)) {
-        throw new Refusal(
-            source
-                + " is below && or ||, so it runs only sometimes. Extract it by hand, or"
-                + " name the statement that tests it.");
-      }
+    String where = Effects.later(e, s);
+    if (where == null) {
+      where = Effects.sometimes(e, s);
+    }
+    if (where != null) {
+      throw new Refusal(
+          source
+              + " is "
+              + where
+              + ", so it may not run where its statement does, or not once. Name it inside, or"
+              + " extract it by hand.");
     }
     checkEarlierEffects(e, s, source);
     if (Effects.of(e).changes()) {
@@ -257,16 +236,6 @@ final class ExtractVariable {
         }
       }
     }
-  }
-
-  /** Whether {@code e} is in one of the updaters of {@code f}, which run after each pass. */
-  private static boolean updates(ForStatement f, Expression e) {
-    for (Object u : f.updaters()) {
-      if (within(e, (ASTNode) u)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private static boolean within(ASTNode inner, ASTNode outer) {

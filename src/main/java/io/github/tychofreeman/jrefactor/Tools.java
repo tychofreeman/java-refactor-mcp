@@ -149,8 +149,9 @@ final class Tools {
           to, instead of a local; it must then be literals and constants only.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
-          Refuses, saying why: an expression in a loop condition or update, below && or ||, \
-          inside a conditional or lambda, assigned to, one that calls, assigns or changes a \
+          Refuses, saying why: an expression that runs only sometimes or more than once (a loop \
+          condition or update, right of && or ||, a branch of ?:) or later (a lambda), \
+          assigned to, one that calls, assigns or changes a \
           variable (its order would change), a statement not directly in a block, or a type \
           that does not resolve.\
           """,
@@ -227,7 +228,7 @@ final class Tools {
           a call nested in another call's arguments; a parameter used twice when its argument \
           calls or assigns; a method with no calls; an argument that calls, assigns or reads a \
           field when an effect of the body runs before its use, or its use is in a lambda or \
-          (for one with an effect) a branch, or an argument with an effect and one that reads \
+          (for one with an effect) a branch or a loop, or an argument with an effect and one that reads \
           state used in the other order than passed: put it in a variable first.\
           """,
           """

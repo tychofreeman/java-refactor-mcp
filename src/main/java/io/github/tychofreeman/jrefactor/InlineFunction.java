@@ -18,7 +18,6 @@ import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -26,7 +25,6 @@ import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -985,30 +983,11 @@ final class InlineFunction {
 
   /**
    * Where {@code use} runs later or only sometimes, as words ("inside a lambda"), or null when it
-   * runs once, in order. Branches count only for an argument with an effect.
+   * runs once, in order. Branches and loops count only for an argument with an effect.
    */
   private static String deferral(ASTNode use, ASTNode bodyNode, boolean effect) {
-    for (ASTNode n = use, p = use.getParent();
-        n != bodyNode && p != null;
-        n = p, p = p.getParent()) {
-      if (p instanceof LambdaExpression) {
-        return "inside a lambda";
-      }
-      if (p instanceof AnonymousClassDeclaration) {
-        return "inside an anonymous class";
-      }
-      if (effect && p instanceof ConditionalExpression c && n != c.getExpression()) {
-        return "in a branch of ?:";
-      }
-      if (effect
-          && p instanceof InfixExpression in
-          && n != in.getLeftOperand()
-          && (in.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
-              || in.getOperator() == InfixExpression.Operator.CONDITIONAL_OR)) {
-        return "to the right of && or ||";
-      }
-    }
-    return null;
+    String later = Effects.later(use, bodyNode);
+    return later != null || !effect ? later : Effects.sometimes(use, bodyNode);
   }
 
   /** Whether {@code node} names a static field or method that {@code owner} declares. */
