@@ -410,6 +410,17 @@ arguments.
   statement, which the read would move ahead of; a new name that a field of the
   enclosing class or its superclasses already has, which the local would hide.
   `all_occurrences` and `pointer` are not built yet.
+- `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
+  expr;` as the type's first member, `field` adds `private final T name = expr;`
+  (refused in a static member), and `parameter` adds a parameter to the method
+  around it, as `add_parameter` does, every call passing the expression; the
+  expression becomes the name. The expression must be literals and constants
+  (static final fields): anything else would be evaluated at another time or
+  place ("uses a local, a parameter, a field that is not a constant, or a
+  call"). Refused also: a field of that name already in the type. Result:
+  `introduced constant RATE (private static final double RATE = 0.2) in Price,
+  in place of 0.2 at line 5 of <file>`; for a parameter, `add_parameter`'s
+  result and `; 0.2 at line 5 is now rate`.
 
 ## `inline_variable` (built)
 

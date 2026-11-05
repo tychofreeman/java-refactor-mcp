@@ -31,7 +31,13 @@ final class ExtractVariable {
   private ExtractVariable() {}
 
   static Outcome run(
-      SourceProject project, String rel, int line, String expression, String name, Integer column)
+      SourceProject project,
+      String rel,
+      int line,
+      String expression,
+      String name,
+      Integer column,
+      String as)
       throws Exception {
     Precondition.require(
         Precondition.that(
@@ -54,6 +60,9 @@ final class ExtractVariable {
           "the type of "
               + expression.strip()
               + " does not resolve, so its declaration cannot be written. Declare the type first.");
+    }
+    if (as != null) {
+      return Introduce.run(project, opened, e, name, as, type, expression.strip(), line);
     }
     checkFieldName(e, name);
     String typeName = Extract.typeName(type);
