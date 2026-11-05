@@ -572,6 +572,35 @@ and `column` (only when the line has two variables of that name).
   type that differs from the initializer's; an initializer that reads a name a later declaration in the block
   hides at a use. `function` (inline by a function's name) is not built yet.
 
+## `fold` (built)
+
+Replaces code that does what an existing static method does with calls of it (roadmap
+#103, gorefactor's `fold`). Arguments: `file` (declares the method), `name`
+(`Type.method`), `line` and `in` (optional: fold only the matches that start on that line
+of `in`, or of `file`). The method stays.
+
+- The body is the pattern: one `return e;` matches expressions; a void method's
+  statements match the same run of statements in any block. Parameters stand for any
+  expression of their type (a reference type takes a subtype); a local the body declares
+  stands for a local the code declares, which must not be used after the run; every other
+  name must resolve to the same declaration, by binding key, so overloads match exactly.
+- In a `String.format` of the body, a plain `%s` whose argument is a parameter matches
+  constant text in the code's format, and the parameter is given that text as a literal:
+  `"%s: %s", room, what` matches `"%s: temp", room`, and the call passes `"temp"`.
+- A match is left, with the reason in the result, when the call would not reproduce it:
+  two arguments, both not fixed and one with an effect, that the body uses in the other
+  order than the parameters; a parameter used several times whose argument is not fixed
+  and has an effect, or that the body could change between its uses; an argument the
+  behavior gate refuses to move to the call (out of a branch or guard, past an effect); a
+  private method and code in another top-level class; a type that does not fit.
+- Result: `folded N matches of T.m into calls: <file> lines a, b; left K: <file> line L
+  (reason), ...`. The call is unqualified in the method's own class, `T.m(...)` elsewhere,
+  with an import when needed.
+- Refuses: a method that is not static or has no body, varargs, a body that is not one
+  return or a void method's statements (or returns early), a parameter the body does not
+  use, a body that assigns a parameter or returns one, and no match a call can replace
+  (with the reasons of those left).
+
 ## `inline_function` (built)
 
 Replaces every call of a method in the project with its body, the

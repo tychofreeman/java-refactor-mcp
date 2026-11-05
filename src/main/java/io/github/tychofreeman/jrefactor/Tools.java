@@ -1046,6 +1046,41 @@ final class Tools {
           Kind.CONTROL,
           (project, args) -> Batch.run(project, args));
 
+  static final Def FOLD =
+      new Def(
+          "fold",
+          """
+          Replace code that does what an existing static method does with calls of it: every \
+          match of the method's body in the project, its parameters standing for any expressions \
+          of their types, becomes a call. The method stays. extract_method makes a method from \
+          one place; fold reuses one, written or extracted, everywhere else.
+          What a body matches: one return's expression matches expressions (x * 1.2 becomes \
+          withTax(x) for static double withTax(double a) { return a * 1.2; }); a void method's \
+          statements match the same statements in any block, a local it declares standing for a \
+          local the code declares and does not use after them. Every other name must mean what it \
+          means in the body. So near-duplicates become calls: write the method with the \
+          differences as parameters, then fold it. In a String.format of the body, a %s whose \
+          argument is a parameter also matches constant text: "%s: %s", room, what matches \
+          "%s: temp", room, and the call passes "temp".
+          With line (and in), only the matches that start on that line are folded.
+          A match the call would not reproduce is left, and the result says why: arguments run in \
+          another order or another number of times, one moved out of a branch or past an effect, \
+          a private method called from another class.
+          Refuses, saying why: a method that is not static or has no body, a body that is not one \
+          return or a void method's statements, a parameter the body does not use, varargs, or no \
+          match a call can replace.\
+          """,
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.method: the static method whose body to fold.").required(),
+              Arg.integer(
+                  "line",
+                  "Optional: fold only the matches that start on this line (of in, or of file)."),
+              Arg.string("in", "Optional, with line: the file whose line it is, if not file.")),
+          Kind.REFACTORING,
+          Tools::fold);
+
   static final List<Def> ALL =
       List.of(
           INSPECT,
@@ -1065,6 +1100,7 @@ final class Tools {
           EXTRACT_VARIABLE,
           INLINE_VARIABLE,
           INLINE_FUNCTION,
+          FOLD,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
           EXTRACT_SUPERTYPE,
@@ -1199,6 +1235,15 @@ final class Tools {
 
   private static Outcome pushDown(SourceProject project, Args args) throws Exception {
     return PushDown.run(project, args.required("file"), args.required("name"));
+  }
+
+  private static Outcome fold(SourceProject project, Args args) throws Exception {
+    return Fold.run(
+        project,
+        args.required("file"),
+        args.required("name"),
+        args.integer("line"),
+        args.string("in"));
   }
 
   /**

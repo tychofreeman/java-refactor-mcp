@@ -36,10 +36,26 @@ final class Behavior {
       List<? extends ASTNode> landings,
       String label,
       String verb,
-      boolean commute) {
+      boolean commute,
+      List<? extends ASTNode> along) {
 
     Move(ASTNode code, ASTNode root, List<? extends ASTNode> landings, String label, String verb) {
-      this(code, root, landings, label, verb, false);
+      this(code, root, landings, label, verb, false, List.of());
+    }
+
+    Move(
+        ASTNode code,
+        ASTNode root,
+        List<? extends ASTNode> landings,
+        String label,
+        String verb,
+        boolean commute) {
+      this(code, root, landings, label, verb, commute, List.of());
+    }
+
+    /** Whether {@code n} is in code that moves with this code, in its order: not crossed. */
+    boolean movesAlong(ASTNode n) {
+      return along.stream().anyMatch(a -> Nodes.within(n, a));
     }
   }
 
@@ -136,6 +152,7 @@ final class Behavior {
           || e.node().getStartPosition() < from
           || e.end() > to
           || (!outside && Nodes.within(e.node(), m.code()))
+          || m.movesAlong(e.node())
           || (!earlier && Nodes.within(e.node(), landing))) {
         continue;
       }

@@ -1,0 +1,1 @@
+folded 2 matches of Calc.diff into calls: com/example/Calc.java lines 19, 21; left 1: com/example/Calc.java line 20 (the arguments g() and f() would run in another order)

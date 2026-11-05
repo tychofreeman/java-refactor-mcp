@@ -1,0 +1,1 @@
+folded 2 matches of Alerts.alert into calls: com/example/Alerts.java lines 12, 16
