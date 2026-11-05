@@ -127,7 +127,7 @@ elsewhere it is a concession, made knowingly and reported. The model can
 require it with `preserve_exceptions`, and a tool that changes it without
 the flag names each change in a separate part of its result. The options
 the user chose between (one flag or one per kind; the alert in the text or
-apart) are in `docs/design.md`, open question 0.
+apart) are in `docs/design.md`, question 0.
 
 ## Abstractions before the cross-cutting flag
 

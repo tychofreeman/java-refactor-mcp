@@ -478,7 +478,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   refactoring's own output, which changes no behavior and so needs none; a
   name a refactoring leaves unresolved is its bug, and should be refused.
 
-2026-11-04: a method deleted from a superclass in another file was still stubbed in a subclass that inherits it (`docs/sessions/stub-after-delete-inherited.md`). The Java was written by Edit (`removedAround` gained a supertype check, `removedInSupertypes` added), not by a tool: `replace_declaration` would fit `removedAround` and `add_declaration` the new method. The tool server was not loaded in that session, so no tool was tried; the gap is the session, recorded in the record.
+## 2026-11-04: a deleted inherited method was still stubbed
+
+A method deleted from a superclass in another file was still stubbed in a subclass that inherits it (`docs/sessions/stub-after-delete-inherited.md`). The Java was written by Edit (`removedAround` gained a supertype check, `removedInSupertypes` added), not by a tool: `replace_declaration` would fit `removedAround` and `add_declaration` the new method. The tool server was not loaded in that session, so no tool was tried; the gap is the session, recorded in the record.
 
 ## 2026-11-04: a test helper's stub went to src/main, and no tool deletes a file
 - Task: roadmap #61 (`docs/sessions/stress-restore.md`).
@@ -546,6 +548,8 @@ The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The g
 `int`), and the gate refused it, which the golden run showed. The tool that would have written
 the cases: none yet; the case is the tool being built.
 
+## 2026-11-04: add_supertype written by hand (before the tool existed)
+
 The fifth of the ten higher-level tools (`docs/sessions/add-supertype.md`). The class and the
 `Tools` registration (the `Def`, its `ALL` entry, the handler) were written by hand: the tool does
 not exist yet to write its own body. Once the server runs, `create_file` writes the class and
@@ -553,27 +557,39 @@ not exist yet to write its own body. Once the server runs, `create_file` writes 
 point for an interface's list and a class's `extends` before `implements` was not in the plan; the
 goldens showed both.
 
+## 2026-11-04: move_statement written by hand (before the tool existed)
+
 The sixth of the ten higher-level tools (`docs/sessions/move-statement.md`). The class and its
 `Tools` registration were written by hand, as the earlier new tools were: no tool writes a new
 tool. The independence rule was the user's choice (strict by default, names_only as a flag); the
 text swap itself is a composition that could be written with `replace_text` over the two lines,
 which the refactoring now does without it.
 
+## 2026-11-04: invert_if written by hand (before the tool existed)
+
 The seventh of the ten higher-level tools (`docs/sessions/invert-if.md`). The class and registration
 were written by hand, as the earlier new tools were. The negation rules were the user's choice
 (simplify comparisons; refuse ordering comparisons on floats).
+
+## 2026-11-04: remove_else written by hand (before the tool existed)
 
 The eighth of the ten higher-level tools (`docs/sessions/remove-else.md`). The class and registration
 were written by hand, as the earlier new tools were. The rule (only when the then-branch cannot
 finish normally) keeps the code's meaning; the dedent is the one extra step beyond the plan.
 
+## 2026-11-04: move_member written by hand (before the tool existed)
+
 The ninth of the ten higher-level tools (`docs/sessions/move-member.md`). The class and registration
 were written by hand. The receiver parameter was the user's choice; the target limited to the same
 file is a default this PR took and the record names.
 
+## 2026-11-04: encapsulate_field written by hand (before the tool existed)
+
 The tenth of the ten higher-level tools (`docs/sessions/encapsulate-field.md`). The class and
 registration were written by hand. The writes the tool refuses (compound, ++, expressions) are where
 a composition of `replace_text` would be needed: a hand edit for each, which the refusal names.
+
+## 2026-11-04: effect-order refusals written by hand
 
 The effect-order probes (`docs/sessions/stress-new-tools.md`) were found by the stress run, but
 the fix was written by hand, not by a tool: the refusals for the seven cases were added with Edit

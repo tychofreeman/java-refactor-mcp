@@ -4,11 +4,14 @@ An MCP server that gives Claude behavior-preserving refactorings for Java,
 built on Eclipse JDT Core. It is the Java counterpart to
 [go-refactor-mcp](https://github.com/tychofreeman/go-refactor-mcp) (gorefactor).
 
-**Status: early.** The server runs over STDIO with `inspect` (read-only),
-`rename` (locals, parameters, fields, methods and types, across files),
-`move_type` (a nested type to its own file), the edits, signature changes, `extract_method`, `batch` and `undo`, each
-type-checked before and after. `bin/jrefactor` runs the same tools from a
-shell, one call per run (`bin/jrefactor list`). The roadmap is in [docs/design.md](docs/design.md).
+The server runs over STDIO and serves one project. Its tools read Java
+(`inspect`), make refactorings (renames, signature changes, extract and inline,
+moves between files and types, conditionals, encapsulation) and edits, all
+type-checked before and after, with `batch` and `undo`. The tools and their
+arguments are in [docs/tool-contract.md](docs/tool-contract.md); `bin/jrefactor`
+runs the same tools from a shell, one call per run (`bin/jrefactor list`). The
+roadmap is in [docs/design.md](docs/design.md), and how the project was built in
+[docs/how-this-project-was-built.md](docs/how-this-project-was-built.md).
 
 ## Goal
 
