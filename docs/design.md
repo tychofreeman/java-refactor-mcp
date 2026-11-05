@@ -236,7 +236,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 81 | 88 | Convert a class to a record (final fields set once by the constructor, accessors renamed or kept) | Done (2026-11-04), local session: `convert_to_record` (`value_semantics`); record in `docs/sessions/convert-to-record.md` | The user's list of 2026-11-04 |
 | 82 | 89 | Extract class and introduce parameter object (gorefactor's `extract_struct`): fields or parameters grouped into a new type, uses following | Partly done (2026-11-04), local session: introduce parameter object (`extract_struct` with `parameters`); extract class open; record in `docs/sessions/extract-struct.md` | The user's list of 2026-11-04; on the planned list in `docs/tool-contract.md` |
 | 83 | 90 | Instance method to static and back in place (gorefactor's `method_to_function`, `function_to_method`) | Done (2026-11-04), local session: `move_member` to its own class, and `function_to_method`; record in `docs/sessions/static-in-place.md` | The user's list of 2026-11-04; `move_member` does it only while moving to another class |
-| 84 | 91 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Planned, last of the 2026-11-04 list | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
+| 84 | 91 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Done (2026-11-04), local session: the five primitives, `Primitives`; record in `docs/sessions/edit-primitives.md` | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
 
 ### The 2026-11-04 list
 

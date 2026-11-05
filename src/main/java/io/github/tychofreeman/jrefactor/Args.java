@@ -102,4 +102,9 @@ final class Args {
   boolean has(String key) {
     return values.containsKey(key);
   }
+
+  /** The tool these arguments are for. */
+  String tool() {
+    return tool;
+  }
 }

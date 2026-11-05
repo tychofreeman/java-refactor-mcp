@@ -105,7 +105,7 @@ final class ExtractVariable {
   }
 
   /** The expression on {@code line} with source text {@code source}, by column if several. */
-  private static Expression find(
+  static Expression find(
       CompilationUnit unit,
       String text,
       String source,

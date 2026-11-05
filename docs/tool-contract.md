@@ -48,9 +48,9 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `extract_method` is gorefactor's `extract_function`; `move_member` covers
 gorefactor's `method_to_function`; `change_type` is for fields. `move_type`,
 `pull_up`, `push_down`, `add_supertype` and `encapsulate_field` have no
-gorefactor counterpart (Go has no nested types or inheritance). gorefactor
-tools not built here (`replace_expression`, `insert_statements`, `add_case`
-and others) wait for friction-log evidence.
+gorefactor counterpart (Go has no nested types or inheritance). gorefactor's edit
+primitives are built with its names (`replace_expression`, `insert_statements`,
+`replace_statements`, `add_case`, `add_element`, roadmap #91).
 
 Planned (the user, 2026-11-04, roadmap #80-#91): `move_type` to another
 package, `move_file`, a parameter or return type change, safe delete,
@@ -368,6 +368,21 @@ in the same turn only if it is sent after it.
   directory names its file count). Refused: a path that does not exist, a `to`
   that does or that is inside `file`, Java under a source root ("Use move_type
   (with package)"), a file that is not UTF-8 ("Move this one with git mv").
+- Edit primitives (roadmap #91, 2026-11-04, gorefactor's names), each with
+  optional `imports`, through the gate with stubs and imports as every edit:
+  - `replace_expression`: `file`, `line`, `expression` (exact text), `column`,
+    `new`. Result: `replaced 0.2 at line 5 of <file>`.
+  - `insert_statements`: `file`, `line` (a statement directly in a block),
+    `where` (`before` or `after`, default after), `content`, re-indented to that
+    statement. Result: `inserted 1 line after the statement at line 5 of <file>`.
+  - `replace_statements`: `file`, `start_line`, `end_line` (whole statements of
+    one block), `content` (empty deletes). Refused: an `end_line` that does not
+    end a statement of that block, with the lines that do. Result: `replaced lines
+    5-6 of <file> with 1 line` or `deleted lines 5-6 of <file>`.
+  - `add_case`: `file`, `line` (a switch statement or expression), `content`;
+    before `default`, else at the end, indented as the other cases.
+  - `add_element`: `file`, `line` (an array initializer or an enum), `content`;
+    after the last element (on a new line when the elements are one per line).
 - `replace_text`: `file`, `old`, `new`, `all_occurrences`. `old` must occur once
   unless `all_occurrences`; refused with the lines it occurs on. Result:
   `replaced <n> occurrence(s) in <file>, line(s) ...`. gorefactor's `files`,
