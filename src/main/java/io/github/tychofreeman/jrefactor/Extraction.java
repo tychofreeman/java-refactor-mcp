@@ -102,6 +102,16 @@ final class Extraction {
             + text.substring(sel.endOffset(), insertAt)
             + method
             + text.substring(insertAt);
+    NameCheck.require(
+        project,
+        Map.of(path, text),
+        Map.of(
+            path,
+            List.of(
+                new TextEdit(sel.startOffset(), sel.endOffset(), callLine),
+                new TextEdit(insertAt, insertAt, method))),
+        NameCheck.meanings(sel.statements()),
+        "extracting " + sel.lines() + " into " + name);
     int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
     Edits.Written written =
         Edits.gated(

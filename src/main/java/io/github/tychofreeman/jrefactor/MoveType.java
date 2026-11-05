@@ -195,6 +195,12 @@ final class MoveType {
       changed.put(target, created);
     }
 
+    NameCheck.require(
+        project,
+        Map.of(target, ""),
+        Map.of(target, List.of(new TextEdit(0, 0, changed.get(target)))),
+        NameCheck.meanings(List.of(decl)),
+        "moving " + name);
     Stubs.Declared declared =
         Gate.applyOrRefuse(
             project,
