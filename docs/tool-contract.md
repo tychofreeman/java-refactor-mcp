@@ -37,6 +37,12 @@ default (`docs/design.md`, Decisions).
   swapped with one that changes state (refused). "May throw" is a dereference
   of a variable or expression, an array element, an integer `/` or `%`, a
   reference cast, a call or a new object.
+- Also detected (roadmap #75, 2026-11-04): `inline_function`, an argument that
+  may throw whose parameter the body does not use, or uses only in a branch, a
+  lambda or an anonymous class (it would throw only sometimes, or never);
+  `inline_variable`, an initializer that may throw moved into an `if`, a loop, a
+  `?:` or `&&`/`||` branch, a lambda, a `switch` or a `try` (it would throw there
+  only, if at all, or be caught).
 
 ## Moved code keeps its meaning (`NameCheck`)
 

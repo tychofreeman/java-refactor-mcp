@@ -165,6 +165,18 @@ final class InlineFunction {
       refuseOverridden(parsed, file, method, name);
     }
     List<String> nullable = new ArrayList<>();
+    // A parameter the body uses never, or only in a branch or later: its argument may not run.
+    boolean[] sometimes = new boolean[params.size()];
+    for (int i = 0; i < params.size(); i++) {
+      sometimes[i] = true;
+    }
+    for (ParamUse u : uses) {
+      ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
+      if (deferral(n, m.getBody(), true) == null) {
+        sometimes[u.index()] = false;
+      }
+    }
+    List<String> throwsSometimes = new ArrayList<>();
     // What the moved text means where it is written: the body, and each call's arguments.
     List<ASTNode> fragments = new ArrayList<>(List.of(m.getBody()));
 
@@ -221,6 +233,12 @@ final class InlineFunction {
                   + " method, or qualify its uses in the body first.");
         }
         checkNesting(site, sites, name);
+        for (int i = 0; i < site.arguments().size() && i < sometimes.length; i++) {
+          Expression a = (Expression) site.arguments().get(i);
+          if (sometimes[i] && !Effects.of(a).mayThrow().isEmpty()) {
+            throwsSometimes.add(a + " in " + project.relative(p));
+          }
+        }
         for (Object a : site.arguments()) {
           fragments.add((ASTNode) a);
         }
@@ -259,6 +277,16 @@ final class InlineFunction {
     if (calls == 0) {
       throw new Refusal(
           name + " has no calls in the project. Delete it with replace_declaration instead.");
+    }
+    if (!throwsSometimes.isEmpty()) {
+      Exceptional.change(
+          project,
+          "an argument of "
+              + name
+              + " that may throw is not used by the inlined body, or only in a branch, so it"
+              + " would throw there only sometimes, or never: "
+              + String.join(", ", throwsSometimes),
+          "keep the method");
     }
     if (!nullable.isEmpty()) {
       Exceptional.change(
