@@ -21,6 +21,14 @@ final class Jdt {
 
   private Jdt() {}
 
+  /** The property of a unit parsed from a project's file that holds the file's absolute path. */
+  static final String FILE = "jrefactor.file";
+
+  /** The file {@code unit} was parsed from, or null for text parsed alone. */
+  static Path fileOf(CompilationUnit unit) {
+    return unit.getProperty(FILE) instanceof Path p ? p : null;
+  }
+
   /** Parses {@code source} without resolving anything: its problems are syntax errors only. */
   static CompilationUnit parseSyntax(String source) {
     return (CompilationUnit) syntaxParser(ASTParser.K_COMPILATION_UNIT, source).createAST(null);
@@ -57,7 +65,9 @@ final class Jdt {
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setSource(source.toCharArray());
     parser.setUnitName(project.relative(file));
-    return (CompilationUnit) parser.createAST(null);
+    CompilationUnit unit = (CompilationUnit) parser.createAST(null);
+    unit.setProperty(FILE, file.toAbsolutePath().normalize());
+    return unit;
   }
 
   /**
@@ -79,6 +89,7 @@ final class Jdt {
             new FileASTRequestor() {
               @Override
               public void acceptAST(String sourceFilePath, CompilationUnit ast) {
+                ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
                 each.accept(Path.of(sourceFilePath), ast);
               }
             },

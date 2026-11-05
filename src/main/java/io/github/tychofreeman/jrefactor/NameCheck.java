@@ -56,7 +56,8 @@ final class NameCheck {
                       : null;
               if (declared != null) {
                 out.computeIfAbsent(n.getIdentifier(), k -> new HashSet<>())
-                    .add(at(declared.getStartPosition()));
+                    .add(
+                        at(Jdt.fileOf((CompilationUnit) n.getRoot()), declared.getStartPosition()));
               }
               return true;
             }
@@ -124,7 +125,11 @@ final class NameCheck {
               ASTNode declared = unit.findDeclaringNode(b);
               if (declared != null
                   && (inside(written, declared.getStartPosition())
-                      || was.contains(at(before(sorted, declared.getStartPosition()))))) {
+                      || was.contains(
+                          at(
+                              e.getKey().toAbsolutePath().normalize(),
+                              before(sorted, declared.getStartPosition())))
+                      || was.contains(at(null, before(sorted, declared.getStartPosition()))))) {
                 return true;
               }
               throw new Refusal(
@@ -153,9 +158,12 @@ final class NameCheck {
     return false;
   }
 
-  /** The meaning of a name by where its declaration starts in its file. */
-  private static String at(int offset) {
-    return "@" + offset;
+  /**
+   * The meaning of a name by where its declaration starts: its file and offset, or the offset alone
+   * for a unit parsed without a file.
+   */
+  private static String at(Path file, int offset) {
+    return (file == null ? "" : file.toString()) + "@" + offset;
   }
 
   /**
