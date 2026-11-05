@@ -90,9 +90,10 @@ server (`/mcp`, jrefactor, Reconnect).
    own are current.
 2. **Read Java through `inspect`:** the file without method bodies, then the
    line ranges you will change. Each line is the number, two spaces, then the
-   code: do not count those two spaces as indentation in `old`. To find a line or
-   a use, `inspect` with `pattern` (a regular expression; without `file`, the
-   whole project), not grep. Avoid Read or `cat` of whole `.java` files; each
+   code: do not count those two spaces as indentation in `old`. To read a
+   declaration wherever it is, `inspect` with `names` (`["Fold.leave"]`, `["Cart"]`);
+   to find a line or a use, with `pattern` (a regular expression; without `file`,
+   the whole project), not grep. Avoid Read or `cat` of whole `.java` files; each
    result is sent again on every later turn.
 3. **Prefer a refactoring to an edit.** Renames, signature changes, extract and
    inline, and the moves carry a change to every use and type-check it; each

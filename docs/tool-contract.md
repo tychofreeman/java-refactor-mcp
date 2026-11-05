@@ -104,8 +104,15 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   give file.` No match is `no line of <file> matches /re/.` Refused: an invalid
   expression (with the reason), `pattern` with `start_line` or `end_line`. What a
   `grep -n` of Java found before; the read guard's refusal points to it.
-- Not yet: gorefactor's no-argument overview, `function`, `targets`, `names`
-  and `uses`.
+- `names` (2026-11-05, gorefactor's argument), alone: declarations found anywhere in
+  the project by name. `"Type"` (or `"Outer.Inner"`, a nested type) shows the type's
+  lines with its bodies elided, as the file view does; `"Type.member"` shows each
+  method of that name (every overload), a field or an enum constant in full, Javadoc
+  included. Each under `<file>  lines a-b (name):` (`, bodies elided` for a type).
+  Refused: no type of that name ("Name a type as Type or Outer.Inner"), a type with no
+  such member ("inspect it by name to see what it declares"), and `names` with
+  `file`, `pattern` or a line range.
+- Not yet: gorefactor's no-argument overview, `function`, `targets` and `uses`.
 
 ## `rename` (built)
 
