@@ -697,6 +697,8 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   fragment's file (the units come from `Holding` or `Jdt.parseAll`, which know
   their paths), and `require` compares the mapped-back position in the file the
   declaration is in.
+  Done: `Jdt.FILE` on each unit, `NameCheck.at(file, offset)` (2026-11-05,
+  `docs/sessions/namecheck-by-file.md`).
 
 ## 2026-11-05: session report counts a bin/jrefactor call as by hand
 - Task: `docs/sessions/probe-test.md`.
