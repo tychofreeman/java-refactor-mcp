@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,5 +71,18 @@ class JournalTest {
     SourceProject second = SourceProject.of(root);
     Refusal refusal = assertThrows(Refusal.class, () -> Journal.undo(second));
     assertEquals("Nothing to undo in this session.", refusal.getMessage());
+  }
+
+  /** A file deleted by the journal takes the directories it alone filled with it. */
+  @Test
+  void deletingAFileRemovesTheDirectoriesItLeavesEmpty(@TempDir Path root) throws Exception {
+    Path kept = root.resolve("a/keep.txt");
+    Files.createDirectories(kept.getParent());
+    Files.writeString(kept, "kept");
+    Path file = root.resolve("a/b/c/new.txt");
+    Journal.put(file, "new");
+    Journal.put(file, null);
+    assertFalse(Files.exists(root.resolve("a/b")));
+    assertTrue(Files.exists(kept));
   }
 }

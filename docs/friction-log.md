@@ -624,3 +624,4 @@ dropped argument) would need the evaluation order named first, which no tool giv
   case directory with no `args.properties`.
 - Idea: the journal removes directories that a refused or undone call created
   and left empty.
+  Done: `Journal.put` (2026-11-04, `docs/sessions/journal-empty-dirs.md`).
