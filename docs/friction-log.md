@@ -681,3 +681,19 @@ next got its stub (a test calling a method of a class nobody declares gets no st
 for the method), then the stub replaced with `replace_declaration` and the rest
 added with `add_declaration`. The tokenizer is a port of gorefactor's
 `internal/hook.Commands`; a shared contract for hooks is not worth one yet.
+
+## 2026-11-05: NameCheck can miss a capture when two files declare a name at one offset
+- Found while fixing #170 (`docs/sessions/namecheck-positions.md`), not by a run:
+  a known limit, logged at the user's request.
+- `NameCheck.meanings` records each name's meaning by its declaration's offset
+  (`@123`), to compare declarations in anonymous classes, whose binding keys hold
+  source positions an earlier edit shifts. The offset is not tied to a file. When
+  moved text comes from one file into another, and the second file has a closer
+  declaration of the same name at the same offset as the one the name meant in the
+  first, the capture is accepted.
+- Unlikely (same identifier, same offset, two files, and a capture), and no case
+  has been seen; but a check that accepts a capture by coincidence is wrong.
+- Idea: key the position by file too (`path@offset`): `meanings` takes each
+  fragment's file (the units come from `Holding` or `Jdt.parseAll`, which know
+  their paths), and `require` compares the mapped-back position in the file the
+  declaration is in.
