@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Block;
@@ -93,6 +95,76 @@ public final class Inspect {
         .append(":\n");
     for (int line = start; line <= last; line++) {
       appendLine(out, width, line, lines.get(line - 1));
+    }
+    return out.toString();
+  }
+
+  /** The most matching lines a pattern shows, over all files. */
+  static final int MAX_MATCHES = 100;
+
+  /**
+   * The lines of {@code file} that {@code regex} matches somewhere in, numbered as {@link #lines}
+   * numbers them; with no file, those of every Java file of the project, file by file. At most
+   * {@link #MAX_MATCHES} lines, then how many more there are.
+   */
+  public static String pattern(SourceProject project, String file, String regex)
+      throws IOException {
+    Pattern p;
+    try {
+      p = Pattern.compile(regex);
+    } catch (PatternSyntaxException e) {
+      throw new Refusal(
+          regex
+              + " is not a regular expression: "
+              + e.getDescription()
+              + ". Escape ( [ { . * + ? with a backslash to match them as text.");
+    }
+    List<Path> files =
+        file == null
+            ? project.javaFiles().stream().sorted().toList()
+            : List.of(javaFile(project, file));
+    StringBuilder out = new StringBuilder();
+    int shown = 0;
+    int more = 0;
+    for (Path f : files) {
+      List<String> lines = Files.readString(f).lines().toList();
+      List<Integer> hits = new ArrayList<>();
+      for (int i = 0; i < lines.size(); i++) {
+        if (p.matcher(lines.get(i)).find()) {
+          hits.add(i + 1);
+        }
+      }
+      if (hits.isEmpty()) {
+        continue;
+      }
+      int room = MAX_MATCHES - shown;
+      if (room <= 0) {
+        more += hits.size();
+        continue;
+      }
+      List<Integer> show = hits.subList(0, Math.min(room, hits.size()));
+      more += hits.size() - show.size();
+      out.append(project.relative(f))
+          .append("  ")
+          .append(hits.size())
+          .append(hits.size() == 1 ? " line matches /" : " lines match /")
+          .append(regex)
+          .append("/:\n");
+      int width = String.valueOf(show.get(show.size() - 1)).length();
+      for (int line : show) {
+        appendLine(out, width, line, lines.get(line - 1));
+      }
+      shown += show.size();
+    }
+    if (shown == 0) {
+      return "no line of "
+          + (file == null ? "a Java file in the project" : file)
+          + " matches /"
+          + regex
+          + "/.";
+    }
+    if (more > 0) {
+      out.append("... and ").append(more).append(" more; narrow the pattern, or give file.\n");
     }
     return out.toString();
   }

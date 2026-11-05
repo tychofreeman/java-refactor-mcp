@@ -95,12 +95,20 @@ final class Tools {
           fields, signatures and comments in full, and in place of each body of two lines or more \
           the lines it takes.
           - file + start_line/end_line: those lines (end_line defaults to the end of the file).
+          - pattern (a Java regular expression), with file or without: the lines that match, \
+          numbered, file by file over the project's Java files (at most 100): where a name is \
+          used, which line to edit. Use it rather than grep.
           Paths are relative to the project root; lines are 1-based.\
           """,
           List.of(
-              Arg.FILE,
+              Arg.string(
+                  "file",
+                  "Java file path relative to the project root; optional with pattern, to search"
+                      + " every Java file."),
               Arg.integer("start_line", "First line to show (1-based)."),
-              Arg.integer("end_line", "Last line to show (inclusive).")),
+              Arg.integer("end_line", "Last line to show (inclusive)."),
+              Arg.string(
+                  "pattern", "Optional: show the lines that match this Java regular expression.")),
           Kind.READ,
           Tools::inspect);
 
@@ -1132,9 +1140,18 @@ final class Tools {
           UNDO);
 
   private static Outcome inspect(SourceProject project, Args args) throws Exception {
-    String file = args.required("file");
+    String pattern = args.string("pattern");
     Integer start = args.integer("start_line");
     Integer end = args.integer("end_line");
+    if (pattern != null) {
+      if (start != null || end != null) {
+        throw new Refusal(
+            "pattern searches all of a file (or, with no file, the project); leave out"
+                + " start_line and end_line, or the pattern.");
+      }
+      return Outcome.of(Inspect.pattern(project, args.string("file"), pattern));
+    }
+    String file = args.required("file");
     if (start == null && end == null) {
       return Outcome.of(Inspect.file(project, file));
     }
