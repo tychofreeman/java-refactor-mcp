@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -87,5 +88,33 @@ class GuardTest {
             bash("git checkout main"))) {
       assertEquals("", Guard.refusal(true, c), c);
     }
+  }
+
+  /** A grep that prints no text of the file (a count, a file name, a status) is not a read. */
+  @Test
+  void aGrepThatShowsNoTextIsAllowed() {
+    for (String flags :
+        List.of("-c", "-l", "-L", "-q", "--count", "--files-with-matches", "-rlq")) {
+      assertEquals("", Guard.each("grep " + flags + " DEBUG " + MAIN, "/home/u/p", false), flags);
+    }
+    assertNotEquals("", Guard.each("grep -n DEBUG " + MAIN, "/home/u/p", false));
+  }
+
+  /** A path a variable hides cannot be judged: refused, saying to write it out. */
+  @Test
+  void aPathThroughAnUnknownVariableIsRefusedSayingSo() {
+    String why = Guard.each("d=$(dirname x); cat $d/in/com/example/Plant.java", "/home/u/p", false);
+    assertTrue(why.contains("write the path out"), why);
+  }
+
+  /** Under a resources directory, by cd or by the path itself, a Java file may be read. */
+  @Test
+  void aFileUnderResourcesMayBeReadAfterACd() {
+    assertEquals(
+        "",
+        Guard.each(
+            "cd /home/u/p/src/test/resources/golden && cat case/in/com/example/Plant.java",
+            "/home/u/p",
+            false));
   }
 }
