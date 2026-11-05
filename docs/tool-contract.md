@@ -555,6 +555,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   it in a variable first"), a body that uses `super`. A receiver that may be null is
   reported as a change to exceptional behavior (it now fails where the body uses it),
   and refused under `preserve_exceptions`.
+- A bare field of the body that a local or parameter of the calling member hides is
+  qualified, `this.count` (or the type, for a static), so it keeps meaning the field
+  (roadmap #93).
 - Refuses: a varargs, generic or abstract method; a body that returns
   before its last statement; a method that calls itself; a method used as
   `Type::name`; a call nested in another call's arguments; a parameter used more than
