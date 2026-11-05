@@ -649,3 +649,13 @@ dropped argument) would need the evaluation order named first, which no tool giv
   ("batch does not take tool").
 - Idea: a JSON object with a `tool` key names the tool, so `bin/jrefactor @file`
   works alone.
+
+## 2026-11-05: a release on every push (the user, as gorefactor's #555)
+
+- By hand: the release job was appended to `.github/workflows/ci.yml` with a
+  shell redirect; `replace_text` has no way to add text at the end of a file
+  (gorefactor's has `append`), and the job was 80 new lines.
+- Through the tools: `Server.version()` was added returning the constant, used
+  in `serverInfo`, then its test written and failing, then the method replaced
+  to read the manifest and the constant deleted (a safe delete).
+- Idea: `replace_text` with `append`, as gorefactor's.

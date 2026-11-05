@@ -367,4 +367,10 @@ class ServerTest {
       assertTrue(files.anyMatch(f -> f.getFileName().toString().endsWith("-classpath.txt")));
     }
   }
+
+  /** Classes outside a released jar have no version in a manifest. */
+  @Test
+  void versionIsDevelOutsideAReleasedJar() {
+    assertEquals("devel", Server.version());
+  }
 }

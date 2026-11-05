@@ -50,6 +50,15 @@ heuristic and would refuse falsely), and keeping the opt-in with a test that
 every refactoring calls the three checks (cheapest, but the rules stay
 scattered and `InlineFunction` does not shrink).
 
+**Decided 2026-11-05 (the user): a release on every push to main that changes code and
+passes CI.** The `release` job of `ci.yml` tags the commit with the next version after the
+latest tag, bumped by the merged pull request's label (`major`, `minor`, else the patch),
+builds the jar with that version in its manifest (`-Drelease.version`, which
+`Server.version()` reports; any other build reports `devel`), and creates the GitHub
+release with generated notes and the jar attached. Not chosen: a version raised by hand in
+a PR (gorefactor's first scheme, which let main run 53 PRs past its release), a date or a
+patch-only bump, and committing the bump back to `main`. The first release is v0.1.0.
+
 **Decided: separate repos** for the Go and Java servers. A shared repo for the
 tool contract and the A/B harness is planned once a second language exists.
 
