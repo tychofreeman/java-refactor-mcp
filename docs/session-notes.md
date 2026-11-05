@@ -134,6 +134,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `convert_lambda` (#87, 2026-11-04) is `ConvertLambda`: lambda, method reference and
   anonymous class to one another; the type check catches an ambiguous overload.
 
+- `convert_to_record` (#88, 2026-11-04) is `ConvertToRecord`; a record's generated
+  `equals`/`hashCode`/`toString` change behavior, so the class must define them or the
+  model must pass `value_semantics=true` (this session's decision).
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the
