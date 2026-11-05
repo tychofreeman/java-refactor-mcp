@@ -217,6 +217,7 @@ final class Signatures {
                     + " not both."));
     MethodFamily family = MethodFamily.of(project, args);
     SignatureChange change = new SignatureChange(family);
+    checkPrimitiveUses(family, args, type, returns);
     if (returns) {
       for (Decl d : family.decls) {
         Precondition.require(
@@ -270,6 +271,53 @@ final class Signatures {
         project,
         "changed the type of " + parameter + " of " + family.label + " to " + type,
         args.list("imports"));
+  }
+
+  /**
+   * Refuses a change of or to a primitive or boxed type where a use decides the result by the type
+   * ({@link PrimitiveUses}): each call's result, for the return type; each use of the parameter in
+   * the family's bodies, for a parameter.
+   */
+  private static void checkPrimitiveUses(
+      MethodFamily family, Args args, String type, boolean returns) {
+    IMethodBinding target = family.target.resolveBinding();
+    if (target == null) {
+      return;
+    }
+    if (returns) {
+      ITypeBinding before = target.getReturnType();
+      if (!PrimitiveUses.applies(before, type)) {
+        return;
+      }
+      boolean boxed = PrimitiveUses.anyBoxed(before, type);
+      for (Call c : family.calls) {
+        if (c.node() instanceof Expression x) {
+          PrimitiveUses.check(
+              x, family.label + "'s result", before.getName(), type, boxed, c.file().rel());
+        }
+      }
+      return;
+    }
+    String parameter = args.required("parameter");
+    int at = family.index(parameter, "parameter", false);
+    ITypeBinding before = target.getParameterTypes()[at];
+    if (!PrimitiveUses.applies(before, type)) {
+      return;
+    }
+    boolean boxed = PrimitiveUses.anyBoxed(before, type);
+    for (Decl d : family.decls) {
+      IVariableBinding p =
+          ((SingleVariableDeclaration) d.m().parameters().get(at)).resolveBinding();
+      if (d.m().getBody() == null || p == null) {
+        continue;
+      }
+      for (SimpleName n : Nodes.all(d.m().getBody(), SimpleName.class)) {
+        if (n.resolveBinding() instanceof IVariableBinding v
+            && v.getVariableDeclaration().getKey().equals(p.getKey())) {
+          PrimitiveUses.check(n, parameter, before.getName(), type, boxed, d.file().rel());
+        }
+      }
+    }
   }
 
   /** Refuses {@code text} as the {@code what} argument unless {@code wrapped} parses. */
