@@ -43,9 +43,20 @@ final class NameCheck {
           new ASTVisitor() {
             @Override
             public boolean visit(SimpleName n) {
-              String key = key(n.resolveBinding());
+              IBinding b = n.resolveBinding();
+              String key = key(b);
               if (key != null) {
                 out.computeIfAbsent(n.getIdentifier(), k -> new HashSet<>()).add(key);
+              }
+              // Keys of what an anonymous or local class declares hold source positions, which an
+              // edit earlier in the file shifts; where the declaration stands does not change.
+              ASTNode declared =
+                  b != null && n.getRoot() instanceof CompilationUnit u
+                      ? u.findDeclaringNode(b)
+                      : null;
+              if (declared != null) {
+                out.computeIfAbsent(n.getIdentifier(), k -> new HashSet<>())
+                    .add(at(declared.getStartPosition()));
               }
               return true;
             }
@@ -111,7 +122,9 @@ final class NameCheck {
                 return true;
               }
               ASTNode declared = unit.findDeclaringNode(b);
-              if (declared != null && inside(written, declared.getStartPosition())) {
+              if (declared != null
+                  && (inside(written, declared.getStartPosition())
+                      || was.contains(at(before(sorted, declared.getStartPosition()))))) {
                 return true;
               }
               throw new Refusal(
@@ -138,6 +151,27 @@ final class NameCheck {
       }
     }
     return false;
+  }
+
+  /** The meaning of a name by where its declaration starts in its file. */
+  private static String at(int offset) {
+    return "@" + offset;
+  }
+
+  /**
+   * Where {@code offset} after {@code sorted} (in order, not overlapping) was before them, for an
+   * offset no edit wrote.
+   */
+  private static int before(List<TextEdit> sorted, int offset) {
+    int shift = 0;
+    for (TextEdit t : sorted) {
+      int end = t.start() + shift + t.text().length();
+      if (end > offset) {
+        break;
+      }
+      shift += t.text().length() - (t.end() - t.start());
+    }
+    return offset - shift;
   }
 
   /** Whether {@code n} is the name part of a qualified name, field access, call or reference. */

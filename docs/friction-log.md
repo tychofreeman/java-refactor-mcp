@@ -632,3 +632,20 @@ dropped argument) would need the evaluation order named first, which no tool giv
   through the journal, without its mode, so `./mvnw` was "permission denied"
   until a `chmod +x` by hand.
 - Idea: the journal keeps a file's permissions when it moves or copies it.
+
+## 2026-11-05: a stub for a call in an anonymous class of a static method is an instance method
+- Task: `docs/sessions/namecheck-positions.md`.
+- Tool: `replace_text` with a call of the new `at(int)` inside an `ASTVisitor`
+  in a static method of `NameCheck` declared the stub without `static`, and the
+  gate refused the edit ("Cannot make a static reference to the non-static
+  method"). Resent as a batch with the declaration first, check `end`.
+- Idea: a stub is static when the call's nearest enclosing method of the
+  target class is static, looking through anonymous classes and lambdas.
+
+## 2026-11-05: bin/jrefactor @file takes the arguments only
+- Task: `docs/sessions/shared-helpers.md`.
+- Tool: `bin/jrefactor @steps.json` without a tool name was read as a tool named
+  `@...`; with `batch`, a JSON object holding `"tool": "batch"` was refused
+  ("batch does not take tool").
+- Idea: a JSON object with a `tool` key names the tool, so `bin/jrefactor @file`
+  works alone.
