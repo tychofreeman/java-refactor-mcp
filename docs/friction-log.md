@@ -18,6 +18,8 @@ first), so parallel PRs do not conflict at the same place:
 Before writing that no tool covers a change, look for a sequence of two or three
 tools that composes to it, and name the sequences tried and why each failed.
 When a later PR closes an entry, mark it *Follow-up: done* with the PR.
+In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
+`docs/design.md`; older entries write rows as `#N` too.
 
 ## 2026-11-02: the first server and `inspect`, all by hand
 - Task: roadmap #5, the MCP server over STDIO with `inspect`
@@ -31,6 +33,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: none new. The gap is the whole edit tool set, which the roadmap already
   orders: `rename_local` through the server (#6), then building this project
   through its own tools (#13).
+- Follow-up: done: the edit tools (roadmap #19), `.mcp.json` (roadmap #13),
+  `extract_method` (#21) and stubs (#18).
 
 ## 2026-11-02: `rename_local` through the server, by hand
 - Task: roadmap #6 (`docs/sessions/rename-local-tool.md`).
@@ -44,6 +48,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: `.mcp.json` running this checkout's jar (roadmap #13), so the next item
   can read with `inspect` and rename with `rename_local`. Then add_parameter and
   extract_function are the edit tools this item would have used.
+- Follow-up: done: `.mcp.json` (roadmap #13), `add_parameter` and
+  `extract_method` exist.
 
 ## 2026-11-02: `.mcp.json` for this checkout, by hand
 - Task: roadmap #13 (`docs/sessions/mcp-json-self.md`).
@@ -53,6 +59,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Edit. The launcher, `.mcp.json` and docs are not Java.
 - Cost: not measured (roadmap #18).
 - Idea: none; from the next session on, `inspect` and `rename_local` are there.
+- Follow-up: no gap to fix: new behavior, before the tools could be used.
 
 ## 2026-11-02: source roots and the classpath, reads through `inspect`
 - Task: roadmap #7 (`docs/sessions/source-roots-classpath.md`).
@@ -68,6 +75,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: roadmap #19's edits cover each of these. The description needs its
   continuation lines unindented, and a test that no description has a run of
   spaces.
+- Follow-up: done: the edits (roadmap #19); `ServerTest.descriptionsHaveNoRunsOfSpaces`.
 
 ## 2026-11-02: the first edit tools, built by hand
 - Task: roadmap #19 (`docs/sessions/first-edit-tools.md`).
@@ -82,6 +90,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: extract_function (#23); a move of declarations between files is not on
   the roadmap; log it again when it recurs before adding it.
+- Follow-up: done: `extract_method` (#21); moving declarations between files is
+  `move_type` (#47) and, within a file, `move_member` (#114); across files, open
+  (roadmap #109).
 
 ## 2026-11-02: imports, the first item built through the edit tools
 - Task: roadmap #20 (`docs/sessions/imports-in-edits.md`).
@@ -102,6 +113,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     `old` from the same lines matched. Cause not found.
 - Cost: not measured (roadmap #18).
 - Idea: batch (#8, next); line numbers in the members-do-not-parse refusal.
+- Follow-up: batch is done (roadmap #8); the members-do-not-parse refusal
+  still names no line (roadmap #110); the unmatched `old` was indentation (next
+  entry).
 
 ## 2026-11-02: undo and batch, through the tools
 - Task: roadmap #8 (`docs/sessions/undo-and-batch.md`).
@@ -125,6 +139,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: the nearest lines in "old is not in", and spacing-tolerant matching;
   the likely candidate first in an ambiguity refusal; the lambda import bug.
+- Follow-up: the lambda import is done (#17); the nearest lines and
+  indentation-tolerant `old` are open (roadmap #106); the likely candidate first is
+  open (roadmap #105).
 
 ## 2026-11-02: imports in lambdas, through the tools
 - Task: the import fixing missed `ArrayDeque` in a lambda (#8's follow-up).
@@ -140,6 +157,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     Worked around with an indented field in the fixture.
 - Cost: not measured (roadmap #18).
 - Idea: with no indentation in the file, take the step from the content.
+- Follow-up: done: the reparse (#17) and the indentation step from the content
+  (#18).
 
 ## 2026-11-02: stubs from usage, through the tools
 - Task: roadmap #21 (`docs/sessions/stubs-from-usage.md`).
@@ -162,6 +181,9 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Cost: not measured (roadmap #18).
 - Idea: discourage `.internal.` packages in the import index; name every
   ambiguous name in one refusal; a way to list the project's Java files.
+- Follow-up: `.internal.` packages are left out (#19); every ambiguous name in one
+  refusal is open (roadmap #105); listing the project's files is open (roadmap
+  #111).
 
 ## 2026-11-02: stubs for a class used as a static receiver
 - Task: registering #22's tools with handlers not written yet
@@ -178,6 +200,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   a class, a lambda's result type comes from the method it implements, and
   libraries' `.internal.` packages are not import candidates (this also ends
   the dom/internal ambiguity logged above).
+- Follow-up: done (#19).
 
 ## 2026-11-02: signature changes, through the tools
 - Task: roadmap #22 (`docs/sessions/signature-changes.md`).
@@ -200,6 +223,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
     `last`; with "named priority, at the end", one `add_parameter` call.
 - Cost: not measured (roadmap #18).
 - Idea: stub replacement by erasure.
+- Follow-up: open: replacing a stub by erasure (roadmap #107; reproduced
+  2026-11-05).
 
 ## 2026-11-03: extract method, through the tools
 - Task: roadmap #23 (`docs/sessions/extract-function.md`).
@@ -215,6 +240,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   file and then `replace_text` it, which works today; say so in the refusal
   for a large file ("send it in a batch with check end, with the fixes as later
   steps").
+- Follow-up: open: a `create_file` compile refusal does not suggest a batch with
+  check "end" (roadmap #110); a batch's refusal does.
 
 ## 2026-11-03: a refused create_file left a stub class behind
 - Task: roadmap #18 (session log), writing its test first.
@@ -229,6 +256,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   file. Fixed with `containsKey` in both (`stubs_refused_leaves_no_class`,
   `JournalTest`).
 - Idea: none beyond the fix.
+- Follow-up: done in that item's PR (#23; golden `stubs_refused_leaves_no_class`).
 
 ## 2026-11-03: stubs do not declare a constant a test uses first
 - Task: roadmap #18 (`docs/sessions/session-log.md`).
@@ -238,6 +266,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   held the constant first. One extra call, and the test resent whole.
 - Idea: a stub for a static field read as `T.NAME` (typed from the use, as
   methods are, with a default value) when the type is the project's.
+- Follow-up: open: no stub for `T.NAME` (roadmap #107; reproduced 2026-11-05).
 
 ## 2026-11-03: an import for a name a later batch step declares
 - Task: roadmap #9 (`docs/sessions/rename-across-files.md`).
@@ -249,6 +278,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: in a batch checked at the end, fix imports once at the end too, or
   have a later step's import fix drop an import that a member type of the
   file now shadows.
+- Follow-up: open (roadmap #108; reproduced 2026-11-05: `javax.management.Query`
+  imported for a member record a later step adds).
 
 ## 2026-11-03: one refused step costs the whole batch again
 - Task: roadmap #9.
@@ -260,6 +291,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   candidate in the same package family as the file's other imports
   (`org.eclipse.jdt.core.dom`, like the file's 14 others) rather than refuse;
   and a deleted declaration still used could be deferred to the end check.
+- Follow-up: the ambiguous import is open (roadmap #105); a deleted declaration
+  still used is refused before the gate, naming the uses (#139).
 
 ## 2026-11-03: stubs declared a local assertEquals for a missing static import
 - Task: roadmap #9, a `JournalTest` method using `assertEquals` when the
@@ -270,6 +303,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: before declaring a stub method on the enclosing type, look for a
   static import of the same class as an existing static import
   (`org.junit.jupiter.api.Assertions.*`) that has the method.
+- Follow-up: done: `Imports.staticImports` (#43, golden `imports_static_method`).
 
 ## 2026-11-03: no tool moves golden directories
 - Task: roadmap #9: eight `rename_local_*` golden cases renamed to `rename_*`,
@@ -279,6 +313,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   file that is not Java). gorefactor has a file move with copy for this
   ("testdata/old_case to testdata/new_case renames a golden case").
 - Idea: a `move_file` (with `copy`) for fixtures and docs, as gorefactor's.
+- Follow-up: done: `move_file` with `copy` (#137).
 
 ## 2026-11-03: session report counts reads as hand writes
 - Task: roadmap #9, `bin/session-report` for the record.
@@ -289,6 +324,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: count a Bash command as a write only when a redirect target or a
   writing command names a file, not for `>` inside quotes; count lines of
   Java only for `.java` targets.
+- Follow-up: done (#39).
 
 ## 2026-11-03: an import removed by one edit, refused as ambiguous by the next
 - Task: roadmap #10 (`docs/sessions/gate-cost.md`).
@@ -299,6 +335,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: when a name is ambiguous, prefer `java.*` (or what the file imported
   before, or what its other imports' packages suggest) over library classes,
   and say which was chosen in the result.
+- Follow-up: open (roadmap #105).
 
 ## 2026-11-03: overload name with a generic parameter typed by hand
 - Task: roadmap #36 (`docs/sessions/overload-generic-params.md`).
@@ -308,6 +345,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   with the Edit tool, not with `replace_text` or `replace_declaration` on this
   repo's own source. Those tools cover it once the server runs; the choice was
   not tested against them.
+- Follow-up: done (#32); the hand edit was before the server ran in that session.
 
 ## 2026-11-03: stub import picks from another file, found by reading
 - Task: roadmap #37 (`docs/sessions/stubs-uses-picks.md`).
@@ -317,24 +355,31 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `java.awt.List`, and was refused only as a side effect of the call.
 - Edit: `Stubs.java` changed with the Edit tool, not `replace_text`, the same
   gap as #36's entry above.
+- Follow-up: done (#33).
 
 ## 2026-11-03: the server's own source edited with the Edit tool
 - Task: roadmap #38 (`docs/sessions/maven-classpath-note.md`).
 - Tool: none used. `SourceProject.java` and `Gate.java` were changed with the
   Edit tool; `replace_text` on those files would have made the same change.
   The same gap as the #36 and #37 entries above.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: six server files edited by script for one refusal wording
 - Task: roadmap #26 (`docs/sessions/path-refusal-one-place.md`).
 - Tool: none used. `SourceProject`, `Extract`, `Signatures`, `Declarations`,
   `Edits` and `Inspect` were changed by Python scripts that replaced anchor
   text. `replace_text` on those files would have made the same edits.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: static state removed by script, six server files
 - Task: roadmap #33 and #43 (`docs/sessions/no-global-state.md`).
 - Tool: none used. `Journal`, `Gate`, `Imports`, `TypeCheck`, `Server`, `Tools`,
   `Batch` and `Edits` were changed by Python scripts that replaced anchor text.
   `replace_text` would have made the same edits.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 
 ## 2026-11-03: line helper call sites changed by script across six files
@@ -346,6 +391,8 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `batch` of six `replace_text` edits with check "end" would have made the
   whole change in one call. The script's anchors that matched more than once
   were caught by count assertions, not by the tool.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 ## 2026-11-03: a stub assertFalse again, for a missing static import
 - Task: roadmap #45 (`docs/sessions/session-report-counts.md`).
 - Tool: `add_declaration` of three tests, one calling `assertFalse`, with
@@ -356,12 +403,15 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: before declaring a stub method in a class, look for a static method
   of that name in the classes the file already imports statically (here
   `org.junit.jupiter.api.Assertions`), and import it instead.
+- Follow-up: done: `Imports.staticImports` (#43).
 
 ## 2026-11-03: Family.of prefilter edited by hand
 - Task: roadmap order 44 (`docs/sessions/reuse-gate-parse.md`).
 - Tool: none used. `Signatures.java` (`Family.of`, a new `simpleName`) was
   changed with the Edit tool; the java-refactor-mcp tools were not in this
   session's tool list. `replace_text` would have made both edits.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: nested class moved to its own file by script
 - Task: roadmap order 25 (`docs/sessions/split-extract.md`).
@@ -372,12 +422,15 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   `replace_declaration` with empty content only deletes. A `move_type` tool
   (move a nested class or member to a new file, fixing references and
   imports) would have done it.
+- Follow-up: done: `move_type` (#47).
 
 ## 2026-11-03: parser options moved into Jdt by hand
 - Task: review item 28 (`docs/sessions/one-parser-config.md`).
 - Tool: none used. `Jdt.java` and `Declarations.java` were changed with the
   Edit tool; the java-refactor-mcp tools were not in this session's tool
   list. `replace_text` would have made each edit.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: gated-edit call sites changed by hand
 - Task: roadmap order 32 (`docs/sessions/edit-pipeline.md`).
@@ -385,36 +438,46 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   were changed with the Edit tool; the java-refactor-mcp tools were not in
   this session's tool list. `replace_text` would have made each edit, and a
   `batch` of them with check "end" the whole change in one call.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: Gate.deferred fix and its test made by hand
 - Task: roadmap order 41 (`docs/sessions/gate-deferred-nesting.md`).
 - Tool: none used. `Gate.java` and `GateTest.java` were changed with the Edit
   tool; the java-refactor-mcp tools were not in this session's tool list.
   `add_declaration` would have written the test and `replace_text` the fix.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: end-of-batch check moved into Gate by hand
 - Task: roadmap order 24 (`docs/sessions/gate-before-after.md`).
 - Tool: none used. `Gate.java` and `Batch.java` were changed with the Edit
   tool. A `move` of the check's steps into `Gate` has no tool; `replace_text`
   would cover each edit.
+- Follow-up: open: moving members to a class in another file (roadmap #109).
 
 ## 2026-11-03: rename column refusal and golden written by hand
 - Task: roadmap order 37 (`docs/sessions/refuse-column-below-one.md`).
 - Tool: none used. `Tools.java` and `Rename.java` were changed with the Edit
   tool, and the golden case was copied with cp. `replace_text` would cover
   the source edits; `create_file` the golden files.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; `move_file`
+  copies a golden case now (#137).
 
 ## 2026-11-03: engine-error path and undo change made by hand
 - Task: roadmap order 35 (`docs/sessions/server-engine-error.md`).
 - Tool: none used. `Server.java`, `Tools.java`, `ServerTest.java` and
   `JournalTest.java` were changed with the Edit tool; `replace_text` and
   `add_declaration` would have covered the edits and the tests.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-03: file writers consolidated by hand
 - Task: roadmap order 40 (`docs/sessions/file-writers-one-place.md`).
 - Tool: none used. `Gate.java`, `Journal.java` and `GateTest.java` were changed
   with the Edit tool and sed. `replace_text` would cover the source edits; a
   `move` of a method between two classes has no tool.
+- Follow-up: open: moving a method to a class in another file (roadmap #109).
 ## 2026-11-03: create_file fixes imports in a file under no source root
 - Task: `move_type` golden cases (`docs/sessions/move-type.md`).
 - Tool: `create_file` of `src/test/resources/golden/move_type/out/com/example/Shop.java`
@@ -425,6 +488,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   heredoc instead.
 - Idea: fix imports (and type-check) only for `.java` files under a source
   root, as the gate already counts errors only there.
+- Follow-up: done (#53).
 
 ## 2026-11-03: deleting a helper still called in the same file declares a stub
 - Task: roadmap order 36 (`docs/sessions/names-one-class.md`): `Stubs.label`
@@ -438,6 +502,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   notes say a member the edit removed is not declared again; here it was, and
   the cause is not yet known (not checked: whether the callers were in the
   same file as the deletion's target, or the rule covers only methods).
+- Follow-up: done: safe delete refuses and names the uses (#139).
 
 ## 2026-11-03: no stub for a new overload of an existing method
 - Task: `docs/sessions/cli-cache.md`.
@@ -447,6 +512,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   have got a stub. Answered with a batch: the overload first, then the test.
 - Idea: declare a stub for a call whose arguments fit no overload of a
   project method, as for an undefined method, typed from the call.
+- Follow-up: done (#57).
 
 ## 2026-11-03: a stub called in an enhanced for is not iterable
 - Task: `docs/sessions/narrow-check.md`.
@@ -456,6 +522,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
   Resent with `List<Path> parsed = TypeCheck.lastParsed(project);` first.
 - Idea: type a stub used as an enhanced for's expression as `List<T>`, T the
   loop variable's type.
+- Follow-up: done (#68, #69).
 
 ## 2026-11-04: a lambda argument to an undefined method gets an Object stub
 - Task: `docs/sessions/stub-parse-refusal.md` (a probe, not a change).
@@ -467,6 +534,7 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: type a stub's parameter for a lambda argument as a functional
   interface, from the lambda's arity (`Function`, `Supplier`, ...), or refuse
   with the names the model should try, rather than an `Object` stub.
+- Follow-up: done (#74).
 
 ## 2026-11-03: stubs hid a wrong move_type
 - Task: `docs/sessions/move-type-inherited.md`.
@@ -477,10 +545,12 @@ When a later PR closes an entry, mark it *Follow-up: done* with the PR.
 - Idea: declare stubs only for edits (code the model wrote), not for a
   refactoring's own output, which changes no behavior and so needs none; a
   name a refactoring leaves unresolved is its bug, and should be refused.
+- Follow-up: done: stubs only for edits (#76).
 
 ## 2026-11-04: a deleted inherited method was still stubbed
 
 A method deleted from a superclass in another file was still stubbed in a subclass that inherits it (`docs/sessions/stub-after-delete-inherited.md`). The Java was written by Edit (`removedAround` gained a supertype check, `removedInSupertypes` added), not by a tool: `replace_declaration` would fit `removedAround` and `add_declaration` the new method. The tool server was not loaded in that session, so no tool was tried; the gap is the session, recorded in the record.
+- Follow-up: done (#75); the hand edit was the session's, as the entry says.
 
 ## 2026-11-04: a test helper's stub went to src/main, and no tool deletes a file
 - Task: roadmap #61 (`docs/sessions/stress-restore.md`).
@@ -493,6 +563,8 @@ A method deleted from a superclass in another file was still stubbed in a subcla
 - Idea: a stub for a class that only a test file uses goes in the test
   tree; `replace_declaration` deletes the file when it removes its only
   type.
+- Follow-up: done: stubs in the user's source root (#96), and the last type's
+  deletion takes its file (#94).
 
 ## 2026-11-04: extract_variable's golden cases were written by hand (before the tool existed)
 
@@ -503,6 +575,8 @@ run (the statement was one line lower than written), which the golden run caught
 The tool that would have written the cases: none yet; a golden-case helper that
 numbers the line of a text would have avoided the mistake, which is a test
 convenience rather than a refactoring, so it is not on the roadmap.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: inline_variable's cases and implementation written by hand (before the tool existed)
 
@@ -511,6 +585,8 @@ goldens and `InlineVariable` were written with Write, since the tool did not exi
 Nothing failed on the first real run, but the goldens were run against the refusal
 text they name, so the phrases are checked. The tool that would have written them:
 none yet; the case is the tool being built.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: inline_function's cases and implementation written by hand (before the tool existed)
 
@@ -519,6 +595,8 @@ goldens and `InlineFunction` were written with Write, since the tool did not exi
 The gate caught the first wrong substitution (the whole statement, not its expression)
 as a syntax error; the golden run caught the blank line left after the method. The tool
 that would have written them: none yet; the case is the tool being built.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: the new refactorings change behavior and still type-check
 - Task: `docs/sessions/stress-new-tools.md` (the five new refactorings in
@@ -540,6 +618,8 @@ that would have written them: none yet; the case is the tool being built.
   imports only `org.eclipse.jdt.core.dom` classes. Listing every
   ambiguous name, and preferring a package the file already imports from,
   would have saved two calls.
+- Follow-up: done: roadmap #67-#70 and `NameCheck` (roadmap #77, #158-#160); the
+  ambiguous-import part is open (roadmap #105).
 
 ## 2026-11-04: change_type's cases written by hand (before the tool existed)
 
@@ -547,6 +627,8 @@ The fourth of the ten higher-level tools (`docs/sessions/change-type.md`). The g
 `ChangeType` were written with Write. The first success case was wrong (a getter returning
 `int`), and the gate refused it, which the golden run showed. The tool that would have written
 the cases: none yet; the case is the tool being built.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: add_supertype written by hand (before the tool existed)
 
@@ -556,6 +638,8 @@ not exist yet to write its own body. Once the server runs, `create_file` writes 
 `add_declaration` adds the `Def` field, with a `replace_text` for the `ALL` list. The insertion
 point for an interface's list and a class's `extends` before `implements` was not in the plan; the
 goldens showed both.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: move_statement written by hand (before the tool existed)
 
@@ -564,30 +648,40 @@ The sixth of the ten higher-level tools (`docs/sessions/move-statement.md`). The
 tool. The independence rule was the user's choice (strict by default, names_only as a flag); the
 text swap itself is a composition that could be written with `replace_text` over the two lines,
 which the refactoring now does without it.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: invert_if written by hand (before the tool existed)
 
 The seventh of the ten higher-level tools (`docs/sessions/invert-if.md`). The class and registration
 were written by hand, as the earlier new tools were. The negation rules were the user's choice
 (simplify comparisons; refuse ordering comparisons on floats).
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: remove_else written by hand (before the tool existed)
 
 The eighth of the ten higher-level tools (`docs/sessions/remove-else.md`). The class and registration
 were written by hand, as the earlier new tools were. The rule (only when the then-branch cannot
 finish normally) keeps the code's meaning; the dedent is the one extra step beyond the plan.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: move_member written by hand (before the tool existed)
 
 The ninth of the ten higher-level tools (`docs/sessions/move-member.md`). The class and registration
 were written by hand. The receiver parameter was the user's choice; the target limited to the same
 file is a default this PR took and the record names.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: encapsulate_field written by hand (before the tool existed)
 
 The tenth of the ten higher-level tools (`docs/sessions/encapsulate-field.md`). The class and
 registration were written by hand. The writes the tool refuses (compound, ++, expressions) are where
 a composition of `replace_text` would be needed: a hand edit for each, which the refusal names.
+- Follow-up: no gap to fix: the tool being built cannot write itself (triage
+  2026-11-05).
 
 ## 2026-11-04: effect-order refusals written by hand
 
@@ -598,6 +692,8 @@ to `InlineFunction`, `ExtractVariable` and `InlineVariable` in one change
 change, each of the three tools accepted a rewrite that compiled and changed behavior. A
 refusal-only fix is the chosen rule; a tool that rewrote the call (for example, a temporary for the
 dropped argument) would need the evaluation order named first, which no tool gives.
+- Follow-up: no gap to fix: the session had no java-refactor-mcp tools; the tools
+  named exist now (triage 2026-11-05).
 
 ## 2026-11-04: probing uncommitted server code from the command line
 - Task: roadmap #73 (`docs/sessions/preserve-exceptions.md`).
@@ -606,6 +702,7 @@ dropped argument) would need the evaluation order named first, which no tool giv
   a soft reset.
 - Idea: a `--rebuild` option (or `JREFACTOR_REBUILD=1`) that builds from the
   working tree first.
+  Done: `bin/jrefactor --rebuild` (roadmap #79, #157, 2026-11-04).
 
 ## 2026-11-04: a batch removes an import a later step needs
 - Task: `docs/sessions/inline-function-instance.md` (and `refactoring-shape.md`).
@@ -614,7 +711,7 @@ dropped argument) would need the evaluation order named first, which no tool giv
   again was refused as ambiguous, with a suggestion from another package.
 - Idea: in a batch, when a name a step needs was imported by the file before
   the batch, choose that import rather than refuse.
-  Done: `bin/jrefactor --rebuild` (roadmap #79, 2026-11-04).
+- Follow-up: open (roadmap #105).
 
 ## 2026-11-04: a refused batch leaves the directories its create_file steps made
 - Task: `docs/sessions/same-meaning-check.md`.
@@ -681,6 +778,7 @@ next got its stub (a test calling a method of a class nobody declares gets no st
 for the method), then the stub replaced with `replace_declaration` and the rest
 added with `add_declaration`. The tokenizer is a port of gorefactor's
 `internal/hook.Commands`; a shared contract for hooks is not worth one yet.
+- Follow-up: none needed: nothing by hand.
 
 ## 2026-11-05: NameCheck can miss a capture when two files declare a name at one offset
 - Found while fixing #170 (`docs/sessions/namecheck-positions.md`), not by a run:
