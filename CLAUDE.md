@@ -118,7 +118,8 @@ file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
 Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
 call, also one from an earlier run. Send several steps as one `batch`. The jar
 is rebuilt when a commit changes `pom.xml` or `src/main`, not for uncommitted
-edits.
+edits; `bin/jrefactor --rebuild ...` (or `JREFACTOR_REBUILD=1`) builds from the
+working tree first, to probe server code before a commit.
 
 ## Build and test
 
