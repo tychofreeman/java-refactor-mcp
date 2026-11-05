@@ -140,7 +140,8 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   the rename, checked once it is written and put back when refused: a renamed use that a
   nested, enclosing or subclass declaration of the new name captures, or an existing use
   of the new name that the renamed declaration captures (`rename_refused_nested_capture`,
-  2026-11-05); a field
+  2026-11-05; types too, `rename_type_captured_by_nested`, `rename_type_captures_existing`);
+  a field
   rename that a local of the new name would hide at an unqualified use; an
   edit that would add compile errors (rolled back, with the errors).
 

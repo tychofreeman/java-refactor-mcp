@@ -580,7 +580,10 @@ public final class Rename {
     for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
       List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
-        if (n.isDeclaration()
+        // A constructor's name declares it too, though JDT's isDeclaration says not.
+        boolean declares =
+            n.isDeclaration() || (n.getParent() instanceof MethodDeclaration d && d.getName() == n);
+        if (declares
             && n.getIdentifier().equals(newName)
             && at.contains(before(at, n.getStartPosition(), delta))) {
           renamed.add(meaning(n.resolveBinding()));
@@ -689,6 +692,8 @@ public final class Rename {
 
     Map<Path, String> changed = new TreeMap<>();
     Map<String, List<Integer>> lines = new TreeMap<>();
+    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
+    Map<Path, Map<Integer, String>> existing = meanings(project, newName);
     int occurrences = 0;
     Holding holding = Holding.of(project, oldName, null);
     Map<Path, String> held = holding.texts();
@@ -717,10 +722,15 @@ public final class Rename {
       }
       changed.put(written, apply(text, uses, newName));
       lines.put(project.relative(written), lineNumbers(unit, uses));
+      renamedAt.put(written, uses.stream().map(ASTNode::getStartPosition).toList());
       occurrences += uses.size();
     }
 
     Stubs.Declared stubs = gate(project, changed, oldName, newName);
+    if (from != null && existing.containsKey(from)) {
+      existing.put(to, existing.remove(from));
+    }
+    checkMeanings(project, renamedAt, existing, oldName, newName);
     String what = "renamed the type " + type.getQualifiedName() + " to " + newName;
     if (from != null) {
       what += ", and " + project.relative(from) + " to " + project.relative(to) + ",";
@@ -747,16 +757,19 @@ public final class Rename {
     while (top.getDeclaringClass() != null) {
       top = top.getDeclaringClass();
     }
-    String rel = top.getErasure().getQualifiedName().replace('.', '/') + ".java";
+    // The file that declares the top-level type, found by its binding: a second top-level class
+    // of a file is not in the file its name implies.
+    String topKey = top.getErasure().getTypeDeclaration().getKey();
     Path file = null;
-    for (Path root : project.sourceRoots()) {
-      if (Files.isRegularFile(root.resolve(rel))) {
-        file = root.resolve(rel);
+    for (Map.Entry<Path, CompilationUnit> e :
+        Holding.of(project, top.getName(), null).units().entrySet()) {
+      if (e.getValue().findDeclaringNode(topKey) != null) {
+        file = e.getKey();
       }
     }
+    String rel = file == null ? top.getName() : project.relative(file).toString();
     if (file == null) {
-      throw new Refusal(
-          "the file that declares " + oldName + " is not " + rel + "; rename it there.");
+      throw new Refusal("the file that declares " + oldName + " was not found in the project.");
     }
     String source = Files.readString(file);
     CompilationUnit cu = Jdt.parse(project, file, source);
