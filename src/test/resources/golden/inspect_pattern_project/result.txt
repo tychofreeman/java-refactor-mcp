@@ -1,0 +1,5 @@
+com/example/Cart.java  2 lines match /price/:
+6    void add(int price) {
+7      total += price;
+com/example/Item.java  1 line matches /price/:
+4    int price;

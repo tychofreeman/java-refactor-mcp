@@ -97,6 +97,13 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
 - Refused: a path that is not a `.java` file under the root; a file that does
   not exist (with the Java files in that directory); `start_line` past the end
   (with the line count); an unknown argument (with the arguments it takes).
+- `pattern` (2026-11-05; Java's own, not in gorefactor yet): a Java regular expression;
+  with `file`, that file's matching lines, without it every Java file's, file by file,
+  each as `<file>  N lines match /re/:` then numbered lines as above (the width of the
+  largest number shown); at most 100 lines, then `... and N more; narrow the pattern, or
+  give file.` No match is `no line of <file> matches /re/.` Refused: an invalid
+  expression (with the reason), `pattern` with `start_line` or `end_line`. What a
+  `grep -n` of Java found before; the read guard's refusal points to it.
 - Not yet: gorefactor's no-argument overview, `function`, `targets`, `names`
   and `uses`.
 
