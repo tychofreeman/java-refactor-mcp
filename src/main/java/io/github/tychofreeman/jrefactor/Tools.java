@@ -232,12 +232,12 @@ final class Tools {
           whose body uses super; a body that \
           returns before its last statement; a body that assigns a parameter, or declares a name \
           the caller uses; a method that calls itself; a method used as Type::name; \
-          a call nested in another call's arguments; a parameter used twice when its argument \
-          calls or assigns; a method with no calls; an argument with an effect that the body \
-          drops, runs after another effect, or uses in a branch, loop or lambda; one that \
-          reads state a call in the body could change before its use; an argument with an \
-          effect and one that reads state used in the other order than passed: put it in a \
-          variable first.\
+          a call nested in another call's arguments; a method with no calls.
+          An argument that inlined in place would run at another time (an effect dropped, used \
+          twice, after another effect, in a branch, loop or lambda, or out of order) is bound \
+          to a local before the call's statement instead, with the arguments before it: \
+          both(reserve(t), charge(t)) gives a = reserve(t); b = charge(t); a && b. Refused when \
+          that move is unsafe too (it would cross an effect earlier in the statement).\
           """,
           List.of(
               Arg.FILE.described(

@@ -602,9 +602,15 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   for `CharSequence s` in `s.length()`, roadmap #78), or an argument of a call of a method
   with no overload of its arity in its class and supertypes, not generic or varargs (it
   resolves to the same method; 2026-11-05);
-  a body that names a member of its class when a call is in another class; each
-  argument is checked by the behavior gate (roadmap #96) as code that ran just before
-  the body and lands at its parameter's uses: one with an effect that the body drops,
+  a body that names a member of its class when a call is in another class. Each
+  argument the behavior gate (below) refuses in place, or that `checkOrder` finds out
+  of order, is bound to a local before the call's statement instead (roadmap #102),
+  with every earlier argument that is not fixed, so they run once, in order: the
+  local has the parameter's name and type, numbered when the method already uses the
+  name. The move to before the statement is checked by the gate as an extract; when
+  it is refused (an effect earlier in the statement), the in-place reason is the
+  refusal. Each argument is checked by the behavior gate (roadmap #96) as code that
+  ran just before the body and lands at its parameter's uses: one with an effect that the body drops,
   uses twice, runs after another effect, or uses where it runs only sometimes, more
   than once or later (a lambda, a `?:` branch, right of `&&` / `||`, a branch of an
   `if`, a loop, a `switch` case, a `catch`); one that reads state (a field, an
