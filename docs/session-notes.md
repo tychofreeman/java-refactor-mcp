@@ -112,6 +112,10 @@ Each was chosen from options; the record named beside it has the options it beat
   text deletes), so a move, copy or delete is one undo. Text only; Java under a
   source root is refused for `move_type`.
 
+- `change_type` with `parameter` or `return_type` (#82, 2026-11-04) is
+  `Signatures.changeType`: the family's declarations and typed lambdas, by
+  `SignatureChange.replace`; calls are left to the gate.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the

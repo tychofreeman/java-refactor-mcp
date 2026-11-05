@@ -241,21 +241,27 @@ final class Tools {
           class of the file.
           Applies the edit, then type-checks the project: a change that a use no longer compiles \
           with is rolled back and refused.
+          A method's parameter (parameter) or return type (return_type=true) changes in it and \
+          every override and implementation, and in lambdas that write the parameter's type; \
+          calls are not edited, so one the new type breaks is refused with the error.
           Refuses, saying why: a name that is not a field of the class, a declaration of several \
-          fields, or a change that adds compile errors, naming them.\
+          fields, a varargs parameter, or a change that adds compile errors, naming them.\
           """,
           """
           {
             "type": "object",
             "properties": {
               "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the field."},
-              "name": {"type": "string", "description": "Type.field, the field whose type to change."},
-              "type": {"type": "string", "description": "The new type as written, such as long or List<String>."}
+              "name": {"type": "string", "description": "Type.field, the field whose type to change; or Type.method (with parameter types for an overload) with parameter or return_type."},
+              "type": {"type": "string", "description": "The new type as written, such as long or List<String>."},
+              "parameter": {"type": "string", "description": "Optional: change this parameter's type in the method and every override."},
+              "return_type": {"type": "boolean", "description": "Optional: change the method's return type, in it and every override."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
             },
             "required": ["file", "name", "type"]
           }\
           """,
-          Set.of("file", "name", "type"),
+          Set.of("file", "name", "type", "parameter", "return_type", "imports"),
           Kind.REFACTORING,
           Tools::changeType);
 
@@ -941,6 +947,9 @@ final class Tools {
   }
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
+    if (args.has("parameter") || args.flag("return_type")) {
+      return Signatures.changeType(project, args);
+    }
     return ChangeType.run(
         project, args.required("file"), args.required("name"), args.required("type"));
   }

@@ -27,6 +27,11 @@ final class SignatureChange {
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(new TextEdit(start, end, text));
   }
 
+  /** Replaces {@code node}'s text in {@code file} with {@code text}. */
+  void replace(Signatures.Source file, ASTNode node, String text) {
+    add(file, node.getStartPosition(), node.getStartPosition() + node.getLength(), text);
+  }
+
   /** Inserts {@code text} at position {@code at} of {@code list}, which opens at {@code open}. */
   void insert(Signatures.Source file, List<?> list, int open, int bare, int at, String text) {
     if (list.isEmpty()) {

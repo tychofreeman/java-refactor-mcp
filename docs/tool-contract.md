@@ -429,7 +429,15 @@ and `type` (the new type as written).
 - Result: `changed the type of Type.field from <old> to <new> in <file>`.
 - Refuses: a name that is not a field of the top-level class; a declaration of several
   fields; a change that adds compile errors (the gate names them, nothing changes).
-- Not built yet: locals, parameters, return types, and fields declared with several names.
+- A method (roadmap #82, 2026-11-04): `name` is `Type.method` (with parameter types for
+  an overload) and `parameter` (whose type changes) or `return_type: true`; optional
+  `imports`. Every declaration in the method's family (overrides, implementations)
+  changes, and a lambda that writes the parameter's type; calls are not edited, so a
+  call the new type breaks is refused by the gate with the error. Result: `changed the
+  type of qty of Pricing.price(int) to long ...` or `changed the return type of ...`.
+  Refuses: both options or neither with a method; a varargs parameter; a `[]` written
+  after the name; a constructor's return type.
+- Not built yet: locals, and fields declared with several names.
 
 ## `add_supertype` (built)
 
