@@ -105,3 +105,79 @@ jobs:
       # Fails if any Java file differs from google-java-format output. Fix locally with: ./mvnw spotless:apply
       - name: Check formatting
         run: ./mvnw -B spotless:check
+
+  # Every push to main that changes code and passes the jobs above is released: the commit is
+  # tagged with the next version after the latest tag, and a GitHub release made with notes from
+  # the merged pull requests and the server jar attached. The pull request a push merged picks
+  # the step: a "major" or "minor" label bumps that part, anything else the patch. The first
+  # release is v0.1.0.
+  release:
+    name: Release
+    needs: [changes, build-and-test, lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: read
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Choose the version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "$(git tag --points-at "$SHA" --list 'v*')" ]; then
+            echo "$SHA is already tagged; nothing to release"
+            exit 0
+          fi
+          last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -n "$last" ] && ! git merge-base --is-ancestor "$last" "$SHA"; then
+            echo "$SHA is not after $last (a later push was released first); nothing to release"
+            exit 0
+          fi
+          labels=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" --jq '[.[].labels[].name] | join(" ")')
+          IFS=. read -r major minor patch <<< "${last:-v0.0.0}"
+          major=${major#v}
+          case " $labels " in
+            *" major "*) tag="v$((major + 1)).0.0" ;;
+            *" minor "*) tag="v$major.$((minor + 1)).0" ;;
+            *) tag="v$major.$minor.$((patch + 1))" ;;
+          esac
+          [ -n "$last" ] || [ "$tag" = v1.0.0 ] || tag=v0.1.0
+          echo "releasing $tag after ${last:-no tag} (labels: ${labels:-none})"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v6
+        if: steps.version.outputs.tag != ''
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build the jar
+        if: steps.version.outputs.tag != ''
+        run: ./mvnw -B -DskipTests -Drelease.version=${{ steps.version.outputs.tag }} package
+
+      - name: Release
+        if: steps.version.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          TAG: ${{ steps.version.outputs.tag }}
+          LAST: ${{ steps.version.outputs.last }}
+        run: |
+          set -euo pipefail
+          start=()
+          [ -z "$LAST" ] || start=(--notes-start-tag "$LAST")
+          gh release create "$TAG" target/java-refactor-mcp.jar --target "$SHA" --title "$TAG" \
+            --generate-notes "${start[@]}"

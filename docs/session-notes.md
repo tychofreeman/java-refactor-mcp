@@ -15,6 +15,11 @@ fact here becomes wrong, fix or remove it in the same PR.
   commits, then delete the PR's branch (78 merged branches had piled up by
   2026-11-04; deleting them in bulk from a session was refused as destructive,
   so the user deletes them).
+- Releases (2026-11-05, the user): every push to `main` that changes code and
+  passes CI is released by the `release` job of `ci.yml`, with the jar attached.
+  Label a PR `minor` (a new tool) or `major` to bump that part; otherwise the
+  patch. There is no version to raise by hand: the jar's manifest carries it
+  (`Server.version()`).
 - Stacked PRs: retarget the upper PR to `main` *before* merging the lower one
   with `--delete-branch`. Deleting the base branch first closed #4, and a closed
   PR whose base is gone cannot be reopened or retargeted.

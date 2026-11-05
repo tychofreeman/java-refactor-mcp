@@ -47,8 +47,11 @@ The tool contract shared with gorefactor is in
 
 ## Running
 
-`./mvnw package` builds `target/java-refactor-mcp.jar`. The server serves one
-project, the directory given as its argument (default: the working directory):
+Every change to `main` that passes CI is released: download `java-refactor-mcp.jar`
+from the latest [release](https://github.com/tychofreeman/java-refactor-mcp/releases), or
+build it with `./mvnw package` (`target/java-refactor-mcp.jar`). The server reports the
+release it was built as, or `devel`. It serves one project, the directory given as its
+argument (default: the working directory):
 
 ```sh
 claude mcp add jrefactor -- java -jar /path/to/java-refactor-mcp/target/java-refactor-mcp.jar /path/to/project

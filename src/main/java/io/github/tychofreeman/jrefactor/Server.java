@@ -24,7 +24,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class Server {
 
   static final String NAME = "java-refactor-mcp";
-  static final String VERSION = "0.1.0";
+
+  /**
+   * The version reported to MCP clients: the Implementation-Version of the jar's manifest, which
+   * the release workflow sets to the release's tag, or "devel" for any other build.
+   */
+  static String version() {
+    String v = Server.class.getPackage().getImplementationVersion();
+    return v == null || v.isBlank() ? "devel" : v;
+  }
 
   private static final long QUIET_BEFORE_EXIT_NANOS = 1_000_000_000L;
 
@@ -162,7 +170,7 @@ public final class Server {
     McpJsonMapper json = McpJsonDefaults.getMapper();
     var spec =
         McpServer.sync(new StdioServerTransportProvider(json, in, out))
-            .serverInfo(NAME, VERSION)
+            .serverInfo(NAME, version())
             .capabilities(ServerCapabilities.builder().tools(false).build());
     for (Tools.Def def : Tools.ALL) {
       spec.toolCall(
