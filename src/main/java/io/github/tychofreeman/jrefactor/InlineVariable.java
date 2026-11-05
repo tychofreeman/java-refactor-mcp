@@ -8,23 +8,11 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ConditionalExpression;
-import org.eclipse.jdt.core.dom.DoStatement;
-import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.IfStatement;
-import org.eclipse.jdt.core.dom.InfixExpression;
-import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.SwitchExpression;
-import org.eclipse.jdt.core.dom.SwitchStatement;
-import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
-import org.eclipse.jdt.core.dom.WhileStatement;
 
 /**
  * inline_variable: a local variable is replaced by its initializer at each use, and its declaration
@@ -83,21 +71,6 @@ final class InlineVariable {
               + " Keep the variable, or remove the assignment first.");
     }
     checkShadowed(block, Effects.of(init).named(), after, name, text);
-    for (IVariableBinding read : Effects.of(init).named()) {
-      if (Effects.of(block).writes(read, after)) {
-        throw new Refusal(
-            read.getName()
-                + " is read by the initializer and assigned after the declaration, so inlining would"
-                + " change the value at each use. Keep the variable.");
-      }
-    }
-    if (Effects.of(init).changes()) {
-      throw new Refusal(
-          "the initializer of "
-              + name
-              + " calls, assigns or changes a variable, so moving it to each use could change when"
-              + " it runs. Keep the variable.");
-    }
     if (!variable.getType().isEqualTo(init.resolveTypeBinding())) {
       throw new Refusal(
           "the declared type of "
@@ -107,7 +80,6 @@ final class InlineVariable {
               + ", not its initializer's, so each use would change type. Keep the variable.");
     }
 
-    checkExceptional(project, block, stmt, init, usesIn(block, variable, after), name, text);
     String source =
         text.substring(init.getStartPosition(), init.getStartPosition() + init.getLength());
     String inlined = needsParentheses(init) ? "(" + source + ")" : source;
@@ -120,12 +92,16 @@ final class InlineVariable {
     }
     int declared = Lines.number(text, stmt.getStartPosition());
     edits.add(removeLine(text, stmt));
-    NameCheck.require(
+    Behavior.check(
         project,
+        new Behavior.Move(
+            init,
+            block,
+            usesIn(block, variable, after),
+            "the initializer of " + name,
+            "inlining " + name),
         Map.of(file, text),
-        Map.of(file, edits),
-        NameCheck.meanings(List.of(init)),
-        "inlining " + name);
+        Map.of(file, edits));
     String updated = TextEdit.apply(text, edits, 0);
 
     Edits.Written written =
@@ -149,90 +125,6 @@ final class InlineVariable {
             + rel
             + written.fixed().said(),
         written.declared());
-  }
-
-  /**
-   * Reports, or under preserve_exceptions refuses, an initializer that may throw moved past a
-   * statement that changes state: the exception would come after that change, not before it.
-   */
-  private static void checkExceptional(
-      SourceProject project,
-      Block block,
-      Statement declaration,
-      Expression init,
-      List<SimpleName> uses,
-      String name,
-      String text) {
-    List<ASTNode> throwing = Effects.of(init).mayThrow();
-    if (throwing.isEmpty() || uses.isEmpty()) {
-      return;
-    }
-    int first = uses.get(0).getStartPosition();
-    for (Object o : block.statements()) {
-      Statement s = (Statement) o;
-      if (s.getStartPosition() > declaration.getStartPosition()
-          && s.getStartPosition() + s.getLength() <= first
-          && Effects.of(s).changes()) {
-        Exceptional.change(
-            project,
-            "the initializer of "
-                + name
-                + " may throw ("
-                + throwing.get(0)
-                + "), and inlining moves it past the statement at line "
-                + Lines.number(text, s.getStartPosition())
-                + ", which changes state: an exception would now come after that change",
-            "keep the variable, or move that statement above the declaration first");
-        return;
-      }
-    }
-    for (SimpleName use : uses) {
-      ASTNode child = use;
-      for (ASTNode p = use.getParent(); p != null && p != block; child = p, p = p.getParent()) {
-        String where = sometimes(p, child);
-        if (where != null) {
-          Exceptional.change(
-              project,
-              "the initializer of "
-                  + name
-                  + " may throw ("
-                  + throwing.get(0)
-                  + "), and inlining moves it into code that runs only sometimes or catches"
-                  + " exceptions (the "
-                  + where
-                  + " at line "
-                  + Lines.number(text, p.getStartPosition())
-                  + "): an exception would come there, if at all",
-              "keep the variable");
-          return;
-        }
-      }
-    }
-  }
-
-  /**
-   * What {@code p} is when its {@code child} runs only sometimes, many times, or under a catch:
-   * "if", "loop", "try" and the like; null when it runs once, as {@code p} does.
-   */
-  private static String sometimes(ASTNode p, ASTNode child) {
-    return switch (p) {
-      case IfStatement s when s.getExpression() != child -> "if";
-      case ConditionalExpression c when c.getExpression() != child -> "?:";
-      case InfixExpression in
-          when in.getLeftOperand() != child
-              && (in.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
-                  || in.getOperator() == InfixExpression.Operator.CONDITIONAL_OR) ->
-          "&& or ||";
-      case ForStatement f -> "loop";
-      case EnhancedForStatement f when f.getExpression() != child -> "loop";
-      case WhileStatement w -> "loop";
-      case DoStatement d -> "loop";
-      case LambdaExpression l -> "lambda";
-      case TryStatement t -> "try";
-      case SwitchStatement s when s.getExpression() != child -> "switch";
-      case SwitchExpression s when s.getExpression() != child -> "switch";
-      default -> null;
-    };
   }
 
   /** The one variable named {@code name} on {@code line}, by column if it is needed. */

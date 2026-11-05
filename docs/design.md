@@ -37,6 +37,19 @@ and `inspect`-style outlines.
 **Decided: Maven.** Group `io.github.tychofreeman`, artifact `java-refactor-mcp`,
 JDK 21.
 
+**Decided: the behavior gate checks declared moves (roadmap #96, the user, 2026-11-05).**
+Each refactoring returns, with its edits, what it does to code: a piece moved
+(and what it crosses, and whether it lands where it runs only sometimes or
+later), duplicated or dropped. One checker derives the effect-order
+(`Effects`), same-meaning (`NameCheck`) and exceptional (`Exceptional`) checks
+from that, so a tool states facts and the rules live in one place. Migrated
+tool by tool; a tool's one-off rules stay only where their refusal is clearer.
+Options it beat: inferring the moves from a diff of the trees (covers every tool
+at once, but inlining substitutes and renames change text, so matching is
+heuristic and would refuse falsely), and keeping the opt-in with a test that
+every refactoring calls the three checks (cheapest, but the rules stay
+scattered and `InlineFunction` does not shrink).
+
 **Decided: separate repos** for the Go and Java servers. A shared repo for the
 tool contract and the A/B harness is planned once a second language exists.
 
@@ -214,7 +227,7 @@ friction log; reorder when this repo's own log says otherwise.
 
 | Order | # | Item | Status | Evidence |
 |---|---|------|--------|----------|
-| 89 | 96 | A behavior gate beside the type-check gate: a tool declares what its edit does to code (moved from here to there, duplicated, dropped), and one checker derives the effect-order (`Effects`), same-meaning (`NameCheck`) and exceptional-behavior (`Exceptional`) checks from that, for every refactoring | Planned; first of the open items | Review of the abstractions, 2026-11-04 (the user agreed): the three checks exist but each tool opts in, and most do not. `Effects` is used by 6 tools, `NameCheck` by 3, `Exceptional` by 5; `extract_method`, `move_member`, `pull_up`, `push_down`, `function_to_method` and `convert_lambda` move code without the effect check, and `preserve_exceptions` is accepted but does nothing in about 30 refactorings. Subsumes the per-tool parts of #75-#77. `InlineFunction` (1,038 lines, 20 refusals) should shrink as its rules move into the gate |
+| 89 | 96 | A behavior gate beside the type-check gate: a tool declares what its edit does to code (moved from here to there, duplicated, dropped), and one checker derives the effect-order (`Effects`), same-meaning (`NameCheck`) and exceptional-behavior (`Exceptional`) checks from that, for every refactoring | In progress (2026-11-05), local session: the user chose declared moves (Decisions); `Behavior` (a `Move`: code, root, landings) derives the effect-order, place, copy, exceptional and same-meaning checks; `inline_variable` is its first user, which fixed a field read moved past a call that changes it (`docs/sessions/behavior-gate.md`). Next: `extract_variable`, `move_statement`, `inline_function` | Review of the abstractions, 2026-11-04 (the user agreed): the three checks exist but each tool opts in, and most do not. `Effects` is used by 6 tools, `NameCheck` by 3, `Exceptional` by 5; `extract_method`, `move_member`, `pull_up`, `push_down`, `function_to_method` and `convert_lambda` move code without the effect check, and `preserve_exceptions` is accepted but does nothing in about 30 refactorings. Subsumes the per-tool parts of #75-#77. `InlineFunction` (1,038 lines, 20 refusals) should shrink as its rules move into the gate |
 | 90 | 97 | One schema vocabulary for `Tools`: `file`, `line`, `name`, `column` and the other shared arguments defined once and named by each `Def`, instead of hand-written JSON per tool | Done (2026-11-05), local session: `Arg` (`FILE`, `IMPORTS`, `string`, `integer`, `bool`, `oneOf`, `strings`, `json`, `required`, `described`); each `Def` lists its `Arg`s, and its schema, `required` and argument names are built from them. Every schema is the same as before (`ToolSchemasTest`, opt-in, diffed before and after); `Tools.java` 1,405 to 1,249 lines; record in `docs/sessions/schema-vocabulary.md` | Same review: `Tools.java` is 1,391 lines for 36 tools, with 114 hand-written string fields. Fits with splitting `Tools` (#32). No behavior change; `ToolsTest` and the goldens are the check |
 | 91 | 98 | Shared helpers instead of copies: `lineOf`/`lineStart` (copied in `ExtractVariable`, `InlineVariable`, `Primitives` though `Lines` has them), `indentOf` (three copies), `within` (two), and a query helper for the common "find nodes like this" walks (53 anonymous `ASTVisitor`s) | Done (2026-11-05), local session: `Nodes.end`, `Nodes.within`, `Lines.offsetOf`, `Lines.indentOf` replace twelve copies (80 calls folded by `inline_function`); `Nodes.all(root, type)` is the query, used by seven walks that only collected; 22 more single-type visitors convert when their classes next change; record in `docs/sessions/shared-helpers.md` | Same review. No behavior change; the goldens are the check. Needed two tool fixes first: #169 (`inline_function`, a subtype passed on to a call) and #170 (`NameCheck`, keys that hold positions) |
 | 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Done (2026-11-05), local session: gorefactor's `cmd/refactor-ab` on a Java port of its warehouse traps (`eval-tasks/warehouse.json`), Sonnet, 4 runs per arm and task: every run passed in both arms (one manual run failed to start), mcp $0.12 a run against manual $0.09 (+32%; gorefactor's same set, +20%); record in `docs/sessions/ab-warehouse.md` | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed. Rerun after #99-#101 |
