@@ -144,6 +144,9 @@ final class Tools {
           gives int subtotal = price * qty; return subtotal + tax;.
           Identify the expression by file, the line it starts on and its exact source text. When \
           the text occurs twice on that line, pass column, the 1-based column where it starts.
+          as=constant, field or parameter makes it a private static final constant or private \
+          final field of the type, or a new parameter of the method that every call passes it \
+          to, instead of a local; it must then be literals and constants only.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
           Refuses, saying why: an expression in a loop condition or update, below && or ||, \
@@ -159,12 +162,13 @@ final class Tools {
               "line":       {"type": "integer", "description": "1-based line on which the expression starts."},
               "expression": {"type": "string",  "description": "Exact source text of the expression, e.g. price * qty."},
               "name":       {"type": "string",  "description": "Name for the new variable."},
-              "column":     {"type": "integer", "description": "Optional 1-based column where the expression starts, only when its text occurs twice on the line."}
+              "column":     {"type": "integer", "description": "Optional 1-based column where the expression starts, only when its text occurs twice on the line."},
+              "as":         {"type": "string", "enum": ["constant", "field", "parameter"], "description": "Optional: a private static final constant or private final field of the type, or a new parameter of the method (calls pass the expression), instead of a local. The expression must be literals and constants."}
             },
             "required": ["file", "line", "expression", "name"]
           }\
           """,
-          Set.of("file", "line", "expression", "name", "column"),
+          Set.of("file", "line", "expression", "name", "column", "as"),
           Kind.REFACTORING,
           Tools::extractVariable);
 
@@ -979,7 +983,8 @@ final class Tools {
         line,
         args.required("expression"),
         args.required("name"),
-        args.integer("column"));
+        args.integer("column"),
+        args.string("as"));
   }
 
   private static Outcome inlineVariable(SourceProject project, Args args) throws Exception {
