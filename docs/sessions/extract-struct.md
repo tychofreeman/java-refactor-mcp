@@ -1,4 +1,4 @@
-# Introduce parameter object (roadmap #89, first part)
+# Extract class and introduce parameter object (roadmap #89)
 
 - **Item:** roadmap #89 (gorefactor's `extract_struct`): extract class and
   introduce parameter object. This PR is the parameter object; extract class
@@ -40,7 +40,33 @@ refusals; one large write (`ExtractStruct`, new).
 - **Did the plan hold?** For the parameter object, yes; extract class was not
   started.
 
+## Second part: extract class (branch extract-class)
+
+- **Decisions (this session):** `extract_struct` with `fields` (and `field`, the
+  holder's name) in place of `parameters`. The named instance fields move into a
+  new package-private class in its own file; the class holds one with `private
+  final Address home = new Address();` in the first field's place, and every use
+  goes through it (`home.street`, `this.home.street`). Refused in this first
+  version: a field used from another class (encapsulate it first), an
+  initializer that reads anything but constants (it would run at the holder's
+  initialization, not its own place), a final field without an initializer (a
+  constructor could not assign it through the holder), a static field, a holder
+  name the class already uses.
+- **Plan:** red goldens `extract_struct_fields`, `_fields_refused_outside`,
+  `_fields_refused_initializer`; then `ExtractStruct.fields` by
+  `add_declaration`, the dispatch by `replace_text`, the schema.
+- **Notes:**
+  - The goldens were red (an unknown argument), then green but for
+    `ServerTest.descriptionsHaveNoRunsOfSpaces`: my first `replace_text` of the
+    schema was refused (its `old` did not match after formatting), a later one
+    put the description's new lines two spaces off, and the text block's lines
+    then carried runs of spaces. `hand:` a Python dedent of that block, since
+    re-indenting every line of it by `replace_text` was longer.
+  - Measured (`bin/session-report`, this branch): Java through jrefactor but the
+    one Python dedent; one refusal (above), answered with a second batch.
+
 ## Follow-ups
 
-- Extract class: fields of a class and the methods that use them moved into a
-  new class held by a field.
+- Extract class: fields used from other classes (with the holder widened), and
+  moving the methods that use only the moved fields (`move_member` to the new
+  class).

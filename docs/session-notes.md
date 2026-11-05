@@ -139,7 +139,8 @@ Each was chosen from options; the record named beside it has the options it beat
   model must pass `value_semantics=true` (this session's decision).
 
 - `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
-  `MethodFamily` and `SignatureChange.replaceRange`; extract class is not built.
+  `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
+  (`ExtractStruct.fields`), for fields only their class uses.
 
 - Instance to static in place is `move_member` with `to` its own class; static to
   instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).

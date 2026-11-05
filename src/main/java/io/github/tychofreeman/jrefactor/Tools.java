@@ -427,6 +427,10 @@ final class Tools {
           height) with parameters [width, height], struct Size and parameter size becomes \
           cost(int weight, Size size), each body reads size.width() for width, and every call \
           passes new Size(3, 4). Every override and implementation changes too.
+          Extract class: with fields [street, city], name Person, struct Address and field \
+          home, the fields move into a new class Address, Person holds one in home, and every \
+          use becomes home.street; refused for a field used outside the class, or whose \
+          initializer reads anything but constants.
           Refuses, saying why: parameters that are not next to each other, a body that assigns \
           one, a method lambdas implement, a varargs parameter, a name in use, or a change that \
           adds compile errors.\
@@ -440,12 +444,14 @@ final class Tools {
               "parameters": {"type": "array", "items": {"type": "string"}, "description": "The parameters to group, next to each other."},
               "struct":     {"type": "string", "description": "The new record's name."},
               "parameter":  {"type": "string", "description": "The new parameter's name."},
+            "fields":     {"type": "array", "items": {"type": "string"}, "description": "Extract class instead: instance fields of the class name names, moved into the new class."},
+            "field":      {"type": "string", "description": "With fields: the name of the field that holds the new class."},
               "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
             },
-            "required": ["file", "name", "parameters", "struct", "parameter"]
+            "required": ["file", "name", "struct"]
           }\
           """,
-          Set.of("file", "name", "parameters", "struct", "parameter", "imports"),
+          Set.of("file", "name", "parameters", "struct", "parameter", "fields", "field", "imports"),
           Kind.REFACTORING,
           ExtractStruct::run);
 
