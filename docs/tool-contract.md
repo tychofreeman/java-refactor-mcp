@@ -255,7 +255,7 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
   in <file>; it now has the record's equals, hashCode and toString; made x()
   public`.
 
-## `extract_struct` (built: parameter object)
+## `extract_struct` (built)
 
 Roadmap #89, 2026-11-04, gorefactor's name. Arguments: `file`, `name` (the method,
 as the signature tools take it), `parameters` (next to each other), `struct` (the
@@ -270,7 +270,16 @@ new record), `parameter` (the new parameter's name), `imports`.
   another order; move them first); a body that assigns one; a family lambdas
   implement; a varargs parameter; a body that already names the new parameter; a
   record file that exists.
-- Not built yet: extract class (`fields`).
+- Extract class (`fields` and `field` in place of `parameters` and `parameter`;
+  `name` is the class): the named instance fields move into a new package-private
+  class `<struct>` in a file of its own, their Javadoc and modifiers but
+  `private` kept; the class holds one in `private final <Struct> <field> = new
+  <Struct>();` in the first field's place, and every use becomes `field.x`.
+  Refused: a field used outside its class ("street is used in Other.java line 5
+  ... Encapsulate them first"), an initializer that reads anything but constants
+  (new objects of constants are fine), a final field without an initializer, a
+  static field, a holder name the class already uses. Result: `moved street and
+  city of Person into Address (com/example/Address.java), held in home`.
 
 ## `function_to_method` (built), and `move_member` in place
 
