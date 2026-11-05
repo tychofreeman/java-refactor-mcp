@@ -65,7 +65,9 @@ final class MoveFile {
     for (int i = 0; i < files.size(); i++) {
       Path f = files.get(i);
       if (dest != null) {
-        Gate.write(project, f.equals(from) ? dest : dest.resolve(from.relativize(f)), texts.get(i));
+        Path target = f.equals(from) ? dest : dest.resolve(from.relativize(f));
+        Gate.write(project, target, texts.get(i));
+        Journal.copyMode(f, target);
       }
       if (!copy) {
         Gate.write(project, f, null);

@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -40,7 +41,7 @@ final class Journal {
                 + ", and undoing would lose that change. Nothing was undone.");
       }
     }
-    restore(last.before());
+    restore(last.before(), last.modes());
     done.pop();
     List<String> restored = new ArrayList<>();
     List<String> removed = new ArrayList<>();
@@ -83,6 +84,9 @@ final class Journal {
         f.put("path", p.toString());
         f.put("before", e.before().get(p));
         f.put("after", e.after().get(p));
+        if (e.modes().containsKey(p)) {
+          f.put("mode", e.modes().get(p));
+        }
       }
     }
     Files.createDirectories(file.getParent());
@@ -99,12 +103,16 @@ final class Journal {
     for (JsonNode entry : JSON.readTree(Files.readString(file)).values()) {
       Map<Path, String> before = new LinkedHashMap<>();
       Map<Path, String> after = new LinkedHashMap<>();
+      Map<Path, String> modes = new LinkedHashMap<>();
       for (JsonNode f : entry.path("files").values()) {
         Path p = Path.of(f.path("path").asString());
         before.put(p, text(f.get("before")));
         after.put(p, text(f.get("after")));
+        if (text(f.get("mode")) != null) {
+          modes.put(p, text(f.get("mode")));
+        }
       }
-      done.addLast(new Entry(entry.path("what").asString(), before, after));
+      done.addLast(new Entry(entry.path("what").asString(), before, after, modes));
     }
   }
 
@@ -112,14 +120,19 @@ final class Journal {
     return node == null || node.isNull() ? null : node.asString();
   }
 
-  /** One change: what made it, and each file's text before and after (null: no such file). */
-  record Entry(String what, Map<Path, String> before, Map<Path, String> after) {}
+  /**
+   * One change: what made it, each file's text before and after (null: no such file), and the mode
+   * ("rwxr-xr-x") of each file that existed before it, where the file system has one.
+   */
+  record Entry(
+      String what, Map<Path, String> before, Map<Path, String> after, Map<Path, String> modes) {}
 
   /** The change being made by the call that is running, and how deep calls are nested in it. */
   static final class Open {
     final String what;
     final Map<Path, String> before = new LinkedHashMap<>();
     final Map<Path, String> after = new LinkedHashMap<>();
+    final Map<Path, String> modes = new LinkedHashMap<>();
     int depth;
 
     Open(String what) {
@@ -162,7 +175,7 @@ final class Journal {
     }
     session.open = null;
     if (!open.after.isEmpty()) {
-      session.done.push(new Entry(open.what, open.before, open.after));
+      session.done.push(new Entry(open.what, open.before, open.after, open.modes));
     }
   }
 
@@ -174,13 +187,21 @@ final class Journal {
       return;
     }
     session.open = null;
-    restore(open.before);
+    restore(open.before, open.modes);
   }
 
   /** The only writer of project files: each path gets its text, or is deleted for null. */
   static void restore(Map<Path, String> texts) throws IOException {
+    restore(texts, Map.of());
+  }
+
+  /** {@link #restore(Map)}, and each file written gets back its mode in {@code modes}, if any. */
+  static void restore(Map<Path, String> texts, Map<Path, String> modes) throws IOException {
     for (Map.Entry<Path, String> file : texts.entrySet()) {
       put(file.getKey(), file.getValue());
+      if (file.getValue() != null && modes.containsKey(file.getKey())) {
+        setMode(file.getKey(), modes.get(file.getKey()));
+      }
     }
   }
 
@@ -198,6 +219,41 @@ final class Journal {
     } else {
       Files.createDirectories(file.getParent());
       Files.writeString(file, text);
+    }
+  }
+
+  /** {@code file}'s mode, "rwxr-xr-x", or null when it does not exist or the system has none. */
+  static String modeOf(Path file) throws IOException {
+    try {
+      return Files.exists(file)
+          ? PosixFilePermissions.toString(Files.getPosixFilePermissions(file))
+          : null;
+    } catch (UnsupportedOperationException e) {
+      return null;
+    }
+  }
+
+  /** Records the mode {@code file} had before the running call first wrote it. */
+  static void mode(SourceProject project, Path file, String mode) {
+    Open open = project.session().open;
+    if (open != null && mode != null) {
+      open.modes.putIfAbsent(file, mode);
+    }
+  }
+
+  /** Gives {@code to} the mode of {@code from}: a moved or copied file keeps it. */
+  static void copyMode(Path from, Path to) throws IOException {
+    String mode = modeOf(from);
+    if (mode != null) {
+      setMode(to, mode);
+    }
+  }
+
+  private static void setMode(Path file, String mode) throws IOException {
+    try {
+      Files.setPosixFilePermissions(file, PosixFilePermissions.fromString(mode));
+    } catch (UnsupportedOperationException e) {
+      // a file system without modes: nothing to keep
     }
   }
 

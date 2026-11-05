@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -84,5 +85,54 @@ class JournalTest {
     Journal.put(file, null);
     assertFalse(Files.exists(root.resolve("a/b")));
     assertTrue(Files.exists(kept));
+  }
+
+  /** A file move_file moves keeps its mode, and undo puts the source back with it. */
+  @Test
+  void moveKeepsTheModeAndUndoRestoresIt(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    Path script = executable(root.resolve("mvnw"));
+    Journal.begin(project, "move_file");
+    MoveFile.run(project, "mvnw", "fx/mvnw", false, false);
+    Journal.commit(project);
+    assertEquals("rwxr-xr-x", mode(root.resolve("fx/mvnw")));
+    Journal.undo(project);
+    assertEquals("rwxr-xr-x", mode(script));
+  }
+
+  @Test
+  void aCopyKeepsTheMode(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    executable(root.resolve("mvnw"));
+    Journal.begin(project, "move_file");
+    MoveFile.run(project, "mvnw", "fx/mvnw", true, false);
+    Journal.commit(project);
+    assertEquals("rwxr-xr-x", mode(root.resolve("fx/mvnw")));
+  }
+
+  /** The command line saves the history between runs; a deleted file's mode is in it. */
+  @Test
+  void theSavedHistoryKeepsADeletedFilesMode(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    Path script = executable(root.resolve("mvnw"));
+    Journal.begin(project, "move_file");
+    MoveFile.run(project, "mvnw", null, false, true);
+    Journal.commit(project);
+    Path saved = root.resolve(".journal.json");
+    Journal.save(project, saved);
+    SourceProject again = SourceProject.of(root);
+    Journal.load(again, saved);
+    Journal.undo(again);
+    assertEquals("rwxr-xr-x", mode(script));
+  }
+
+  private static Path executable(Path file) throws Exception {
+    Files.writeString(file, "#!/bin/sh\n");
+    Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rwxr-xr-x"));
+    return file;
+  }
+
+  private static String mode(Path file) throws Exception {
+    return PosixFilePermissions.toString(Files.getPosixFilePermissions(file));
   }
 }
