@@ -1,0 +1,17 @@
+[
+  {
+    "tool": "mcp__jrefactor__replace_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "name": "A.c",
+      "content": "int c() {\n  return 2;\n}\n"
+    }
+  },
+  {
+    "tool": "mcp__gorefactor__add_declaration",
+    "args": {
+      "file": "com/example/A.java",
+      "content": "int d() {\n  return 4;\n}\n"
+    }
+  }
+]
