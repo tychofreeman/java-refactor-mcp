@@ -155,6 +155,19 @@ session thinks about changes as operations when it has the tools, or as
 text when it does not. It is not yet a measurement of token cost; the A/B
 harness (roadmap #13) is.
 
+## What every session loads
+
+By the evening of 2026-11-04 every session loaded `CLAUDE.md` (222 lines) and
+the session notes it imports (561 lines, about 5,900 words) before doing
+anything. Most of the notes were a history of each item ("X exists, roadmap
+#N, date, measured Y"), written there because the notes were the first place
+sessions recorded what they learned, before the records and this document
+existed. The user agreed to prune both (#131 and the PR after it): the notes
+now hold only preferences, the user's decisions, rules for where code goes,
+testing practice and traps (157 lines), and say that history goes in the
+records and here. `CLAUDE.md` lost its tool lists, which named 13 of 25 tools,
+and the text it said twice.
+
 ## Open at the time of writing
 
 - `CLAUDE.md` still lists literals as a `replace_text` use; option B's

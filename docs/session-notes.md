@@ -1,464 +1,140 @@
 # Session notes
 
 What sessions working on this project have learned that the code, the README and
-the other docs do not record: the user's preferences, why past choices were made,
-and where the work stands. Every session reads this (CLAUDE.md imports it). When
-you learn something a later session would need, add it here in the same PR as the
-work, and correct or remove what has become wrong. Keep it short: facts, with the
-reason, not a diary. The roadmap is in `docs/design.md`.
+the other docs do not record: the user's preferences and decisions, rules for
+where code goes, and traps. Every session reads this (CLAUDE.md imports it), so
+keep it to what a session needs now: facts, with the reason, not a diary. History
+and measurements go in the item's record (`docs/sessions/`) and in
+`docs/how-this-project-was-built.md`; the roadmap is in `docs/design.md`. When a
+fact here becomes wrong, fix or remove it in the same PR.
 
 ## Working with the user
 
-- One item per branch and PR. Adopted from gorefactor on 2026-11-02, after the
-  first items had been committed straight to `main`.
-- Claude merges its own PRs once CI is green and they are mergeable (the user,
-  2026-11-02); use merge commits, as earlier PRs did.
+- One item per branch and PR (adopted from gorefactor, 2026-11-02).
+- Claude merges its own PRs once CI is green and they are mergeable; use merge
+  commits.
 - Stacked PRs: retarget the upper PR to `main` *before* merging the lower one
   with `--delete-branch`. Deleting the base branch first closed #4, and a closed
-  PR whose base is gone cannot be reopened or retargeted until the branch is
-  pushed back (2026-11-02).
+  PR whose base is gone cannot be reopened or retargeted.
 - Development standards follow gorefactor's (`CLAUDE.md` there, and its
-  `docs/how-this-project-was-built.md`). The user asked for the same standards
-  here (2026-11-02), including the same goal: about 95% of coding through the
-  tools, judged by token cost against editing by hand.
-- "What's next?" runs the `whats-next` skill, ported from gorefactor on
-  2026-11-02. In gorefactor the user chose a record per item in
-  `docs/sessions/` so they can judge whether a session used the tools or worked
-  around them. The session log (roadmap #18, 2026-11-03) is the measured part:
-  `bin/session-log` and `bin/session-report`.
+  `docs/how-this-project-was-built.md`), with the same goal: about 95% of coding
+  through the tools, judged by token cost against editing by hand.
+- "What's next?" runs the `whats-next` skill. Its record per item lets the user
+  judge whether a session used the tools or worked around them; the session log
+  (`bin/session-log`, `bin/session-report`) is the measured part.
+- Before fixing a roadmap row, check `main` and the open branches for the same
+  row: two sessions once fixed #67 at once, and one PR (#118) was closed.
+- The roadmap's open items are ordered by evidence (gorefactor's, then this
+  repo's friction log), not only by what unblocks what; the reasons are under
+  "Why this order" in `docs/design.md`.
 
-## Where the work stands
+## Decisions the user made
 
-- `TextEdit` is the one replace-back-to-front edit (roadmap order 32, 2026-11-03), used by `Rename`, `MoveType` and `SignatureChange`. `Declarations.plan` and `Edits.replaceText` keep their own shape.
-- `Extraction.apply` is split into `Plan`, `callOf` and `methodText` (roadmap order 34, 2026-11-03); behavior is the extract goldens, unchanged.
-- `Extraction.Plan.declaredInside` is the set of variables declared inside the selection (roadmap order 42, 2026-11-03). `Stubs`' `implicit` name matches its use. A class this call created gets no default-constructor stub: the user chose that (2026-11-03), and `Stubs` skips it through `created`.
-- `Stubs.find` declares a stub for a call that fits no overload (`IProblem.ParameterMismatch`, roadmap order 48, 2026-11-03): an overload typed from the call. A wrong call to an existing method now gets a stub overload, not a refusal.
-- The two `ancestor` helpers are named by where they start (roadmap order 29, 2026-11-04):
-  `Stubs.ancestorOrSelf` (from the node itself) and `Extract.ancestorAbove` (from its
-  parent). The names were chosen by the session, not asked; `rename` moved the calls.
-- The server loads its classpath from the same cache the command line keeps
-  (order 63, 2026-11-04, `docs/sessions/server-classpath-cache.md`): `Cli.classpathCache`
-  names the file, `Server.load` uses it. A second start on this repo takes 1.6 s, not 4.7 s.
-- `Names.typeLabel` is the one `Outer.Inner` label (roadmap order 36, 2026-11-03). `Stubs.typeName`
-  and `Extract.typeName` still differ on wildcards: `Stubs` erases them, `Extract` keeps them.
-  Stub type variables (decided 2026-11-04): written by name when the target type declares
-  them, erased otherwise. Writing every type variable by name refuses a stub whose
-  caller's `T` is not in scope in the target (`docs/sessions/stubs-type-variables.md`).
-- `Edits.gated` fixes imports only for a file under a source root (roadmap order 47, 2026-11-03):
-  `SourceProject.packageOf` is null elsewhere, and the gate counts errors only under a source root.
-- `Rename.gate` calls `Gate.applyOrRefuse` (roadmap order 33, 2026-11-03): a rename
-  that adds compile errors is refused with "would add", as every other edit says.
-  `MoveType` says "would add" through the same gate (`docs/sessions/movetype-gate.md`).
-- `Journal.put` and `Journal.restore` are the one writer of project files (roadmap
-  order 40, 2026-11-03). `Gate` calls them; `Gate.put` and `Gate.restore` are gone.
-- Engine errors name where they failed: `Server.answer` puts the first three frames
-  in the text and the trace on stderr; a failed undo is added to the failure as
-  suppressed, not thrown in its place (`Tools.abort`, roadmap order 35, 2026-11-03).
-- `rename` refuses a column below 1 (roadmap order 37, 2026-11-03): `Tools` passes
-  the column as given (null when absent), and `Rename.run` takes an `Integer`.
-- The end-of-batch check is `Gate.checkedAtEnd` (roadmap order 24, 2026-11-03):
-  it counts, runs the body deferred, declares stubs, then refuses and restores or
-  journals. `Batch` calls it; `Gate.refusal` is the one refusal wording for both.
-- `Gate.deferred` restores the flag it found, so a nested deferred call (a batch
-  inside a batch) leaves the outer call deferred (roadmap order 41, 2026-11-03).
-- Order 32 (edit pipeline) is closed as partly done (2026-11-03, the user's choice
-  from the options, `docs/sessions/edit-pipeline-close.md`). Its remaining part, the
-  per-file import fix and gate in `SignatureChange` and `MoveType`, was closed on
-  2026-11-04 as not worth merging (`docs/sessions/import-fix-close.md`).
+Each was chosen from options; the record named beside it has the options it beat.
+
+- What a refactoring preserves (2026-11-04, `docs/design.md`, Decisions): every
+  effect in the normal logic flow. Exceptional behavior is kept only under a
+  guard or a try/catch; elsewhere a tool may change it and names each change.
+  `preserve_exceptions` (one flag on every refactoring) makes it refuse instead;
+  the changes are a separate part of the result.
+- Stubs: declared automatically by edits, no `create_from_usage` tool. A class
+  the same call created gets no default-constructor stub. A lambda argument to
+  an undefined method gets a functional interface by its arity (`Supplier`,
+  `Function`, `BiFunction`), a guess. Stub type variables are written by name
+  when the target type declares them, erased otherwise.
+- `rename` is one tool for every kind of name. When a line has two meanings it
+  refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
+  wins".
+- `extract_method` refuses two or more results rather than returning a record,
+  and the new method is static exactly when the enclosing member is.
+- `move_type` is its own tool, and widens private members used across the
+  boundary rather than refusing.
+- A failed Maven classpath keeps the server serving and names the cause in
+  refusals that say a name cannot be resolved.
+- The ten higher-level tools (option B, 2026-11-04), with the tool-count limit
+  raised to 50 (`ToolsTest`). Within them: `move_statement` is strict by
+  default (no shared written name, at most one side effect) with `names_only`
+  to relax it; `invert_if` simplifies the negated comparison; `move_member`
+  passes the instance as a `receiver` parameter; `encapsulate_field` writes
+  bean-style accessors with optional names.
+- Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
+  `MoveType` keep their own per-file import fix and gate.
+
+## Where code goes
+
+- `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only.
+- `Journal.put` and `Journal.restore` are the one writer of project files.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
-  gate (roadmap order 32, 2026-11-03). `Declarations` (3), `Extraction` and
-  `Edits.write` use it; `Signatures` keeps its per-file loop. Add new single-file
-  edits through `gated`.
-- `Jdt` owns every parser (review item 28, 2026-11-03): `Jdt.parseMembers` parses
-  class-body members for `Declarations`, and the compiler options come from one
-  function. `grep ASTParser` finds `Jdt` only; keep it that way.
-- `Extraction`, the nested class of `Extract`, is its own file (roadmap order 25,
-  2026-11-03, `docs/sessions/split-extract.md`). Its helpers in `Extract` are
-  package-private for it. `Signatures`, `Declarations` and `Tools` are still whole;
-  split them when a change needs it.
-- Signature tools parse only the files that can hold the method (roadmap
-  order 44, 2026-11-03): `MethodFamily.of` (was `Signatures.Family.of`) reads every file's text and parses
-  only those containing the method's simple name. A family member and a call of
-  one share that name, so nothing is missed; `add_parameter` on Commons Math went
-  from 6.5 s to 2.9 s. The summary's option (reuse the gate's parse across calls)
-  was not taken: it keeps every AST of the project between calls.
-- One line helper (roadmap #27, 2026-11-03): `Lines` holds `number` (1-based line of an
-  offset), `start`, `end`, `range` ("line N" or "lines A-B") and `list` ("line N" or
-  "lines 4, 7, 9"). The duplicates in `Declarations`, `Imports`, `Edits`, `Tools`, `Rename`
-  and `Extract` now call it. `Inspect` and `SessionReport` never had a copy; the review
-  row said they did. Batch's "line N of rel" and Rename's "line N, column" refusals are
-  separate wordings and were left as they were.
-- Built: the type-check gate and `rename`. Layers: `SourceProject` (root and
-  classpath), `Jdt` (headless parse), `TypeCheck` (project-wide compile-error
-  counts before and after, the gate every refactoring uses), `Refusal`,
-  `Positions` (1-based to offset), `Rename`.
-- The MCP server runs (roadmap #5, 2026-11-02): `Server` over STDIO, one
-  project root per process, one tool, `inspect`. Claude Code lists and calls it
-  (`claude -p --mcp-config` probe with Haiku, $0.0008).
-- `rename_local` is a tool too (roadmap #6, 2026-11-02), addressed by `name` and
-  `line` as gorefactor's `rename` is; `column` only for two meanings on one line.
-  A Haiku probe renamed a constructor parameter through it with no column.
-- Sessions here have the tools (roadmap #13, 2026-11-02): `.mcp.json` runs
-  `bin/jrefactor-mcp`, which rebuilds a stale jar (about 4 s, output to stderr)
-  and serves this checkout. After merging a server change, check out `main`
-  and reconnect the server with `/mcp` (the user asked, 2026-11-02, why a
-  restart was needed; it is not: a reconnect starts a new server process).
-- The server exits when stdin ends, but only after it is quiet: the SDK closes
-  the session as soon as it reads the end of input and drops requests it has
-  read but not run, so the read that finds the end waits until no tool call is
-  running and nothing was written for a second. Exiting at once lost every
-  reply of a piped script; never exiting leaves a JVM behind a crashed client.
-- Maven projects load from their build (roadmap #7, 2026-11-02): source roots
-  `src/main/java` and `src/test/java`, and the test classpath from
-  `dependency:build-classpath`. This repo now type-checks with zero errors in
-  the gate (`SourceProjectTest.thisRepoTypeChecksClean`); loading it costs a
-  Maven run, about 3 s, at each server start. JDT's `setEnvironment` needs one
-  encoding per source path entry, or it throws `IllegalArgumentException`.
-- The first edit tools exist (roadmap #19, 2026-11-02): `create_file`,
-  `replace_text`, `add_declaration` (replaces "not implemented" stubs),
-  `replace_declaration`. Tool definitions live in `Tools.ALL`; `GoldenTest` calls
-  them the same way the server does, with `<arg>.txt` files for long arguments.
-- Edits fix imports (roadmap #20, 2026-11-02): `Imports.fix` runs before the
-  gate in `replace_text`, `add_declaration` and `replace_declaration`. The class
-  index (JDK through `jrt:/`, classpath jars) is built once per server and
-  classpath, the sources each call; a server start plus two import-fixing edits
-  took 2.2 s.
-- The server runs one tool call at a time (`Server.ONE_AT_A_TIME`, 2026-11-02).
-  Before that, two edits sent together ran at once and the second undid the
-  first (found by a piped probe; `ServerTest.editsSentTogetherBothApply`).
-- `batch` and `undo` exist (roadmap #8, 2026-11-02). Every write goes through
-  `Gate` (`apply`, or `write` for non-Java) and is recorded by `Journal`; a
-  top-level call is `Tools.call`, which begins and commits the journal entry.
-  A Haiku probe chose `batch` with check `"end"` for a signature change and its
-  caller unprompted (6 turns, $0.004).
-- Edits import names that resolve only once others do (2026-11-02): a lambda
-  is not type-checked while the type of the call around it is unresolved, so
-  `Imports.fix` parses again with the imports found so far until no more turn
-  up (`imports_in_lambda`).
-- Edits declare stubs (roadmap #21, 2026-11-02): `Stubs.declare` runs inside
-  `Gate.apply` and `Batch`'s end check, before a refusal, for methods,
-  constructors and classes of the project that nothing declares. The user chose
-  automatic stubs only, over a `create_from_usage` tool alone or both: a tool
-  waits for evidence that inference picks the wrong place. A member the edit
-  removed is not declared again (deleting a used method is still refused). A
-  Haiku probe wrote a test first in one `add_declaration` and got `int total()`
-  from `total() == 0` (8 turns, $0.0055). The import index leaves out libraries'
-  `.internal.` packages (2026-11-02): JDT's internal compiler AST made most
-  `org.eclipse.jdt.core.dom` names ambiguous, and a JDK class in an unexported
-  `jdk.javadoc.internal` package was imported for a name nothing declared.
-- Signature changes exist (roadmap #22, 2026-11-02): `add_parameter`,
-  `remove_parameter`, `move_parameter` in `Signatures`. The family is found by
-  `IMethodBinding.overrides` against each declaration's supertypes, in each
-  file's own parse, joined across files by binding key
-  (`getMethodDeclaration().getKey()`). A Haiku probe added a parameter to an
-  interface method, two implementations and two calls in one call (10 turns,
-  $0.004).
-- Extract method exists (roadmap #23, 2026-11-03): `extract_method` in
-  `Extract`, Java's name for `extract_function`. The user chose refusing two
-  or more results over returning a record, and static exactly when the
-  enclosing member is over "whenever it can be". The tool was registered first
-  with a handler class that did not exist, and #19's stubs declared it. A
-  Haiku probe did an extraction in one call (6 turns, $0.004).
-- Results audit (roadmap #24, 2026-11-03): no edit result repeats the input or
-  a diff; they report names and line ranges, 31-241 bytes in the golden
-  cases. Nothing was changed. The largest is a stub list, which grows with
-  the stubs declared (a follow-up in `docs/sessions/results-without-echo.md`).
-  The session log recorded nothing for this session: the hook loads only in
-  a session started after `.claude/settings.json` existed.
-- Rename across files (roadmap #9, 2026-11-03): `rename` (class `Rename`)
-  replaced `rename_local`, the user's choice over a second tool or widening
-  the old one. Fields, methods (with their override family, from
-  `Signatures.family`) and types (with their file; `Gate.apply` deletes a
-  file whose text is null) are renamed in every file, Javadoc references
-  included. A name with two meanings on the line is refused, and `name`
-  picks one (`Counter.count`, `local count`) or column does: the user's
-  choice over "the local wins", which renamed the parameter when the field
-  was meant. A Haiku probe started from `this.price = price`, was refused,
-  and passed `Item.price` (5 turns, $0.0037). `RenameLocal` became `Rename`
-  through the new type rename, sent over stdin to the branch's jar.
-- Gate cost (roadmap #10, 2026-11-03): parsing file by file, each with a
-  fresh JDT environment, cost 21.8 s per edit on Commons Math (990 files).
-  `Jdt.parseAll` (`ASTParser.createASTs`) parses a set in one environment;
-  `TypeCheck.errors` reuses the last count while every file's text is the
-  same. One edit there is now about 2.1 s, `add_parameter` 4.1 s (was 15.0),
-  a field rename in 10 files 2.4 s. Measure with the opt-in `GateCostTest`:
-  `-Djrefactor.cost.root=<dir>`, and `-Djrefactor.cost.call='{"tool": ...,
-  "args": {...}}'` for one call and its undo. The projects were Maven Central
-  sources jars unpacked into the scratchpad (JDK-only, so no build runs).
-- Golden cases check undo and the cache (roadmap #14, 2026-11-03): every
-  write case is undone by `undo` and must return to `in/`, and the cached type
-  count must equal `TypeCheck.uncached`. All 51 write cases passed on the first
-  run, so no journaling gap exists in the golden set; the check guards future ones.
-- `create_file` fixes imports (roadmap #35, 2026-11-03): a new Java file goes through
-  `Edits.write` like the other edits, so `Imports.fix` runs before the gate and
-  `List<String>` gets its import, not a project stub `List`. The result gains
-  "; imported ..." when it imports a name (`create_file_java_imports`).
-- Overload names split at top-level commas only (roadmap #36, 2026-11-03):
-  `Declarations.topLevelCommas`, so `name=A.b(Map<String, Integer>)` finds the
-  overload the refusal listed. Labels stay without spaces (`Map<String,Integer>`),
-  as members are labelled. Golden: `replace_declaration_generic_overload`.
-- Stub import picks are per file (roadmap #37, 2026-11-03): `Stubs.Round` keeps
-  `wantedUses` per target file, filled from the names each stub's handler used
-  (`uses` is cleared at each handler's start). Before, every file got every
-  stub's picks, so a shared simple name (`java.awt.List`, `java.util.List`)
-  took the last one sorted. Golden: `stubs_uses_per_file`.
-- A failed Maven classpath is kept and named (roadmap #38, 2026-11-03): the user
-  chose "keep serving, name the cause" over refusing to start. `SourceProject`
-  has a `classpathProblem`; `Gate.applyOrRefuse` adds the reason to a refusal
-  that says a name "cannot be resolved". Test: `GateTest`.
-- File refusals are one wording (roadmap #26, 2026-11-03): `SourceProject.javaFile`
-  (not a .java file; missing, with the Java files in its folder) and
-  `existingFile` (replace_text, any file). `Inspect` keeps "No Java file" (its
-  wording is in a golden and two tests). `Signatures` now refuses a non-Java
-  file by name, not as "not a Java file under a source root".
-- No static mutable state (roadmap #33 and #43, 2026-11-03): `Session` holds, per
-  `SourceProject`, the undo history and open call (`Journal`), the deferred flag
-  (`Gate.deferred`), the library index (`Imports`) and the last type check
-  (`TypeCheck`). `Server.Quiet` holds the call counter, the one-at-a-time lock and
-  the last output, per started server. Two project objects over one folder share
-  no undo history (`JournalTest.aProjectOpenedAgainHasNoHistory`).
-- Call costs on Commons Math 3.6.1 (roadmap #44, 2026-11-03, `docs/sessions/measure-call-cost.md`):
-  one whole-project parse is about 3.5 s; rename, replace_text and create_file each
-  make one (3.2-3.5 s); add_parameter makes two (7.0 s), because `MethodFamily.of`
-  parses every file before the gate. `GateCostTest.timesACall` prints the parse count.
-- Import and stub costs on Commons Math (roadmap #44, 2026-11-03,
-  `docs/sessions/measure-imports-stubs.md`): a plain `add_declaration` 0.27 s;
-  one needing a JDK import 0.96 s; one declaring a stub 0.47 s with a second
-  parse.
-- A deleted member that an unqualified call in a nested class still uses is refused,
-  not declared back (2026-11-04, `docs/sessions/stub-after-delete.md`): `Stubs.removedAround`
-  checks the enclosing types too. The removal check also reads the supertypes of the
-  owner and of each enclosing type, each in its own file (2026-11-04,
-  `docs/sessions/stub-after-delete-inherited.md`): an inherited method deleted from a
-  superclass in another file is refused. A sibling nested class is not covered (not reproduced).
-- A stub that is the expression of an enhanced `for` is typed `List<` the loop
-  variable's type `>` (2026-11-04, `docs/sessions/stub-enhanced-for.md`). A primitive
-  loop variable is boxed (`List<Integer>`, 2026-11-04, `docs/sessions/stub-enhanced-for-primitive.md`);
-  `List<int>` as a stub's text does not parse, and the refusal then blames the caller's content.
-- A lambda argument to an undefined method gets a functional interface by its
-  arity (`Supplier`, `Function`, `BiFunction`; the user's choice over refusing, 2026-11-04,
-  `docs/sessions/stub-lambda-argument.md`). It is a guess: a `Runnable` parameter or a body that
-  uses a parameter's type is still refused.
-- Undo is not slow (2026-11-04, `docs/sessions/measure-undo.md`): `Journal.undo`
-  takes under 1 ms. The 2.7-2.9 s once recorded was `GateCostTest`'s own uncached
-  check, now timed apart. Measure undo with the harness, not from its old figures.
-- Stubs travel in the call's result (roadmap #30, 2026-11-03): `Tools.call`
-  returns an `Outcome` (text and `Stubs.Declared`; its own file since 2026-11-04, moved
-  from `Tools`, roadmap order 46); `render()` gives the text
-  the model reads, with the stubs named after it. `Stubs.said()` and its
-  `ThreadLocal` are gone. Golden `stubs_*` text is unchanged.
-- The session report counts by `Tools.Def.kind` (roadmap #45, 2026-11-03):
-  a new tool needs only its `Kind`, not a copy in `SessionReport`. Quoted
-  text and heredoc bodies are not read as redirects, and a shell write
-  counts lines of Java only when it writes a `.java` file. Records written
-  before this may count some reads as hand writes, and Markdown as Java.
-- Edits import static methods (2026-11-03, from two friction entries):
-  `Imports.fix` imports an unresolved unqualified call statically from the
-  one class the file already has a single static import from with that
-  static method, so stubs no longer declare `assertFalse` in a test class.
-  Several such classes, or none, still leave it to the stubs.
-- `move_type` exists (roadmap #52, 2026-11-03): `MoveType` moves a static
-  nested type to its own file in the same package, every reference
-  following, the outer type's statics qualified and private members used
-  across the boundary widened (named in the result). The user chose a new
-  tool over an option on `rename` or `replace_declaration`, and widening
-  over refusing. A trial move of `Signatures.Family` (327 lines) through the
-  branch's jar passed the gate and every test; it was reverted, since the
-  split of `Signatures` (order 25) is its own item.
-- The command line exists (roadmap #53, 2026-11-03): `bin/jrefactor` runs
-  `Cli`, one tool call per process, for sessions where the MCP server cannot
-  run (the user's other session, in a container, made orders 24-44's edits by
-  hand). `Journal.save` and `load` keep the undo stack between runs in the
-  user's cache, beside the classpath (`MavenBuild.classpath(root, cache)`,
-  keyed by `pom.xml`'s hash) and the last count (`TypeCheck.save`/`load`,
-  each file's hash). On this repo a read takes 0.3 s and an edit 2.4 s (they
-  were 9.4 s and 4.7 s): `bin/jrefactor` had rebuilt the jar after each of
-  its own edits to `src/main`, so it now rebuilds only for a commit newer
-  than the jar.
-- `Signatures` is split (order 25, 2026-11-03): `MethodFamily` (the family
-  search, `MethodFamily.of`) and `SignatureChange` (the edits of one change)
-  are top-level, moved by `move_type` and renamed by `rename`; `Signatures`
-  keeps the three tools' entry points, `Source`, `Decl`, `Call` and the
-  helpers the three share.
-- The check after an edit is narrowed (roadmap #56, 2026-11-03):
-  `TypeCheck.Counted` keeps each file's `Headers`, and `errors` parses only
-  the changed files and those naming a name whose header changed. Commons
-  Math: one edit 64 ms (was 2.1 s), `rename` 1.3 s, `add_parameter` 1.9 s.
-  Soundness rests on `GoldenTest`'s comparison with `uncached` at every
-  step, `GateCostTest`'s on a real project, and the opt-in
-  `NarrowCheckStressTest` (random declaration edits; a killed run is put back
-  by the next one from `.jrefactor-stress-snapshot.json`, `StressSnapshot`). Following names
-  alone missed edits seen through inheritance; the rule now follows
-  subtypes and headers that name a changed type. A cache file of another
-  `version` is ignored.
-- A rule in the gate that skips work (the narrowed check, #56) is checked
-  by a stress run on a real project before it is merged, not after: #56's
-  first rule missed three of 60 random edits on Commons Math, all through
-  inheritance, though every example test passed (2026-11-03).
-- `RefactoringStressTest` (opt-in, `-Djrefactor.stress.root`, `.calls`,
-  `.seed`, `.counts`) calls rename, move_type and the signature and extract
-  tools on random targets of a real project. No failures in 160 calls on
-  Commons Lang and Math (2026-11-03). It prints refusals that the gate made
-  ("stress gated:") in full: those are code a tool wrote that did not
-  compile, a precondition the tool lacks. Since 2026-11-04 it also calls
-  `extract_variable`, `inline_variable`, `inline_function`, `pull_up` and
-  `push_down`, each tool in turn (`made % TOOLS.size()`), with targets
-  weighted to what can apply (call-free expressions, one-statement static
-  methods, classes in a project hierarchy). No failures in 220 calls; but
-  the test sees only compile errors, and probes found seven behavior
-  changes that type-check in those tools (roadmap #67-#69,
-  `docs/sessions/stress-new-tools.md`). A tool that moves expressions or
-  members needs probes for evaluation order and name capture, not only a
-  stress run.
-- The signature tools change the lambdas that implement the method (#57,
-  2026-11-04; they refused them from #72): a lambda's parameter list is
-  written again. They look for lambdas in every file with `->` when the
-  family has an abstract interface method, since a lambda need not name the
-  method. Before, `move_parameter` on
-  such a method compiled with the lambdas' parameters swapped (seen on
-  Commons Lang's `FailableObjIntConsumer.accept`), which neither the gate
-  nor the stress test can see.
-- `move_type` qualifies what the outer type inherits (2026-11-03): a member
-  type or static of the outer type's supertype, used unqualified in the
-  moved type, gets the declaring type's name and keeps its import. Before,
-  the name was left unqualified and the stubs declared an empty class for
-  it, which the gate passed (friction log: stubs should not run for a
-  refactoring's own output).
-- Stubs are declared only for edits (2026-11-03): `Tools.call` sets
-  `Session.editing` for a call of `Kind.EDIT`, and a batch keeps it once a
-  step was an edit; `Stubs.declare` declares nothing otherwise. A
-  refactoring that leaves a name unresolved is refused: before, `move_type`
-  left an inherited `Helper` unqualified and the stubs declared an empty
-  class for it, which the gate passed.
-- The next ten items are split between sessions (the user, 2026-11-03): the
-  local session takes #57-#61 (the refactorings and their stress tests), the
-  cloud session #62, #63, #64, #34 and the rest of #32 (pipeline, server,
-  structure). Each roadmap row's status names its session; see "Split
-  between sessions" in `docs/design.md`. Take another session's item only
-  when the user says so.
-- A stub goes in the source root of the file that uses it (2026-11-04,
-  `docs/sessions/stubs-test-tree.md`): a class only a test uses is declared in
-  `src/test/java`, not `src/main/java`. Test: `StubsTest`. Goldens have one root,
-  so a two-root case is a unit test.
-- `replace_declaration` with empty content deletes the file when it removes
-  the file's only top-level type (2026-11-04), through the gate and the
-  journal; the stubs do not declare a class whose file the edit deleted.
-  Before, the file was left with its package line, and removing it took
-  `rm` (friction log, twice).
-- `pull_up` exists for methods (roadmap #17, 2026-11-04, `docs/sessions/pull-up.md`):
-  a method moves to the direct superclass, or to the direct supertype named by `to`;
-  the gate refuses a move that leaves a name unresolved (no stubs, since a refactoring
-  has `Session.editing` false). `push_down` (2026-11-04, `docs/sessions/push-down.md`) moves
-  a method to every direct subclass, and refuses an override, since moving it would change what
-  the class runs. Both share `MemberMove`, which also lifts a field (2026-11-04, `docs/sessions/fields-pull-push.md`) and picks an overload by its parameter list, as `replace_declaration` does (`docs/sessions/overloads-pull-push.md`). Signatures are compared by binding, not by name. Originally added at the
-  user's request (2026-11-03), with a note that gorefactor and the TypeScript port may want
-  the same.
-- The session log (roadmap #18, 2026-11-03): `SessionLog` is the hook, run
-  from the jar by `bin/session-log` for PreToolUse, PostToolUse and
-  PostToolUseFailure; `SessionReport` reads the log. A refused MCP call
-  arrives as PostToolUseFailure with the text in `error`, not as
-  PostToolUse (found with a probe hook that appended its input); gorefactor
-  logs only PostToolUse, which works there because its refusals are not
-  error results. The hook costs about 0.2 s per event (two per call). It
-  logs nothing until the jar is built; hooks load when Claude Code starts,
-  so a session started before `.claude/settings.json` existed has no log.
-- `gh pr checks` right after `gh pr create` can say "no checks reported"
-  before CI registers, and `--watch` then returns at once: #22 was merged
-  that way before its run (which passed). Wait for the run to appear. A PR
-  that conflicts with `main` gets no run at all (#29, while other sessions
-  merged #25-#28): check `gh pr view N --json mergeable` when none appears.
-- The client keeps tool descriptions from before a restart in its listing (seen
-  twice: after #19 and #20); the server's are current. Not this server's bug.
-- Two `replace_text` "old is not in" refusals (#20, #8) were the model reading
-  `inspect`'s two-space separator as indentation.
-- Writing Java through a Python script: use raw strings. In a plain Python
-  string a backslash before a newline joins the lines, which is how
-  `rename_local`'s description got its runs of spaces. The Edit tool avoids it.
-- The user asked for roadmap positions 1-8 in order, one PR each (2026-11-02):
-  #7, #19, #20, #8, #21, #22, #23, #18.
-- The roadmap's open items are ordered by gorefactor's evidence (the user asked,
-  2026-11-02, after items had been ordered only by what unblocks what): source
-  roots and classpath (#7), then the first edit tools, imports, undo and batch,
-  stubs, signature changes. The reasons are under "Why this order" in
-  `docs/design.md`.
-- The SDK (2.1.0) was checked with `javap` against the jars, not from memory:
-  `Tool.builder()` is deprecated in favor of `Tool.builder(name, mapper, schema)`,
-  and the SDK validates arguments against the input schema itself.
+  gate; add new single-file edits through it. It fixes imports only for a file
+  under a source root.
+- `Session` holds all per-project state (undo history, deferred flag, library
+  index, last type check, `editing`, `preserveExceptions`); there is no static
+  mutable state. `Server.Quiet` holds the per-server state.
+- A new tool starts from `Opened` (read, parse, find the target) and lists its
+  up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
+  (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,
+  `Declarations` and the signature tools keep their own resolvers (roadmap #74).
+- What code reads, writes and calls comes from `Effects.of(node)`
+  (`docs/sessions/one-effects-analysis.md`); a new effect kind goes in
+  `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw".
+- A refactoring reports or refuses a change to exceptional behavior through
+  `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
+  Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
+  Goldens pin the separate part of the result in `exceptional.txt`; a case
+  without that file must report nothing.
+- A tool's result is an `Outcome`; `render()` gives the text the model reads,
+  with the stubs named after it.
+- Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a
+  refactoring that leaves a name unresolved is refused. A stub goes in the
+  source root of the file that uses it.
+- The session report counts by `Tools.Def.kind`, so a new tool needs only its
+  `Kind`.
+- The server runs one tool call at a time (`Server.ONE_AT_A_TIME`): two edits
+  run at once undid each other. It exits when stdin ends only after it is quiet,
+  since the SDK drops requests it has read but not run.
+
+## Testing
+
+- Every golden write case is undone by `undo` and must return to `in/`, and the
+  cached type count must equal `TypeCheck.uncached`.
+- A rule in the gate that skips work (such as the narrowed check) is checked by
+  a stress run on a real project before it is merged: the narrowed check's first
+  rule missed three of 60 random edits, all through inheritance, though every
+  example test passed. `NarrowCheckStressTest` and `RefactoringStressTest` are
+  opt-in (`-Djrefactor.stress.root`, `.seed`, `.counts`); a killed run is put
+  back by the next one.
+- The stress tests see only compile errors. A tool that moves expressions or
+  members also needs probes for evaluation order and name capture: probes found
+  seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`).
+  The refusals that followed are conservative, and compare first uses only.
+- Measure call costs with `GateCostTest` (`-Djrefactor.cost.root`,
+  `-Djrefactor.cost.call`), not from old figures.
+
+## Traps
+
+- `gh pr checks` right after `gh pr create` can say "no checks reported" before
+  CI registers, and `--watch` then returns at once. Wait for the run. A PR that
+  conflicts with `main` gets no run at all: check its `mergeable` state.
+- GitHub's GraphQL API is closed to these sessions: use `gh api` REST endpoints
+  (`gh pr list` and `gh pr view` fail).
+- A refused MCP call reaches the hook as PostToolUseFailure, with the text in
+  `error`. Hooks load when Claude Code starts, so a session started before
+  `.claude/settings.json` existed has no session log.
+- The client keeps tool descriptions from before a reconnect; the server's are
+  current.
+- `inspect` puts two spaces between the line number and the code; they are not
+  indentation in `old`.
+- Writing Java through a Python script: use raw strings, or a backslash before a
+  newline joins the lines. The Edit tool avoids it.
+- Check SDK and library APIs with `javap` against the jars, not from memory.
+- JDT's `setEnvironment` needs one encoding per source path entry.
+- `bin/jrefactor` rebuilds its jar only for a commit newer than the jar; probing
+  uncommitted server code takes a temporary commit (roadmap #79).
 - To test a server change from Claude Code without registering it, write a
   `--mcp-config` JSON in the scratchpad and run `claude -p "<prompt>" --model
-  haiku --strict-mcp-config --mcp-config <file> --allowedTools mcp__<name>__<tool>`.
-  Put the prompt first: `--allowedTools` takes several values and swallows it.
-  Redirect stdin (`< /dev/null`): otherwise it waits 3 s and prints a warning
-  into the output, which then does not parse as JSON (the cause of two "not
-  JSON" probe outputs, in #6 and #19).
-
-- Tool count limit 50 (roadmap order 15, 2026-11-04): `ToolsTest` holds it. The user
-  raised it from the implied budget to add ten higher-level tools that replace
-  `replace_text` in the composites of the Fowler, Go and IntelliJ comparison.
-  Those ten are not built yet; each is its own PR, in the order the user gave.
-
-- `extract_variable` exists (2026-11-04, `docs/sessions/extract-variable.md`): the first of the
-  ten higher-level tools the user asked for (option B of the 2026-11-04 choice). It names an
-  expression by line and exact text, and by column when the text occurs twice. Its implementation
-  is `ExtractVariable`; its refusals match gorefactor's conditions.
-
-- `inline_variable` exists (2026-11-04, `docs/sessions/inline-variable.md`): the inverse of
-  `extract_variable`. It refuses an initializer with calls or assignments outright, not only
-  one with several uses: the first version is the simplest safe rule. Uses are parenthesized
-  unless the initializer is primary.
-
-- `inline_function` exists (2026-11-04, `docs/sessions/inline-function.md`): static methods only,
-  a body that is one return or one statement, every call in the project. An instance method is
-  refused for its receiver, not inlined. The method is removed with the blank line after it.
-
-- Effect order and name capture (roadmap 60, 61, 2026-11-04, `docs/sessions/effect-order.md`):
-  `inline_function` refuses a dropped effect, two effectful arguments, a converted argument and
-  a body that names a member of its class when a call is in another class. `extract_variable`
-  refuses an effect earlier in the statement and a new name that hides a field. `inline_variable`
-  refuses an initializer name that a later declaration in the block hides. All are refusals, not
-  rewrites: the probes' cases are the goldens. The rules are conservative (a safe case with the
-  same shape is refused too).
-
-- `change_type` exists (2026-11-04, `docs/sessions/change-type.md`): fields only, named
-  `Type.field`. The gate checks the uses, so a change that a use no longer compiles with is
-  refused, not applied.
-
-- `add_supertype` exists (2026-11-04, `docs/sessions/add-supertype.md`): the fifth of the ten
-  higher-level tools. The caller states the relation (`extends` or `implements`) rather than the
-  tool working out the supertype's kind. Interfaces take `extends` into their list; a class's
-  `extends` goes before any `implements` clause. No stubs: it is a refactoring.
-
-- `move_statement` exists (2026-11-04, `docs/sessions/move-statement.md`): the sixth of the ten
-  higher-level tools. Two adjacent statements in one block trade places. The default rule is
-  strict (no shared written name, at most one side effect); `names_only=true` relaxes it to the
-  shared-name rule. The user chose this over Names-only as the default and over a `force` flag.
-
-- `invert_if` exists (2026-11-04, `docs/sessions/invert-if.md`): the seventh of the ten higher-level
-  tools. The negated condition simplifies comparisons (the user's choice over always `!(...)` and over
-  refusing non-simple conditions). An ordering comparison on a float or double is refused (NaN).
-
-- `remove_else` exists (2026-11-04, `docs/sessions/remove-else.md`): the eighth of the ten
-  higher-level tools. Only an if whose then-branch ends in a return, throw, break, continue or
-  yield loses its else; the if must be directly in a block.
-
-- `move_member` exists (2026-11-04, `docs/sessions/move-member.md`): the ninth of the ten higher-level
-  tools. An instance method moves to a type of the same file as a static method with the instance as
-  its first parameter, `receiver` (the user's choice over refusing instance uses). A null instance now
-  fails inside the method, not at the call: a behavior difference no static check sees.
-
-- `encapsulate_field` exists (2026-11-04, `docs/sessions/encapsulate-field.md`): the tenth of the ten
-  higher-level tools. Bean-style accessors with optional names (the user's choice). Writes it does not
-  rewrite (compound, ++, in an expression, or reading the field too) are refused, not rewritten.
-
-- Effects and exceptions (the user, 2026-11-04; `docs/design.md`, Decisions): preserve every
-  effect in the normal logic flow. Exceptional behavior is not preserved by default, except a guard
-  or a try/catch (keep the source inside the try). A flag lets the model require it, and a tool that
-  changes it without the flag says so in its result. The user chose one `preserve_exceptions`
-  flag on every refactoring and a separate field for the alert (design.md, open question 0).
-  It is roadmap #73, after #71 (one shape for a refactoring: target resolver and preconditions
-  as values) and #72 (one effects analysis): the user agreed to build those first, since the
-  flag otherwise means editing every `run` and every schema. `move_member`'s null-receiver
-  change is the first case to alert on.
+  haiku --strict-mcp-config --mcp-config <file> --allowedTools mcp__<name>__<tool>
+  < /dev/null`. Put the prompt first (`--allowedTools` swallows what follows it),
+  and redirect stdin, or a warning lands in the output.
 
 ## Why past choices were made
 
@@ -470,92 +146,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 
 ## Build environment
 
-- Sandbox Maven needs `~/.m2/settings.xml` with an active `https` proxy at the
-  host and port in `$HTTPS_PROXY`; without it Maven fails with "Name or service
-  not known" for `repo.maven.apache.org`, even when `curl` reaches it. The port
-  changes between sessions and once went stale mid-session, so regenerate the
-  file before every Maven run. No mirror is needed.
+- The sandbox Maven proxy fix is in `CLAUDE.md`; the port once went stale
+  mid-session, so regenerate `~/.m2/settings.xml` before every Maven run.
 - Maven Central answered 429 (rate limit) once; the rerun passed.
-- Maven Wrapper added 2026-11-02 (the user's choice over apt, a tarball in
-  `~/.local`, or Docker) when the user's own machine had no Maven: one pinned
-  Maven everywhere, CI included. That machine also had only JRE packages
-  (`openjdk-21-jre`), which fails as "release version 21 not supported"; the fix
-  is `openjdk-21-jdk-headless`. Its default `java` is 25, so set
-  `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`.
-- CI: `./mvnw verify` on JDK 21 plus a `spotless:check` job; runs are skipped for
-  docs-only changes. Dependabot opens weekly PRs for Maven and Actions. As of
-  2026-11-02: JUnit 6.1.3, `actions/checkout@v7`, `actions/setup-java@v6`. The
-  first runs on `main` passed (2026-11-02).
-
-- `inline_function` also refuses an argument that is not fixed (it calls,
-  assigns, or reads a field or array element) when an effect of the body
-  runs before its use, or its use is in a lambda or anonymous class, or, for
-  one with an effect, a branch (2026-11-04,
-  `docs/sessions/inline-function-effect-gaps.md`). Two sessions fixed #67
-  at once; the user kept the other session's refusals for conversions and
-  the class's own members over this session's casts and qualification
-  (closed PR #118). Before fixing a planned roadmap row, check `main`
-  and the open branches for the same row.
-
-- `pull_up` refuses a method that would override a concrete method the
-  supertype inherits (roadmap #69, 2026-11-04,
-  `docs/sessions/pull-up-inherited-override.md`): `PullUp.overridden` walks
-  the supertype's superclasses and interfaces. An inherited abstract method is
-  not refused, since every concrete class below declares its own. This also
-  refuses pulling up a `toString()` or `equals` into a class that inherits
-  `Object`'s: that changes every other subclass too.
-
-- `MemberMove.appendTo` inserts before the closing brace when it shares its
-  line (`class Base {}`), for `pull_up` and `push_down` (roadmap #70,
-  2026-11-04, `docs/sessions/member-move-one-line-body.md`). Before, the
-  member went in front of the class header, and the gate's syntax error was
-  refused as if the member used what only the subclass has.
-
-- `inline_function` refuses two arguments that are not fixed, one with an
-  effect, when the body first uses them in the other order than the call
-  passes them (`InlineFunction.checkOrder`, 2026-11-04,
-  `docs/sessions/inline-function-read-order.md`). Together with
-  `checkTiming` and the two-effects rule, these cover the orders the probes
-  found; the rules compare first uses only, so they are a check on the
-  shapes tested, not a proof.
-
-- A body on one line is opened up when a tool adds a member (2026-11-04,
-  `docs/sessions/one-line-body-layout.md`): `MemberMove.appendTo` returns
-  its edits as a list (`{ int x; }` takes two, so the other edits inside the
-  member do not overlap), and `Declarations.memberIndent` falls back to 2
-  spaces, not 4, when neither the file nor the content shows a step: the
-  tools that move members write 2.
-
-- One shape for a refactoring (roadmap #71, 2026-11-04,
-  `docs/sessions/refactoring-shape.md`): `Opened.of(project, rel)` reads and
-  parses a tool's file; `topLevel(name)` and `startingOn(line, ...)` find its
-  target with one refusal wording each; `Qualified.of(name, shape)` splits
-  `Type.member` at the first dot; `Precondition.that(holds, refusal)` and
-  `require(...)` hold a tool's up-front checks as values, checked in order.
-  Twelve tools use them; `Rename`, `MoveType`, `Extract`, `Declarations` and
-  the signature tools keep their own resolvers. A new tool starts from
-  `Opened` and `Precondition`. Decided by this session while the user was
-  away: mid-algorithm refusals stay `throw`.
-
-- One effects analysis (roadmap #72, 2026-11-04,
-  `docs/sessions/one-effects-analysis.md`): `Effects.of(node)` lists what code
-  does in source order (names, elements, declarations, writes, calls,
-  creations), each marked when it runs in a lambda or anonymous class.
-  `ExtractVariable`, `InlineVariable`, `InlineFunction` and `MoveStatement`
-  query it (`changes`, `named`, `written`, `writes`, `normalFlowChanges`,
-  `fixed`); their own models are gone, removed by `inline_function` where
-  they had become one-line delegates. A new effect kind (what may throw, for
-  #73) goes in `Effects.Kind`.
-
-- `preserve_exceptions` (roadmap #73, 2026-11-04, `docs/sessions/preserve-exceptions.md`):
-  every `Kind.REFACTORING` `Def` gains the argument in its constructor (schema
-  and allowed arguments), so a new refactoring has it without a schema edit.
-  `Tools.call` sets `Session.preserveExceptions` for the call and collects
-  `Session.exceptional` into `Outcome.exceptional`; a batch step's changes go
-  to its batch. A tool reports or refuses through `Exceptional.change`, or
-  keeps the behavior itself and reports through `Exceptional.report`
-  (`move_member` writes `requireNonNull`). The result's part of its own is a
-  second MCP text block (`Outcome.contents`, `Server.answerAll`); goldens pin
-  it in `exceptional.txt`, and a case without that file must report nothing.
-  `Effects.Kind.MAY_THROW` and `Effects.mayThrow()` are the syntax-only "may
-  throw".
+- The Maven Wrapper was the user's choice over apt, a tarball or Docker, when
+  their machine had no Maven. That machine had only JRE packages, which fails as
+  "release version 21 not supported"; the fix is `openjdk-21-jdk-headless`. Its
+  default `java` is 25, so set `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`.
+- CI skips the build for docs-only changes. Dependabot opens weekly PRs for
+  Maven and Actions.
