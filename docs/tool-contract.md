@@ -295,7 +295,9 @@ Roadmap #90, 2026-11-04 (gorefactor's `method_to_function`, `function_to_method`
   null now fails at the call, not where the body used it: reported as a change to
   exceptional behavior, and refused under `preserve_exceptions`. Refused also:
   not static, a first parameter of another type or varargs, a body that assigns
-  it, lambdas or method references of it.
+  it, lambdas or method references of it, an instance method of the new signature
+  in a subclass ("Square.area(int) would then override it") or a supertype,
+  libraries included (roadmap #92).
 
 ## `push_down` (built)
 

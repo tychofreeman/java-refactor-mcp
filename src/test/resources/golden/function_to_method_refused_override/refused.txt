@@ -1,0 +1,1 @@
+Square.area(int) would then override it

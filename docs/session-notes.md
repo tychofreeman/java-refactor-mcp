@@ -184,6 +184,10 @@ Each was chosen from options; the record named beside it has the options it beat
   newline joins the lines. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- Bindings from two parses (the tool's `Opened` parse and `Holding`'s or
+  `parseAll`'s) do not compare: `overrides`, `isSubTypeCompatible` and `isEqualTo`
+  return false. Compare keys or qualified names, or take both from one parse (hit
+  twice on 2026-11-04: `inline_function`'s override check, `function_to_method`'s).
 - `bin/jrefactor` rebuilds its jar only for a commit newer than the jar; probing
   uncommitted server code takes a temporary commit (roadmap #79).
 - To test a server change from Claude Code without registering it, write a
