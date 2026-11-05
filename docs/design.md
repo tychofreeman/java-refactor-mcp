@@ -69,7 +69,10 @@ model in its result, so the model can decide whether the change is acceptable. N
 preserving exceptional behavior (it would refuse most moves that pass the normal-flow rule, such
 as an inlined initializer that may throw) and ignoring it (the model would not know).
 
-## Open questions
+## Questions (all answered)
+
+No question is open. These were open when the design was written; each says how it
+was answered.
 
 0. **How exceptional behavior is preserved and reported.** Answered 2026-11-04 by the user: one
    `preserve_exceptions` flag on every refactoring (option a's first form), and the alert as a
@@ -117,19 +120,6 @@ as an inlined initializer that may throw) and ignoring it (the model would not k
 5. ~~**Versions.**~~ Resolved 2026-11-02: JDT Core 3.47.0, MCP SDK 2.1.0 and JUnit
    5.14.4 resolve from Maven Central and `mvn verify` passes on the scaffold.
 
-## First milestone (proposed)
-
-1. ~~JDT spike~~ Done (`spikes/jdt-headless/`).
-2. Type-check gate and first refactoring. **Done in code, 2026-11-02:**
-   `TypeCheck` counts compile errors across the project before and after an edit;
-   `RenameLocal` applies the edit, runs the gate, and rolls back with a refusal if
-   the edit adds errors. Golden cases pass. Fields and other kinds of rename are
-   not built.
-3. ~~Start the MCP server over STDIO with one tool~~ Done (roadmap #5): `inspect`
-   lists and answers from Claude Code.
-4. ~~Wire `rename_local` into the server~~ Done (roadmap #6).
-5. Run the A/B harness on a small Java task set against a stock baseline.
-
 ## Roadmap
 
 Item numbers are stable (records and notes refer to them); the order of the
@@ -140,7 +130,7 @@ item is done, change its status here and in `docs/session-notes.md`.
 
 | # | Item | Notes |
 |---|------|-------|
-| 1 | JDT spike: headless bindings | `spikes/jdt-headless/`; open question 1 |
+| 1 | JDT spike: headless bindings | `spikes/jdt-headless/`; question 1 |
 | 2 | Type-check gate | `TypeCheck`; see "Gate" below |
 | 3 | `rename_local` (locals and parameters) | Four golden cases |
 | 4 | CI: tests, formatting, compiler lint; Dependabot | `.github/`; pom Spotless and `-Xlint:all -Werror`; first run green 2026-11-02 |
@@ -151,10 +141,10 @@ item is done, change its status here and in `docs/session-notes.md`.
 | 10 | Measure gate cost on a large project; cache the reparse | Commons Math (990 files): one edit 21.8 s to 2.1 s, `add_parameter` 15.0 s to 4.1 s, by one batch parse (`Jdt.parseAll`) and reusing the last count while no file changed. Opt-in `GateCostTest`; record in `docs/sessions/gate-cost.md` |
 | 24 | Results that do not echo what the model sent; locations, not diffs | Audit found no result that repeats input or a diff; the largest result is the stub list (follow-up). Record in `docs/sessions/results-without-echo.md` |
 
-### Open, in order
+### Done from the ordered list
 
-Ordered by gorefactor's evidence (see "Why this order" below) and this repo's
-friction log; reorder when this repo's own log says otherwise.
+Rows that were in the ordered list below, in their order; the status says how each
+was finished or closed, and the evidence names its record.
 
 | Order | # | Item | Status | Evidence |
 |---|---|------|--------|----------|
@@ -167,19 +157,14 @@ friction log; reorder when this repo's own log says otherwise.
 | 7 | 23 | `extract_function` (Java: `extract_method`): at most one result (the user chose refusing two over a record, 2026-11-03); static exactly when the enclosing member is (chosen over "when it can be") | Done | This repo's log names it twice (`GoldenTest.call`, `atColumn`) |
 | 8 | 18 | Session log: a hook that records every tool call per branch, and a report of it for the session records (`bin/session-log`, `bin/session-report`; the hook in Java from the jar, the user's choice of 2026-11-03 over shell and jq; tokens not yet) | Done | Without it the records cannot say "measured"; gorefactor's `cmd/session-log` and `refactor-tokens -log` |
 | 12 | 14 | Golden cases also undo each applied step and compare with `in/`; incremental state compared with a fresh load | Done | `GoldenTest` undoes each write and checks `TypeCheck.errors` against `TypeCheck.uncached`; record in `docs/sessions/golden-undo-check.md` |
-| 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed |
-| 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Partly done | From gorefactor; compare versions on identical input; `NarrowCheckStressTest` for the narrowed type check (`-Djrefactor.stress.root`, `.edits`, `.seed`, `.counts=true` for counts only), record in `docs/sessions/stress-narrow-check.md`; `RefactoringStressTest` calls the refactorings on random targets (applies or refuses, adds no error by a full count, undo restores every file): no failures in 160 calls on Commons Lang and Math, three refusals by the gate that are tools' missing preconditions (`docs/sessions/stress-refactorings.md`); the five newer refactorings added 2026-11-04, no failures in 220 calls, behavior changes found by probes instead (#67-#70, `docs/sessions/stress-new-tools.md`) |
 | 15 | 17 | A test that holds the tool count and the instructions' size, raised only with the user | Done (2026-11-04): the count only, limit 50 (`ToolsTest`, `docs/sessions/tool-count-limit.md`); the user raised it for ten higher-level tools | gorefactor's tool budget |
-| 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
 | 17 | 25 | `pull_up` and `push_down` for methods (and fields): move a member to a supertype or to its subtypes, with the type-check gate behind it | Done (2026-11-04): `pull_up` and `push_down` for methods, fields and overloads (`docs/sessions/pull-up.md`, `docs/sessions/push-down.md`, `docs/sessions/fields-pull-push.md`, `docs/sessions/overloads-pull-push.md`) | The user asked, 2026-11-03; no friction entry yet, so it waits for one. Also worth a look for gorefactor (Go has embedding, not inheritance: the nearest is moving a method between a struct and the one it embeds) and the TypeScript port |
-| 18 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in open question 1 |
 | 19 | 26 | Path refusal in one place: `SourceProject` returns a `.java` path or refuses, instead of five checks with different wording (`Declarations`, `Extract`, `Inspect`, `Signatures`, `Edits`) | Done | Code review 2026-11-03. Refusal wording is contract: golden `refused.txt` fragments must hold |
 | 20 | 27 | One line helper, `Lines`: `lineStart` and `lineEnd` (identical in `Declarations` and `Imports`), `Edits.lineOf`, and the "line N" / "lines N, M" / "lines A-B" text in `Tools`, `Rename` and `Extract` | Done | Code review 2026-11-03 |
 | 21 | 28 | One ASTParser configuration: `Declarations.members` sets its own options and no environment; `Jdt` should own every parser | Done | Code review 2026-11-03. `Jdt` owns every parser now (`Jdt.parseMembers`, `options()`); record `docs/sessions/one-parser-config.md` |
 | 22 | 29 | Name the two `ancestor` helpers apart: `Extract` starts at the parent, `Stubs` at the node itself | Done (2026-11-04): `Extract.ancestorAbove`, `Stubs.ancestorOrSelf`, `docs/sessions/ancestor-helper-names.md` | Code review 2026-11-03. Same name, different meaning |
 | 23 | 30 | Stubs travel in the call's result object, not `Stubs.said()` and a `ThreadLocal` (decided 2026-11-03, see Decisions) | Done | `Tools.Outcome`, `Stubs.Declared`, `Stubs.Check`; record in `docs/sessions/stubs-in-result.md` |
 | 24 | 31 | The before/after type check goes through `Gate`: `Batch` and `Stubs` each re-implement it | Done | Code review 2026-11-03. `Gate.checkedAtEnd` is the end-of-batch check; `Batch` calls it. `Stubs.declare` stays the declare loop. Record: `docs/sessions/gate-before-after.md` |
-| 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Partly done, cloud session | Code review 2026-11-03. No behavior change; no split without a change that needs it. `Signatures` is split (`MethodFamily`, `SignatureChange`; the other session, 2026-11-03). `Extraction` (the nested class of `Extract`, about 660 lines) is its own file (`docs/sessions/split-extract.md`); `Signatures`, `Declarations` and `Tools` are not split; `Signatures` (818 lines) split by `move_type` into `Signatures` (365, the entry points and shared helpers), `MethodFamily` (327) and `SignatureChange` (153), record in `docs/sessions/split-signatures.md` |
 | 26 | 33 | Static mutable state: `Journal.DONE`, `Imports.LIBRARIES`, `Server.CALLS`, `Stubs.DECLARED`; tests in one JVM can interfere | Done | Code review 2026-11-03. Safe in the server today: one call at a time |
 | 27 | 34 | One `ObjectMapper` shared by `SessionLog` and `SessionReport` | Done | Code review 2026-11-03. `SessionReport` uses `SessionLog.JSON`. Record: `docs/sessions/shared-object-mapper.md` |
 | 28 | 35 | `create_file` fixes imports before the gate, as every other edit does; a new file's unimported library type is now declared as a project class (`List.java`) | Done | Full code review 2026-11-03; reproduced by `create_file_java_imports`. `createFile` now goes through `write`, which fixes imports before the gate |
@@ -221,49 +206,47 @@ friction log; reorder when this repo's own log says otherwise.
 | 64 | 71 | One shape for a refactoring: a shared target resolver (file, line, name, column to a type, member, statement or expression, with one refusal wording) and preconditions as values a tool lists, not `if`/`throw` in each `run`, so a check can refuse or report | Done for twelve tools (2026-11-04), local session: `Opened`, `Qualified`, `Precondition`; `Rename`, `MoveType`, `Extract`, `Declarations` and the signature tools keep their own resolvers (follow-up); record in `docs/sessions/refactoring-shape.md` | Review of the abstractions, 2026-11-04 (the user agreed to put it ahead of #73): 14 tool classes repeat the parse-and-locate preamble (13 copy `project.javaFile(rel)` then `Jdt.parse`), resolve targets their own way (`MemberMove.typeNamed`, `ExtractVariable.find`, `InlineVariable.variableAt`, `Rename.Query`), and refuse inline (22 refusals each in `MoveMember` and `InlineFunction`). A cross-cutting flag has no one place to attach. No behavior change; the goldens are the check |
 | 65 | 72 | One effects analysis: what an expression or statement reads, writes and calls, in order, shared by the tools that move code; it replaces `ExtractVariable.hasEffect`, `MoveStatement.Effects`, `InlineVariable.assigns`/`readsIn` and `InlineFunction`'s argument checks, and has room for what may throw | Done (2026-11-04), local session: `Effects`; record in `docs/sessions/one-effects-analysis.md` | Same review: four partial models of effects, none knowing exceptions. #73 needs a fifth unless they become one. No behavior change; the goldens and the effect-order probes are the check |
 | 66 | 73 | `preserve_exceptions` on every refactoring, and a separate section in the result naming each change to exceptional behavior (a dereference moved past a guard, a call declaring a checked exception moved, an expression moved into or out of a `try`) | Done (2026-11-04), local session: the flag, the result's own part, and three tools' first cases; record in `docs/sessions/preserve-exceptions.md` | The user's decision, 2026-11-04 (Decisions, and open question 0: one flag, a separate field). First case: `move_member`'s null receiver |
-| 67 | 74 | `move_type` moves a top-level type to another package (an option, `package`): its file moves, its package line and every reference and import follow, and members used across the new package boundary are widened or refused | Planned, local session, first of the 2026-11-04 list | Friction log: "No tool moves a type or…", golden and fixture moves by hand. The user's order of 2026-11-04 (recommendation 1). An option on `move_type`, not a tool, unless its design note finds otherwise |
-| 68 | 75 | `move_file`: move or copy a file that is not Java (a fixture, a doc, a golden case directory), as gorefactor's; and delete a directory | Planned, after #74 | Friction log: `move_file` idea; "no tool moves golden directories"; `rm` of directories by hand |
-| 69 | 76 | Change a method's parameter or return type, every override and call following (gorefactor's `change_parameter_type`; Java adds the return type) | Planned | Recommendation 2 (2026-11-04): #125 changed `appendTo`'s return type with an `add` to `addAll` edit at each of four callers. Extends the signature tools; `change_type` does fields only |
-| 70 | 77 | Safe delete: delete a member or type that nothing uses, refused with the uses when something does (gorefactor's `remove_dead_code`) | Planned | Recommendation 3 (2026-11-04). Perhaps an option on `replace_declaration`, which deletes with empty content and refuses a used declaration through the gate |
-| 71 | 78 | Widen existing tools: `inline_function` for instance methods and bodies of several statements; `extract_method` with several results; `rename` of type parameters | Planned | The user's list of 2026-11-04. `extract_method`'s refusal of two results was the user's choice of 2026-11-03 (over returning a record): widening it needs the user's choice again. `rename` refuses type parameters (stress runs) |
-| 72 | 79 | Extract interface and extract superclass: a new type from members of a class, the class implementing or extending it | Planned | The user's list of 2026-11-04; `pull_up` needs the supertype to exist |
-| 73 | 80 | Introduce constant, field and parameter: `extract_variable`'s expression as a `static final` field, an instance field, or a new parameter of the enclosing method (callers pass the expression) | Planned | The user's list of 2026-11-04. Perhaps options on `extract_variable`; the parameter form composes with `add_parameter` |
-| 74 | 81 | Lambda, anonymous class and method reference, each to the others where the meaning is kept | Planned | The user's list of 2026-11-04; `inline_function` and `move_member` refuse method references and ask for a lambda first |
-| 75 | 82 | Convert a class to a record (final fields set once by the constructor, accessors renamed or kept) | Planned | The user's list of 2026-11-04 |
-| 76 | 83 | Extract class and introduce parameter object (gorefactor's `extract_struct`): fields or parameters grouped into a new type, uses following | Planned | The user's list of 2026-11-04; on the planned list in `docs/tool-contract.md` |
-| 77 | 84 | Instance method to static and back in place (gorefactor's `method_to_function`, `function_to_method`) | Planned | The user's list of 2026-11-04; `move_member` does it only while moving to another class |
-| 78 | 85 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Planned, last of the 2026-11-04 list | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
 
-### Split between sessions (2026-11-03)
+### Open, in order
 
-The user asked for the next ten reasonable items, five of them taken by the
-local session, chosen so its changes sit close together in the code, and the
-other five left to the cloud session. Each row's status says which.
+Ordered by gorefactor's evidence (see "Why this order" below) and this repo's
+friction log; reorder when this repo's own log says otherwise.
 
-- **Local session** (the refactorings and their stress test: `MethodFamily`,
-  `SignatureChange`, `MoveType`, `Rename`, `RefactoringStressTest`,
-  `NarrowCheckStressTest`): #57 lambdas changed with their method, #58
-  `move_type`'s unused import, #59 one "files that hold the name" walk, #60
-  stress targets weighted, #61 stress restore after a killed run.
-- **Cloud session** (the edit pipeline, the server and the structure:
-  `Batch`, `Gate`, `Stubs`, `Server`, `SourceProject`, `SessionLog`,
-  `SessionReport`, `Tools`, `Extract`, `Declarations`): #62 stubs per batch
-  step, #63 the server's classpath cache, #64 a parent pom and the classpath
-  cache, #34 one `ObjectMapper`, #32 the rest of the large-class splits
-  (`Extract`, `Declarations`, `Tools`). (#46, first on this list, was done
-  by the cloud session before the split was merged.)
-
-The two sets share no class.
+| Order | # | Item | Status | Evidence |
+|---|---|------|--------|----------|
+| 13 | 11 | A/B harness run on a small Java task set against a stock baseline | Planned | Needs edits, batch and stubs to be a fair test; gorefactor's fresh-model arm cost about twice the manual arm until they existed |
+| 14 | 16 | Opt-in stress tests on a real project for tools whose rules are heuristics, with a counts-only mode | Partly done | From gorefactor; compare versions on identical input; `NarrowCheckStressTest` for the narrowed type check (`-Djrefactor.stress.root`, `.edits`, `.seed`, `.counts=true` for counts only), record in `docs/sessions/stress-narrow-check.md`; `RefactoringStressTest` calls the refactorings on random targets (applies or refuses, adds no error by a full count, undo restores every file): no failures in 160 calls on Commons Lang and Math, three refusals by the gate that are tools' missing preconditions (`docs/sessions/stress-refactorings.md`); the five newer refactorings added 2026-11-04, no failures in 220 calls, behavior changes found by probes instead (#67-#70, `docs/sessions/stress-new-tools.md`) |
+| 16 | 15 | Read guard: a hook that sends reads of `.java` files through `inspect` | Planned | Last: in gorefactor's A/B the guarded arm did worse ($2.95, 5/8 against $2.71, 6/8) |
+| 18 | 12 | Trim the transitive JDT jar set | Open, low priority | Caveat in question 1 |
+| 25 | 32 | Split large classes when each is next changed: `Extract` (1,048 lines), `Signatures` (753), `Declarations` (597, 26 static methods), `Tools` (schemas and dispatch) | Partly done, cloud session | Code review 2026-11-03. No behavior change; no split without a change that needs it. `Signatures` is split (`MethodFamily`, `SignatureChange`; the other session, 2026-11-03). `Extraction` (the nested class of `Extract`, about 660 lines) is its own file (`docs/sessions/split-extract.md`); `Signatures`, `Declarations` and `Tools` are not split; `Signatures` (818 lines) split by `move_type` into `Signatures` (365, the entry points and shared helpers), `MethodFamily` (327) and `SignatureChange` (153), record in `docs/sessions/split-signatures.md` |
+| 67 | 74 | Move the remaining tools onto the refactoring shape: `Rename` (`Query`), `MoveType`, `Extract`, `Declarations` (`find`) and the signature tools (`MethodFamily.of`) resolve targets through `Opened`; the up-front checks still written as `if`/`throw` in `InlineVariable`, `ExtractVariable`, `ChangeType` and `EncapsulateField` become `Precondition`s | Planned; convert each tool when it is next changed | Follow-ups of #71 (`docs/sessions/refactoring-shape.md`). No behavior change; the goldens are the check |
+| 68 | 75 | `preserve_exceptions` detects more: a dereference moved past a guard, code moved into or out of a `try`, an `inline_function` argument that may throw and now runs later in the body, an `extract_variable` expression that may throw moved before an earlier state change in its statement | Planned | Follow-ups of #73 (`docs/sessions/preserve-exceptions.md`); the user's policy asks for the syntactically clear cases (Decisions, 2026-11-04) |
+| 69 | 76 | Mark code that runs only sometimes on `Effect` (`conditional`), replacing the parent walks in `ExtractVariable.checkPlace` (loop conditions, `&&` and `\|\|`, conditionals) and `InlineFunction.deferral` | Planned, when a third tool needs it | Follow-up of #72 (`docs/sessions/one-effects-analysis.md`). No behavior change |
+| 70 | 77 | A check that every name in moved text resolves to the same declaration after the edit, for every tool that moves code; it would replace one-off rules such as `inline_function`'s other-class member refusal and `inline_variable`'s shadow refusal | Planned | Follow-up of #67 and #68 (`docs/sessions/effect-order.md`); the general form named in row 60's evidence |
+| 71 | 78 | `inline_function` accepts an argument whose type is a subtype of the parameter's (a `String` for an `Object`), refused today by the conversion rule; numeric and boxing conversions stay refused | Planned | Follow-up of `docs/sessions/effect-order.md`: the rule is broader than the probe (`half(3)` for `double`) needed. Needs a golden showing the body behaves the same |
+| 72 | 79 | `bin/jrefactor --rebuild` (or `JREFACTOR_REBUILD=1`) builds the jar from the working tree first, so a session can probe uncommitted server code | Planned | Friction log, 2026-11-04: probing #73's change took a temporary commit and a soft reset |
+| 73 | 80 | `move_type` moves a top-level type to another package (an option, `package`): its file moves, its package line and every reference and import follow, and members used across the new package boundary are widened or refused | Planned, local session, first of the 2026-11-04 list | Friction log: "No tool moves a type or…", golden and fixture moves by hand. The user's order of 2026-11-04 (recommendation 1). An option on `move_type`, not a tool, unless its design note finds otherwise |
+| 74 | 81 | `move_file`: move or copy a file that is not Java (a fixture, a doc, a golden case directory), as gorefactor's; and delete a directory | Planned, after #80 | Friction log: `move_file` idea; "no tool moves golden directories"; `rm` of directories by hand |
+| 75 | 82 | Change a method's parameter or return type, every override and call following (gorefactor's `change_parameter_type`; Java adds the return type) | Planned | Recommendation 2 (2026-11-04): #125 changed `appendTo`'s return type with an `add` to `addAll` edit at each of four callers. Extends the signature tools; `change_type` does fields only |
+| 76 | 83 | Safe delete: delete a member or type that nothing uses, refused with the uses when something does (gorefactor's `remove_dead_code`) | Planned | Recommendation 3 (2026-11-04). Perhaps an option on `replace_declaration`, which deletes with empty content and refuses a used declaration through the gate |
+| 77 | 84 | Widen existing tools: `inline_function` for instance methods and bodies of several statements; `extract_method` with several results; `rename` of type parameters | Planned | The user's list of 2026-11-04. `extract_method`'s refusal of two results was the user's choice of 2026-11-03 (over returning a record): widening it needs the user's choice again. `rename` refuses type parameters (stress runs) |
+| 78 | 85 | Extract interface and extract superclass: a new type from members of a class, the class implementing or extending it | Planned | The user's list of 2026-11-04; `pull_up` needs the supertype to exist |
+| 79 | 86 | Introduce constant, field and parameter: `extract_variable`'s expression as a `static final` field, an instance field, or a new parameter of the enclosing method (callers pass the expression) | Planned | The user's list of 2026-11-04. Perhaps options on `extract_variable`; the parameter form composes with `add_parameter` |
+| 80 | 87 | Lambda, anonymous class and method reference, each to the others where the meaning is kept | Planned | The user's list of 2026-11-04; `inline_function` and `move_member` refuse method references and ask for a lambda first |
+| 81 | 88 | Convert a class to a record (final fields set once by the constructor, accessors renamed or kept) | Planned | The user's list of 2026-11-04 |
+| 82 | 89 | Extract class and introduce parameter object (gorefactor's `extract_struct`): fields or parameters grouped into a new type, uses following | Planned | The user's list of 2026-11-04; on the planned list in `docs/tool-contract.md` |
+| 83 | 90 | Instance method to static and back in place (gorefactor's `method_to_function`, `function_to_method`) | Planned | The user's list of 2026-11-04; `move_member` does it only while moving to another class |
+| 84 | 91 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Planned, last of the 2026-11-04 list | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
 
 ### The 2026-11-04 list
 
 The user asked (2026-11-04) for the missing refactorings in this order: the
-three recommended from the friction log (#74 with #75, #76, #77), then the
-widening of existing tools (#78), extract interface and superclass (#79),
-introduce constant, field and parameter (#80), lambda, anonymous class and
-method reference (#81), record conversion (#82), extract class and parameter
-object (#83), instance to static and back (#84), and the edit primitives
-(#85). One PR per item; each item's design note decides whether it is a tool
+three recommended from the friction log (#80 with #81, #82, #83), then the
+widening of existing tools (#84), extract interface and superclass (#85),
+introduce constant, field and parameter (#86), lambda, anonymous class and
+method reference (#87), record conversion (#88), extract class and parameter
+object (#89), instance to static and back (#90), and the edit primitives
+(#91). One PR per item; each item's design note decides whether it is a tool
 or an option on one, as CLAUDE.md prefers. Not on the list, left for the
 friction log to raise: renaming a package, encapsulating a collection.
 

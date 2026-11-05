@@ -38,24 +38,29 @@ default (`docs/design.md`, Decisions).
   of a variable or expression, an array element, an integer `/` or `%`, a
   reference cast, a call or a new object.
 
-## Tools (planned, by gorefactor's names)
+## Names shared with gorefactor
 
-Names and groups follow gorefactor. A tool is added here only when it is
-implemented or being implemented.
+Tools keep gorefactor's names where the Java tool does the same thing:
+`inspect`, `rename`, the signature changes, `extract_variable`,
+`inline_variable`, `inline_function`, `invert_if`, `remove_else`,
+`move_statement`, `create_file`, `add_declaration`, `replace_declaration`,
+`replace_text`, `batch` and `undo`. Where Java differs, the name says so:
+`extract_method` is gorefactor's `extract_function`; `move_member` covers
+gorefactor's `method_to_function`; `change_type` is for fields. `move_type`,
+`pull_up`, `push_down`, `add_supertype` and `encapsulate_field` have no
+gorefactor counterpart (Go has no nested types or inheritance). gorefactor
+tools not built here (`replace_expression`, `insert_statements`, `add_case`
+and others) wait for friction-log evidence.
 
-| Group | Tools |
-|---|---|
-| Simplify | `rename`, `extract_variable`, `inline_variable`, `extract_function`, `inline_function`, `invert_if`, `remove_else` |
-| Prepare a change | `add_parameter`, `remove_parameter`, `move_parameter`, `change_parameter_type`, `method_to_function`, `function_to_method`, `extract_struct`, `remove_dead_code`, `move_statement_up`, `move_statement_down`, `move_declaration` |
-| Edit | `create_file`, `replace_statements`, `insert_statements`, `add_declaration`, `replace_expression`, `replace_text`, `add_field`, `add_case`, `add_element`, `create_from_usage` |
-| Inspect | `inspect` (outline with complexity, nesting and side effects per method) |
-| Multi-step | `batch` |
-| Planned for Java (2026-11-04, roadmap #74-#85) | `move_type` to another package, `move_file`, a parameter or return type change, safe delete, extract interface and superclass, introduce constant, field and parameter, lambda / anonymous class / method reference, class to record, extract class and parameter object |
-
-Java names may differ where the Java language needs it (for example, `add_field`
-on a class, or `add_case` for a `switch`). Record any difference in this file:
-`extract_method` (`extract_function`). `rename` has gorefactor's name.
-`move_type` has no gorefactor counterpart: Go has no nested types.
+Planned (the user, 2026-11-04, roadmap #80-#91): `move_type` to another
+package, `move_file`, a parameter or return type change, safe delete,
+widened `inline_function`, `extract_method` and `rename`, extract interface
+and superclass, introduce constant, field and parameter, lambda / anonymous
+class / method reference, class to record, extract class and parameter
+object (gorefactor's `extract_struct`), instance method to static and back
+in place (`method_to_function`, `function_to_method`), and gorefactor's edit
+primitives (`replace_expression`, `insert_statements`, `replace_statements`,
+`add_case`, `add_element`).
 
 ## `inspect` (built)
 
@@ -501,7 +506,7 @@ field, and the gate's "would add compile errors".
 
 - Reverts the last change made through the tools in this server session: one
   call, or a whole batch. Call again to step back further.
-- Kept in memory per server process (open question 3: not on disk).
+- Kept in memory per server process (`docs/design.md`, question 3: not on disk).
 - Refused when a file it would restore changed since; nothing is undone.
 - Result: `undid <tool>: restored a, b; removed c`.
 
@@ -551,5 +556,6 @@ actionable. Avoid generic messages such as "unsupported".
 - Coaching tips inside results did not help and were removed. Do not add them.
 
 ## Open
-- Java-specific refusals (checked exceptions, overloads, generics) need their own
-  wording once the first refactorings exist.
+- Overloads and generics have their own refusals in each tool; checked exceptions
+  are reported through `preserve_exceptions`. A shared wording for these across
+  tools is not written yet.
