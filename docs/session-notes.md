@@ -12,8 +12,9 @@ fact here becomes wrong, fix or remove it in the same PR.
 
 - One item per branch and PR (adopted from gorefactor, 2026-11-02).
 - Claude merges its own PRs once CI is green and they are mergeable; use merge
-  commits, then delete the PR's branch (77 merged branches had piled up by
-  2026-11-04 and were removed).
+  commits, then delete the PR's branch (78 merged branches had piled up by
+  2026-11-04; deleting them in bulk from a session was refused as destructive,
+  so the user deletes them).
 - Stacked PRs: retarget the upper PR to `main` *before* merging the lower one
   with `--delete-branch`. Deleting the base branch first closed #4, and a closed
   PR whose base is gone cannot be reopened or retargeted.
