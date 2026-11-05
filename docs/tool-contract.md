@@ -263,6 +263,14 @@ in the same turn only if it is sent after it.
 - `create_file`: `file`, `content`, `overwrite`. A `.java` file must declare the
   package its directory implies under a source root. Result: `created <file>
   (<n> lines)`.
+- `move_file` (roadmap #81, 2026-11-04, gorefactor's name): `file` (a file or
+  directory), `to`, `copy`, `delete` (instead of `to`). Text files that are not
+  Java under a source root; each goes through the journal, so `undo` puts it
+  back, and directories a move or delete empties are removed. Result: `moved
+  docs/a.md to notes/a.md`, `copied ...`, `deleted cases/one (2 files)` (a
+  directory names its file count). Refused: a path that does not exist, a `to`
+  that does or that is inside `file`, Java under a source root ("Use move_type
+  (with package)"), a file that is not UTF-8 ("Move this one with git mv").
 - `replace_text`: `file`, `old`, `new`, `all_occurrences`. `old` must occur once
   unless `all_occurrences`; refused with the lines it occurs on. Result:
   `replaced <n> occurrence(s) in <file>, line(s) ...`. gorefactor's `files`,

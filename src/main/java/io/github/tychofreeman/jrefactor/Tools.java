@@ -545,6 +545,38 @@ final class Tools {
           Kind.EDIT,
           (project, args) -> Edits.createFile(project, args));
 
+  static final Def MOVE_FILE =
+      new Def(
+          "move_file",
+          """
+          Move or copy a file or directory that is not Java under a source root (a fixture, a doc, \
+          a golden case), or delete it with delete=true: an edit. Missing directories are \
+          created, and directories a move or delete empties are removed. undo puts every file back.
+          Refuses, saying why: a path that does not exist, a to that does, a Java file under a \
+          source root (move_type moves types), a file that is not UTF-8 text.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":   {"type": "string",  "description": "The file or directory, relative to the project root."},
+              "to":     {"type": "string",  "description": "Its new path, relative to the project root."},
+              "copy":   {"type": "boolean", "description": "Copy it, keeping the original."},
+              "delete": {"type": "boolean", "description": "Delete it instead (no to)."}
+            },
+            "required": ["file"]
+          }\
+          """,
+          Set.of("file", "to", "copy", "delete"),
+          Kind.EDIT,
+          (project, args) ->
+              MoveFile.run(
+                  project,
+                  args.required("file"),
+                  args.string("to"),
+                  args.flag("copy"),
+                  args.flag("delete")));
+
   static final Def REPLACE_TEXT =
       new Def(
           "replace_text",
@@ -828,6 +860,7 @@ final class Tools {
           PULL_UP,
           PUSH_DOWN,
           CREATE_FILE,
+          MOVE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
           REPLACE_DECLARATION,
