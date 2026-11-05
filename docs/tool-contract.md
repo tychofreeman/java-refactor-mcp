@@ -133,7 +133,10 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   it"; type parameters are renamed in their declaration, Javadoc `@param <T>`
   included, roadmap #84, 2026-11-04); an invalid new name; a new name
   another variable in the method uses, the type already has as a field, method
-  with the same parameter types, or member type, or whose file exists; a field
+  with the same parameter types, or member type, or whose file exists; a method
+  name that the type or a supertype has for another method of as many parameters
+  (an overload: a call of either could resolve to the other; probe
+  `rename_into_overload`, 2026-11-05); a field
   rename that a local of the new name would hide at an unqualified use; an
   edit that would add compile errors (rolled back, with the errors).
 

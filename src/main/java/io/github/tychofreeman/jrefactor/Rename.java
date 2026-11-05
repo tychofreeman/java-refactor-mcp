@@ -715,7 +715,12 @@ public final class Rename {
     }
   }
 
-  /** Refuses when {@code b}'s type already declares {@code newName} with b's parameter types. */
+  /**
+   * Refuses when {@code b}'s type already declares {@code newName} with b's parameter types, or
+   * when it or a supertype has another method {@code newName} of as many parameters: an overload,
+   * which existing calls of that name could resolve to the renamed method from, or calls of it to
+   * that.
+   */
   private static void refuseMethodClash(CompilationUnit unit, IMethodBinding b, String newName) {
     List<String> types = new ArrayList<>();
     for (ITypeBinding t : b.getParameterTypes()) {
@@ -736,6 +741,32 @@ public final class Rename {
                 + (at == null ? "" : " (line " + unit.getLineNumber(at.getStartPosition()) + ")")
                 + ". Choose another name.");
       }
+    }
+    int arity = b.getParameterTypes().length;
+    List<ITypeBinding> todo = new ArrayList<>(List.of(b.getDeclaringClass()));
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      for (IMethodBinding other : t.getDeclaredMethods()) {
+        if (other.getName().equals(newName)
+            && !other.isConstructor()
+            && other.getParameterTypes().length == arity) {
+          throw new Refusal(
+              Names.typeLabel(t)
+                  + " has "
+                  + Signatures.label(other)
+                  + ", another method "
+                  + newName
+                  + " of "
+                  + arity
+                  + (arity == 1 ? " parameter" : " parameters")
+                  + ": after the rename, a call of either could resolve to the other. Choose another"
+                  + " name.");
+        }
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(List.of(t.getInterfaces()));
     }
   }
 

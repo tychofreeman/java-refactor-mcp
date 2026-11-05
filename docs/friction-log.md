@@ -705,3 +705,14 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   through the tools.
 - Idea: the report counts a Bash command that runs `bin/jrefactor` as tool steps
   (its tool, or the batch's steps), as it does the MCP calls.
+
+## 2026-11-05: rename refuses a member of a second top-level class of a file
+- Task: `docs/sessions/probes-remaining.md`.
+- Tool: `rename` of `Base.a`, where `class Base` is a second top-level class of
+  `p/Main.java`, refused: "the field Base.a is declared in p.Base, not in this
+  project". It looks for the type's file by its name (`p/Base.java`). Safe (a
+  refusal), but such members cannot be renamed; the probes that meant to test a
+  field hidden by a subclass and a method renamed into an override test this
+  refusal instead.
+- Idea: find the declaring file through the binding (`Holding` by the type's name,
+  then `findDeclaringNode` by key), as `move_type` with `package` does.
