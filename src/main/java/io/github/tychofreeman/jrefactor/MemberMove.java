@@ -191,7 +191,7 @@ final class MemberMove {
    */
   static TextEdit removal(String text, BodyDeclaration m) {
     int start = Lines.start(text, m.getStartPosition());
-    int end = Lines.end(text, end(m) - 1);
+    int end = Lines.end(text, Nodes.end(m) - 1);
     if (end < text.length() && text.charAt(end) == '\n') {
       end++;
     }
@@ -213,7 +213,7 @@ final class MemberMove {
    * one per line.
    */
   static List<TextEdit> appendTo(String text, TypeDeclaration type, String moved) {
-    int brace = end(type) - 1;
+    int brace = Nodes.end(type) - 1;
     int at = Lines.start(text, brace);
     if (text.substring(at, brace).isBlank()) {
       return List.of(new TextEdit(at, at, "\n  " + moved + "\n"));
@@ -224,7 +224,7 @@ final class MemberMove {
       return List.of(new TextEdit(open + 1, brace, "\n  " + moved + "\n"));
     }
     int first = ((ASTNode) members.get(0)).getStartPosition();
-    int last = end((ASTNode) members.get(members.size() - 1));
+    int last = Nodes.end(((ASTNode) members.get(members.size() - 1)));
     int open = text.lastIndexOf('{', first - 1);
     List<TextEdit> edits = new ArrayList<>();
     if (Lines.start(text, open) == at) {
@@ -237,7 +237,7 @@ final class MemberMove {
 
   /** The text of {@code m} as written in {@code text}. */
   static String textOf(String text, BodyDeclaration m) {
-    return text.substring(m.getStartPosition(), end(m));
+    return text.substring(m.getStartPosition(), Nodes.end(m));
   }
 
   /**
@@ -270,10 +270,5 @@ final class MemberMove {
       }
     }
     return null;
-  }
-
-  /** The offset just past {@code n}. */
-  static int end(ASTNode n) {
-    return n.getStartPosition() + n.getLength();
   }
 }

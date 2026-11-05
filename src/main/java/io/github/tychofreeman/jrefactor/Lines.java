@@ -34,6 +34,29 @@ final class Lines {
     return i < 0 ? text.length() : i + 1;
   }
 
+  /** The offset of the first character of 1-based {@code line}, or a refusal past the end. */
+  static int offsetOf(String text, int line) {
+    int offset = 0;
+    for (int i = 1; i < line; i++) {
+      int next = text.indexOf('\n', offset);
+      if (next < 0) {
+        throw new Refusal("line " + line + " is past the end of the file.");
+      }
+      offset = next + 1;
+    }
+    return offset;
+  }
+
+  /** The spaces and tabs that start the line {@code at} is on. */
+  static String indentOf(String text, int at) {
+    int start = start(text, at);
+    int end = start;
+    while (end < text.length() && (text.charAt(end) == ' ' || text.charAt(end) == '\t')) {
+      end++;
+    }
+    return text.substring(start, end);
+  }
+
   /** "line 4" for one line, "lines 4-7" for a range. */
   static String range(int first, int last) {
     return first == last ? "line " + first : "lines " + first + "-" + last;

@@ -285,10 +285,10 @@ final class MoveToPackage {
 
   /** Where {@code public } goes in {@code d}: after its Javadoc and annotations. */
   private static int publicAt(String text, BodyDeclaration d) {
-    int at = d.getJavadoc() != null ? MemberMove.end(d.getJavadoc()) : d.getStartPosition();
+    int at = d.getJavadoc() != null ? Nodes.end(d.getJavadoc()) : d.getStartPosition();
     for (Object o : d.modifiers()) {
       if (o instanceof Annotation a) {
-        at = Math.max(at, MemberMove.end(a));
+        at = Math.max(at, Nodes.end(a));
       }
     }
     while (at < text.length() && Character.isWhitespace(text.charAt(at))) {

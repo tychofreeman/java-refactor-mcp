@@ -11,7 +11,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnnotationTypeMemberDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
@@ -126,26 +125,32 @@ final class Headers {
       AbstractTypeDeclaration t, String text, Map<String, StringBuilder> parts) {
     String owner = t.getName().getIdentifier();
     int open = text.indexOf('{', t.getName().getStartPosition());
-    add(parts, owner, text.substring(start(t), open < 0 ? end(t) : open));
+    add(parts, owner, text.substring(start(t), open < 0 ? Nodes.end(t) : open));
     if (t instanceof EnumDeclaration e) {
       for (Object o : e.enumConstants()) {
         EnumConstantDeclaration c = (EnumConstantDeclaration) o;
-        add(parts, owner + "#" + c.getName().getIdentifier(), text.substring(start(c), end(c)));
+        add(
+            parts,
+            owner + "#" + c.getName().getIdentifier(),
+            text.substring(start(c), Nodes.end(c)));
       }
     }
     for (Object o : t.bodyDeclarations()) {
       if (o instanceof AbstractTypeDeclaration inner) {
         type(inner, text, parts);
       } else if (o instanceof MethodDeclaration m) {
-        int end = m.getBody() == null ? end(m) : m.getBody().getStartPosition();
+        int end = m.getBody() == null ? Nodes.end(m) : m.getBody().getStartPosition();
         add(parts, owner + "#" + m.getName().getIdentifier(), text.substring(start(m), end));
       } else if (o instanceof FieldDeclaration f) {
         for (Object v : f.fragments()) {
           String name = ((VariableDeclarationFragment) v).getName().getIdentifier();
-          add(parts, owner + "#" + name, text.substring(start(f), end(f)));
+          add(parts, owner + "#" + name, text.substring(start(f), Nodes.end(f)));
         }
       } else if (o instanceof AnnotationTypeMemberDeclaration a) {
-        add(parts, owner + "#" + a.getName().getIdentifier(), text.substring(start(a), end(a)));
+        add(
+            parts,
+            owner + "#" + a.getName().getIdentifier(),
+            text.substring(start(a), Nodes.end(a)));
       }
     }
   }
@@ -159,10 +164,6 @@ final class Headers {
     return d.getJavadoc() == null
         ? d.getStartPosition()
         : d.getJavadoc().getStartPosition() + d.getJavadoc().getLength();
-  }
-
-  private static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength();
   }
 
   private static Set<String> identifiers(String text) {

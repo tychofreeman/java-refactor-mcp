@@ -46,7 +46,7 @@ final class SignatureChange {
         add(file, open, open, text);
       }
     } else if (at == list.size()) {
-      int end = Signatures.end((ASTNode) list.get(list.size() - 1));
+      int end = Nodes.end(((ASTNode) list.get(list.size() - 1)));
       add(file, end, end, ", " + text);
     } else {
       int start = ((ASTNode) list.get(at)).getStartPosition();
@@ -58,11 +58,11 @@ final class SignatureChange {
   void remove(Signatures.Source file, List<?> list, int at) {
     ASTNode e = (ASTNode) list.get(at);
     if (list.size() == 1) {
-      add(file, e.getStartPosition(), Signatures.end(e), "");
+      add(file, e.getStartPosition(), Nodes.end(e), "");
     } else if (at < list.size() - 1) {
       add(file, e.getStartPosition(), ((ASTNode) list.get(at + 1)).getStartPosition(), "");
     } else {
-      add(file, Signatures.end((ASTNode) list.get(at - 1)), Signatures.end(e), "");
+      add(file, Nodes.end(((ASTNode) list.get(at - 1))), Nodes.end(e), "");
     }
   }
 
@@ -71,7 +71,7 @@ final class SignatureChange {
     LambdaExpression n = l.node();
     List<?> old = n.parameters();
     int from =
-        old.isEmpty() ? n.getStartPosition() : Signatures.end((ASTNode) old.get(old.size() - 1));
+        old.isEmpty() ? n.getStartPosition() : Nodes.end(((ASTNode) old.get(old.size() - 1)));
     int arrow = l.file().text().indexOf("->", from);
     add(l.file(), n.getStartPosition(), arrow, "(" + String.join(", ", params) + ") ");
   }
@@ -85,8 +85,8 @@ final class SignatureChange {
         add(
             file,
             at.getStartPosition(),
-            Signatures.end(at),
-            file.text().substring(from.getStartPosition(), Signatures.end(from)));
+            Nodes.end(at),
+            file.text().substring(from.getStartPosition(), Nodes.end(from)));
       }
     }
   }
@@ -107,7 +107,7 @@ final class SignatureChange {
           && tag.fragments().get(0) instanceof SimpleName n
           && n.getIdentifier().equals(name)) {
         int start = text.lastIndexOf('\n', tag.getStartPosition()) + 1;
-        int end = text.indexOf('\n', Signatures.end(tag)) + 1;
+        int end = text.indexOf('\n', Nodes.end(tag)) + 1;
         add(d.file(), start, end, "");
       }
     }

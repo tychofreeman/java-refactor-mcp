@@ -98,7 +98,7 @@ final class Extract {
         List<Integer> over = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
           Statement s = list.get(i);
-          if (s.getStartPosition() < endOffset && endOf(s) > startOffset) {
+          if (s.getStartPosition() < endOffset && Nodes.end(s) > startOffset) {
             over.add(i);
           }
         }
@@ -128,7 +128,7 @@ final class Extract {
           }
         }
         int first = list.get(from).getStartPosition();
-        int last = endOf(list.get(to));
+        int last = Nodes.end(list.get(to));
         if (!onlyComments(unit, text, startOffset, first)
             || !onlyComments(unit, text, last, endOffset)) {
           throw through != null
@@ -166,7 +166,9 @@ final class Extract {
             }
 
             private void add(Block b) {
-              if (b != null && b.getStartPosition() < startOffset && endOf(b) >= endOffset - 1) {
+              if (b != null
+                  && b.getStartPosition() < startOffset
+                  && Nodes.end(b) >= endOffset - 1) {
                 bodies.add(b);
               }
             }
@@ -202,10 +204,10 @@ final class Extract {
               if (!found.isEmpty()) {
                 return false;
               }
-              if (node.getStartPosition() < endOffset && endOf(node) > startOffset) {
+              if (node.getStartPosition() < endOffset && Nodes.end(node) > startOffset) {
                 for (Object o : list) {
                   Statement st = (Statement) o;
-                  if (st.getStartPosition() < endOffset && endOf(st) > startOffset) {
+                  if (st.getStartPosition() < endOffset && Nodes.end(st) > startOffset) {
                     found.add(asStatements(list));
                     return false;
                   }
@@ -233,7 +235,7 @@ final class Extract {
     }
 
     private static boolean inside(ASTNode n, int startOffset, int endOffset) {
-      return n.getStartPosition() >= startOffset && endOf(n) <= endOffset;
+      return n.getStartPosition() >= startOffset && Nodes.end(n) <= endOffset;
     }
 
     /** Whether {@code text} from {@code from} to {@code to} is only white space and comments. */
@@ -255,7 +257,7 @@ final class Extract {
         if (in == null) {
           return false;
         }
-        i = endOf(in);
+        i = Nodes.end(in);
       }
       return true;
     }
@@ -326,11 +328,6 @@ final class Extract {
     return null;
   }
 
-  /** The offset just past {@code node}. */
-  static int endOf(ASTNode node) {
-    return node.getStartPosition() + node.getLength();
-  }
-
   /** The offset just past the line ending of 1-based line {@code line}. */
   static int lineEndOffset(CompilationUnit unit, String text, int line) {
     int at = unit.getPosition(line, 0);
@@ -340,7 +337,7 @@ final class Extract {
 
   private static String span(CompilationUnit unit, ASTNode n) {
     int a = unit.getLineNumber(n.getStartPosition());
-    int b = unit.getLineNumber(endOf(n) - 1);
+    int b = unit.getLineNumber(Nodes.end(n) - 1);
     return Lines.range(a, b);
   }
 }

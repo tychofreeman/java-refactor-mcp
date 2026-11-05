@@ -93,7 +93,7 @@ final class Extraction {
     Call c = callOf(p, invocation, recordName());
     String method = methodText(p, c);
 
-    int insertAt = Extract.lineEndOffset(unit, text, line(Extract.endOf(member) - 1));
+    int insertAt = Extract.lineEndOffset(unit, text, line(Nodes.end(member) - 1));
     String callIndent = indentOf(lineStartOffset(sel.statements().get(0).getStartPosition()));
     String callLine = callIndent + c.call().replace("\n", "\n" + callIndent) + "\n";
     String edited =
@@ -214,7 +214,7 @@ final class Extraction {
                 + " would still run. Extract statements up to the end of the body (lines "
                 + sel.startLine()
                 + "-"
-                + line(Extract.endOf(list.get(list.size() - 1)) - 1)
+                + line(Nodes.end(list.get(list.size() - 1)) - 1)
                 + "), or lines without a return.");
       }
       List<Statement> chosen = sel.statements();
@@ -400,16 +400,8 @@ final class Extraction {
         }
       }
     }
-    boolean[] used = {false};
-    member.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(SimpleName n) {
-            used[0] |= n.getIdentifier().equals(holder);
-            return true;
-          }
-        });
-    if (used[0]) {
+    if (Nodes.all(member, SimpleName.class).stream()
+        .anyMatch(n -> n.getIdentifier().equals(holder))) {
       throw new Refusal(
           holder
               + " is a name the code around "
@@ -668,7 +660,7 @@ final class Extraction {
       if (loop(p)
           && decl != null
           && !(decl.getStartPosition() >= p.getStartPosition()
-              && decl.getStartPosition() < Extract.endOf(p))) {
+              && decl.getStartPosition() < Nodes.end(p))) {
         return true;
       }
     }
@@ -810,7 +802,7 @@ final class Extraction {
     List<String> out = new ArrayList<>();
     for (Object o : m.typeParameters()) {
       TypeParameter p = (TypeParameter) o;
-      out.add(text.substring(p.getStartPosition(), Extract.endOf(p)));
+      out.add(text.substring(p.getStartPosition(), Nodes.end(p)));
     }
     return "<" + String.join(", ", out) + "> ";
   }
@@ -820,7 +812,7 @@ final class Extraction {
     List<int[]> blocks = new ArrayList<>();
     for (ASTNode n : allNodes()) {
       if (n instanceof TextBlock b) {
-        blocks.add(new int[] {b.getStartPosition(), Extract.endOf(b)});
+        blocks.add(new int[] {b.getStartPosition(), Nodes.end(b)});
       }
     }
     StringBuilder out = new StringBuilder();

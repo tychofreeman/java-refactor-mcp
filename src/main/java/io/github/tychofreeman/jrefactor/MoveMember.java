@@ -511,19 +511,13 @@ final class MoveMember {
   }
 
   private static boolean callsMember(Expression arg, String key) {
-    boolean[] found = {false};
-    arg.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(MethodInvocation node) {
-            IMethodBinding b = node.resolveMethodBinding();
-            if (b != null && b.getKey().equals(key)) {
-              found[0] = true;
-            }
-            return true;
-          }
-        });
-    return found[0];
+    for (MethodInvocation node : Nodes.all(arg, MethodInvocation.class)) {
+      IMethodBinding b = node.resolveMethodBinding();
+      if (b != null && b.getKey().equals(key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static ASTNode owningType(ASTNode node) {

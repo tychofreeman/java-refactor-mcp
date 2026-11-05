@@ -112,7 +112,7 @@ final class ExtractStruct {
       change.replaceRange(
           d.file(),
           ((ASTNode) params.get(first)).getStartPosition(),
-          Signatures.end((ASTNode) params.get(last)),
+          Nodes.end(((ASTNode) params.get(last))),
           struct + " " + parameter);
       if (d.m().getBody() == null) {
         continue;
@@ -156,7 +156,7 @@ final class ExtractStruct {
                   change.replaceRange(
                       d.file(),
                       n.getStartPosition(),
-                      Signatures.end(n),
+                      Nodes.end(n),
                       parameter + "." + n.getIdentifier() + "()");
                   return true;
                 }
@@ -165,7 +165,7 @@ final class ExtractStruct {
     for (Signatures.Call c : family.calls) {
       List<?> arguments = c.arguments();
       int s = ((ASTNode) arguments.get(first)).getStartPosition();
-      int e = Signatures.end((ASTNode) arguments.get(last));
+      int e = Nodes.end(((ASTNode) arguments.get(last)));
       change.replaceRange(
           c.file(), s, e, "new " + struct + "(" + c.file().text().substring(s, e) + ")");
     }
@@ -357,11 +357,11 @@ final class ExtractStruct {
     for (int i = 0; i < moved.size(); i++) {
       FieldDeclaration fd = moved.get(i);
       int start = Lines.start(text, fd.getStartPosition());
-      String fieldText = text.substring(fd.getStartPosition(), Signatures.end(fd));
+      String fieldText = text.substring(fd.getStartPosition(), Nodes.end(fd));
       for (Object o : fd.modifiers()) {
         if (o instanceof Modifier m && m.isPrivate()) {
           int from = m.getStartPosition() - fd.getStartPosition();
-          int to = Signatures.end(m) - fd.getStartPosition();
+          int to = Nodes.end(m) - fd.getStartPosition();
           while (to < fieldText.length() && fieldText.charAt(to) == ' ') {
             to++;
           }
@@ -374,7 +374,7 @@ final class ExtractStruct {
         edits.add(
             new TextEdit(
                 start,
-                Lines.end(text, Signatures.end(fd) - 1),
+                Lines.end(text, Nodes.end(fd) - 1),
                 indent + "private final " + struct + " " + holder + " = new " + struct + "();\n"));
       } else {
         edits.add(MemberMove.removal(text, fd));
