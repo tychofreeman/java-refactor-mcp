@@ -208,11 +208,14 @@ final class Tools {
           in place of the parameters, then delete the method. return a + tax(a) with \
           static double tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);.
           Identify the method as Type.method, a top-level class of the file that declares it.
-          The first version takes a body that is one return or one statement.
+          A body of several statements: a void method's call becomes its statements; a method \
+          ending in its one return must be called as all of an initializer, a return or an \
+          assignment's value, and its other statements go before that statement.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
-          Refuses, saying why: an instance, varargs, generic or abstract method; a body that is \
-          not one return or one statement; a method that calls itself; a method used as Type::name; \
+          Refuses, saying why: an instance, varargs, generic or abstract method; a body that \
+          returns before its last statement; a body that assigns a parameter, or declares a name \
+          the caller uses; a method that calls itself; a method used as Type::name; \
           a call nested in another call's arguments; a parameter used twice when its argument \
           calls or assigns; a method with no calls; an argument that calls, assigns or reads a \
           field when an effect of the body runs before its use, or its use is in a lambda or \
