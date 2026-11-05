@@ -308,7 +308,7 @@ final class Signatures {
       List<String> out = new ArrayList<>();
       for (Object o : node.parameters()) {
         ASTNode p = (ASTNode) o;
-        out.add(file.text().substring(p.getStartPosition(), end(p)));
+        out.add(file.text().substring(p.getStartPosition(), Nodes.end(p)));
       }
       return out;
     }
@@ -489,15 +489,11 @@ final class Signatures {
 
   /** The offset just after the first "(" following {@code node}. */
   static int open(String text, ASTNode node) {
-    return after(text, end(node));
+    return after(text, Nodes.end(node));
   }
 
   /** The offset just after the first "(" at or after {@code from}. */
   static int after(String text, int from) {
     return text.indexOf('(', from) + 1;
-  }
-
-  static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength();
   }
 }

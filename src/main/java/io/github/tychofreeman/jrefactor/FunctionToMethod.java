@@ -72,7 +72,7 @@ final class FunctionToMethod {
     SignatureChange change = new SignatureChange(family);
     for (Object o : d.m().modifiers()) {
       if (o instanceof Modifier mod && mod.isStatic()) {
-        int end = Signatures.end(mod);
+        int end = Nodes.end(mod);
         while (end < d.file().text().length() && d.file().text().charAt(end) == ' ') {
           end++;
         }
@@ -101,7 +101,7 @@ final class FunctionToMethod {
                               + n
                               + ", which as the receiver (this) cannot be. Use a local first.");
                     }
-                    change.replaceRange(d.file(), n.getStartPosition(), Signatures.end(n), "this");
+                    change.replaceRange(d.file(), n.getStartPosition(), Nodes.end(n), "this");
                   }
                   return true;
                 }
@@ -122,9 +122,9 @@ final class FunctionToMethod {
       List<String> rest = new ArrayList<>();
       for (int i = 1; i < c.arguments().size(); i++) {
         ASTNode a = (ASTNode) c.arguments().get(i);
-        rest.add(text.substring(a.getStartPosition(), Signatures.end(a)));
+        rest.add(text.substring(a.getStartPosition(), Nodes.end(a)));
       }
-      String on = text.substring(receiver.getStartPosition(), Signatures.end(receiver));
+      String on = text.substring(receiver.getStartPosition(), Nodes.end(receiver));
       if (InlineVariable.needsParentheses(receiver)) {
         on = "(" + on + ")";
       }
@@ -135,7 +135,7 @@ final class FunctionToMethod {
       change.replaceRange(
           c.file(),
           mi.getStartPosition(),
-          Signatures.end(mi),
+          Nodes.end(mi),
           (onThis ? "" : on + ".") + name + "(" + String.join(", ", rest) + ")");
     }
     if (!nullable.isEmpty()) {

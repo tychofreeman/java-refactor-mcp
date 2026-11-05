@@ -75,6 +75,9 @@ Each was chosen from options; the record named beside it has the options it beat
 ## Where code goes
 
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only.
+- Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
+  (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
+  `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
 - `Journal.put` and `Journal.restore` are the one writer of project files.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file

@@ -271,16 +271,11 @@ final class Imports {
   /** The names of unqualified calls in {@code unit} that resolve to no method. */
   private static Set<String> uncalled(CompilationUnit unit) {
     Set<String> out = new TreeSet<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(MethodInvocation call) {
-            if (call.getExpression() == null && call.resolveMethodBinding() == null) {
-              out.add(call.getName().getIdentifier());
-            }
-            return true;
-          }
-        });
+    for (MethodInvocation call : Nodes.all(unit, MethodInvocation.class)) {
+      if (call.getExpression() == null && call.resolveMethodBinding() == null) {
+        out.add(call.getName().getIdentifier());
+      }
+    }
     return out;
   }
 

@@ -67,11 +67,11 @@ final class Primitives {
             "statement",
             ", directly in a block",
             "the statement");
-    String block = indent(args.required("content"), indentOf(text, s.getStartPosition()));
+    String block = indent(args.required("content"), Lines.indentOf(text, s.getStartPosition()));
     int at =
         where.equals("before")
             ? Lines.start(text, s.getStartPosition())
-            : Lines.end(text, MemberMove.end(s) - 1);
+            : Lines.end(text, Nodes.end(s) - 1);
     String after =
         text.substring(0, at) + block + "\n" + text.substring(Math.min(at, text.length()));
     int count = block.split("\n", -1).length;
@@ -119,7 +119,7 @@ final class Primitives {
       if (!seen) {
         continue;
       }
-      int end = Lines.number(text, MemberMove.end(s) - 1);
+      int end = Lines.number(text, Nodes.end(s) - 1);
       ends.add(String.valueOf(end));
       if (end == endLine) {
         last = s;
@@ -137,7 +137,7 @@ final class Primitives {
               + ". Pass one of those.");
     }
     int start = Lines.start(text, first.getStartPosition());
-    int end = Lines.end(text, MemberMove.end(last) - 1);
+    int end = Lines.end(text, Nodes.end(last) - 1);
     String content = args.string("content") == null ? "" : args.string("content");
     String after;
     String said;
@@ -145,7 +145,7 @@ final class Primitives {
       after = text.substring(0, start) + text.substring(end);
       said = "deleted lines " + startLine + "-" + endLine + " of " + rel;
     } else {
-      String replaced = indent(content, indentOf(text, first.getStartPosition()));
+      String replaced = indent(content, Lines.indentOf(text, first.getStartPosition()));
       after = text.substring(0, start) + replaced + "\n" + text.substring(end);
       int count = replaced.split("\n", -1).length;
       said =
@@ -188,11 +188,11 @@ final class Primitives {
         }
       }
     }
-    int closing = MemberMove.end(sw) - 1;
+    int closing = Nodes.end(sw) - 1;
     String indent =
         firstCase != null
-            ? indentOf(text, firstCase.getStartPosition())
-            : indentOf(text, sw.getStartPosition()) + "  ";
+            ? Lines.indentOf(text, firstCase.getStartPosition())
+            : Lines.indentOf(text, sw.getStartPosition()) + "  ";
     int at =
         defaultCase != null
             ? Lines.start(text, defaultCase.getStartPosition())
@@ -243,13 +243,13 @@ final class Primitives {
       after = text.substring(0, open + 1) + content + text.substring(open + 1);
     } else {
       ASTNode lastElement = (ASTNode) elements.get(elements.size() - 1);
-      int end = MemberMove.end(lastElement);
+      int end = Nodes.end(lastElement);
       boolean ownLine =
           elements.size() > 1
               && Lines.number(
                       text, ((ASTNode) elements.get(elements.size() - 2)).getStartPosition())
                   != Lines.number(text, lastElement.getStartPosition());
-      String sep = ownLine ? ",\n" + indentOf(text, lastElement.getStartPosition()) : ", ";
+      String sep = ownLine ? ",\n" + Lines.indentOf(text, lastElement.getStartPosition()) : ", ";
       after = text.substring(0, end) + sep + content + text.substring(end);
     }
     return gated(
@@ -319,14 +319,5 @@ final class Primitives {
       }
     }
     return out.toString();
-  }
-
-  private static String indentOf(String text, int at) {
-    int start = Lines.start(text, at);
-    int end = start;
-    while (end < text.length() && (text.charAt(end) == ' ' || text.charAt(end) == '\t')) {
-      end++;
-    }
-    return text.substring(start, end);
   }
 }

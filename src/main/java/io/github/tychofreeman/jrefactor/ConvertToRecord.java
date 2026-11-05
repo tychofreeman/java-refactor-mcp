@@ -137,14 +137,14 @@ final class ConvertToRecord {
 
     int headerStart =
         type.getJavadoc() != null
-            ? skipSpace(text, MemberMove.end(type.getJavadoc()))
+            ? skipSpace(text, Nodes.end(type.getJavadoc()))
             : type.getStartPosition();
-    int afterHeader = MemberMove.end(type.getName());
+    int afterHeader = Nodes.end(type.getName());
     for (Object o : type.typeParameters()) {
-      afterHeader = Math.max(afterHeader, MemberMove.end((ASTNode) o));
+      afterHeader = Math.max(afterHeader, Nodes.end(((ASTNode) o)));
     }
     for (Object o : type.superInterfaceTypes()) {
-      afterHeader = Math.max(afterHeader, MemberMove.end((ASTNode) o));
+      afterHeader = Math.max(afterHeader, Nodes.end(((ASTNode) o)));
     }
     int open = text.indexOf('{', afterHeader);
     List<String> modifiers = new ArrayList<>();
@@ -168,8 +168,7 @@ final class ConvertToRecord {
             ? ""
             : text.substring(
                 ((ASTNode) type.typeParameters().get(0)).getStartPosition() - 1,
-                MemberMove.end(
-                        (ASTNode) type.typeParameters().get(type.typeParameters().size() - 1))
+                Nodes.end(((ASTNode) type.typeParameters().get(type.typeParameters().size() - 1)))
                     + 1);
     String header =
         (modifiers.isEmpty() ? "" : String.join(" ", modifiers) + " ")
@@ -271,13 +270,13 @@ final class ConvertToRecord {
   private static TextEdit publicEdit(String text, MethodDeclaration m) {
     for (Object o : m.modifiers()) {
       if (o instanceof Modifier mod && (mod.isPrivate() || mod.isProtected())) {
-        return new TextEdit(mod.getStartPosition(), MemberMove.end(mod), "public");
+        return new TextEdit(mod.getStartPosition(), Nodes.end(mod), "public");
       }
     }
-    int at = m.getJavadoc() != null ? MemberMove.end(m.getJavadoc()) : m.getStartPosition();
+    int at = m.getJavadoc() != null ? Nodes.end(m.getJavadoc()) : m.getStartPosition();
     for (Object o : m.modifiers()) {
       if (o instanceof Annotation a) {
-        at = Math.max(at, MemberMove.end(a));
+        at = Math.max(at, Nodes.end(a));
       }
     }
     at = skipSpace(text, at);
@@ -292,6 +291,6 @@ final class ConvertToRecord {
   }
 
   private static String source(String text, ASTNode n) {
-    return text.substring(n.getStartPosition(), MemberMove.end(n));
+    return text.substring(n.getStartPosition(), Nodes.end(n));
   }
 }

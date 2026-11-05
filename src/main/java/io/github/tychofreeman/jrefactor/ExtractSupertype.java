@@ -151,11 +151,11 @@ final class ExtractSupertype {
 
   /** {@code m}'s signature as written: from after its modifiers to its body, without them. */
   private static String signature(String text, MethodDeclaration m) {
-    int start = m.getJavadoc() != null ? MemberMove.end(m.getJavadoc()) : m.getStartPosition();
+    int start = m.getJavadoc() != null ? Nodes.end(m.getJavadoc()) : m.getStartPosition();
     for (Object o : m.modifiers()) {
-      start = Math.max(start, MemberMove.end((ASTNode) o));
+      start = Math.max(start, Nodes.end(((ASTNode) o)));
     }
-    int end = m.getBody() != null ? m.getBody().getStartPosition() : MemberMove.end(m);
+    int end = m.getBody() != null ? m.getBody().getStartPosition() : Nodes.end(m);
     return text.substring(start, end).strip();
   }
 }

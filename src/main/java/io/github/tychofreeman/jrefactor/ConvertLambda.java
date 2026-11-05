@@ -322,8 +322,8 @@ final class ConvertLambda {
       params.add(((VariableDeclaration) o).getName().getIdentifier());
     }
     int shift =
-        indentOf(text, m.getStartPosition()).length()
-            - indentOf(text, c.getStartPosition()).length();
+        Lines.indentOf(text, m.getStartPosition()).length()
+            - Lines.indentOf(text, c.getStartPosition()).length();
     String body = source(text, m.getBody());
     if (shift > 0) {
       body = body.replace("\n" + " ".repeat(shift), "\n");
@@ -346,7 +346,7 @@ final class ConvertLambda {
       }
     }
     refuseSelf(l.getBody(), fi, "lambda", "an anonymous class");
-    String ind = indentOf(text, l.getStartPosition());
+    String ind = Lines.indentOf(text, l.getStartPosition());
     List<String> params = new ArrayList<>();
     for (int i = 0; i < l.parameters().size(); i++) {
       VariableDeclaration p = (VariableDeclaration) l.parameters().get(i);
@@ -490,14 +490,9 @@ final class ConvertLambda {
       member = member.getParent();
     }
     if (member != null) {
-      member.accept(
-          new ASTVisitor() {
-            @Override
-            public boolean visit(SimpleName n) {
-              used.add(n.getIdentifier());
-              return true;
-            }
-          });
+      for (SimpleName n : Nodes.all(member, SimpleName.class)) {
+        used.add(n.getIdentifier());
+      }
     }
     List<String> out = new ArrayList<>();
     for (ITypeBinding t : sam.getParameterTypes()) {
@@ -516,14 +511,5 @@ final class ConvertLambda {
 
   private static String source(String text, ASTNode n) {
     return text.substring(n.getStartPosition(), n.getStartPosition() + n.getLength());
-  }
-
-  private static String indentOf(String text, int at) {
-    int start = Lines.start(text, at);
-    int end = start;
-    while (end < text.length() && (text.charAt(end) == ' ' || text.charAt(end) == '\t')) {
-      end++;
-    }
-    return text.substring(start, end);
   }
 }

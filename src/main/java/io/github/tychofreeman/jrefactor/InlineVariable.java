@@ -118,7 +118,7 @@ final class InlineVariable {
           new TextEdit(use.getStartPosition(), use.getStartPosition() + use.getLength(), inlined));
       uses++;
     }
-    int declared = lineOf(text, stmt.getStartPosition());
+    int declared = Lines.number(text, stmt.getStartPosition());
     edits.add(removeLine(text, stmt));
     NameCheck.require(
         project,
@@ -239,20 +239,15 @@ final class InlineVariable {
   private static IVariableBinding variableAt(
       CompilationUnit unit, String text, String name, int line, Integer column) {
     List<SimpleName> named = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(SimpleName node) {
-            if (node.getIdentifier().equals(name)
-                && lineOf(text, node.getStartPosition()) == line) {
-              named.add(node);
-            }
-            return true;
-          }
-        });
+    for (SimpleName node : Nodes.all(unit, SimpleName.class)) {
+      if (node.getIdentifier().equals(name)
+          && Lines.number(text, node.getStartPosition()) == line) {
+        named.add(node);
+      }
+    }
     List<IVariableBinding> found = new ArrayList<>();
     for (SimpleName n : named) {
-      if (column != null && n.getStartPosition() - lineStart(text, line) + 1 != column) {
+      if (column != null && n.getStartPosition() - Lines.offsetOf(text, line) + 1 != column) {
         continue;
       }
       if (n.resolveBinding() instanceof IVariableBinding v) {
@@ -284,16 +279,11 @@ final class InlineVariable {
   private static VariableDeclarationFragment declarationOf(
       CompilationUnit unit, IVariableBinding variable, String name) {
     VariableDeclarationFragment[] found = {null};
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(VariableDeclarationFragment node) {
-            if (node.resolveBinding() != null && node.resolveBinding().isEqualTo(variable)) {
-              found[0] = node;
-            }
-            return true;
-          }
-        });
+    for (VariableDeclarationFragment node : Nodes.all(unit, VariableDeclarationFragment.class)) {
+      if (node.resolveBinding() != null && node.resolveBinding().isEqualTo(variable)) {
+        found[0] = node;
+      }
+    }
     if (found[0] == null) {
       throw new Refusal("the declaration of " + name + " was not found in the file.");
     }
@@ -344,7 +334,7 @@ final class InlineVariable {
                 + ", and the "
                 + read.getName()
                 + " declared at line "
-                + lineOf(text, later[0].getStartPosition())
+                + Lines.number(text, later[0].getStartPosition())
                 + " hides it at a use of "
                 + name
                 + ", so inlining would read the new one. Rename that variable first.");
@@ -381,17 +371,5 @@ final class InlineVariable {
           "the declaration shares its line with other code. Put it on a line of its own first.");
     }
     return new TextEdit(lineStart, lineEnd, "");
-  }
-
-  private static int lineOf(String text, int offset) {
-    return Lines.number(text, offset);
-  }
-
-  private static int lineStart(String text, int line) {
-    int offset = 0;
-    for (int i = 1; i < line; i++) {
-      offset = text.indexOf('\n', offset) + 1;
-    }
-    return offset;
   }
 }

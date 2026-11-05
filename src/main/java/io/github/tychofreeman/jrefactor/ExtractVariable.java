@@ -42,7 +42,7 @@ final class ExtractVariable {
     Path file = opened.file();
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    int lineStart = lineStart(text, line);
+    int lineStart = Lines.offsetOf(text, line);
     int lineEnd = text.indexOf('\n', lineStart) < 0 ? text.length() : text.indexOf('\n', lineStart);
 
     Expression e = find(unit, text, expression.strip(), lineStart, lineEnd, line, column);
@@ -67,7 +67,7 @@ final class ExtractVariable {
 
     List<TextEdit> edits = new ArrayList<>();
     int stmtStart = statement.getStartPosition();
-    int stmtLineStart = lineStart(text, lineOf(text, stmtStart));
+    int stmtLineStart = Lines.offsetOf(text, Lines.number(text, stmtStart));
     String before = text.substring(stmtLineStart, stmtStart);
     if (before.isBlank()) {
       String indent = before;
@@ -238,38 +238,6 @@ final class ExtractVariable {
     }
   }
 
-  private static boolean within(ASTNode inner, ASTNode outer) {
-    if (outer == null) {
-      return false;
-    }
-    int start = outer.getStartPosition();
-    return inner.getStartPosition() >= start
-        && inner.getStartPosition() + inner.getLength() <= start + outer.getLength();
-  }
-
-  /** The offset of the first character of 1-based {@code line}. */
-  private static int lineStart(String text, int line) {
-    int offset = 0;
-    for (int i = 1; i < line; i++) {
-      int next = text.indexOf('\n', offset);
-      if (next < 0) {
-        throw new Refusal("line " + line + " is past the end of the file.");
-      }
-      offset = next + 1;
-    }
-    return offset;
-  }
-
-  private static int lineOf(String text, int offset) {
-    int line = 1;
-    for (int i = 0; i < offset; i++) {
-      if (text.charAt(i) == '\n') {
-        line++;
-      }
-    }
-    return line;
-  }
-
   /**
    * Reports, or under preserve_exceptions refuses, an expression that may throw taken out of the
    * resources of a try: that try's catch clauses caught what it threw, and its finally ran after.
@@ -282,7 +250,7 @@ final class ExtractVariable {
       return;
     }
     for (Object r : t.resources()) {
-      if (within(e, (ASTNode) r)) {
+      if (Nodes.within(e, ((ASTNode) r))) {
         Exceptional.change(
             project,
             source

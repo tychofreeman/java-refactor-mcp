@@ -221,7 +221,7 @@ final class InlineFunction {
       }
       List<TextEdit> list = new ArrayList<>();
       for (MethodInvocation site : sites) {
-        if (usesOwnMembers && !(p.equals(file) && within(site, type))) {
+        if (usesOwnMembers && !(p.equals(file) && Nodes.within(site, type))) {
           throw new Refusal(
               "the body of "
                   + name
@@ -397,10 +397,10 @@ final class InlineFunction {
                   args,
                   siteText,
                   receiver),
-              indentOf(declaringText, from),
-              indentOf(siteText, statement.getStartPosition()));
+              Lines.indentOf(declaringText, from),
+              Lines.indentOf(siteText, statement.getStartPosition()));
       int at = statement.getStartPosition();
-      return List.of(new TextEdit(at, at, before + "\n" + indentOf(siteText, at)), call);
+      return List.of(new TextEdit(at, at, before + "\n" + Lines.indentOf(siteText, at)), call);
     }
     if (!(site.getParent() instanceof ExpressionStatement stmt)) {
       throw new Refusal(name + " returns nothing, so a call of it can only be a statement.");
@@ -408,8 +408,8 @@ final class InlineFunction {
     String replaced =
         reindent(
             substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText, receiver),
-            indentOf(declaringText, bodyStart),
-            indentOf(siteText, stmt.getStartPosition()));
+            Lines.indentOf(declaringText, bodyStart),
+            Lines.indentOf(siteText, stmt.getStartPosition()));
     return List.of(
         new TextEdit(
             stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced));
@@ -686,14 +686,9 @@ final class InlineFunction {
       return;
     }
     Set<String> used = new HashSet<>();
-    n.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(SimpleName s) {
-            used.add(s.getIdentifier());
-            return true;
-          }
-        });
+    for (SimpleName s : Nodes.all(n, SimpleName.class)) {
+      used.add(s.getIdentifier());
+    }
     for (String local : bodyLocals) {
       if (used.contains(local)) {
         throw new Refusal(
@@ -773,16 +768,6 @@ final class InlineFunction {
           }
         });
     return out;
-  }
-
-  /** The spaces and tabs that start the line {@code at} is on. */
-  private static String indentOf(String text, int at) {
-    int start = Lines.start(text, at);
-    int end = start;
-    while (end < text.length() && (text.charAt(end) == ' ' || text.charAt(end) == '\t')) {
-      end++;
-    }
-    return text.substring(start, end);
   }
 
   /**
@@ -1022,7 +1007,7 @@ final class InlineFunction {
   private static void checkNesting(
       MethodInvocation site, List<MethodInvocation> sites, String name) {
     for (MethodInvocation other : sites) {
-      if (other != site && within(other, site)) {
+      if (other != site && Nodes.within(other, site)) {
         throw new Refusal(
             "a call of "
                 + name
@@ -1030,12 +1015,6 @@ final class InlineFunction {
                 + " the inner result in a variable.");
       }
     }
-  }
-
-  private static boolean within(ASTNode inner, ASTNode outer) {
-    int start = outer.getStartPosition();
-    return inner.getStartPosition() >= start
-        && inner.getStartPosition() + inner.getLength() <= start + outer.getLength();
   }
 
   /** The parameter uses in {@code node}: each name that is one of the parameters. */
