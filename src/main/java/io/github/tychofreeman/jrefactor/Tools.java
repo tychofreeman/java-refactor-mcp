@@ -204,7 +204,7 @@ final class Tools {
       new Def(
           "inline_function",
           """
-          Replace every call of a static method in the project with its body, the arguments put \
+          Replace every call of a method in the project with its body, the arguments put \
           in place of the parameters, then delete the method. return a + tax(a) with \
           static double tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);.
           Identify the method as Type.method, a top-level class of the file that declares it.
@@ -213,7 +213,11 @@ final class Tools {
           assignment's value, and its other statements go before that statement.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
-          Refuses, saying why: an instance, varargs, generic or abstract method; a body that \
+          An instance method's receiver takes the place of this, and of the bare members the \
+          body uses (c.total() with return count * 2 becomes c.count * 2).
+          Refuses, saying why: a varargs, generic or abstract method; an instance method that \
+          another overrides, or called on a receiver that is not a local, parameter or this, or \
+          whose body uses super; a body that \
           returns before its last statement; a body that assigns a parameter, or declares a name \
           the caller uses; a method that calls itself; a method used as Type::name; \
           a call nested in another call's arguments; a parameter used twice when its argument \
