@@ -8,7 +8,6 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.DoStatement;
@@ -18,11 +17,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
-import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.WhileStatement;
 
@@ -206,7 +201,7 @@ final class ExtractVariable {
       }
     }
     checkEarlierEffects(e, s, source);
-    if (hasEffect(e)) {
+    if (Effects.of(e).changes()) {
       throw new Refusal(
           source
               + " calls, assigns or changes a variable, and moving it before its statement could"
@@ -216,20 +211,8 @@ final class ExtractVariable {
 
   /** Refuses an effect that comes earlier in the statement: the read would move ahead of it. */
   private static void checkEarlierEffects(Expression e, Statement s, String source) {
-    boolean[] found = {false};
-    s.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean preVisit2(ASTNode node) {
-            if (node instanceof Expression x
-                && x.getStartPosition() + x.getLength() <= e.getStartPosition()
-                && hasEffect(x)) {
-              found[0] = true;
-            }
-            return !found[0];
-          }
-        });
-    if (found[0]) {
+    if (Effects.of(s).all().stream()
+        .anyMatch(x -> x.changes() && x.end() <= e.getStartPosition())) {
       throw new Refusal(
           source
               + " comes after an effect before it in the same statement (a call, an assignment or"
@@ -263,52 +246,6 @@ final class ExtractVariable {
         }
       }
     }
-  }
-
-  static boolean hasEffect(Expression e) {
-    boolean[] found = {false};
-    e.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(MethodInvocation node) {
-            found[0] = true;
-            return false;
-          }
-
-          @Override
-          public boolean visit(SuperMethodInvocation node) {
-            found[0] = true;
-            return false;
-          }
-
-          @Override
-          public boolean visit(ClassInstanceCreation node) {
-            found[0] = true;
-            return false;
-          }
-
-          @Override
-          public boolean visit(Assignment node) {
-            found[0] = true;
-            return false;
-          }
-
-          @Override
-          public boolean visit(PostfixExpression node) {
-            found[0] = true;
-            return false;
-          }
-
-          @Override
-          public boolean visit(PrefixExpression node) {
-            if (node.getOperator() == PrefixExpression.Operator.INCREMENT
-                || node.getOperator() == PrefixExpression.Operator.DECREMENT) {
-              found[0] = true;
-            }
-            return false;
-          }
-        });
-    return found[0];
   }
 
   /** Whether {@code e} is in one of the updaters of {@code f}, which run after each pass. */

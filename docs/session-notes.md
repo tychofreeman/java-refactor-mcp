@@ -536,3 +536,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   the signature tools keep their own resolvers. A new tool starts from
   `Opened` and `Precondition`. Decided by this session while the user was
   away: mid-algorithm refusals stay `throw`.
+
+- One effects analysis (roadmap #72, 2026-11-04,
+  `docs/sessions/one-effects-analysis.md`): `Effects.of(node)` lists what code
+  does in source order (names, elements, declarations, writes, calls,
+  creations), each marked when it runs in a lambda or anonymous class.
+  `ExtractVariable`, `InlineVariable`, `InlineFunction` and `MoveStatement`
+  query it (`changes`, `named`, `written`, `writes`, `normalFlowChanges`,
+  `fixed`); their own models are gone, removed by `inline_function` where
+  they had become one-line delegates. A new effect kind (what may throw, for
+  #73) goes in `Effects.Kind`.

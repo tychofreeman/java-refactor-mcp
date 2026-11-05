@@ -11,16 +11,11 @@ import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.ArrayAccess;
-import org.eclipse.jdt.core.dom.ArrayCreation;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -32,14 +27,10 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NodeFinder;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.SuperFieldAccess;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
@@ -249,7 +240,7 @@ final class InlineFunction {
     checkTiming(args, uses, params, value != null ? value : body, siteText, name);
     checkOrder(args, uses, params, name);
     for (int i = 0; i < args.size(); i++) {
-      if (useCount[i] > 1 && ExtractVariable.hasEffect(args.get(i))) {
+      if (useCount[i] > 1 && Effects.of(args.get(i)).changes()) {
         throw new Refusal(
             "parameter "
                 + params.get(i).getName().getIdentifier()
@@ -305,7 +296,7 @@ final class InlineFunction {
     for (int i = 0; i < args.size(); i++) {
       Expression arg = args.get(i);
       String param = params.get(i).getName().getIdentifier();
-      boolean effect = ExtractVariable.hasEffect(arg);
+      boolean effect = Effects.of(arg).changes();
       if (useCount[i] == 0 && effect) {
         throw new Refusal(
             "parameter "
@@ -359,17 +350,17 @@ final class InlineFunction {
       ASTNode bodyNode,
       String siteText,
       String name) {
-    List<ASTNode> effects = effectsIn(bodyNode);
+    List<ASTNode> effects = Effects.of(bodyNode).normalFlowChanges();
     for (ParamUse u : uses) {
       Expression arg = args.get(u.index());
-      if (fixed(arg)) {
+      if (Effects.of(arg).fixed()) {
         continue;
       }
       String param = params.get(u.index()).getName().getIdentifier();
       String source =
           siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
       ASTNode use = NodeFinder.perform(bodyNode.getRoot(), u.start(), u.end() - u.start());
-      String where = deferral(use, bodyNode, ExtractVariable.hasEffect(arg));
+      String where = deferral(use, bodyNode, Effects.of(arg).changes());
       if (where != null) {
         throw new Refusal(
             "the argument "
@@ -421,14 +412,14 @@ final class InlineFunction {
       }
     }
     for (int i = 0; i < args.size(); i++) {
-      if (first[i] < 0 || fixed(args.get(i))) {
+      if (first[i] < 0 || Effects.of(args.get(i)).fixed()) {
         continue;
       }
       for (int j = i + 1; j < args.size(); j++) {
-        if (first[j] < 0 || fixed(args.get(j)) || first[j] > first[i]) {
+        if (first[j] < 0 || Effects.of(args.get(j)).fixed() || first[j] > first[i]) {
           continue;
         }
-        if (ExtractVariable.hasEffect(args.get(i)) || ExtractVariable.hasEffect(args.get(j))) {
+        if (Effects.of(args.get(i)).changes() || Effects.of(args.get(j)).changes()) {
           throw new Refusal(
               "the body of "
                   + name
@@ -470,80 +461,6 @@ final class InlineFunction {
       }
     }
     return null;
-  }
-
-  /**
-   * Whether {@code e} is literals, locals, parameters, constants and operators on them: nothing the
-   * body could change or run twice. A lambda counts as fixed, since making one runs nothing.
-   */
-  private static boolean fixed(Expression e) {
-    boolean[] fixed = {true};
-    e.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(LambdaExpression n) {
-            return false;
-          }
-
-          @Override
-          public void preVisit(ASTNode n) {
-            if (n instanceof MethodInvocation
-                || n instanceof SuperMethodInvocation
-                || n instanceof ClassInstanceCreation
-                || n instanceof ArrayCreation
-                || n instanceof Assignment
-                || n instanceof PostfixExpression
-                || n instanceof ArrayAccess
-                || n instanceof FieldAccess
-                || n instanceof SuperFieldAccess
-                || (n instanceof PrefixExpression p && changes(p))
-                || (n instanceof SimpleName s
-                    && s.resolveBinding() instanceof IVariableBinding v
-                    && v.isField()
-                    && v.getConstantValue() == null)) {
-              fixed[0] = false;
-            }
-          }
-        });
-    return fixed[0];
-  }
-
-  private static boolean changes(PrefixExpression p) {
-    return p.getOperator() == PrefixExpression.Operator.INCREMENT
-        || p.getOperator() == PrefixExpression.Operator.DECREMENT;
-  }
-
-  /**
-   * The calls, creations, assignments and increments in {@code node}, outside lambdas and anonymous
-   * classes (which run later, if at all).
-   */
-  private static List<ASTNode> effectsIn(ASTNode node) {
-    List<ASTNode> out = new ArrayList<>();
-    node.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(LambdaExpression n) {
-            return false;
-          }
-
-          @Override
-          public boolean visit(AnonymousClassDeclaration n) {
-            return false;
-          }
-
-          @Override
-          public void preVisit(ASTNode n) {
-            if (n instanceof MethodInvocation
-                || n instanceof SuperMethodInvocation
-                || n instanceof ClassInstanceCreation
-                || n instanceof Assignment
-                || n instanceof PostfixExpression
-                || (n instanceof PrefixExpression p && changes(p))) {
-              out.add(n);
-            }
-          }
-        });
-    return out;
   }
 
   /** Whether {@code node} names a field or method that {@code owner} declares. */

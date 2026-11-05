@@ -5,25 +5,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BreakStatement;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.ContinueStatement;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
-import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThrowStatement;
-import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
@@ -95,14 +83,15 @@ final class MoveStatement {
             + Lines.number(text, early.getStartPosition())
             + " and "
             + Lines.number(text, late.getStartPosition());
-    if (intersects(a.written, b.used) || intersects(b.written, a.used)) {
+    if (intersects(a.written(), new HashSet<>(b.named()))
+        || intersects(b.written(), new HashSet<>(a.named()))) {
       throw new Refusal(
           lines
               + " share a name: one declares or writes a variable or field the other uses. Moving"
               + " them past each other would change what the later one reads. Move the statement"
               + " another way, or extract the other one first.");
     }
-    if (!namesOnly && a.sideEffect && b.sideEffect) {
+    if (!namesOnly && a.changes() && b.changes()) {
       throw new Refusal(
           lines
               + " both have side effects (a call, an assignment or a new object), so swapping them"
@@ -158,84 +147,5 @@ final class MoveStatement {
       }
     }
     return false;
-  }
-
-  /** The variables a statement reads or writes, and whether it has a side effect. */
-  private static final class Effects extends ASTVisitor {
-    final Set<IVariableBinding> used = new HashSet<>();
-    final Set<IVariableBinding> written = new HashSet<>();
-    boolean sideEffect;
-
-    static Effects of(Statement s) {
-      Effects e = new Effects();
-      s.accept(e);
-      return e;
-    }
-
-    @Override
-    public boolean visit(SimpleName node) {
-      if (node.resolveBinding() instanceof IVariableBinding v) {
-        used.add(v);
-      }
-      return true;
-    }
-
-    @Override
-    public boolean visit(VariableDeclarationFragment node) {
-      if (node.resolveBinding() != null) {
-        written.add(node.resolveBinding());
-      }
-      return true;
-    }
-
-    @Override
-    public boolean visit(Assignment node) {
-      markWritten(node.getLeftHandSide());
-      sideEffect = true;
-      return true;
-    }
-
-    @Override
-    public boolean visit(PrefixExpression node) {
-      if (node.getOperator() == PrefixExpression.Operator.INCREMENT
-          || node.getOperator() == PrefixExpression.Operator.DECREMENT) {
-        markWritten(node.getOperand());
-        sideEffect = true;
-      }
-      return true;
-    }
-
-    @Override
-    public boolean visit(PostfixExpression node) {
-      markWritten(node.getOperand());
-      sideEffect = true;
-      return true;
-    }
-
-    @Override
-    public boolean visit(MethodInvocation node) {
-      sideEffect = true;
-      return true;
-    }
-
-    @Override
-    public boolean visit(SuperMethodInvocation node) {
-      sideEffect = true;
-      return true;
-    }
-
-    @Override
-    public boolean visit(ClassInstanceCreation node) {
-      sideEffect = true;
-      return true;
-    }
-
-    private void markWritten(Expression target) {
-      Name name =
-          target instanceof FieldAccess f ? f.getName() : target instanceof Name n ? n : null;
-      if (name != null && name.resolveBinding() instanceof IVariableBinding v) {
-        written.add(v);
-      }
-    }
   }
 }
