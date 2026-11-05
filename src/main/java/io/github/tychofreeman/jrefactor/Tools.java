@@ -231,10 +231,11 @@ final class Tools {
           returns before its last statement; a body that assigns a parameter, or declares a name \
           the caller uses; a method that calls itself; a method used as Type::name; \
           a call nested in another call's arguments; a parameter used twice when its argument \
-          calls or assigns; a method with no calls; an argument that calls, assigns or reads a \
-          field when an effect of the body runs before its use, or its use is in a lambda or \
-          (for one with an effect) a branch or a loop, or an argument with an effect and one that reads \
-          state used in the other order than passed: put it in a variable first.\
+          calls or assigns; a method with no calls; an argument with an effect that the body \
+          drops, runs after another effect, or uses in a branch, loop or lambda; one that \
+          reads state a call in the body could change before its use; an argument with an \
+          effect and one that reads state used in the other order than passed: put it in a \
+          variable first.\
           """,
           List.of(
               Arg.FILE.described(

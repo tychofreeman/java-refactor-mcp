@@ -602,12 +602,15 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   for `CharSequence s` in `s.length()`, roadmap #78), or an argument of a call of a method
   with no overload of its arity in its class and supertypes, not generic or varargs (it
   resolves to the same method; 2026-11-05);
-  a body that names a member of its class when a call is in another class; an argument
-  that calls, assigns, or reads a field or array element, when an effect of the body
-  (a call, an assignment, an increment) comes before its use, or its use is inside a
-  lambda or anonymous class, or, for one with an effect, in a `?:` branch, right of
-  `&&` / `||`, in a branch of an `if`, a loop, a `switch` case or a `catch` (it would run
-  later, after the effect, more than once, or not at all); two such
+  a body that names a member of its class when a call is in another class; each
+  argument is checked by the behavior gate (roadmap #96) as code that ran just before
+  the body and lands at its parameter's uses: one with an effect that the body drops,
+  uses twice, runs after another effect, or uses where it runs only sometimes, more
+  than once or later (a lambda, a `?:` branch, right of `&&` / `||`, a branch of an
+  `if`, a loop, a `switch` case, a `catch`); one that reads state (a field, an
+  element, a call's result) that a call in the body before its use could change, or
+  that the body writes; what may throw and is dropped, or moved past a change, is
+  reported; two such
   arguments, one with an effect, that the body first uses in the other order than the
   call passes them (`f(bump(), count)` with `b + a`).
 - A body of several statements (roadmap #84, 2026-11-04): a void method's call statement

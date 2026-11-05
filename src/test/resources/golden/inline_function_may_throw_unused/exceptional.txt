@@ -1,2 +1,2 @@
 exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
-- an argument of Lib.one that may throw is not used by the inlined body, or only in a branch, so it would throw there only sometimes, or never: a[0] in com/example/Lib.java
+- the argument a[0] for x may throw (a[0]), and inlining Lib.one drops it

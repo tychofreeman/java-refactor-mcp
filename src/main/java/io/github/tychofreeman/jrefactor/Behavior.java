@@ -50,11 +50,15 @@ final class Behavior {
   static void check(
       SourceProject project, Move m, Map<Path, String> texts, Map<Path, List<TextEdit>> edits)
       throws IOException {
-    checkFlow(project, m);
+    flow(project, m);
     NameCheck.require(project, texts, edits, NameCheck.meanings(List.of(m.code())), m.verb());
   }
 
-  private static void checkFlow(SourceProject project, Move m) {
+  /**
+   * The checks of {@link #check} but the names: for a tool that runs {@link NameCheck} itself, over
+   * several fragments at once.
+   */
+  static void flow(SourceProject project, Move m) {
     Effects code = Effects.of(m.code());
     List<ASTNode> throwing = code.mayThrow();
     if (m.landings().isEmpty()) {
@@ -63,7 +67,7 @@ final class Behavior {
             m.label()
                 + " calls, assigns or changes a variable, and "
                 + m.verb()
-                + " drops it, so that would no longer happen.");
+                + " drops it, so that effect would no longer happen.");
       }
       if (!throwing.isEmpty()) {
         Exceptional.change(
@@ -85,10 +89,18 @@ final class Behavior {
               + " times.");
     }
     for (ASTNode landing : m.landings()) {
+      checkPlace(project, m, code, throwing, landing);
       checkCrossed(project, m, code, throwing, landing);
       checkExits(project, m, code, throwing, landing);
-      checkPlace(project, m, code, throwing, landing);
     }
+  }
+
+  /**
+   * Whether the code is not inside the root, as an argument is not inside the body it is inlined
+   * into: it ran just before the root, once, uncaught by it.
+   */
+  private static boolean outside(Move m) {
+    return m.code().getRoot() != m.root().getRoot() || !Nodes.within(m.code(), m.root());
   }
 
   /**
@@ -97,14 +109,15 @@ final class Behavior {
    */
   private static void checkCrossed(
       SourceProject project, Move m, Effects code, List<ASTNode> throwing, ASTNode landing) {
-    boolean earlier = landing.getStartPosition() < m.code().getStartPosition();
+    boolean outside = outside(m);
+    boolean earlier = !outside && landing.getStartPosition() < m.code().getStartPosition();
     int from;
     int to;
     if (earlier) {
       from = landing.getStartPosition();
       to = m.code().getStartPosition();
     } else {
-      from = Nodes.end(m.code());
+      from = outside ? m.root().getStartPosition() : Nodes.end(m.code());
       ASTNode loop = Effects.loopOf(landing, m.root());
       to = loop != null ? Nodes.end(loop) : landing.getStartPosition();
     }
@@ -122,7 +135,7 @@ final class Behavior {
       if (e.deferred()
           || e.node().getStartPosition() < from
           || e.end() > to
-          || Nodes.within(e.node(), m.code())
+          || (!outside && Nodes.within(e.node(), m.code()))
           || (!earlier && Nodes.within(e.node(), landing))) {
         continue;
       }
@@ -237,8 +250,12 @@ final class Behavior {
    */
   private static void checkExits(
       SourceProject project, Move m, Effects code, List<ASTNode> throwing, ASTNode landing) {
-    boolean earlier = landing.getStartPosition() < m.code().getStartPosition();
-    int from = earlier ? landing.getStartPosition() : Nodes.end(m.code());
+    boolean outside = outside(m);
+    boolean earlier = !outside && landing.getStartPosition() < m.code().getStartPosition();
+    int from =
+        earlier
+            ? landing.getStartPosition()
+            : outside ? m.root().getStartPosition() : Nodes.end(m.code());
     int to = earlier ? m.code().getStartPosition() : landing.getStartPosition();
     for (Statement s : Nodes.all(m.root(), Statement.class)) {
       boolean crossed =
@@ -307,7 +324,7 @@ final class Behavior {
    */
   private static void checkPlace(
       SourceProject project, Move m, Effects code, List<ASTNode> throwing, ASTNode landing) {
-    String was = place(m.code(), m.root());
+    String was = outside(m) ? null : place(m.code(), m.root());
     String now = place(landing, m.root());
     if (!Objects.equals(was, now)) {
       if (code.changes()) {
@@ -321,7 +338,7 @@ final class Behavior {
                     : "from where it runs only sometimes, more than once or later (" + was + ")")
                 + ", so it would run at another time, or not at all.");
       }
-      if (Effects.loopOf(m.code(), m.root()) != null && !code.named().isEmpty()) {
+      if (!outside(m) && Effects.loopOf(m.code(), m.root()) != null && !code.named().isEmpty()) {
         throw new Refusal(
             m.label()
                 + " is "
@@ -346,7 +363,7 @@ final class Behavior {
         }
       }
     }
-    String wasCaught = caught(m.code(), m.root());
+    String wasCaught = outside(m) ? null : caught(m.code(), m.root());
     String nowCaught = caught(landing, m.root());
     if (!throwing.isEmpty() && !Objects.equals(wasCaught, nowCaught)) {
       if (wasCaught != null) {

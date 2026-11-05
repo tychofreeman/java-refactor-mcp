@@ -165,18 +165,6 @@ final class InlineFunction {
       refuseOverridden(parsed, file, method, name);
     }
     List<String> nullable = new ArrayList<>();
-    // A parameter the body uses never, or only in a branch or later: its argument may not run.
-    boolean[] sometimes = new boolean[params.size()];
-    for (int i = 0; i < params.size(); i++) {
-      sometimes[i] = true;
-    }
-    for (ParamUse u : uses) {
-      ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
-      if (deferral(n, m.getBody(), true) == null) {
-        sometimes[u.index()] = false;
-      }
-    }
-    List<String> throwsSometimes = new ArrayList<>();
     // What the moved text means where it is written: the body, and each call's arguments.
     List<ASTNode> fragments = new ArrayList<>(List.of(m.getBody()));
 
@@ -233,12 +221,6 @@ final class InlineFunction {
                   + " method, or qualify its uses in the body first.");
         }
         checkNesting(site, sites, name);
-        for (int i = 0; i < site.arguments().size() && i < sometimes.length; i++) {
-          Expression a = (Expression) site.arguments().get(i);
-          if (sometimes[i] && !Effects.of(a).mayThrow().isEmpty()) {
-            throwsSometimes.add(a + " in " + project.relative(p));
-          }
-        }
         for (Object a : site.arguments()) {
           fragments.add((ASTNode) a);
         }
@@ -254,6 +236,7 @@ final class InlineFunction {
         }
         list.addAll(
             replacementFor(
+                project,
                 site,
                 value,
                 m.getBody(),
@@ -277,16 +260,6 @@ final class InlineFunction {
     if (calls == 0) {
       throw new Refusal(
           name + " has no calls in the project. Delete it with replace_declaration instead.");
-    }
-    if (!throwsSometimes.isEmpty()) {
-      Exceptional.change(
-          project,
-          "an argument of "
-              + name
-              + " that may throw is not used by the inlined body, or only in a branch, so it"
-              + " would throw there only sometimes, or never: "
-              + String.join(", ", throwsSometimes),
-          "keep the method");
     }
     if (!nullable.isEmpty()) {
       Exceptional.change(
@@ -324,6 +297,7 @@ final class InlineFunction {
    * statement.
    */
   private static List<TextEdit> replacementFor(
+      SourceProject project,
       MethodInvocation site,
       Expression value,
       Block whole,
@@ -342,21 +316,28 @@ final class InlineFunction {
       boolean[] subtypeSafe) {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(args, params, useCount, name, subtypeSafe);
-    checkTiming(args, uses, params, whole, siteText, name);
-    checkOrder(args, uses, params, name);
+    // Each argument ran just before the body; inlined, it runs at its parameter's uses.
     for (int i = 0; i < args.size(); i++) {
-      if (useCount[i] > 1 && Effects.of(args.get(i)).changes()) {
-        throw new Refusal(
-            "parameter "
-                + params.get(i).getName().getIdentifier()
-                + " is used "
-                + useCount[i]
-                + " times in the body of "
-                + name
-                + ", and its argument calls, assigns or changes a variable, so the call would run"
-                + " more than once. Put the argument in a variable first.");
+      List<ASTNode> at = new ArrayList<>();
+      for (ParamUse u : uses) {
+        if (u.index() == i) {
+          at.add(NodeFinder.perform(whole.getRoot(), u.start(), u.end() - u.start()));
+        }
       }
+      Expression arg = args.get(i);
+      Behavior.flow(
+          project,
+          new Behavior.Move(
+              arg,
+              whole,
+              at,
+              "the argument "
+                  + siteText.substring(arg.getStartPosition(), Nodes.end(arg))
+                  + " for "
+                  + params.get(i).getName().getIdentifier(),
+              "inlining " + name));
     }
+    checkOrder(args, uses, params, name);
     checkLocals(site, bodyLocals, name);
     List<TextEdit> receiver =
         new ArrayList<>(receiverEdits(site, thisUses, implicit, siteText, name));
@@ -792,15 +773,6 @@ final class InlineFunction {
       Expression arg = args.get(i);
       String param = params.get(i).getName().getIdentifier();
       boolean effect = Effects.of(arg).changes();
-      if (useCount[i] == 0 && effect) {
-        throw new Refusal(
-            "parameter "
-                + param
-                + " is not used in the body of "
-                + name
-                + ", and its argument calls, assigns or changes a variable, so inlining would drop"
-                + " that effect. Keep the call, or use the argument in the body first.");
-      }
       ITypeBinding argType = arg.resolveTypeBinding();
       ITypeBinding paramType = params.get(i).resolveBinding().getType();
       if (argType != null
@@ -872,62 +844,6 @@ final class InlineFunction {
   }
 
   /**
-   * Refuses an argument that is not {@link #fixed} when the inlined body would evaluate it at
-   * another time than the call did: after an effect of the body, or inside a lambda or anonymous
-   * class (later), or, for one with an effect, in a branch (perhaps not at all).
-   */
-  private static void checkTiming(
-      List<Expression> args,
-      List<ParamUse> uses,
-      List<SingleVariableDeclaration> params,
-      ASTNode bodyNode,
-      String siteText,
-      String name) {
-    List<ASTNode> effects = Effects.of(bodyNode).normalFlowChanges();
-    for (ParamUse u : uses) {
-      Expression arg = args.get(u.index());
-      if (Effects.of(arg).fixed()) {
-        continue;
-      }
-      String param = params.get(u.index()).getName().getIdentifier();
-      String source =
-          siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
-      ASTNode use = NodeFinder.perform(bodyNode.getRoot(), u.start(), u.end() - u.start());
-      String where = deferral(use, bodyNode, Effects.of(arg).changes());
-      if (where != null) {
-        throw new Refusal(
-            "the argument "
-                + source
-                + " for "
-                + param
-                + " calls, assigns or reads changing state, and the body of "
-                + name
-                + " uses "
-                + param
-                + " "
-                + where
-                + ", so it would run at another time, or not at all. Put the argument in a"
-                + " variable first.");
-      }
-      for (ASTNode e : effects) {
-        if (e.getStartPosition() + e.getLength() <= u.start()) {
-          throw new Refusal(
-              "the argument "
-                  + source
-                  + " for "
-                  + param
-                  + " calls, assigns or reads changing state, and "
-                  + e
-                  + " in the body of "
-                  + name
-                  + " runs before its use, so the order would change. Put the argument in a"
-                  + " variable first.");
-        }
-      }
-    }
-  }
-
-  /**
    * Refuses arguments that are not {@link #fixed}, one of them with an effect, that the body first
    * uses in the other order than the call passes them: the read would move to the other side of the
    * effect.
@@ -966,15 +882,6 @@ final class InlineFunction {
         }
       }
     }
-  }
-
-  /**
-   * Where {@code use} runs later or only sometimes, as words ("inside a lambda"), or null when it
-   * runs once, in order. Branches and loops count only for an argument with an effect.
-   */
-  private static String deferral(ASTNode use, ASTNode bodyNode, boolean effect) {
-    String later = Effects.later(use, bodyNode);
-    return later != null || !effect ? later : Effects.sometimes(use, bodyNode);
   }
 
   /** Whether {@code node} names a static field or method that {@code owner} declares. */
