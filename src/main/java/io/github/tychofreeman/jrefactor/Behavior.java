@@ -141,11 +141,9 @@ final class Behavior {
     for (IVariableBinding v : code.written()) {
       writes.add(v.getKey());
     }
-    boolean calls =
-        code.all().stream()
-            .anyMatch(e ->
-                !e.deferred()
-                    && (e.kind() == Effects.Kind.CALL || e.kind() == Effects.Kind.CREATE));
+    // A call, a new object, or a write to an array element (which another name may alias, so it
+    // has no variable to compare): any of these may change state a read elsewhere sees.
+    boolean calls = code.all().stream().anyMatch(e -> !e.deferred() && changesUnknown(e));
     boolean reported = false;
     for (Effects.Effect e : Effects.of(m.root()).all()) {
       if (e.deferred()
@@ -183,7 +181,7 @@ final class Behavior {
                     + " puts it, so it would read another value.");
           }
         }
-        if (!code.fixed() && e.kind() != Effects.Kind.WRITE && !m.commute()) {
+        if (!code.fixed() && changesUnknown(e) && !m.commute()) {
           throw new Refusal(
               m.label()
                   + " reads state that "
@@ -248,7 +246,7 @@ final class Behavior {
                   && e.variable().isField()))) {
         throw new Refusal(
             m.label()
-                + " calls code that could change "
+                + " calls code or writes an array element that could change "
                 + e.node()
                 + ", which is read at "
                 + where
@@ -257,6 +255,17 @@ final class Behavior {
                 + " moves the call past that read.");
       }
     }
+  }
+
+  /**
+   * Whether {@code e} may change state that no name of it identifies: a call, a new object, or a
+   * write to an array element ({@code a[0] = 1}; {@code b[0]} may be the same element). A write to
+   * a variable or field has the variable, which the name rules compare.
+   */
+  private static boolean changesUnknown(Effects.Effect e) {
+    return e.kind() == Effects.Kind.CALL
+        || e.kind() == Effects.Kind.CREATE
+        || (e.kind() == Effects.Kind.WRITE && e.variable() == null);
   }
 
   /**
