@@ -171,7 +171,7 @@ final class EncapsulateField {
               + field
               + ";\n  }";
     }
-    own.add(MemberMove.appendTo(text, owner, moved));
+    own.addAll(MemberMove.appendTo(text, owner, moved));
 
     Stubs.Declared declared =
         MemberMove.gate(

@@ -107,7 +107,7 @@ final class PullUp {
     String targetText = texts.getOrDefault(target, Files.readString(target));
     edits
         .computeIfAbsent(target, k -> new ArrayList<>())
-        .add(MemberMove.appendTo(targetText, superDecl, movedText));
+        .addAll(MemberMove.appendTo(targetText, superDecl, movedText));
 
     Stubs.Declared declared =
         MemberMove.gate(

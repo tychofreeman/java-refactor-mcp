@@ -567,7 +567,8 @@ final class Declarations {
 
   /**
    * The indentation of {@code type}'s members: that of its first member, else one step in. The step
-   * is the file's, else that of the {@code content} being added, else 4.
+   * is the file's, else that of the {@code content} being added, else 2 (as the tools that move
+   * members write them).
    */
   private static String memberIndent(String text, AbstractTypeDeclaration type, String content) {
     if (!type.bodyDeclarations().isEmpty()) {
@@ -580,7 +581,7 @@ final class Declarations {
     }
     int at = Lines.start(text, type.getStartPosition());
     String typeIndent = text.substring(at, at + leading(text, at));
-    int step = step(text) > 0 ? step(text) : step(content) > 0 ? step(content) : 4;
+    int step = step(text) > 0 ? step(text) : step(content) > 0 ? step(content) : 2;
     return typeIndent + " ".repeat(step);
   }
 

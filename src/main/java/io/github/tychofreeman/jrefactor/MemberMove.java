@@ -193,16 +193,31 @@ final class MemberMove {
   }
 
   /**
-   * The edit that adds {@code moved} as the last member of {@code type}, a blank line before it.
+   * The edits that add {@code moved} as the last member of {@code type}, a blank line before it. A
+   * body on one line ({@code {}} or {@code { int x; }}) is opened up first, so the members end up
+   * one per line.
    */
-  static TextEdit appendTo(String text, TypeDeclaration type, String moved) {
+  static List<TextEdit> appendTo(String text, TypeDeclaration type, String moved) {
     int brace = end(type) - 1;
     int at = Lines.start(text, brace);
-    if (!text.substring(at, brace).isBlank()) {
-      // The closing brace shares its line ({} on one line): insert just before it.
-      return new TextEdit(brace, brace, "\n  " + moved + "\n");
+    if (text.substring(at, brace).isBlank()) {
+      return List.of(new TextEdit(at, at, "\n  " + moved + "\n"));
     }
-    return new TextEdit(at, at, "\n  " + moved + "\n");
+    List<?> members = type.bodyDeclarations();
+    if (members.isEmpty()) {
+      int open = text.lastIndexOf('{', brace - 1);
+      return List.of(new TextEdit(open + 1, brace, "\n  " + moved + "\n"));
+    }
+    int first = ((ASTNode) members.get(0)).getStartPosition();
+    int last = end((ASTNode) members.get(members.size() - 1));
+    int open = text.lastIndexOf('{', first - 1);
+    List<TextEdit> edits = new ArrayList<>();
+    if (Lines.start(text, open) == at) {
+      // The members share the line of both braces: start them on a line of their own.
+      edits.add(new TextEdit(open + 1, first, "\n  "));
+    }
+    edits.add(new TextEdit(last, brace, "\n\n  " + moved + "\n"));
+    return edits;
   }
 
   /** The text of {@code m} as written in {@code text}. */
