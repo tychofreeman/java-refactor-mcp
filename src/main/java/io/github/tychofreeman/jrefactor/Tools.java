@@ -191,9 +191,10 @@ final class Tools {
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
           Refuses, saying why: a field or a parameter; a declaration of several variables or \
-          without an initializer; a variable assigned after its declaration; an initializer that \
-          calls, assigns or changes a variable; a variable the initializer reads that is assigned \
-          after the declaration; a declared type different from the initializer's.\
+          without an initializer; a variable assigned after its declaration; an initializer with \
+          an effect used twice, or moved past another effect or into a branch, loop or lambda; \
+          one that reads state a call or assignment before a use could change; a declared type \
+          different from the initializer's.\
           """,
           List.of(
               Arg.FILE,

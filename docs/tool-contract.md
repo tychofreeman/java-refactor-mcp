@@ -559,10 +559,13 @@ and `column` (only when the line has two variables of that name).
 
 - Result: `inlined <name> into N uses and deleted its declaration at line L of <file>`.
 - Refuses: a field or a parameter; several variables in one declaration, or no
-  initializer; a variable assigned after its declaration; an initializer that
-  calls, assigns or changes a variable; a variable the initializer reads that is
-  assigned after the declaration; a declared type that differs from the
-  initializer's; an initializer that reads a name a later declaration in the block
+  initializer; a variable assigned after its declaration; an initializer with an
+  effect (a call, an assignment, a new object) used more than once, moved past
+  another effect, or into code that runs only sometimes, more than once or later
+  (one used once, with nothing between, is inlined: `int n = s.get(); return n + 1;`);
+  an initializer that reads state (a field, an element, a call's result) that a
+  call or assignment between the declaration and a use could change; a declared
+  type that differs from the initializer's; an initializer that reads a name a later declaration in the block
   hides at a use. `function` (inline by a function's name) is not built yet.
 
 ## `inline_function` (built)
