@@ -272,6 +272,22 @@ new record), `parameter` (the new parameter's name), `imports`.
   record file that exists.
 - Not built yet: extract class (`fields`).
 
+## `function_to_method` (built), and `move_member` in place
+
+Roadmap #90, 2026-11-04 (gorefactor's `method_to_function`, `function_to_method`).
+
+- Instance to static in place: `move_member` with `to` the method's own class; the
+  method becomes `static`, takes the instance as `receiver`, and calls pass it
+  (`Price.charge(this, a)`), as it does for another class.
+- `function_to_method`: `file`, `name` (a static method whose first parameter is
+  of its own class), `imports`. `static int area(Shape s, int k)` becomes `int
+  area(int k)`, `s` becomes `this` in the body, and `Shape.area(x, 3)` becomes
+  `x.area(3)` (`area(2)` where `this` was passed). A first argument that may be
+  null now fails at the call, not where the body used it: reported as a change to
+  exceptional behavior, and refused under `preserve_exceptions`. Refused also:
+  not static, a first parameter of another type or varargs, a body that assigns
+  it, lambdas or method references of it.
+
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`

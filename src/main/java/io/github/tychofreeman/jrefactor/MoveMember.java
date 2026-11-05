@@ -64,12 +64,13 @@ final class MoveMember {
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move_member");
     Precondition.require(
         Precondition.that(
-            () -> target != null && target.resolveBinding() != null && !to.equals(typeName),
+            () -> target != null && target.resolveBinding() != null,
             () ->
                 to
-                    + " is not another top-level type of "
+                    + " is not a top-level type of "
                     + rel
-                    + " that resolves. move_member moves a method to a type in the same file."),
+                    + " that resolves. move_member moves a method to a type in the same file, or"
+                    + " makes it static in its own."),
         Precondition.that(
             () -> declared instanceof MethodDeclaration,
             () ->
