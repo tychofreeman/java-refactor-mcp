@@ -316,7 +316,11 @@ final class InlineFunction {
       boolean[] subtypeSafe) {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(args, params, useCount, name, subtypeSafe);
-    // Each argument ran just before the body; inlined, it runs at its parameter's uses.
+    // Each argument ran just before the body; inlined in place, it runs at its parameter's uses.
+    // One the gate refuses there is bound to a local before the call's statement instead.
+    boolean[] bind = new boolean[args.size()];
+    Refusal inPlace = null;
+    List<String> reports = project.session().exceptional;
     for (int i = 0; i < args.size(); i++) {
       List<ASTNode> at = new ArrayList<>();
       for (ParamUse u : uses) {
@@ -324,20 +328,25 @@ final class InlineFunction {
           at.add(NodeFinder.perform(whole.getRoot(), u.start(), u.end() - u.start()));
         }
       }
-      Expression arg = args.get(i);
-      Behavior.flow(
-          project,
-          new Behavior.Move(
-              arg,
-              whole,
-              at,
-              "the argument "
-                  + siteText.substring(arg.getStartPosition(), Nodes.end(arg))
-                  + " for "
-                  + params.get(i).getName().getIdentifier(),
-              "inlining " + name));
+      int mark = reports.size();
+      try {
+        Behavior.flow(
+            project,
+            new Behavior.Move(
+                args.get(i), whole, at, label(args, params, i, siteText), "inlining " + name));
+      } catch (Refusal r) {
+        reports.subList(mark, reports.size()).clear();
+        bind[i] = true;
+        inPlace = inPlace != null ? inPlace : r;
+      }
     }
-    checkOrder(args, uses, params, name);
+    try {
+      checkOrder(args, uses, params, name);
+    } catch (Refusal r) {
+      inPlace = inPlace != null ? inPlace : r;
+      Arrays.fill(bind, true);
+    }
+    String[] local = bindings(project, site, whole, args, params, bind, siteText, name, inPlace);
     checkLocals(site, bodyLocals, name);
     List<TextEdit> receiver =
         new ArrayList<>(receiverEdits(site, thisUses, implicit, siteText, name));
@@ -350,7 +359,7 @@ final class InlineFunction {
                 + " method.");
       }
       String replaced =
-          substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText, receiver);
+          substituted(declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver);
       // A call that is all of an initializer, a return or an assignment's value needs none.
       boolean entire =
           site.getParent() instanceof VariableDeclarationFragment
@@ -362,10 +371,15 @@ final class InlineFunction {
       TextEdit call =
           new TextEdit(
               site.getStartPosition(), site.getStartPosition() + site.getLength(), replaced);
-      if (prefix.isEmpty()) {
+      if (prefix.isEmpty() && !any(local)) {
         return List.of(call);
       }
-      Statement statement = wholeStatement(site, name);
+      Statement statement = prefix.isEmpty() ? blockStatement(site) : wholeStatement(site, name);
+      int at = statement.getStartPosition();
+      String declared = declarations(args, params, local, siteText, Lines.indentOf(siteText, at));
+      if (prefix.isEmpty()) {
+        return List.of(new TextEdit(at, at, declared), call);
+      }
       int from = prefix.get(0).getStartPosition();
       Statement end = prefix.get(prefix.size() - 1);
       String before =
@@ -376,29 +390,156 @@ final class InlineFunction {
                   end.getStartPosition() + end.getLength(),
                   uses,
                   args,
+                  local,
                   siteText,
                   receiver),
               Lines.indentOf(declaringText, from),
               Lines.indentOf(siteText, statement.getStartPosition()));
-      int at = statement.getStartPosition();
-      return List.of(new TextEdit(at, at, before + "\n" + Lines.indentOf(siteText, at)), call);
+      return List.of(
+          new TextEdit(at, at, declared + before + "\n" + Lines.indentOf(siteText, at)), call);
     }
     if (!(site.getParent() instanceof ExpressionStatement stmt)) {
       throw new Refusal(name + " returns nothing, so a call of it can only be a statement.");
     }
     String replaced =
-        reindent(
-            substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText, receiver),
-            Lines.indentOf(declaringText, bodyStart),
-            Lines.indentOf(siteText, stmt.getStartPosition()));
+        declarations(
+                args, params, local, siteText, Lines.indentOf(siteText, stmt.getStartPosition()))
+            + reindent(
+                substituted(
+                    declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver),
+                Lines.indentOf(declaringText, bodyStart),
+                Lines.indentOf(siteText, stmt.getStartPosition()));
     return List.of(
         new TextEdit(
             stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced));
   }
 
+  /** "the argument next() for x": argument {@code i} in a refusal. */
+  private static String label(
+      List<Expression> args, List<SingleVariableDeclaration> params, int i, String siteText) {
+    Expression arg = args.get(i);
+    return "the argument "
+        + siteText.substring(arg.getStartPosition(), Nodes.end(arg))
+        + " for "
+        + params.get(i).getName().getIdentifier();
+  }
+
+  /**
+   * The local each argument marked in {@code bind} is bound to, by index (null for one inlined in
+   * place). Every argument before the last bound one that is not fixed is bound too, so the
+   * arguments run once, in order, before the statement of the call, as they ran before the body.
+   * Moving them there is an extract, checked by the behavior gate; when that is refused, so is the
+   * call, with {@code inPlace}, the reason inlining in place was.
+   */
+  private static String[] bindings(
+      SourceProject project,
+      MethodInvocation site,
+      Block whole,
+      List<Expression> args,
+      List<SingleVariableDeclaration> params,
+      boolean[] bind,
+      String siteText,
+      String name,
+      Refusal inPlace) {
+    String[] local = new String[args.size()];
+    int last = -1;
+    for (int i = 0; i < bind.length; i++) {
+      if (bind[i]) {
+        last = i;
+      }
+    }
+    if (last < 0) {
+      return local;
+    }
+    for (int i = 0; i < last; i++) {
+      bind[i] |= !Effects.of(args.get(i)).fixed();
+    }
+    Statement statement;
+    try {
+      statement = blockStatement(site);
+      int first = 0;
+      while (!bind[first]) {
+        first++;
+      }
+      Behavior.flow(
+          project,
+          new Behavior.Move(
+              args.get(first),
+              statement,
+              List.of(statement),
+              label(args, params, first, siteText),
+              "binding it to a local before the call"));
+    } catch (Refusal r) {
+      throw inPlace;
+    }
+    ASTNode decl = site;
+    while (!(decl instanceof BodyDeclaration)) {
+      decl = decl.getParent();
+    }
+    Set<String> taken = new HashSet<>();
+    for (SimpleName n : Nodes.all(decl, SimpleName.class)) {
+      taken.add(n.getIdentifier());
+    }
+    Set<String> paramNames = new HashSet<>();
+    for (SingleVariableDeclaration p : params) {
+      paramNames.add(p.getName().getIdentifier());
+    }
+    for (SimpleName n : Nodes.all(whole, SimpleName.class)) {
+      if (!paramNames.contains(n.getIdentifier())) {
+        taken.add(n.getIdentifier());
+      }
+    }
+    for (int i = 0; i < args.size(); i++) {
+      if (!bind[i]) {
+        continue;
+      }
+      String base = params.get(i).getName().getIdentifier();
+      String chosen = base;
+      for (int n = 2; taken.contains(chosen); n++) {
+        chosen = base + n;
+      }
+      taken.add(chosen);
+      local[i] = chosen;
+    }
+    return local;
+  }
+
+  /** "int v = nextSlot();" and a line break at {@code indent}, for each bound argument in order. */
+  private static String declarations(
+      List<Expression> args,
+      List<SingleVariableDeclaration> params,
+      String[] local,
+      String siteText,
+      String indent) {
+    StringBuilder out = new StringBuilder();
+    for (int i = 0; i < args.size(); i++) {
+      if (local[i] != null) {
+        Expression arg = args.get(i);
+        out.append(Extract.typeName(params.get(i).resolveBinding().getType()))
+            .append(' ')
+            .append(local[i])
+            .append(" = ")
+            .append(siteText, arg.getStartPosition(), Nodes.end(arg))
+            .append(";\n")
+            .append(indent);
+      }
+    }
+    return out.toString();
+  }
+
+  private static boolean any(String[] local) {
+    for (String l : local) {
+      if (l != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * The text of {@code start}-{@code end} of the declaring file, each parameter use given its
-   * argument, and the receiver's edits ({@code receiver}, at positions of the declaring file) made.
+   * argument, or the local it is bound to ({@code local}, by index), and the receiver's edits
+   * ({@code receiver}, at positions of the declaring file) made.
    */
   private static String substituted(
       String declaringText,
@@ -406,6 +547,7 @@ final class InlineFunction {
       int end,
       List<ParamUse> uses,
       List<Expression> args,
+      String[] local,
       String siteText,
       List<TextEdit> receiver) {
     List<TextEdit> all = new ArrayList<>(receiver);
@@ -413,7 +555,9 @@ final class InlineFunction {
       Expression arg = args.get(u.index());
       String argText =
           siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
-      if (InlineVariable.needsParentheses(arg)) {
+      if (local[u.index()] != null) {
+        argText = local[u.index()];
+      } else if (InlineVariable.needsParentheses(arg)) {
         argText = "(" + argText + ")";
       }
       all.add(new TextEdit(u.start(), u.end(), argText));
@@ -654,6 +798,22 @@ final class InlineFunction {
             + " variable of its own first.");
   }
 
+  /**
+   * The statement that holds the call, which must be directly in a block, so that locals can be
+   * declared before it.
+   */
+  private static Statement blockStatement(MethodInvocation site) {
+    ASTNode n = site;
+    while (!(n instanceof Statement)) {
+      n = n.getParent();
+    }
+    if (!(n.getParent() instanceof Block)) {
+      throw new Refusal(
+          "the statement that holds the call is not directly in a block. Put it in braces first.");
+    }
+    return (Statement) n;
+  }
+
   /** Refuses a local of the body whose name the member around the call also uses. */
   private static void checkLocals(MethodInvocation site, Set<String> bodyLocals, String name) {
     if (bodyLocals.isEmpty()) {
@@ -768,11 +928,9 @@ final class InlineFunction {
       int[] useCount,
       String name,
       boolean[] subtypeSafe) {
-    int effects = 0;
     for (int i = 0; i < args.size(); i++) {
       Expression arg = args.get(i);
       String param = params.get(i).getName().getIdentifier();
-      boolean effect = Effects.of(arg).changes();
       ITypeBinding argType = arg.resolveTypeBinding();
       ITypeBinding paramType = params.get(i).resolveBinding().getType();
       if (argType != null
@@ -793,16 +951,6 @@ final class InlineFunction {
                 + paramType.getName()
                 + ", and the body would not. Pass a value of the parameter's type first.");
       }
-      if (effect) {
-        effects++;
-      }
-    }
-    if (effects > 1) {
-      throw new Refusal(
-          "two arguments of "
-              + name
-              + " call, assign or change a variable, and inlining would run them in another order."
-              + " Put one of them in a variable first.");
     }
   }
 
