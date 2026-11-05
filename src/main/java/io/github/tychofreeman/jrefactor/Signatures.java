@@ -200,6 +200,78 @@ final class Signatures {
         List.of());
   }
 
+  /**
+   * change_type for a method: with parameter, that parameter's type; with return_type, the return
+   * type; in every declaration of the family, and in a lambda that writes the parameter's type.
+   * Calls are not edited: one the new type breaks is refused by the gate.
+   */
+  static Outcome changeType(SourceProject project, Args args) throws Exception {
+    String type = args.required("type");
+    parsesAs("type", type, "class X { " + type + " x; }");
+    boolean returns = args.flag("return_type");
+    Precondition.require(
+        Precondition.that(
+            () -> returns != args.has("parameter"),
+            () ->
+                "change_type of a method takes parameter (whose type to change) or return_type=true,"
+                    + " not both."));
+    MethodFamily family = MethodFamily.of(project, args);
+    SignatureChange change = new SignatureChange(family);
+    if (returns) {
+      for (Decl d : family.decls) {
+        Precondition.require(
+            Precondition.that(
+                () -> !d.m().isConstructor(),
+                () -> family.label + " is a constructor, which has no return type."),
+            Precondition.that(
+                () -> d.m().extraDimensions().isEmpty(),
+                () ->
+                    family.label
+                        + " writes its return type's [] after its parameters. Write it before the"
+                        + " name first."));
+        change.replace(d.file(), d.m().getReturnType2(), type);
+      }
+      return change.apply(
+          project,
+          "changed the return type of " + family.label + " to " + type,
+          args.list("imports"));
+    }
+    String parameter = args.required("parameter");
+    int at = family.index(parameter, "parameter", false);
+    for (Decl d : family.decls) {
+      SingleVariableDeclaration p = (SingleVariableDeclaration) d.m().parameters().get(at);
+      Precondition.require(
+          Precondition.that(
+              () -> !p.isVarargs(),
+              () ->
+                  parameter
+                      + " of "
+                      + family.label
+                      + " is varargs. Change it with replace_declaration."),
+          Precondition.that(
+              () -> p.extraDimensions().isEmpty(),
+              () ->
+                  parameter
+                      + " of "
+                      + family.label
+                      + " writes its [] after its name. Write it after the type first."));
+      change.replace(d.file(), p.getType(), type);
+    }
+    for (Lambda l : family.lambdas) {
+      if (l.typed()) {
+        List<String> params = l.params();
+        String name =
+            ((VariableDeclaration) l.node().parameters().get(at)).getName().getIdentifier();
+        params.set(at, type + " " + name);
+        change.lambda(l, params);
+      }
+    }
+    return change.apply(
+        project,
+        "changed the type of " + parameter + " of " + family.label + " to " + type,
+        args.list("imports"));
+  }
+
   /** Refuses {@code text} as the {@code what} argument unless {@code wrapped} parses. */
   private static void parsesAs(String what, String text, String wrapped) {
     for (IProblem p : Jdt.parseSyntax(wrapped).getProblems()) {

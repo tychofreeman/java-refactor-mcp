@@ -42,8 +42,7 @@ final class ChangeType {
               + typeName
               + " in "
               + rel
-              + ". change_type changes a field's type; a method's signature is changed with"
-              + " replace_declaration.");
+              + ". For a method, pass parameter (whose type to change) or return_type=true.");
     }
     if (decl.fragments().size() != 1) {
       throw new Refusal(
