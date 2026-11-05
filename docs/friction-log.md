@@ -641,6 +641,7 @@ dropped argument) would need the evaluation order named first, which no tool giv
   method"). Resent as a batch with the declaration first, check `end`.
 - Idea: a stub is static when the call's nearest enclosing method of the
   target class is static, looking through anonymous classes and lambdas.
+  Done: `Stubs.inStaticContext` (2026-11-05, `docs/sessions/stub-static-anonymous.md`).
 
 ## 2026-11-05: bin/jrefactor @file takes the arguments only
 - Task: `docs/sessions/shared-helpers.md`.

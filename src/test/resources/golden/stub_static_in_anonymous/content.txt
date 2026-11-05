@@ -1,0 +1,8 @@
+static Runnable task() {
+  return new Runnable() {
+    @Override
+    public void run() {
+      helper(1);
+    }
+  };
+}
