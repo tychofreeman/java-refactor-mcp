@@ -285,7 +285,12 @@ in the same turn only if it is sent after it.
   `(parameter types)` for an overload), `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old
   and its file com/example/Old.java (was lines 5-8)", and a type still used is
-  refused rather than declared again as a stub). The old Javadoc stays unless content has its own. Refused: several
+  refused rather than declared again as a stub). A deletion is a safe delete
+  (roadmap #83, 2026-11-04): refused while anything else uses it, "Price.rate()
+  is used in com/example/Shop.java line 5. Remove or change those uses first,
+  then delete it." (constructors by their calls too), and for a method that
+  overrides a concrete one ("Sub.name() overrides Base.name(): deleted, its
+  callers would run Base's instead ..."). The old Javadoc stays unless content has its own. Refused: several
   members of that name (with their signatures), no such member (with the
   members there), a field declared with others in one statement. gorefactor's
   `line`/`column` addressing and `imports` are not built.

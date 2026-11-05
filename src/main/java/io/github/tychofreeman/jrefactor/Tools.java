@@ -658,8 +658,9 @@ final class Tools {
           Javadoc; a file's only top-level type takes the file with it (undo restores it).
           name is Type, Type.member, or member (of the file's only top-level type); for one of \
           several overloads, add its parameter types: Cart.add(int, String).
-          The old Javadoc stays unless content has its own. Callers a new signature or a \
-          deletion breaks are refused.
+          The old Javadoc stays unless content has its own. Callers a new signature breaks are \
+          refused. A deletion is refused while anything uses it (the uses are named), and for a \
+          method that overrides a concrete one, whose callers would then run the inherited one.
           Imports content needs are added, and those only the old declaration used are \
           removed; when a name could be several classes, imports chooses.\
           """,

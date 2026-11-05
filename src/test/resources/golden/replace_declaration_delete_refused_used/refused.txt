@@ -1,0 +1,1 @@
+Price.rate() is used in com/example/Shop.java line 5
