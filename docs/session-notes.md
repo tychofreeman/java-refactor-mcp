@@ -453,9 +453,12 @@ reason, not a diary. The roadmap is in `docs/design.md`.
 - Effects and exceptions (the user, 2026-11-04; `docs/design.md`, Decisions): preserve every
   effect in the normal logic flow. Exceptional behavior is not preserved by default, except a guard
   or a try/catch (keep the source inside the try). A flag lets the model require it, and a tool that
-  changes it without the flag says so in its result. The flag's shape and the alert mechanism are
-  open (design.md, open question 0). `move_member`'s null-receiver change is the first case to
-  alert on.
+  changes it without the flag says so in its result. The user chose one `preserve_exceptions`
+  flag on every refactoring and a separate field for the alert (design.md, open question 0).
+  It is roadmap #73, after #71 (one shape for a refactoring: target resolver and preconditions
+  as values) and #72 (one effects analysis): the user agreed to build those first, since the
+  flag otherwise means editing every `run` and every schema. `move_member`'s null-receiver
+  change is the first case to alert on.
 
 ## Why past choices were made
 
