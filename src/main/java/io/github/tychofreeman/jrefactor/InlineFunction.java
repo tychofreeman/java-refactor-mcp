@@ -135,6 +135,18 @@ final class InlineFunction {
     int bodyEnd = bodyNode.getStartPosition() + bodyNode.getLength();
     List<ParamUse> uses = paramUsesIn(m.getBody(), paramBindings);
     checkNotAssigned(uses, unit, params, name);
+    // A parameter used only as a call's receiver dispatches on the argument's own type, so a
+    // subtype argument means the same there.
+    boolean[] receiverOnly = new boolean[params.size()];
+    for (int i = 0; i < params.size(); i++) {
+      receiverOnly[i] = useCount(uses, i) > 0;
+    }
+    for (ParamUse u : uses) {
+      ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
+      if (!(n.getParent() instanceof MethodInvocation mi && mi.getExpression() == n)) {
+        receiverOnly[u.index()] = false;
+      }
+    }
     Set<String> bodyLocals = declaredIn(m.getBody());
     for (SingleVariableDeclaration p : params) {
       bodyLocals.remove(p.getName().getIdentifier());
@@ -238,7 +250,8 @@ final class InlineFunction {
                 params,
                 fileText,
                 name,
-                declaringText));
+                declaringText,
+                receiverOnly));
         calls++;
       }
       edits.computeIfAbsent(p, k -> new ArrayList<>()).addAll(list);
@@ -297,9 +310,10 @@ final class InlineFunction {
       List<SingleVariableDeclaration> params,
       String siteText,
       String name,
-      String declaringText) {
+      String declaringText,
+      boolean[] receiverOnly) {
     List<Expression> args = typed(site.arguments(), Expression.class);
-    checkArguments(args, params, useCount, name);
+    checkArguments(args, params, useCount, name, receiverOnly);
     checkTiming(args, uses, params, whole, siteText, name);
     checkOrder(args, uses, params, name);
     for (int i = 0; i < args.size(); i++) {
@@ -755,7 +769,11 @@ final class InlineFunction {
    * whose calls would run in another order, and one whose type the call converts.
    */
   private static void checkArguments(
-      List<Expression> args, List<SingleVariableDeclaration> params, int[] useCount, String name) {
+      List<Expression> args,
+      List<SingleVariableDeclaration> params,
+      int[] useCount,
+      String name,
+      boolean[] receiverOnly) {
     int effects = 0;
     for (int i = 0; i < args.size(); i++) {
       Expression arg = args.get(i);
@@ -775,7 +793,8 @@ final class InlineFunction {
       if (argType != null
           && !argType.isNullType()
           && paramType != null
-          && !argType.isEqualTo(paramType)) {
+          && !argType.isEqualTo(paramType)
+          && !(receiverOnly[i] && subtype(argType, paramType))) {
         throw new Refusal(
             "argument "
                 + param
@@ -800,6 +819,43 @@ final class InlineFunction {
               + " call, assign or change a variable, and inlining would run them in another order."
               + " Put one of them in a variable first.");
     }
+  }
+
+  /** How many of {@code uses} are of parameter {@code index}. */
+  private static int useCount(List<ParamUse> uses, int index) {
+    int n = 0;
+    for (ParamUse u : uses) {
+      if (u.index() == index) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /**
+   * Whether reference type {@code sub} extends or implements {@code sup}, by qualified name: the
+   * two come from different parses.
+   */
+  private static boolean subtype(ITypeBinding sub, ITypeBinding sup) {
+    if (sub.isPrimitive() || sup.isPrimitive()) {
+      return false;
+    }
+    String target = sup.getErasure().getQualifiedName();
+    if (target.equals("java.lang.Object")) {
+      return true;
+    }
+    List<ITypeBinding> todo = new ArrayList<>(List.of(sub));
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      if (t.getErasure().getQualifiedName().equals(target)) {
+        return true;
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(List.of(t.getInterfaces()));
+    }
+    return false;
   }
 
   /**
