@@ -107,7 +107,10 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   ("names 2 declarations: the field Counter.count (column 10) and the parameter
   count (column 18). Pass name "Counter.count" or "local count", or
   column."); a declaration of a library; a method that overrides a library
-  method; a type parameter (not built); an invalid new name; a new name
+  method; a type parameter renamed to a type its class or method already names
+  ("String is a type that Box already names (line 5); renamed, T would hide
+  it"; type parameters are renamed in their declaration, Javadoc `@param <T>`
+  included, roadmap #84, 2026-11-04); an invalid new name; a new name
   another variable in the method uses, the type already has as a field, method
   with the same parameter types, or member type, or whose file exists; a field
   rename that a local of the new name would hide at an unqualified use; an

@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -537,8 +538,7 @@ public final class Rename {
   private static Outcome renameType(SourceProject project, ITypeBinding type, String newName)
       throws IOException {
     if (type.isTypeVariable()) {
-      throw new Refusal(
-          "'" + type.getName() + "' is a type parameter; renaming those is not built yet.");
+      return renameTypeParameter(project, type, newName);
     }
     String oldName = type.getName();
     String key = type.getKey();
@@ -606,6 +606,89 @@ public final class Rename {
       what += ", and " + project.relative(from) + " to " + project.relative(to) + ",";
     }
     return summary(what, lines, occurrences, stubs);
+  }
+
+  /**
+   * Renames a type parameter in the class or method that declares it, Javadoc's {@code @param <T>}
+   * included. Refuses a new name that the declaration already uses for a type: the parameter would
+   * hide it.
+   */
+  private static Outcome renameTypeParameter(
+      SourceProject project, ITypeBinding parameter, String newName) throws IOException {
+    String oldName = parameter.getName();
+    IBinding owner =
+        parameter.getDeclaringMethod() != null
+            ? parameter.getDeclaringMethod()
+            : parameter.getDeclaringClass();
+    ITypeBinding top =
+        parameter.getDeclaringMethod() != null
+            ? parameter.getDeclaringMethod().getDeclaringClass()
+            : parameter.getDeclaringClass();
+    while (top.getDeclaringClass() != null) {
+      top = top.getDeclaringClass();
+    }
+    String rel = top.getErasure().getQualifiedName().replace('.', '/') + ".java";
+    Path file = null;
+    for (Path root : project.sourceRoots()) {
+      if (Files.isRegularFile(root.resolve(rel))) {
+        file = root.resolve(rel);
+      }
+    }
+    if (file == null) {
+      throw new Refusal(
+          "the file that declares " + oldName + " is not " + rel + "; rename it there.");
+    }
+    String source = Files.readString(file);
+    CompilationUnit cu = Jdt.parse(project, file, source);
+    ASTNode scope =
+        cu.findDeclaringNode(
+            owner instanceof IMethodBinding m
+                ? m.getMethodDeclaration().getKey()
+                : ((ITypeBinding) owner).getTypeDeclaration().getKey());
+    if (scope == null) {
+      throw new Refusal("the declaration of " + oldName + " was not found in " + rel + ".");
+    }
+    String key = parameter.getKey();
+    String ownerName =
+        owner instanceof IMethodBinding m ? m.getName() + "()" : ((ITypeBinding) owner).getName();
+    List<SimpleName> occurrences = new ArrayList<>();
+    scope.accept(
+        new ASTVisitor(true) {
+          @Override
+          public boolean visit(SimpleName n) {
+            IBinding b = n.resolveBinding();
+            if (b instanceof ITypeBinding t && t.getKey().equals(key)) {
+              occurrences.add(n);
+            } else if (b == null
+                && n.getParent() instanceof TagElement tag
+                && TagElement.TAG_PARAM.equals(tag.getTagName())
+                && n.getIdentifier().equals(oldName)) {
+              occurrences.add(n);
+            } else if (b instanceof ITypeBinding t && n.getIdentifier().equals(newName)) {
+              throw new Refusal(
+                  newName
+                      + " is a type that "
+                      + ownerName
+                      + " already names (line "
+                      + cu.getLineNumber(n.getStartPosition())
+                      + "); renamed, "
+                      + oldName
+                      + " would hide it. Choose another name.");
+            }
+            return true;
+          }
+        });
+    Stubs.Declared stubs =
+        gate(project, Map.of(file, apply(source, occurrences, newName)), oldName, newName);
+    return new Outcome(
+        "renamed %s to %s in %s: %d occurrences, %s"
+            .formatted(
+                oldName,
+                newName,
+                project.relative(file),
+                occurrences.size(),
+                Lines.list(lineNumbers(cu, occurrences))),
+        stubs);
   }
 
   /**

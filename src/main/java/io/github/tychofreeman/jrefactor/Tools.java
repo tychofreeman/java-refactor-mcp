@@ -106,7 +106,8 @@ final class Tools {
           the project, Javadoc included: renaming the field price of Item to cost changes its \
           declaration, every item.price and this.price, and {@link Item#price}. A method takes \
           every declaration it overrides or that overrides it (an interface method and its \
-          implementations); a top-level type takes its file (Plant.java becomes Herb.java).
+          implementations); a top-level type takes its file (Plant.java becomes Herb.java); a \
+          type parameter is renamed in its class or method, @param <T> included.
           Identify it by file, line (its declaration or any use) and its current name. When the \
           name means two things on the line (this.count = count), name the one you mean: \
           "Counter.count" for the member of Counter, "local count" for the local or parameter, \
