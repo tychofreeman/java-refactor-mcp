@@ -33,7 +33,7 @@ has no log, and the notes are then the record. gorefactor's records (`docs/sessi
 
     ## Measured
 
-    "Not measured" until the session-log hook exists; counts from the
+    From `bin/session-report`, or "not measured" when the branch has no session log; counts from the
     notes meanwhile.
 
     ## Assessment
