@@ -31,6 +31,7 @@ final class Cli {
       usage: jrefactor list [tool...]                 (descriptions and arguments)
              jrefactor [-C dir] <tool> key=value...   (typed by the tool's schema)
              jrefactor [-C dir] <tool> '<json>' | @file | -
+             jrefactor [-C dir] @file | -              (a JSON object with "tool")
              jrefactor [-C dir] undo
 
       The project is the nearest directory with a pom.xml at or above dir (default: the
@@ -68,8 +69,21 @@ final class Cli {
         list(words, out);
         return 0;
       }
-      Tools.Def def = Tools.named(name);
-      Map<String, Object> values = arguments(def, words);
+      Tools.Def def;
+      Map<String, Object> values;
+      if (isJson(name) && words.isEmpty()) {
+        Map<String, Object> json = new LinkedHashMap<>(readJson(name));
+        if (!(json.remove("tool") instanceof String tool)) {
+          throw new Refusal(
+              "A JSON object given alone names its tool, as \"tool\": {\"tool\": \"rename\", ...};"
+                  + " or put the tool's name before it.");
+        }
+        def = Tools.named(tool);
+        values = withFiles(def, json);
+      } else {
+        def = Tools.named(name);
+        values = arguments(def, words);
+      }
       Path at = root(dir).toAbsolutePath().normalize();
       String cached = cacheName(at);
       SourceProject project = SourceProject.load(at, classpathCache(cacheDir, at));
@@ -118,18 +132,22 @@ final class Cli {
 
   /**
    * The arguments of {@code def} from the words after its name: one JSON object (inline, {@code
-   * @file} or {@code -} for stdin), or {@code key=value} pairs typed by the tool's schema; then each
-   * {@code key_file} read into {@code key}.
+   * @file} or {@code -} for stdin, its "tool" key, if any, naming {@code def}), or {@code key=value}
+   * pairs typed by the tool's schema; then each {@code key_file} read into {@code key}.
    */
   static Map<String, Object> arguments(Tools.Def def, List<String> words) throws IOException {
     Map<String, Object> values = new LinkedHashMap<>();
     if (words.size() == 1 && isJson(words.get(0))) {
-      String word = words.get(0);
-      String text =
-          word.equals("-")
-              ? new String(System.in.readAllBytes(), StandardCharsets.UTF_8)
-              : word.startsWith("@") ? Files.readString(Path.of(word.substring(1))) : word;
-      values.putAll(JSON.readValue(text, new TypeReference<Map<String, Object>>() {}));
+      values.putAll(readJson(words.get(0)));
+      Object tool = values.remove("tool");
+      if (tool != null && !Tools.named(String.valueOf(tool)).name().equals(def.name())) {
+        throw new Refusal(
+            "the JSON object names the tool "
+                + tool
+                + ", and the command line "
+                + def.name()
+                + ". Leave out one of them.");
+      }
     } else {
       JsonNode properties = JSON.readTree(def.schema()).path("properties");
       for (String word : words) {
@@ -146,6 +164,23 @@ final class Cli {
         values.put(key, typed(key, value, type));
       }
     }
+    return withFiles(def, values);
+  }
+
+  /** One JSON object: {@code word} itself, the file after its {@code @}, or stdin for {@code -}. */
+  private static Map<String, Object> readJson(String word) throws IOException {
+    String text =
+        word.equals("-")
+            ? new String(System.in.readAllBytes(), StandardCharsets.UTF_8)
+            : word.startsWith("@") ? Files.readString(Path.of(word.substring(1))) : word;
+    return JSON.readValue(text, new TypeReference<Map<String, Object>>() {});
+  }
+
+  /**
+   * {@code values} with each {@code key_file} that {@code def} does not take read into {@code key}.
+   */
+  private static Map<String, Object> withFiles(Tools.Def def, Map<String, Object> values)
+      throws IOException {
     for (String key : List.copyOf(values.keySet())) {
       String base = key.endsWith("_file") ? key.substring(0, key.length() - "_file".length()) : "";
       if (!base.isEmpty() && !def.args().contains(key) && def.args().contains(base)) {
