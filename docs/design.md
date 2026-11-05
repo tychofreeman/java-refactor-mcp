@@ -225,6 +225,30 @@ friction log; reorder when this repo's own log says otherwise.
 | 70 | 77 | A check that every name in moved text resolves to the same declaration after the edit, for every tool that moves code; it would replace one-off rules such as `inline_function`'s other-class member refusal and `inline_variable`'s shadow refusal | Planned | Follow-up of #67 and #68 (`docs/sessions/effect-order.md`); the general form named in row 60's evidence |
 | 71 | 78 | `inline_function` accepts an argument whose type is a subtype of the parameter's (a `String` for an `Object`), refused today by the conversion rule; numeric and boxing conversions stay refused | Planned | Follow-up of `docs/sessions/effect-order.md`: the rule is broader than the probe (`half(3)` for `double`) needed. Needs a golden showing the body behaves the same |
 | 72 | 79 | `bin/jrefactor --rebuild` (or `JREFACTOR_REBUILD=1`) builds the jar from the working tree first, so a session can probe uncommitted server code | Planned | Friction log, 2026-11-04: probing #73's change took a temporary commit and a soft reset |
+| 73 | 80 | `move_type` moves a top-level type to another package (an option, `package`): its file moves, its package line and every reference and import follow, and members used across the new package boundary are widened or refused | Planned, local session, first of the 2026-11-04 list | Friction log: "No tool moves a type or…", golden and fixture moves by hand. The user's order of 2026-11-04 (recommendation 1). An option on `move_type`, not a tool, unless its design note finds otherwise |
+| 74 | 81 | `move_file`: move or copy a file that is not Java (a fixture, a doc, a golden case directory), as gorefactor's; and delete a directory | Planned, after #80 | Friction log: `move_file` idea; "no tool moves golden directories"; `rm` of directories by hand |
+| 75 | 82 | Change a method's parameter or return type, every override and call following (gorefactor's `change_parameter_type`; Java adds the return type) | Planned | Recommendation 2 (2026-11-04): #125 changed `appendTo`'s return type with an `add` to `addAll` edit at each of four callers. Extends the signature tools; `change_type` does fields only |
+| 76 | 83 | Safe delete: delete a member or type that nothing uses, refused with the uses when something does (gorefactor's `remove_dead_code`) | Planned | Recommendation 3 (2026-11-04). Perhaps an option on `replace_declaration`, which deletes with empty content and refuses a used declaration through the gate |
+| 77 | 84 | Widen existing tools: `inline_function` for instance methods and bodies of several statements; `extract_method` with several results; `rename` of type parameters | Planned | The user's list of 2026-11-04. `extract_method`'s refusal of two results was the user's choice of 2026-11-03 (over returning a record): widening it needs the user's choice again. `rename` refuses type parameters (stress runs) |
+| 78 | 85 | Extract interface and extract superclass: a new type from members of a class, the class implementing or extending it | Planned | The user's list of 2026-11-04; `pull_up` needs the supertype to exist |
+| 79 | 86 | Introduce constant, field and parameter: `extract_variable`'s expression as a `static final` field, an instance field, or a new parameter of the enclosing method (callers pass the expression) | Planned | The user's list of 2026-11-04. Perhaps options on `extract_variable`; the parameter form composes with `add_parameter` |
+| 80 | 87 | Lambda, anonymous class and method reference, each to the others where the meaning is kept | Planned | The user's list of 2026-11-04; `inline_function` and `move_member` refuse method references and ask for a lambda first |
+| 81 | 88 | Convert a class to a record (final fields set once by the constructor, accessors renamed or kept) | Planned | The user's list of 2026-11-04 |
+| 82 | 89 | Extract class and introduce parameter object (gorefactor's `extract_struct`): fields or parameters grouped into a new type, uses following | Planned | The user's list of 2026-11-04; on the planned list in `docs/tool-contract.md` |
+| 83 | 90 | Instance method to static and back in place (gorefactor's `method_to_function`, `function_to_method`) | Planned | The user's list of 2026-11-04; `move_member` does it only while moving to another class |
+| 84 | 91 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Planned, last of the 2026-11-04 list | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
+
+### The 2026-11-04 list
+
+The user asked (2026-11-04) for the missing refactorings in this order: the
+three recommended from the friction log (#80 with #81, #82, #83), then the
+widening of existing tools (#84), extract interface and superclass (#85),
+introduce constant, field and parameter (#86), lambda, anonymous class and
+method reference (#87), record conversion (#88), extract class and parameter
+object (#89), instance to static and back (#90), and the edit primitives
+(#91). One PR per item; each item's design note decides whether it is a tool
+or an option on one, as CLAUDE.md prefers. Not on the list, left for the
+friction log to raise: renaming a package, encapsulating a collection.
 
 ### Why this order
 

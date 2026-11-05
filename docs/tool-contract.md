@@ -52,6 +52,16 @@ gorefactor counterpart (Go has no nested types or inheritance). gorefactor
 tools not built here (`replace_expression`, `insert_statements`, `add_case`
 and others) wait for friction-log evidence.
 
+Planned (the user, 2026-11-04, roadmap #80-#91): `move_type` to another
+package, `move_file`, a parameter or return type change, safe delete,
+widened `inline_function`, `extract_method` and `rename`, extract interface
+and superclass, introduce constant, field and parameter, lambda / anonymous
+class / method reference, class to record, extract class and parameter
+object (gorefactor's `extract_struct`), instance method to static and back
+in place (`method_to_function`, `function_to_method`), and gorefactor's edit
+primitives (`replace_expression`, `insert_statements`, `replace_statements`,
+`add_case`, `add_element`).
+
 ## `inspect` (built)
 
 Text, in gorefactor's format (decided 2026-11-02: copied, not measured).

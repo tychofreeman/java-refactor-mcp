@@ -59,6 +59,14 @@ Each was chosen from options; the record named beside it has the options it beat
   to relax it; `invert_if` simplifies the negated comparison; `move_member`
   passes the instance as a `receiver` parameter; `encapsulate_field` writes
   bean-style accessors with optional names.
+- The missing refactorings are roadmap #80-#91 (2026-11-04), in the user's
+  order, after #79: a type to another package and `move_file`, a signature
+  type change, safe delete, widening, extract interface/superclass, introduce
+  constant/field/parameter, lambda/anonymous/method reference, record
+  conversion, extract class and parameter object, instance/static in place,
+  the edit primitives. `extract_method` with several results would reverse
+  the choice above: ask before building it. Left off: renaming a package,
+  encapsulating a collection.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
