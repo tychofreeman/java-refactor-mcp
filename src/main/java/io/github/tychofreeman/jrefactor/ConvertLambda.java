@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -131,6 +132,18 @@ final class ConvertLambda {
             yield anonymousOf(l, text);
           }
         };
+    NameCheck.require(
+        project,
+        Map.of(opened.file(), text),
+        Map.of(
+            opened.file(),
+            List.of(
+                new TextEdit(
+                    node.getStartPosition(),
+                    node.getStartPosition() + node.getLength(),
+                    replacement))),
+        NameCheck.meanings(List.of(node)),
+        "converting the " + what + " at line " + line);
     String after =
         text.substring(0, node.getStartPosition())
             + replacement

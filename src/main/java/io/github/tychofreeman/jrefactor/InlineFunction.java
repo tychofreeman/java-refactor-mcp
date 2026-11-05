@@ -153,6 +153,8 @@ final class InlineFunction {
       refuseOverridden(parsed, file, method, name);
     }
     List<String> nullable = new ArrayList<>();
+    // What the moved text means where it is written: the body, and each call's arguments.
+    List<ASTNode> fragments = new ArrayList<>(List.of(m.getBody()));
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -207,6 +209,12 @@ final class InlineFunction {
                   + " method, or qualify its uses in the body first.");
         }
         checkNesting(site, sites, name);
+        for (Object a : site.arguments()) {
+          fragments.add((ASTNode) a);
+        }
+        if (site.getExpression() != null) {
+          fragments.add(site.getExpression());
+        }
         Expression receiver = site.getExpression();
         if (instance
             && receiver != null
@@ -250,6 +258,7 @@ final class InlineFunction {
     }
     edits.computeIfAbsent(declaringFile, k -> new ArrayList<>()).add(removal(declaringText, m));
 
+    NameCheck.require(project, texts, edits, NameCheck.meanings(fragments), "inlining " + name);
     Stubs.Declared declaredStubs =
         MemberMove.gate(
             project,

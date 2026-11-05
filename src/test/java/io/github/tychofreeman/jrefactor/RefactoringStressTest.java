@@ -100,16 +100,24 @@ class RefactoringStressTest {
     List<String> failures = new ArrayList<>();
     int made = 0;
     Hierarchy hierarchy = Hierarchy.of(texts.values());
+    int skipped = 0;
+    int misses = 0;
     for (int tries = 0; made < calls && tries < calls * 200; tries++) {
       Path file = files.get(random.nextInt(files.size()));
-      // Each tool in turn, so a tool with few targets is still called.
-      String tool = TOOLS.get(made % TOOLS.size());
+      // Each tool in turn, so a tool with few targets is still called; one that finds none in
+      // 200 files gives its turn to the next.
+      String tool = TOOLS.get((made + skipped) % TOOLS.size());
       String text = texts.get(file);
       Map<String, Object> args =
           target(tool, project.relative(file), Jdt.parseSyntax(text), text, hierarchy, random);
       if (args == null) {
+        if (++misses >= 200) {
+          skipped++;
+          misses = 0;
+        }
         continue;
       }
+      misses = 0;
       made++;
       String what = tool + " " + args;
       Map<String, Integer> tally = outcomes.computeIfAbsent(tool, k -> new TreeMap<>());

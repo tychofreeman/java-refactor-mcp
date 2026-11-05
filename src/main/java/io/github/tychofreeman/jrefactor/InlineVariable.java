@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Block;
@@ -108,6 +109,12 @@ final class InlineVariable {
     }
     int declared = lineOf(text, stmt.getStartPosition());
     edits.add(removeLine(text, stmt));
+    NameCheck.require(
+        project,
+        Map.of(file, text),
+        Map.of(file, edits),
+        NameCheck.meanings(List.of(init)),
+        "inlining " + name);
     String updated = TextEdit.apply(text, edits, 0);
 
     Edits.Written written =
