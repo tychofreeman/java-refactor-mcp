@@ -697,3 +697,11 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   fragment's file (the units come from `Holding` or `Jdt.parseAll`, which know
   their paths), and `require` compares the mapped-back position in the file the
   declaration is in.
+
+## 2026-11-05: session report counts a bin/jrefactor call as by hand
+- Task: `docs/sessions/probe-test.md`.
+- Tool: a batch of 66 `create_file` steps sent through `bin/jrefactor @file` was
+  reported by `bin/session-report` as one Bash write by hand, though every step went
+  through the tools.
+- Idea: the report counts a Bash command that runs `bin/jrefactor` as tool steps
+  (its tool, or the batch's steps), as it does the MCP calls.
