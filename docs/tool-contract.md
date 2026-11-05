@@ -38,6 +38,17 @@ default (`docs/design.md`, Decisions).
   of a variable or expression, an array element, an integer `/` or `%`, a
   reference cast, a call or a new object.
 
+## Moved code keeps its meaning (`NameCheck`)
+
+Roadmap #77, 2026-11-04. `inline_function`, `inline_variable` and `convert_lambda`
+check, before writing, that each name in the text they write resolves to a
+declaration it resolved to where the text came from (the body, the arguments, the
+initializer, the lambda). A name the moved text declares itself, or one it did not
+have (a qualifier the tool added), is not checked. Refused: "inlining Cart.total
+would make count at line 11 of <file> mean the field count of an anonymous class,
+not what it meant where it was written: a closer declaration of that name hides it
+there. Rename one of them, or qualify it, first."
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:

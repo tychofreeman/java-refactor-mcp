@@ -1,0 +1,1 @@
+would make count at line 11 of com/example/Cart.java mean the field count of an anonymous class
