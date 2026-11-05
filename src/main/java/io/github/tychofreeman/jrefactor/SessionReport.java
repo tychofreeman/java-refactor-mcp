@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * A report on a session log ({@link SessionLog}), for an item's record in {@code docs/sessions/}:
@@ -116,6 +117,7 @@ final class SessionReport {
     int refactorings = 0;
     int edits = 0;
     int refusals = 0;
+    int cliCalls = 0;
     List<String> byHand = new ArrayList<>();
     List<String> afterRefusal = new ArrayList<>();
     List<String> large = new ArrayList<>();
@@ -162,6 +164,31 @@ final class SessionReport {
         }
         continue;
       }
+      CliCalls viaCli = tool.equals("Bash") ? cli(input.path("command").asString(""), cwd) : null;
+      if (viaCli != null && viaCli.calls() > 0) {
+        cliCalls += viaCli.calls();
+        if (result.lines().anyMatch(l -> l.startsWith(Refusal.PREFIX))) {
+          refusals++;
+          pending.add("bin/jrefactor (" + result.lines().findFirst().orElse("") + ")");
+          continue;
+        }
+        for (Map.Entry<String, JsonNode> step : viaCli.steps()) {
+          Tools.Kind kind = KINDS.get(step.getKey());
+          if (kind == Tools.Kind.REFACTORING) {
+            refactorings++;
+          } else if (kind == Tools.Kind.EDIT) {
+            edits++;
+          }
+          String big = largeStep(step.getKey(), step.getValue());
+          if (big != null) {
+            large.add(big);
+          }
+        }
+        if (!viaCli.steps().isEmpty()) {
+          pending.clear();
+        }
+        continue;
+      }
       Boolean writes = writes(tool, input, cwd);
       if (writes == null) {
         scratch.add(what);
@@ -190,6 +217,9 @@ final class SessionReport {
         .append(", ")
         .append(plural(edits, "edit step"))
         .append("\n");
+    if (cliCalls > 0) {
+      out.append("- bin/jrefactor calls (in Bash): ").append(cliCalls).append("\n");
+    }
     out.append("- refused by jrefactor: ").append(refusals).append("\n");
     list(out, "by hand", byHand);
     list(out, "refused, then done by hand", afterRefusal);
@@ -224,6 +254,109 @@ final class SessionReport {
       }
     } else {
       out.add(Map.entry(tool, input));
+    }
+    return out;
+  }
+
+  /** A run of bin/jrefactor in a shell command, and the words after it up to the next command. */
+  private static final Pattern CLI =
+      Pattern.compile("(?:^|[\\s;&|(])(?:\\S*/)?bin/jrefactor\\s+([^;&|\\n]*)");
+
+  /** The bin/jrefactor runs of a shell command: how many, and the steps the command shows. */
+  private record CliCalls(int calls, List<Map.Entry<String, JsonNode>> steps) {}
+
+  /**
+   * The runs of bin/jrefactor in {@code command}, each with its tool and arguments as written
+   * (key=value pairs, a JSON object, or an {@code @file} still readable from {@code cwd}); a run
+   * whose arguments the log cannot show counts as a call with no steps, and list and undo as calls
+   * that change nothing.
+   */
+  private static CliCalls cli(String command, String cwd) {
+    Matcher m = CLI.matcher(command);
+    int calls = 0;
+    List<Map.Entry<String, JsonNode>> out = new ArrayList<>();
+    while (m.find()) {
+      calls++;
+      List<String> words = words(m.group(1));
+      int i = 0;
+      while (i < words.size() && (words.get(i).equals("--rebuild") || words.get(i).equals("-C"))) {
+        i += words.get(i).equals("-C") ? 2 : 1;
+      }
+      if (i >= words.size()) {
+        continue;
+      }
+      String first = words.get(i);
+      JsonNode json = json(first, cwd);
+      String tool = json != null ? json.path("tool").asString("") : first;
+      if (json == null && i + 1 < words.size()) {
+        json = json(words.get(i + 1), cwd);
+      }
+      if (!KINDS.containsKey(tool)) {
+        continue;
+      }
+      if (json == null) {
+        ObjectNode args = JSON.createObjectNode();
+        for (String w : words.subList(i + 1, words.size())) {
+          int eq = w.indexOf('=');
+          if (eq > 0) {
+            args.put(w.substring(0, eq), w.substring(eq + 1));
+          }
+        }
+        json = args;
+      }
+      out.addAll(steps(tool, json));
+    }
+    return new CliCalls(calls, out);
+  }
+
+  /**
+   * {@code word} as a JSON object: inline, or an {@code @file} that can still be read; else null.
+   */
+  private static JsonNode json(String word, String cwd) {
+    try {
+      if (word.startsWith("{")) {
+        return JSON.readTree(word);
+      }
+      if (word.startsWith("@") && !word.contains("$")) {
+        Path file = Path.of(cwd).resolve(word.substring(1));
+        return Files.isRegularFile(file) ? JSON.readTree(Files.readString(file)) : null;
+      }
+    } catch (RuntimeException | java.io.IOException e) {
+      return null;
+    }
+    return null;
+  }
+
+  /** The words of {@code text} as a shell splits them, quotes removed; up to a redirect or pipe. */
+  private static List<String> words(String text) {
+    List<String> out = new ArrayList<>();
+    StringBuilder w = new StringBuilder();
+    char quote = 0;
+    boolean any = false;
+    for (char c : text.toCharArray()) {
+      if (quote != 0) {
+        if (c == quote) {
+          quote = 0;
+        } else {
+          w.append(c);
+        }
+      } else if (c == '\'' || c == '"') {
+        quote = c;
+        any = true;
+      } else if (Character.isWhitespace(c)) {
+        if (any || w.length() > 0) {
+          out.add(w.toString());
+        }
+        w.setLength(0);
+        any = false;
+      } else if (c == '>' || c == '<') {
+        break;
+      } else {
+        w.append(c);
+      }
+    }
+    if (any || w.length() > 0) {
+      out.add(w.toString());
     }
     return out;
   }
