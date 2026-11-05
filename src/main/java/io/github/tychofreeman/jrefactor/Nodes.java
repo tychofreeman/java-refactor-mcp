@@ -24,6 +24,20 @@ final class Nodes {
     return inner.getStartPosition() >= start && end(inner) <= start + outer.getLength();
   }
 
+  /**
+   * The 1-based columns where {@code nodes} start on the line at {@code lineStart}: "12 and 26".
+   */
+  static String columns(List<? extends ASTNode> nodes, int lineStart) {
+    List<String> out = new ArrayList<>();
+    for (ASTNode n : nodes) {
+      out.add(String.valueOf(n.getStartPosition() - lineStart + 1));
+    }
+    if (out.size() == 1) {
+      return out.get(0);
+    }
+    return String.join(", ", out.subList(0, out.size() - 1)) + " and " + out.get(out.size() - 1);
+  }
+
   /** The nodes of {@code type} in {@code root}, itself included, in source order. */
   static <T extends ASTNode> List<T> all(ASTNode root, Class<T> type) {
     List<T> out = new ArrayList<>();

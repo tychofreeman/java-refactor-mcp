@@ -1,1 +1,1 @@
-occurs 2 times
+occurs 2 times on line 5, at columns 12 and 26

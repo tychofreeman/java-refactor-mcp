@@ -144,11 +144,13 @@ final class ExtractVariable {
       }
       throw new Refusal(
           source
-              + " does not start at column "
-              + column
+              + (found.size() == 1 ? " starts at column " : " starts at columns ")
+              + Nodes.columns(found, lineStart)
               + " of line "
               + line
-              + ". Give its column.");
+              + ", not "
+              + column
+              + ". Pass one of them.");
     }
     if (found.size() > 1) {
       throw new Refusal(
@@ -157,7 +159,9 @@ final class ExtractVariable {
               + found.size()
               + " times on line "
               + line
-              + "; pass column, the 1-based column where the one you mean starts.");
+              + ", at columns "
+              + Nodes.columns(found, lineStart)
+              + "; pass column, the one where the one you mean starts.");
     }
     return found.get(0);
   }
