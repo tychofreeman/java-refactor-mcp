@@ -17,6 +17,7 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PostfixExpression;
@@ -91,6 +92,16 @@ final class ExtractStruct {
           Precondition.that(
               () -> !p.isVarargs(),
               () -> p.getName() + " is varargs, which a record cannot hold."));
+      String unusable = unusable(p.resolveBinding().getType());
+      Precondition.require(
+          Precondition.that(
+              () -> unusable == null,
+              () ->
+                  "the type of "
+                      + p.getName()
+                      + " "
+                      + unusable
+                      + ", which the new record in its own file cannot name. Leave it out."));
       components.add(
           Extract.typeName(p.resolveBinding().getType()) + " " + p.getName().getIdentifier());
     }
@@ -184,6 +195,40 @@ final class ExtractStruct {
             + project.relative(record)
             + ")",
         args.list("imports"));
+  }
+
+  /**
+   * Why {@code t} cannot be a component of a record in a file of its own, in words ("uses the type
+   * variable T", "uses the private type Outer.Shift"), or null when it can.
+   */
+  private static String unusable(ITypeBinding t) {
+    if (t == null) {
+      return "does not resolve";
+    }
+    if (t.isArray()) {
+      return unusable(t.getElementType());
+    }
+    if (t.isTypeVariable() || t.isCapture()) {
+      return "uses the type variable " + t.getName();
+    }
+    if (t.isWildcardType()) {
+      return t.getBound() == null ? null : unusable(t.getBound());
+    }
+    if (t.isLocal() || t.isAnonymous()) {
+      return "uses the local type " + t.getName();
+    }
+    for (ITypeBinding m = t; m != null; m = m.getDeclaringClass()) {
+      if (Modifier.isPrivate(m.getModifiers())) {
+        return "uses the private type " + Names.typeLabel(m);
+      }
+    }
+    for (ITypeBinding arg : t.getTypeArguments()) {
+      String why = unusable(arg);
+      if (why != null) {
+        return why;
+      }
+    }
+    return null;
   }
 
   /**

@@ -269,7 +269,9 @@ new record), `parameter` (the new parameter's name), `imports`.
   Shipping.cost(int, int, int) into Size size (com/example/Size.java) ...`.
 - Refused: parameters not next to each other (their arguments would run in
   another order; move them first); a body that assigns one; a family lambdas
-  implement; a varargs parameter; a body that already names the new parameter; a
+  implement; a varargs parameter; a type the record in its own file cannot name (a
+  type variable, a private or local type: "the type of shift uses the private type
+  SchurTransformer.ShiftInfo", roadmap #95); a body that already names the new parameter; a
   record file that exists.
 - Extract class (`fields` and `field` in place of `parameters` and `parameter`;
   `name` is the class): the named instance fields move into a new package-private
