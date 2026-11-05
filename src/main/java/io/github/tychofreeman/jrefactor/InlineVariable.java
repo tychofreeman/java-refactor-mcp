@@ -149,6 +149,17 @@ final class InlineVariable {
         }
       }
     }
+    if (found.isEmpty() && column != null && !named.isEmpty()) {
+      throw new Refusal(
+          name
+              + (named.size() == 1 ? " starts at column " : " starts at columns ")
+              + Nodes.columns(named, Lines.offsetOf(text, line))
+              + " of line "
+              + line
+              + ", not "
+              + column
+              + ". Pass one of them.");
+    }
     if (found.isEmpty()) {
       throw new Refusal(
           "no variable named "
@@ -163,7 +174,9 @@ final class InlineVariable {
           name
               + " means two different variables on line "
               + line
-              + "; pass column, the 1-based column of the one you mean.");
+              + ", at columns "
+              + Nodes.columns(named, Lines.offsetOf(text, line))
+              + "; pass column, the one of the one you mean.");
     }
     return found.get(0);
   }

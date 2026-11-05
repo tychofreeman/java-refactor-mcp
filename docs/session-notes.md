@@ -75,6 +75,8 @@ Each was chosen from options; the record named beside it has the options it beat
 ## Where code goes
 
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only.
+- A refusal about a column names the columns where the thing does start
+  (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
