@@ -1,8 +1,12 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /** The server's tools: each one's name, description, schema and what a call does. */
 final class Tools {
@@ -26,6 +30,29 @@ final class Tools {
       Set<String> args,
       Kind kind,
       Handler handler) {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    /** Every refactoring takes preserve_exceptions: its schema and its arguments gain it here. */
+    Def {
+      if (kind == Kind.REFACTORING) {
+        ObjectNode root = (ObjectNode) JSON.readTree(schema);
+        ObjectNode properties =
+            root.get("properties") instanceof ObjectNode p ? p : root.putObject("properties");
+        properties
+            .putObject(Exceptional.FLAG)
+            .put("type", "boolean")
+            .put(
+                "description",
+                "Optional: true to keep exceptional behavior (where an exception is thrown, or"
+                    + " whether one is): the tool keeps it or refuses. Without it, the changes it"
+                    + " makes to it are listed in a part of the result of their own.");
+        schema = root.toString();
+        Set<String> all = new HashSet<>(args);
+        all.add(Exceptional.FLAG);
+        args = Set.copyOf(all);
+      }
+    }
 
     /** Whether the tool changes nothing. */
     boolean readOnly() {
@@ -945,10 +972,16 @@ final class Tools {
     Journal.begin(project, def.name());
     Session session = project.session();
     boolean outer = session.editing;
+    boolean outerPreserve = session.preserveExceptions;
+    List<String> outerExceptional = session.exceptional;
     session.editing = def.kind() == Kind.EDIT;
+    session.preserveExceptions = def.kind() == Kind.REFACTORING && args.flag(Exceptional.FLAG);
+    session.exceptional = new ArrayList<>();
     try {
-      Outcome outcome = def.handler().run(project, args);
+      Outcome outcome = def.handler().run(project, args).withExceptional(session.exceptional);
       Journal.commit(project);
+      // A step's changes to exceptional behavior are its batch's too.
+      outerExceptional.addAll(session.exceptional);
       return outcome;
     } catch (Exception | Error e) {
       abort(project, e);
@@ -956,6 +989,8 @@ final class Tools {
     } finally {
       // A batch remembers that one of its steps was an edit, for its check at the end.
       session.editing = outer || def.kind() == Kind.EDIT;
+      session.preserveExceptions = outerPreserve;
+      session.exceptional = outerExceptional;
     }
   }
 

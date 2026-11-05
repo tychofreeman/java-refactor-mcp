@@ -81,6 +81,10 @@ final class Cli {
         Outcome outcome = Tools.call(def, project, values);
         Journal.save(project, stack);
         out.println(outcome.render());
+        if (!outcome.exceptional().isEmpty()) {
+          out.println();
+          out.println(outcome.renderExceptional());
+        }
         return 0;
       } finally {
         TypeCheck.save(project, count);

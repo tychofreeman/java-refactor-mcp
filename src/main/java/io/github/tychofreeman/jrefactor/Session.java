@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,14 @@ final class Session {
    * it leaves unresolved is its mistake, and a stub would hide it.
    */
   boolean editing;
+
+  /**
+   * Whether the running refactoring was asked to keep exceptional behavior (preserve_exceptions).
+   */
+  boolean preserveExceptions;
+
+  /** The changes to exceptional behavior the running call made and reports, in order. */
+  List<String> exceptional = new ArrayList<>();
 
   /** The library classes by simple name, built on first use; null until then. */
   Map<String, List<String>> libraries;
