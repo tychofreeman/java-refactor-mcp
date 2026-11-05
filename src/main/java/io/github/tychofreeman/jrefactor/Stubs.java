@@ -17,7 +17,6 @@ import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
@@ -710,12 +709,15 @@ final class Stubs {
     return method;
   }
 
+  /**
+   * Whether {@code node} is in a static member of the named type around it, the one a bare call's
+   * stub goes in: its member is looked for through anonymous classes and lambdas, whose own methods
+   * do not make the call an instance one.
+   */
   private static boolean inStaticContext(ASTNode node) {
+    AbstractTypeDeclaration owner = ancestorOrSelf(node, AbstractTypeDeclaration.class);
     for (ASTNode n = node.getParent(); n != null; n = n.getParent()) {
-      if (n instanceof AnonymousClassDeclaration) {
-        return false;
-      }
-      if (n instanceof BodyDeclaration d) {
+      if (n instanceof BodyDeclaration d && d.getParent() == owner) {
         return Modifier.isStatic(d.getModifiers());
       }
     }
