@@ -133,16 +133,18 @@ final class InlineFunction {
     int bodyEnd = bodyNode.getStartPosition() + bodyNode.getLength();
     List<ParamUse> uses = paramUsesIn(m.getBody(), paramBindings);
     checkNotAssigned(uses, unit, params, name);
-    // A parameter used only as a call's receiver dispatches on the argument's own type, so a
-    // subtype argument means the same there.
-    boolean[] receiverOnly = new boolean[params.size()];
+    // A parameter used only as a call's receiver dispatches on the argument's own type, and one
+    // passed on to a method with no overload resolves to it still, so a subtype argument means
+    // the same there.
+    boolean[] subtypeSafe = new boolean[params.size()];
     for (int i = 0; i < params.size(); i++) {
-      receiverOnly[i] = useCount(uses, i) > 0;
+      subtypeSafe[i] = useCount(uses, i) > 0;
     }
     for (ParamUse u : uses) {
       ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
-      if (!(n.getParent() instanceof MethodInvocation mi && mi.getExpression() == n)) {
-        receiverOnly[u.index()] = false;
+      if (!(n.getParent() instanceof MethodInvocation mi && mi.getExpression() == n)
+          && !soleOverloadArgument(n)) {
+        subtypeSafe[u.index()] = false;
       }
     }
     Set<String> bodyLocals = declaredIn(m.getBody());
@@ -267,7 +269,7 @@ final class InlineFunction {
                 fileText,
                 name,
                 declaringText,
-                receiverOnly));
+                subtypeSafe));
         calls++;
       }
       edits.computeIfAbsent(p, k -> new ArrayList<>()).addAll(list);
@@ -337,9 +339,9 @@ final class InlineFunction {
       String siteText,
       String name,
       String declaringText,
-      boolean[] receiverOnly) {
+      boolean[] subtypeSafe) {
     List<Expression> args = typed(site.arguments(), Expression.class);
-    checkArguments(args, params, useCount, name, receiverOnly);
+    checkArguments(args, params, useCount, name, subtypeSafe);
     checkTiming(args, uses, params, whole, siteText, name);
     checkOrder(args, uses, params, name);
     for (int i = 0; i < args.size(); i++) {
@@ -799,7 +801,7 @@ final class InlineFunction {
       List<SingleVariableDeclaration> params,
       int[] useCount,
       String name,
-      boolean[] receiverOnly) {
+      boolean[] subtypeSafe) {
     int effects = 0;
     for (int i = 0; i < args.size(); i++) {
       Expression arg = args.get(i);
@@ -820,7 +822,7 @@ final class InlineFunction {
           && !argType.isNullType()
           && paramType != null
           && !argType.isEqualTo(paramType)
-          && !(receiverOnly[i] && subtype(argType, paramType))) {
+          && !(subtypeSafe[i] && subtype(argType, paramType))) {
         throw new Refusal(
             "argument "
                 + param
@@ -1097,5 +1099,41 @@ final class InlineFunction {
       end = nl + 1;
     }
     return new TextEdit(start, end, "");
+  }
+
+  /**
+   * Whether {@code n} is an argument of a call that an argument of a subtype resolves to the same
+   * method: one neither generic nor varargs, and the only method of its name and number of
+   * parameters in its class and supertypes.
+   */
+  private static boolean soleOverloadArgument(ASTNode n) {
+    if (!(n.getParent() instanceof MethodInvocation mi) || !mi.arguments().contains(n)) {
+      return false;
+    }
+    IMethodBinding b = mi.resolveMethodBinding();
+    if (b == null || b.isVarargs() || b.isGenericMethod() || b.isParameterizedMethod()) {
+      return false;
+    }
+    IMethodBinding decl = b.getMethodDeclaration();
+    int same = 0;
+    List<ITypeBinding> todo = new ArrayList<>(List.of(decl.getDeclaringClass()));
+    Set<String> seen = new HashSet<>();
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      if (!seen.add(t.getKey())) {
+        continue;
+      }
+      for (IMethodBinding m : t.getDeclaredMethods()) {
+        if (m.getName().equals(decl.getName())
+            && m.getParameterTypes().length == decl.getParameterTypes().length) {
+          same++;
+        }
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(Arrays.asList(t.getInterfaces()));
+    }
+    return same == 1;
   }
 }

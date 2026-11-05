@@ -592,7 +592,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   it); two arguments with effects (they would run in another order); an argument whose
   type differs from its parameter's, where the call converts (`half(3)` for `double`), but
   for a reference subtype when every use of the parameter is a call's receiver (a `String`
-  for `CharSequence s` in `s.length()`, roadmap #78);
+  for `CharSequence s` in `s.length()`, roadmap #78), or an argument of a call of a method
+  with no overload of its arity in its class and supertypes, not generic or varargs (it
+  resolves to the same method; 2026-11-05);
   a body that names a member of its class when a call is in another class; an argument
   that calls, assigns, or reads a field or array element, when an effect of the body
   (a call, an assignment, an increment) comes before its use, or its use is inside a
