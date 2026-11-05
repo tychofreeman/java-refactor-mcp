@@ -136,7 +136,11 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   with the same parameter types, or member type, or whose file exists; a method
   name that the type or a supertype has for another method of as many parameters
   (an overload: a call of either could resolve to the other; probe
-  `rename_into_overload`, 2026-11-05); a field
+  `rename_into_overload`, 2026-11-05); a use that would mean another declaration after
+  the rename, checked once it is written and put back when refused: a renamed use that a
+  nested, enclosing or subclass declaration of the new name captures, or an existing use
+  of the new name that the renamed declaration captures (`rename_refused_nested_capture`,
+  2026-11-05); a field
   rename that a local of the new name would hide at an unqualified use; an
   edit that would add compile errors (rolled back, with the errors).
 

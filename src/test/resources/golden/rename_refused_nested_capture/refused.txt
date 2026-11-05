@@ -1,0 +1,1 @@
+would change what b at line 10 of com/example/Outer.java means

@@ -459,8 +459,15 @@ final class Signatures {
     return out;
   }
 
-  /** Whether {@code type} is declared in one of the project's source files. */
+  /**
+   * Whether {@code type} is declared in one of the project's source files: one parsed from source
+   * (the parse reads only the project's source roots), as a second top-level class of a file is, or
+   * one in the file its name implies.
+   */
   static boolean projects(SourceProject project, ITypeBinding type) {
+    if (type.getErasure().isFromSource()) {
+      return true;
+    }
     ITypeBinding top = type.getErasure();
     while (top.getDeclaringClass() != null) {
       top = top.getDeclaringClass();
