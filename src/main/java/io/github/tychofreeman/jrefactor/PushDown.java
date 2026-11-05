@@ -26,21 +26,13 @@ final class PushDown {
   private PushDown() {}
 
   static Outcome run(SourceProject project, String rel, String name) throws IOException {
-    int dot = name.lastIndexOf('.');
-    if (dot < 0) {
-      throw new Refusal(
-          "name is Sub.member, the class and the method or field to move, not " + name + ".");
-    }
-    String subName = name.substring(0, dot);
-    String member = name.substring(dot + 1);
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration sub = MemberMove.typeNamed(unit, subName);
-    if (sub == null || sub.resolveBinding() == null) {
-      throw new Refusal(
-          subName + " is not a top-level class of " + rel + " that resolves. Fix it first.");
-    }
+    Qualified q = Qualified.of(name, "Sub.member, the class and the method or field to move");
+    String subName = q.type();
+    String member = q.member();
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    TypeDeclaration sub = opened.topLevel(subName);
     BodyDeclaration moved = MemberMove.member(sub, subName, member, rel, "push_down");
     ITypeBinding subType = sub.resolveBinding();
     if (moved instanceof MethodDeclaration m) {

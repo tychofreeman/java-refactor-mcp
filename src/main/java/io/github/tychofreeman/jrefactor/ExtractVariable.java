@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +38,14 @@ final class ExtractVariable {
   static Outcome run(
       SourceProject project, String rel, int line, String expression, String name, Integer column)
       throws Exception {
-    if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-      throw new Refusal(name + " is not a valid Java name for the new variable.");
-    }
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
+    Precondition.require(
+        Precondition.that(
+            () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
+            () -> name + " is not a valid Java name for the new variable."));
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    CompilationUnit unit = opened.unit();
     int lineStart = lineStart(text, line);
     int lineEnd = text.indexOf('\n', lineStart) < 0 ? text.length() : text.indexOf('\n', lineStart);
 

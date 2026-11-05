@@ -55,41 +55,35 @@ final class InlineFunction {
   private record ParamUse(int start, int end, int index) {}
 
   static Outcome run(SourceProject project, String rel, String name) throws Exception {
-    int dot = name.lastIndexOf('.');
-    if (dot < 0) {
-      throw new Refusal(
-          "name is Type.method, the class and the static method to inline, not " + name + ".");
-    }
-    String typeName = name.substring(0, dot);
-    String member = name.substring(dot + 1);
-    Path file = project.javaFile(rel).toAbsolutePath().normalize();
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration type = MemberMove.typeNamed(unit, typeName);
-    if (type == null || type.resolveBinding() == null) {
-      throw new Refusal(typeName + " is not a top-level class of " + rel + " that resolves.");
-    }
+    Qualified q = Qualified.of(name, "Type.method, the class and the static method to inline");
+    String typeName = q.type();
+    String member = q.member();
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    CompilationUnit unit = opened.unit();
+    TypeDeclaration type = opened.topLevel(typeName);
     BodyDeclaration declared = MemberMove.member(type, typeName, member, rel, "inline_function");
-    if (!(declared instanceof MethodDeclaration m)) {
-      throw new Refusal(name + " is a field. inline_function inlines a method.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> declared instanceof MethodDeclaration,
+            () -> name + " is a field. inline_function inlines a method."));
+    MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
-    if (method == null) {
-      throw new Refusal(name + " does not resolve.");
-    }
-    if (!Modifier.isStatic(m.getModifiers())) {
-      throw new Refusal(
-          name
-              + " is not static. inline_function inlines static methods in this first version; an"
-              + " instance method needs its receiver.");
-    }
-    if (m.isVarargs() || !m.typeParameters().isEmpty()) {
-      throw new Refusal(
-          name + " is varargs or generic, which inline_function does not inline yet.");
-    }
-    if (m.getBody() == null) {
-      throw new Refusal(name + " has no body (abstract or native), so there is nothing to inline.");
-    }
+    Precondition.require(
+        Precondition.that(() -> method != null, () -> name + " does not resolve."),
+        Precondition.that(
+            () -> Modifier.isStatic(m.getModifiers()),
+            () ->
+                name
+                    + " is not static. inline_function inlines static methods in this first"
+                    + " version; an instance method needs its receiver."),
+        Precondition.that(
+            () -> !m.isVarargs() && m.typeParameters().isEmpty(),
+            () -> name + " is varargs or generic, which inline_function does not inline yet."),
+        Precondition.that(
+            () -> m.getBody() != null,
+            () -> name + " has no body (abstract or native), so there is nothing to inline."));
     List<Statement> statements = typed(m.getBody().statements(), Statement.class);
     Expression value = null;
     Statement body;
