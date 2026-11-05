@@ -307,7 +307,9 @@ final class InlineFunction {
       }
     }
     checkLocals(site, bodyLocals, name);
-    List<TextEdit> receiver = receiverEdits(site, thisUses, implicit, siteText, name);
+    List<TextEdit> receiver =
+        new ArrayList<>(receiverEdits(site, thisUses, implicit, siteText, name));
+    receiver.addAll(shadowEdits(site, whole, receiver, name.substring(0, name.indexOf('.'))));
     if (value != null) {
       if (site.getParent() instanceof ExpressionStatement) {
         throw new Refusal(
@@ -434,6 +436,41 @@ final class InlineFunction {
       edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), as + "."));
     }
     return edits;
+  }
+
+  /**
+   * Edits that qualify a bare field of the body that a local or parameter of the calling member
+   * hides: {@code this.count}, or {@code Type.COUNT} for a static. Inlined there, the bare name
+   * would mean the local. A name {@code done} already rewrites (the receiver's) is left to it.
+   */
+  private static List<TextEdit> shadowEdits(
+      MethodInvocation site, Block body, List<TextEdit> done, String typeName) {
+    ASTNode member = site;
+    while (member != null && !(member instanceof BodyDeclaration)) {
+      member = member.getParent();
+    }
+    if (member == null) {
+      return List.of();
+    }
+    Set<String> hidden = declaredIn(member);
+    List<TextEdit> out = new ArrayList<>();
+    body.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(SimpleName n) {
+            if (!n.isDeclaration()
+                && !qualified(n)
+                && hidden.contains(n.getIdentifier())
+                && n.resolveBinding() instanceof IVariableBinding v
+                && v.isField()
+                && done.stream().noneMatch(e -> e.start() == n.getStartPosition())) {
+              String prefix = Modifier.isStatic(v.getModifiers()) ? typeName + "." : "this.";
+              out.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), prefix));
+            }
+            return true;
+          }
+        });
+    return out;
   }
 
   /**
