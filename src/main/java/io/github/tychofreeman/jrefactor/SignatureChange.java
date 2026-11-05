@@ -32,6 +32,11 @@ final class SignatureChange {
     add(file, node.getStartPosition(), node.getStartPosition() + node.getLength(), text);
   }
 
+  /** Replaces {@code start}-{@code end} of {@code file} with {@code text}. */
+  void replaceRange(Signatures.Source file, int start, int end, String text) {
+    add(file, start, end, text);
+  }
+
   /** Inserts {@code text} at position {@code at} of {@code list}, which opens at {@code open}. */
   void insert(Signatures.Source file, List<?> list, int open, int bare, int at, String text) {
     if (list.isEmpty()) {

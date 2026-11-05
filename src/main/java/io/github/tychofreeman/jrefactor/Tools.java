@@ -418,6 +418,37 @@ final class Tools {
                   args.required("name"),
                   args.flag("value_semantics")));
 
+  static final Def EXTRACT_STRUCT =
+      new Def(
+          "extract_struct",
+          """
+          Introduce a parameter object: consecutive parameters of a method become one parameter of \
+          a new record, in a file beside the method's class: cost(int weight, int width, int \
+          height) with parameters [width, height], struct Size and parameter size becomes \
+          cost(int weight, Size size), each body reads size.width() for width, and every call \
+          passes new Size(3, 4). Every override and implementation changes too.
+          Refuses, saying why: parameters that are not next to each other, a body that assigns \
+          one, a method lambdas implement, a varargs parameter, a name in use, or a change that \
+          adds compile errors.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":       {"type": "string", "description": "Java file that declares the method, relative to the project root."},
+              "name":       {"type": "string", "description": "Type.member, or with (parameter types) for an overload."},
+              "parameters": {"type": "array", "items": {"type": "string"}, "description": "The parameters to group, next to each other."},
+              "struct":     {"type": "string", "description": "The new record's name."},
+              "parameter":  {"type": "string", "description": "The new parameter's name."},
+              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "name", "parameters", "struct", "parameter"]
+          }\
+          """,
+          Set.of("file", "name", "parameters", "struct", "parameter", "imports"),
+          Kind.REFACTORING,
+          ExtractStruct::run);
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -1009,6 +1040,7 @@ final class Tools {
           EXTRACT_SUPERTYPE,
           CONVERT_LAMBDA,
           CONVERT_TO_RECORD,
+          EXTRACT_STRUCT,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,

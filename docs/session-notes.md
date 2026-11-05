@@ -138,6 +138,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `equals`/`hashCode`/`toString` change behavior, so the class must define them or the
   model must pass `value_semantics=true` (this session's decision).
 
+- `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
+  `MethodFamily` and `SignatureChange.replaceRange`; extract class is not built.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the
