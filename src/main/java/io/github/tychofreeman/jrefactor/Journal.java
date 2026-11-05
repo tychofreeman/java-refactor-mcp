@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -183,13 +184,29 @@ final class Journal {
     }
   }
 
-  /** Writes {@code text} to {@code file}, creating its directories; null deletes the file. */
+  /**
+   * Writes {@code text} to {@code file}, creating its directories; null deletes the file, and the
+   * directories its deletion leaves empty, up to the first that is not: a refused or undone call
+   * leaves no empty directories behind.
+   */
   static void put(Path file, String text) throws IOException {
     if (text == null) {
       Files.deleteIfExists(file);
+      for (Path d = file.getParent(); d != null && empty(d); d = d.getParent()) {
+        Files.delete(d);
+      }
     } else {
       Files.createDirectories(file.getParent());
       Files.writeString(file, text);
+    }
+  }
+
+  private static boolean empty(Path dir) throws IOException {
+    if (!Files.isDirectory(dir)) {
+      return false;
+    }
+    try (Stream<Path> inside = Files.list(dir)) {
+      return inside.findAny().isEmpty();
     }
   }
 
