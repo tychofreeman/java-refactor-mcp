@@ -5,15 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -68,22 +63,22 @@ final class InlineVariable {
           "the declaration of " + name + " is not directly in a block. Put it in braces first.");
     }
     int after = stmt.getStartPosition() + stmt.getLength();
-    if (assigns(block, variable, after)) {
+    if (Effects.of(block).writes(variable, after)) {
       throw new Refusal(
           name
               + " is assigned after its declaration, so its uses do not all hold the initializer."
               + " Keep the variable, or remove the assignment first.");
     }
-    checkShadowed(block, readsIn(init), after, name, text);
-    for (IVariableBinding read : readsIn(init)) {
-      if (assigns(block, read, after)) {
+    checkShadowed(block, Effects.of(init).named(), after, name, text);
+    for (IVariableBinding read : Effects.of(init).named()) {
+      if (Effects.of(block).writes(read, after)) {
         throw new Refusal(
             read.getName()
                 + " is read by the initializer and assigned after the declaration, so inlining would"
                 + " change the value at each use. Keep the variable.");
       }
     }
-    if (ExtractVariable.hasEffect(init)) {
+    if (Effects.of(init).changes()) {
       throw new Refusal(
           "the initializer of "
               + name
@@ -217,60 +212,6 @@ final class InlineVariable {
           }
         });
     return uses;
-  }
-
-  /** Whether {@code block} assigns {@code binding} after offset {@code after}. */
-  private static boolean assigns(Block block, IBinding binding, int after) {
-    boolean[] found = {false};
-    block.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(Assignment node) {
-            check(node.getLeftHandSide(), node.getStartPosition());
-            return true;
-          }
-
-          @Override
-          public boolean visit(PrefixExpression node) {
-            if (node.getOperator() == PrefixExpression.Operator.INCREMENT
-                || node.getOperator() == PrefixExpression.Operator.DECREMENT) {
-              check(node.getOperand(), node.getStartPosition());
-            }
-            return true;
-          }
-
-          @Override
-          public boolean visit(PostfixExpression node) {
-            check(node.getOperand(), node.getStartPosition());
-            return true;
-          }
-
-          private void check(Expression target, int at) {
-            if (at >= after
-                && target instanceof Name n
-                && n.resolveBinding() != null
-                && n.resolveBinding().isEqualTo(binding)) {
-              found[0] = true;
-            }
-          }
-        });
-    return found[0];
-  }
-
-  /** The local and field variables that {@code init} reads. */
-  private static List<IVariableBinding> readsIn(Expression init) {
-    List<IVariableBinding> reads = new ArrayList<>();
-    init.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean visit(SimpleName node) {
-            if (node.resolveBinding() instanceof IVariableBinding v) {
-              reads.add(v.getVariableDeclaration());
-            }
-            return true;
-          }
-        });
-    return reads;
   }
 
   /** Refuses an initializer that reads a name a later declaration in the block hides at a use. */
