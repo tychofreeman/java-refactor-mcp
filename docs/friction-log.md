@@ -614,3 +614,4 @@ dropped argument) would need the evaluation order named first, which no tool giv
   again was refused as ambiguous, with a suggestion from another package.
 - Idea: in a batch, when a name a step needs was imported by the file before
   the batch, choose that import rather than refuse.
+  Done: `bin/jrefactor --rebuild` (roadmap #79, 2026-11-04).

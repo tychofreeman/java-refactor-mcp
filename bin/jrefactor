@@ -1,8 +1,9 @@
 #!/bin/sh
 # Runs one java-refactor-mcp tool from the command line (see Cli.USAGE, or run
 # it with no arguments), with the jar built from this checkout. Rebuilds the jar
-# first when it is missing or older than the last commit of its sources; the
-# build's output goes to stderr, so stdout carries only the result.
+# first when it is missing or older than the last commit of its sources, or
+# always with --rebuild; the build's output goes to stderr, so stdout carries
+# only the result.
 set -eu
 
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -28,7 +29,15 @@ stale() {
   fi
 }
 
-if stale; then
+# --rebuild (as the first argument) or JREFACTOR_REBUILD=1 builds from the working
+# tree first, uncommitted changes included: to probe server code before a commit.
+rebuild=${JREFACTOR_REBUILD:-}
+if [ "${1:-}" = "--rebuild" ]; then
+  rebuild=1
+  shift
+fi
+
+if [ -n "$rebuild" ] || stale; then
   echo "jrefactor: building $jar" >&2
   (cd "$here" && ./mvnw -q -B package -DskipTests) >&2 || {
     echo "jrefactor: build failed; run ./mvnw package in $here to see why" >&2
