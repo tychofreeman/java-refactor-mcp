@@ -10,6 +10,7 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TryStatement;
 
 /**
@@ -25,10 +26,22 @@ final class Behavior {
    * A piece of code an edit moves: {@code code} in the tree before the edit, inside {@code root},
    * landing at each of {@code landings} (nodes of the same tree, later in it, that it replaces or
    * goes before). No landing drops it; two or more duplicate it. {@code label} names it in a
-   * refusal ("the initializer of n"), {@code verb} names the edit ("inlining").
+   * refusal ("the initializer of n"), {@code verb} names the edit ("inlining"). {@code commute}
+   * says the caller was told that the order of two effects does not matter (move_statement's
+   * names_only).
    */
   record Move(
-      ASTNode code, ASTNode root, List<? extends ASTNode> landings, String label, String verb) {}
+      ASTNode code,
+      ASTNode root,
+      List<? extends ASTNode> landings,
+      String label,
+      String verb,
+      boolean commute) {
+
+    Move(ASTNode code, ASTNode root, List<? extends ASTNode> landings, String label, String verb) {
+      this(code, root, landings, label, verb, false);
+    }
+  }
 
   /**
    * Refuses a move that changes what the code does in its normal flow, or what a name in it means
@@ -73,6 +86,7 @@ final class Behavior {
     }
     for (ASTNode landing : m.landings()) {
       checkCrossed(project, m, code, throwing, landing);
+      checkExits(project, m, code, throwing, landing);
       checkPlace(project, m, code, throwing, landing);
     }
   }
@@ -114,7 +128,7 @@ final class Behavior {
       }
       String where = line(e.node());
       if (e.changes()) {
-        if (code.changes()) {
+        if (code.changes() && !m.commute()) {
           throw new Refusal(
               m.label()
                   + " calls, assigns or changes a variable, and "
@@ -139,7 +153,7 @@ final class Behavior {
                     + " puts it, so it would read another value.");
           }
         }
-        if (!code.fixed() && e.kind() != Effects.Kind.WRITE) {
+        if (!code.fixed() && e.kind() != Effects.Kind.WRITE && !m.commute()) {
           throw new Refusal(
               m.label()
                   + " reads state that "
@@ -163,6 +177,25 @@ final class Behavior {
                   + where
                   + ", which changes state: an exception would now come "
                   + (earlier ? "before" : "after")
+                  + " that change",
+              "leave it where it is");
+        }
+      } else if (e.kind() == Effects.Kind.MAY_THROW && code.changes()) {
+        if (!reported) {
+          reported = true;
+          Exceptional.change(
+              project,
+              e.node()
+                  + " ("
+                  + where
+                  + ") may throw, and "
+                  + m.verb()
+                  + " moves "
+                  + m.label()
+                  + ", which changes state, "
+                  + (earlier ? "before" : "after")
+                  + " it: an exception would now come "
+                  + (earlier ? "after" : "before")
                   + " that change",
               "leave it where it is");
         }
@@ -192,6 +225,76 @@ final class Behavior {
                 + ", and "
                 + m.verb()
                 + " moves the call past that read.");
+      }
+    }
+  }
+
+  /**
+   * An early exit (a return, or a break, continue or yield that leaves its statement) between where
+   * the code was and where it lands, or the code itself being one: what crosses it runs when it did
+   * not, or not when it did. An effect is refused; code that may throw, leaving the exit's guard,
+   * is refused, and gaining it is reported.
+   */
+  private static void checkExits(
+      SourceProject project, Move m, Effects code, List<ASTNode> throwing, ASTNode landing) {
+    boolean earlier = landing.getStartPosition() < m.code().getStartPosition();
+    int from = earlier ? landing.getStartPosition() : Nodes.end(m.code());
+    int to = earlier ? m.code().getStartPosition() : landing.getStartPosition();
+    for (Statement s : Nodes.all(m.root(), Statement.class)) {
+      boolean crossed =
+          s.getStartPosition() >= from
+              && Nodes.end(s) <= to
+              && !(s.getParent().getStartPosition() >= from && Nodes.end(s.getParent()) <= to);
+      if (!crossed) {
+        continue;
+      }
+      String exit = "the statement at " + line(s);
+      if (Effects.leaves(s)) {
+        if (code.changes()) {
+          throw new Refusal(
+              exit
+                  + " may leave the block early, and "
+                  + m.verb()
+                  + " moves "
+                  + m.label()
+                  + ", which changes state, past it: it would run when it did not, or not"
+                  + " when it did.");
+        }
+        if (!throwing.isEmpty()) {
+          if (earlier) {
+            throw new Refusal(
+                m.label()
+                    + " may throw ("
+                    + throwing.get(0)
+                    + "), and "
+                    + exit
+                    + ", which may leave the block early, guards it; "
+                    + m.verb()
+                    + " would move it above that guard. Keep it there.");
+          }
+          report(project, m, throwing, "after the early exit at " + line(s));
+        }
+      } else if (m.code() instanceof Statement own && Effects.leaves(own)) {
+        if (Effects.of(s).changes()) {
+          throw new Refusal(
+              m.label()
+                  + " may leave the block early, and "
+                  + m.verb()
+                  + " moves it past "
+                  + exit
+                  + ", which changes state: that would run when it did not, or not when it did.");
+        }
+        if (!Effects.of(s).mayThrow().isEmpty() && !earlier) {
+          throw new Refusal(
+              exit
+                  + " may throw ("
+                  + Effects.of(s).mayThrow().get(0)
+                  + "), and "
+                  + m.label()
+                  + ", which may leave the block early, guards it; "
+                  + m.verb()
+                  + " would move the guard below it.");
+        }
       }
     }
   }

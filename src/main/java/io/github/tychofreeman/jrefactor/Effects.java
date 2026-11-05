@@ -10,10 +10,12 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
@@ -23,20 +25,25 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.WhileStatement;
+import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
  * What code does when it runs, in its normal flow: each variable it names, declares or writes, each
@@ -409,5 +416,84 @@ final class Effects {
       }
     }
     return loop;
+  }
+
+  /**
+   * Whether {@code s} holds a return, or a yield, break or continue that leaves it, outside lambdas
+   * and classes declared in it.
+   */
+  static boolean leaves(Statement s) {
+    boolean[] found = {false};
+    s.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(LambdaExpression n) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(AnonymousClassDeclaration n) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(TypeDeclarationStatement n) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(ReturnStatement n) {
+            found[0] = true;
+            return false;
+          }
+
+          @Override
+          public boolean visit(YieldStatement n) {
+            found[0] |= !lands(n, null, false, s);
+            return false;
+          }
+
+          @Override
+          public boolean visit(BreakStatement n) {
+            found[0] |= !lands(n, n.getLabel(), true, s);
+            return false;
+          }
+
+          @Override
+          public boolean visit(ContinueStatement n) {
+            found[0] |= !lands(n, n.getLabel(), false, s);
+            return false;
+          }
+        });
+    return found[0];
+  }
+
+  /**
+   * Whether the jump {@code n} lands inside {@code s}: on a statement labeled {@code label}, or,
+   * unlabeled, on a loop (a switch too for a break; a switch expression for a yield).
+   */
+  private static boolean lands(Statement n, SimpleName label, boolean isBreak, Statement s) {
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      if (n instanceof YieldStatement) {
+        if (p instanceof SwitchExpression) {
+          return true;
+        }
+      } else if (label != null) {
+        if (p instanceof LabeledStatement l
+            && l.getLabel().getIdentifier().equals(label.getIdentifier())) {
+          return true;
+        }
+      } else if (p instanceof ForStatement
+          || p instanceof EnhancedForStatement
+          || p instanceof WhileStatement
+          || p instanceof DoStatement
+          || (isBreak && p instanceof SwitchStatement)) {
+        return true;
+      }
+      if (p == s) {
+        return false;
+      }
+    }
+    return false;
   }
 }

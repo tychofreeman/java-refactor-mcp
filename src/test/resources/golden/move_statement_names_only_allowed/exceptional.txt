@@ -1,2 +1,2 @@
 exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
-- the statement at line 5 may throw (print("x")) and now runs after the one at line 6, which changes state: an exception would now come after that change
+- the statement at line 6 may throw (print("y")), and swapping the statements at lines 5 and 6 moves it past line 5, which changes state: an exception would now come before that change

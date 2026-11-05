@@ -1,2 +1,2 @@
 exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
-- the statement at line 7 may throw (p.cost) and now runs after the one at line 8, which changes state: an exception would now come after that change
+- p.cost (line 7) may throw, and swapping the statements at lines 7 and 8 moves the statement at line 8, which changes state, before it: an exception would now come after that change
