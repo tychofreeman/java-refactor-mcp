@@ -1,0 +1,10 @@
+[
+  {
+    "tool": "replace_declaration",
+    "args": {"file": "com/example/A.java", "name": "A.made", "content": "long made;\n"}
+  },
+  {
+    "tool": "add_declaration",
+    "args": {"file": "com/example/A.java", "content": "Date when() {\n  return null;\n}\n"}
+  }
+]

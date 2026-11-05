@@ -863,7 +863,9 @@ final class Tools {
           are declared as such stubs, typed from the use; the result names them ("declared \
           stubs"). Write a test first and call what does not exist yet.
           Imports the members need are added, and those they no longer use are removed; when a \
-          name could be several classes, the call is refused with them, and imports chooses.\
+          name could be several classes, the one the file imported before, or the only one in a \
+          package it imports from, is taken and named; otherwise the call is refused with every \
+          such name, and imports chooses.\
           """,
           List.of(
               Arg.FILE,

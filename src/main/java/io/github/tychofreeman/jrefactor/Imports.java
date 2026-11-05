@@ -84,7 +84,18 @@ final class Imports {
     for (String name : chosen) {
       picks.put(simpleName(name), name);
     }
-    Set<String> add = toImport(project, missing, imported, picks);
+    // Evidence for an ambiguous name: what the file imported before this call or its batch, and
+    // the packages of the imports it keeps.
+    Set<String> prior = importsOf(before);
+    prior.addAll(importsOf(Journal.written(project).get(file)));
+    Set<String> packages = new TreeSet<>();
+    for (ImportDeclaration i : imported.values()) {
+      if (!remove.contains(i)) {
+        packages.add(packageOf(i.getName().getFullyQualifiedName()));
+      }
+    }
+    List<String> chose = new ArrayList<>();
+    Set<String> add = toImport(project, missing, imported, picks, prior, packages, chose);
     add.addAll(staticImports(unit, beforeUnit));
     // A name in a lambda is reported only once the names around it resolve, so look again with
     // the imports found so far, until no more are needed.
@@ -92,7 +103,7 @@ final class Imports {
     while (!found.isEmpty()) {
       Set<String> still = unresolved(Jdt.parse(project, file, withImports(after, unit, add)));
       still.removeAll(unresolvedBefore);
-      found = toImport(project, still, imported, picks);
+      found = toImport(project, still, imported, picks, prior, packages, chose);
       found.removeAll(add);
       add.addAll(found);
     }
@@ -163,6 +174,7 @@ final class Imports {
       }
       notes.add("removed import " + String.join(", ", names));
     }
+    notes.addAll(chose);
     String fixed = text.toString();
     return new Fixed(fixed, count(fixed) - count(after), notes);
   }
@@ -185,18 +197,25 @@ final class Imports {
   }
 
   /**
-   * The fully qualified names to import for the simple {@code names}: the one chosen, or the one
-   * class with that name. Names already imported, or that no class has, are left out; a name that
-   * several classes have is refused.
+   * The fully qualified names to import for the simple {@code names}: the one chosen, the one class
+   * with that name, or, of several, the one {@link #chosen} on the file's evidence ({@code prior},
+   * {@code packages}), said in {@code notes}. Names already imported, or that no class has, are
+   * left out; the names still ambiguous are refused together, a {@code java.*} candidate suggested
+   * first.
    */
   private static Set<String> toImport(
       SourceProject project,
       Set<String> names,
       Map<String, ImportDeclaration> imported,
-      Map<String, String> picks)
+      Map<String, String> picks,
+      Set<String> prior,
+      Set<String> packages,
+      List<String> notes)
       throws IOException {
     Set<String> add = new TreeSet<>();
-    for (String name : names) {
+    List<String> ambiguous = new ArrayList<>();
+    List<String> suggested = new ArrayList<>();
+    for (String name : new TreeSet<>(names)) {
       if (imported.containsKey(name)) {
         continue;
       }
@@ -206,23 +225,80 @@ final class Imports {
         if (candidates.isEmpty()) {
           continue;
         }
-        if (candidates.size() > 1) {
+        pick =
+            candidates.size() == 1 ? candidates.get(0) : chosen(candidates, prior, packages, notes);
+        if (pick == null) {
           String last = candidates.get(candidates.size() - 1);
-          throw new Refusal(
+          ambiguous.add(
               name
                   + " could be "
                   + String.join(", ", candidates.subList(0, candidates.size() - 1))
                   + " or "
-                  + last
-                  + ". Pass imports with the one to use, as imports: [\""
-                  + last
-                  + "\"].");
+                  + last);
+          suggested.add(
+              candidates.stream()
+                  .filter(c -> c.startsWith("java."))
+                  .findFirst()
+                  .orElse(candidates.get(0)));
+          continue;
         }
-        pick = candidates.get(0);
       }
       add.add(pick);
     }
+    if (!ambiguous.isEmpty()) {
+      throw new Refusal(
+          String.join("; ", ambiguous)
+              + ". Pass imports with the one to use for each, as imports: [\""
+              + String.join("\", \"", suggested)
+              + "\"].");
+    }
     return add;
+  }
+
+  /**
+   * Of several {@code candidates} for a name, the one the file imported before the call or batch
+   * ({@code prior}), else the only one in a package the file imports from ({@code packages}), with
+   * the reason added to {@code notes}; null when neither decides.
+   */
+  private static String chosen(
+      List<String> candidates, Set<String> prior, Set<String> packages, List<String> notes) {
+    String pick = candidates.stream().filter(prior::contains).findFirst().orElse(null);
+    String why = "the file imported it before";
+    if (pick == null) {
+      List<String> near = candidates.stream().filter(c -> packages.contains(packageOf(c))).toList();
+      if (near.size() != 1) {
+        return null;
+      }
+      pick = near.get(0);
+      why = "the file imports from " + packageOf(pick);
+    }
+    List<String> others = new ArrayList<>(candidates);
+    others.remove(pick);
+    String note = "chose " + pick + " over " + String.join(", ", others) + ": " + why;
+    if (!notes.contains(note)) {
+      notes.add(note);
+    }
+    return pick;
+  }
+
+  private static String packageOf(String qualified) {
+    int dot = qualified.lastIndexOf('.');
+    return dot < 0 ? "" : qualified.substring(0, dot);
+  }
+
+  /** The single-type imports of {@code text}, as fully qualified names. */
+  private static Set<String> importsOf(String text) {
+    Set<String> out = new TreeSet<>();
+    if (text == null) {
+      return out;
+    }
+    for (Object o : Jdt.parseSyntax(text).imports()) {
+      ImportDeclaration i = (ImportDeclaration) o;
+      if (!i.isStatic() && !i.isOnDemand()) {
+        out.add(i.getName().getFullyQualifiedName());
+      }
+    }
+    return out;
   }
 
   /**

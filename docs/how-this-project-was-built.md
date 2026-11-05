@@ -73,6 +73,10 @@ the arc, and a dated section in order when the decision needs its reasons.
     write guards (#185, roadmap #15 and #104); a relaxation of the read guard
     (#201), reverted once `inspect` gained `pattern` and `names` (#202-#204;
     below).
+12. **2026-11-05: the friction log triaged.** Every entry got a follow-up (#206),
+    and the open gaps became roadmap #105-#111, ordered by how many entries name
+    them; the first, ambiguous imports, was built next on the user's rule (roadmap
+    #105: choose on evidence, else refuse with every name).
 
 ## Why `replace_text` carried so much (2026-11-04)
 

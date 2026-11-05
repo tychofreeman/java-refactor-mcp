@@ -835,3 +835,13 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   routing the search through a tool, and `inspect | grep` saved nothing over grep.
 - Done: `inspect` `pattern` and `names` (#202, #203), and the guard refuses a grep
   of Java again (`docs/sessions/read-guard-to-inspect.md`); gorefactor the same.
+
+## 2026-11-05: replace_text matched old inside a line's indentation
+- Task: `docs/sessions/ambiguous-imports.md`, a line added to `add_declaration`'s
+  description.
+- Tool: `replace_text` with `old` written at 8 spaces matched a line at 10 (the 8
+  spaces are inside the 10), so the new lines went in at 8; Spotless then
+  re-indented the whole text block, and `ServerTest`'s runs-of-spaces check failed.
+  Three more calls to put the block back.
+- Idea: an `old` that starts with spaces matches only from the start of a line, or
+  the refusal says it matched inside the indentation; with roadmap #106.
