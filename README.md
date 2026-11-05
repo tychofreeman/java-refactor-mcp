@@ -67,6 +67,16 @@ claude mcp add jrefactor -- /path/to/java-refactor-mcp/bin/jrefactor-mcp /path/t
 In this repo, `.mcp.json` runs the launcher on the checkout itself. The server
 exits when its input ends, after answering the requests it has read.
 
+Two optional hooks hold a session to the tools, as gorefactor's do (its README,
+"Using the tools well"): `bin/read-guard` refuses reading a `.java` file other
+than through `inspect` (Read, or `sed`, `cat`, `head`, `tail`, `awk` or `grep`
+naming one), and `bin/write-guard`, an experiment, refuses changing one other
+than through the tools (Edit, Write, MultiEdit, or `sed -i`, `tee`, `cp`, `mv`,
+`rm` or a redirection into one). Files under `resources/` are allowed, and so
+are `./mvnw spotless:apply` and git. This repo's `.claude/settings.json` runs
+both; in another project, add them as PreToolUse hooks on `Read|Bash` and
+`Edit|Write|MultiEdit|Bash`, with the path to this checkout's `bin/`.
+
 ## Layout
 
 ```

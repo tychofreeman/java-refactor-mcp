@@ -26,6 +26,13 @@ fact here becomes wrong, fix or remove it in the same PR.
 - Development standards follow gorefactor's (`CLAUDE.md` there, and its
   `docs/how-this-project-was-built.md`), with the same goal: about 95% of coding
   through the tools, judged by token cost against editing by hand.
+- The read and write guards (2026-11-05, the user; roadmap #15 and #104, as
+  gorefactor's `cmd/read-guard` and `cmd/write-guard`): `bin/read-guard` and
+  `bin/write-guard` run `Guard` from the jar and deny reading a `.java` file
+  other than through `inspect`, and changing one other than through the tools,
+  outside `resources/`. The write guard is an experiment. With both on, a change
+  no tool makes is logged and asked of the user, not made by hand.
+  A session started before they existed has neither (hooks load at start).
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log
   (`bin/session-log`, `bin/session-report`) is the measured part.

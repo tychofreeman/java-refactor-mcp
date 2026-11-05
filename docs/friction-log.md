@@ -669,3 +669,11 @@ dropped argument) would need the evaluation order named first, which no tool giv
   for a CI job (its own entry, PR #182).
 - Done: `replace_text` with `append` (2026-11-05,
   `docs/sessions/replace-text-append.md`); this entry was appended with it.
+
+## 2026-11-05: the read and write guards (roadmap #15, #104)
+
+Nothing by hand. `Guard` was created empty with `create_file`, so the test written
+next got its stub (a test calling a method of a class nobody declares gets no stub
+for the method), then the stub replaced with `replace_declaration` and the rest
+added with `add_declaration`. The tokenizer is a port of gorefactor's
+`internal/hook.Commands`; a shared contract for hooks is not worth one yet.
