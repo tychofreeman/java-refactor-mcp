@@ -50,6 +50,7 @@ implemented or being implemented.
 | Edit | `create_file`, `replace_statements`, `insert_statements`, `add_declaration`, `replace_expression`, `replace_text`, `add_field`, `add_case`, `add_element`, `create_from_usage` |
 | Inspect | `inspect` (outline with complexity, nesting and side effects per method) |
 | Multi-step | `batch` |
+| Planned for Java (2026-11-04, roadmap #74-#85) | `move_type` to another package, `move_file`, a parameter or return type change, safe delete, extract interface and superclass, introduce constant, field and parameter, lambda / anonymous class / method reference, class to record, extract class and parameter object |
 
 Java names may differ where the Java language needs it (for example, `add_field`
 on a class, or `add_case` for a `switch`). Record any difference in this file:

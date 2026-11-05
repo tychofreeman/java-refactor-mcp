@@ -559,3 +559,13 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   it in `exceptional.txt`, and a case without that file must report nothing.
   `Effects.Kind.MAY_THROW` and `Effects.mayThrow()` are the syntax-only "may
   throw".
+
+- The missing refactorings are on the roadmap as #74-#85 (the user, 2026-11-04),
+  in the user's order: type to another package and `move_file`, a signature
+  type change, safe delete, widening (`inline_function`, `extract_method`,
+  type-parameter rename), extract interface/superclass, introduce
+  constant/field/parameter, lambda/anonymous/method reference, record
+  conversion, extract class and parameter object, instance/static in place,
+  edit primitives. `extract_method`'s several results reverses the user's
+  2026-11-03 choice, so ask before building it. Renaming a package and
+  encapsulating a collection were left off.

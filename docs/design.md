@@ -221,6 +221,18 @@ friction log; reorder when this repo's own log says otherwise.
 | 64 | 71 | One shape for a refactoring: a shared target resolver (file, line, name, column to a type, member, statement or expression, with one refusal wording) and preconditions as values a tool lists, not `if`/`throw` in each `run`, so a check can refuse or report | Done for twelve tools (2026-11-04), local session: `Opened`, `Qualified`, `Precondition`; `Rename`, `MoveType`, `Extract`, `Declarations` and the signature tools keep their own resolvers (follow-up); record in `docs/sessions/refactoring-shape.md` | Review of the abstractions, 2026-11-04 (the user agreed to put it ahead of #73): 14 tool classes repeat the parse-and-locate preamble (13 copy `project.javaFile(rel)` then `Jdt.parse`), resolve targets their own way (`MemberMove.typeNamed`, `ExtractVariable.find`, `InlineVariable.variableAt`, `Rename.Query`), and refuse inline (22 refusals each in `MoveMember` and `InlineFunction`). A cross-cutting flag has no one place to attach. No behavior change; the goldens are the check |
 | 65 | 72 | One effects analysis: what an expression or statement reads, writes and calls, in order, shared by the tools that move code; it replaces `ExtractVariable.hasEffect`, `MoveStatement.Effects`, `InlineVariable.assigns`/`readsIn` and `InlineFunction`'s argument checks, and has room for what may throw | Done (2026-11-04), local session: `Effects`; record in `docs/sessions/one-effects-analysis.md` | Same review: four partial models of effects, none knowing exceptions. #73 needs a fifth unless they become one. No behavior change; the goldens and the effect-order probes are the check |
 | 66 | 73 | `preserve_exceptions` on every refactoring, and a separate section in the result naming each change to exceptional behavior (a dereference moved past a guard, a call declaring a checked exception moved, an expression moved into or out of a `try`) | Done (2026-11-04), local session: the flag, the result's own part, and three tools' first cases; record in `docs/sessions/preserve-exceptions.md` | The user's decision, 2026-11-04 (Decisions, and open question 0: one flag, a separate field). First case: `move_member`'s null receiver |
+| 67 | 74 | `move_type` moves a top-level type to another package (an option, `package`): its file moves, its package line and every reference and import follow, and members used across the new package boundary are widened or refused | Planned, local session, first of the 2026-11-04 list | Friction log: "No tool moves a type or…", golden and fixture moves by hand. The user's order of 2026-11-04 (recommendation 1). An option on `move_type`, not a tool, unless its design note finds otherwise |
+| 68 | 75 | `move_file`: move or copy a file that is not Java (a fixture, a doc, a golden case directory), as gorefactor's; and delete a directory | Planned, after #74 | Friction log: `move_file` idea; "no tool moves golden directories"; `rm` of directories by hand |
+| 69 | 76 | Change a method's parameter or return type, every override and call following (gorefactor's `change_parameter_type`; Java adds the return type) | Planned | Recommendation 2 (2026-11-04): #125 changed `appendTo`'s return type with an `add` to `addAll` edit at each of four callers. Extends the signature tools; `change_type` does fields only |
+| 70 | 77 | Safe delete: delete a member or type that nothing uses, refused with the uses when something does (gorefactor's `remove_dead_code`) | Planned | Recommendation 3 (2026-11-04). Perhaps an option on `replace_declaration`, which deletes with empty content and refuses a used declaration through the gate |
+| 71 | 78 | Widen existing tools: `inline_function` for instance methods and bodies of several statements; `extract_method` with several results; `rename` of type parameters | Planned | The user's list of 2026-11-04. `extract_method`'s refusal of two results was the user's choice of 2026-11-03 (over returning a record): widening it needs the user's choice again. `rename` refuses type parameters (stress runs) |
+| 72 | 79 | Extract interface and extract superclass: a new type from members of a class, the class implementing or extending it | Planned | The user's list of 2026-11-04; `pull_up` needs the supertype to exist |
+| 73 | 80 | Introduce constant, field and parameter: `extract_variable`'s expression as a `static final` field, an instance field, or a new parameter of the enclosing method (callers pass the expression) | Planned | The user's list of 2026-11-04. Perhaps options on `extract_variable`; the parameter form composes with `add_parameter` |
+| 74 | 81 | Lambda, anonymous class and method reference, each to the others where the meaning is kept | Planned | The user's list of 2026-11-04; `inline_function` and `move_member` refuse method references and ask for a lambda first |
+| 75 | 82 | Convert a class to a record (final fields set once by the constructor, accessors renamed or kept) | Planned | The user's list of 2026-11-04 |
+| 76 | 83 | Extract class and introduce parameter object (gorefactor's `extract_struct`): fields or parameters grouped into a new type, uses following | Planned | The user's list of 2026-11-04; on the planned list in `docs/tool-contract.md` |
+| 77 | 84 | Instance method to static and back in place (gorefactor's `method_to_function`, `function_to_method`) | Planned | The user's list of 2026-11-04; `move_member` does it only while moving to another class |
+| 78 | 85 | Edit primitives: `replace_expression`, `insert_statements`, `replace_statements`, `add_case`, `add_element` (gorefactor's names) | Planned, last of the 2026-11-04 list | The user's list of 2026-11-04; option A of the ten-tools decision (`docs/how-this-project-was-built.md`) |
 
 ### Split between sessions (2026-11-03)
 
@@ -242,6 +254,18 @@ other five left to the cloud session. Each row's status says which.
   by the cloud session before the split was merged.)
 
 The two sets share no class.
+
+### The 2026-11-04 list
+
+The user asked (2026-11-04) for the missing refactorings in this order: the
+three recommended from the friction log (#74 with #75, #76, #77), then the
+widening of existing tools (#78), extract interface and superclass (#79),
+introduce constant, field and parameter (#80), lambda, anonymous class and
+method reference (#81), record conversion (#82), extract class and parameter
+object (#83), instance to static and back (#84), and the edit primitives
+(#85). One PR per item; each item's design note decides whether it is a tool
+or an option on one, as CLAUDE.md prefers. Not on the list, left for the
+friction log to raise: renaming a package, encapsulating a collection.
 
 ### Why this order
 
