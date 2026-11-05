@@ -171,6 +171,13 @@ Each was chosen from options; the record named beside it has the options it beat
   members also needs probes for evaluation order and name capture: probes found
   seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`).
   The refusals that followed are conservative, and compare first uses only.
+- A/B runs use gorefactor's harness from its checkout: `go run ./cmd/refactor-ab
+  -model sonnet -arms mcp,manual -runs 4 -tasks <this repo>/eval-tasks/warehouse.json
+  -claude-md <this repo>/eval-tasks/claude-md -mcp <this repo>/eval-tasks/jrefactor-ab-server
+  -out <this repo>/eval-runs/<name>` (about $3.40 for 32 runs). Do not change
+  `src/main` during a run: the wrapper rebuilds the jar from this checkout. The
+  tools appear as `mcp__gorefactor__*` there. The fixture's checks run Maven
+  offline (`-o`), so `~/.m2` must hold JUnit 6.1.3 and the plugins.
 - Measure call costs with `GateCostTest` (`-Djrefactor.cost.root`,
   `-Djrefactor.cost.call`), not from old figures.
 
