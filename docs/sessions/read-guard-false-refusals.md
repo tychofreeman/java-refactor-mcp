@@ -33,5 +33,7 @@ All Java through jrefactor (`replace_text`, `add_declaration`, `replace_declarat
 
 ## Follow-ups
 
-- gorefactor's guard (`cmd/read-guard`) has the same `grep -c` false refusal; the
-  rule is shared, so the change belongs there too.
+- gorefactor's guard got the same change (its #559), the same day.
+- Reverted the same day in both guards, by the user's decision: `inspect` gained
+  `pattern` and `names` (#202, #203; gorefactor's #560) and a grep of source is
+  refused again (`docs/sessions/read-guard-to-inspect.md`).
