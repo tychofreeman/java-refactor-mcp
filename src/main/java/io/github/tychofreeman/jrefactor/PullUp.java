@@ -101,6 +101,8 @@ final class PullUp {
         .computeIfAbsent(target, k -> new ArrayList<>())
         .addAll(MemberMove.appendTo(targetText, superDecl, movedText));
 
+    NameCheck.require(
+        project, texts, edits, NameCheck.meanings(List.of(moved)), "pulling " + name + " up");
     Stubs.Declared declared =
         MemberMove.gate(
             project,

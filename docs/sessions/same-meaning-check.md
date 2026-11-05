@@ -44,7 +44,26 @@
   (`function_to_method`) used up the tries. A tool that finds no target in 200
   files now gives its turn to the next (`RefactoringStressTest`).
 
+## Second PR (branch same-meaning-more)
+
+- `pull_up`, `push_down` and `move_member` call it too. Golden
+  `push_down_refused_captured`: a method reading `Sub.count`, pushed into a `Child`
+  that declares its own `count`, compiled and read the other field.
+- `NameCheck` reads a file its `texts` map does not hold (`pull_up`'s target).
+- `move_member` gave four false positives at first: its rewritten calls are written
+  text too, and their arguments mean the caller's names; the call sites' arguments
+  and receivers are fragments now, as in `inline_function`.
+- Two tool bugs on the way: a refused batch left the empty directories its
+  `create_file` steps made (friction log); `move_file` of a directory with no files
+  failed reading its first file for the result text (fixed).
+
+- Stress run on Commons Math (seed 11, 200 calls): no failures, but three
+  `push_down` refusals by the check were false positives: a type the target file
+  did not import yet (a recovered binding, before the import fix that runs after)
+  and a class's type variable moved into a subclass. The check now skips recovered
+  bindings and type variables; the gate judges both. The three cases are now refused
+  later for their real reasons (an ambiguous import, a compile error).
+
 ## Follow-ups
 
-- `extract_method`, `move_member`, `pull_up`, `push_down` and `move_type` call it
-  too.
+- `extract_method` and `move_type` call it too.

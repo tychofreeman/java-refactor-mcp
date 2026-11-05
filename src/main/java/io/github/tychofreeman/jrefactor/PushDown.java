@@ -81,6 +81,8 @@ final class PushDown {
               + " into.");
     }
 
+    NameCheck.require(
+        project, texts, edits, NameCheck.meanings(List.of(moved)), "pushing " + name + " down");
     Stubs.Declared declared =
         MemberMove.gate(
             project,

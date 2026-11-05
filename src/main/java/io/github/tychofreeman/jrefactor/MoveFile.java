@@ -77,7 +77,7 @@ final class MoveFile {
 
     String verb = delete ? "deleted" : copy ? "copied" : "moved";
     String result = verb + " " + rel + (dest == null ? "" : " to " + project.relative(dest));
-    if (!from.equals(files.get(0)) || files.size() > 1) {
+    if (files.isEmpty() || !from.equals(files.get(0)) || files.size() > 1) {
       result += " (" + files.size() + (files.size() == 1 ? " file)" : " files)");
     }
     return Outcome.of(result);

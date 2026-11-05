@@ -1,5 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -56,12 +58,14 @@ final class NameCheck {
       Map<Path, List<TextEdit>> edits,
       Map<String, Set<String>> before,
       String what)
-      throws Exception {
+      throws IOException {
     for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String text = texts.get(e.getKey());
-      if (text == null || e.getKey().toString().endsWith(".java") == false) {
+      if (!e.getKey().toString().endsWith(".java")
+          || (!texts.containsKey(e.getKey()) && !Files.isRegularFile(e.getKey()))) {
         continue;
       }
+      String text =
+          texts.containsKey(e.getKey()) ? texts.get(e.getKey()) : Files.readString(e.getKey());
       List<TextEdit> sorted = new ArrayList<>(e.getValue());
       sorted.sort(Comparator.comparingInt(TextEdit::start));
       List<int[]> written = new ArrayList<>();
@@ -89,7 +93,13 @@ final class NameCheck {
               IBinding b = n.resolveBinding();
               String key = key(b);
               Set<String> was = before.get(n.getIdentifier());
-              if (key == null || was == null || was.contains(key)) {
+              // A recovered binding is a name the edit's file has not imported yet (the import fix
+              // runs after), and a type variable belongs to its class: the gate judges both.
+              if (key == null
+                  || was == null
+                  || was.contains(key)
+                  || b.isRecovered()
+                  || (b instanceof ITypeBinding t && t.isTypeVariable())) {
                 return true;
               }
               ASTNode declared = unit.findDeclaringNode(b);
