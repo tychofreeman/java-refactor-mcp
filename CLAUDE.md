@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Instructions for Claude Code in this repository. Read this first.
+Instructions for Claude Code in this repository.
 
 ## What this repo is
 
@@ -16,14 +16,11 @@ helps Claude do that during real feature work, and by whether working through
 the tools costs fewer tokens than editing by hand. Once the server runs, aim for
 about 95% of coding through the tools, this project's own code included.
 
-Current state: early. The MCP server (`Server`, STDIO; tools defined in
-`Tools`) exposes `inspect` (read-only), `rename` (`Rename`), `move_type` (`MoveType`), and four edits:
-`create_file`, `replace_text`, `add_declaration`, `replace_declaration`;
-`add_parameter`, `remove_parameter`, `move_parameter` (`Signatures`);
-`extract_method` (`Extract`); `batch` and `undo`. Every change goes through the type-check gate (`Gate`, `TypeCheck`),
-which first declares stubs for what the change uses and nothing declares (`Stubs`),
-and is recorded in `Journal`. Check the roadmap and open questions in
-`docs/design.md` before starting work.
+The MCP server is `Server` (STDIO); the tools are defined in `Tools.ALL`. Every
+change goes through the type-check gate (`Gate`, `TypeCheck`), which first
+declares stubs for what an edit uses and nothing declares (`Stubs`), and is
+recorded in `Journal`. Check the roadmap in `docs/design.md` before starting
+work.
 
 ## How we work
 
@@ -43,14 +40,9 @@ pass, not a refactoring. If you find you need one, undo the test (or set it
 aside), refactor while green, and add the test again.
 
 One branch and one PR per item, never commits to `main`. Merge your own PR
-once CI is green (see the session notes). When
-the user says "do X, then Y", do them in order, each in its own PR. Before
-pushing, run what CI runs (`.github/workflows/ci.yml`):
-
-    ./mvnw verify   # compiles with -Xlint:all -Werror, runs the tests, checks Spotless
-
-Hand edits are not formatted, so run `./mvnw spotless:apply` first if `verify`
-reports formatting.
+once CI is green (see the session notes). When the user says "do X, then Y",
+do them in order, each in its own PR. Before pushing, run what CI runs,
+`./mvnw verify` (see "Build and test").
 
 Each PR also updates the docs it affects (see "Documentation to keep in sync"):
 mark a roadmap item *Done* when it is, and fix text that still calls finished
@@ -81,41 +73,29 @@ claude.ai Project) do not reach sessions on other machines.
 
 @docs/session-notes.md
 
-When the user asks "what's next?", the `whats-next` skill
-(`.claude/skills/whats-next`) offers the next items, and keeps a record of the
-chosen one in `docs/sessions/<branch>.md`: the plan before code, notes of
-hand edits, refusals, reads and large writes, and the report of the session
-log. The hook `bin/session-log` (`.claude/settings.json`) logs every tool call
-to `.claude/session-log/<branch>.jsonl`; `bin/session-report` reports on it.
+When the user asks "what's next?", use the `whats-next` skill: it keeps a
+record of the chosen item in `docs/sessions/<branch>.md`, and
+`bin/session-report` reports the branch's tool calls from the session log.
 
 ## Using java-refactor-mcp
 
-`.mcp.json` starts `bin/jrefactor-mcp`, which serves this checkout with the
-server built from it, rebuilding the jar first when `pom.xml` or `src/main`
-changed. Claude Code asks once to approve the project's server. A session's
-tools are the build from when the server started: after changing the server,
-test the change with `./mvnw test`, not by calling the tool. To use it once
-merged, check out `main` and reconnect the server (`/mcp`, jrefactor,
-Reconnect); no restart of Claude Code is needed. A reconnect serves whatever is
-checked out, a branch's build included.
+`.mcp.json` starts `bin/jrefactor-mcp`, which serves this checkout, rebuilding
+the jar first when `pom.xml` or `src/main` changed. A session's tools are the
+build from when the server started: test a server change with `./mvnw test`,
+not by calling the tool, and after merging, check out `main` and reconnect the
+server (`/mcp`, jrefactor, Reconnect).
 
-1. **Load every schema at once:** `select:mcp__jrefactor__inspect,mcp__jrefactor__rename,mcp__jrefactor__move_type,mcp__jrefactor__create_file,mcp__jrefactor__replace_text,mcp__jrefactor__add_declaration,mcp__jrefactor__replace_declaration,mcp__jrefactor__add_parameter,mcp__jrefactor__remove_parameter,mcp__jrefactor__move_parameter,mcp__jrefactor__extract_method,mcp__jrefactor__batch,mcp__jrefactor__undo`.
-   After a restart or reconnect the client may list descriptions from before it; the server's
-   own are current (it accepts the arguments they name).
+1. **Load every schema at once:** ToolSearch `+jrefactor` with `max_results`
+   50. After a reconnect the client may list older descriptions; the server's
+   own are current.
 2. **Read Java through `inspect`:** the file without method bodies, then the
    line ranges you will change. Each line is the number, two spaces, then the
-   code: do not count those two spaces as indentation in `old`. Avoid Read or `cat` of whole `.java` files;
-   each result is sent again on every later turn.
-3. **Rename with `rename`** (locals, parameters, fields, methods, types), by
-   `file`, `line` and `name`; it changes every reference in the project,
-   Javadoc and a type's file included, and type-checks. When the line has two
-   meanings, `name` picks one: `Counter.count` or `local count`. **Change parameters with
-   `add_parameter`, `remove_parameter`, `move_parameter`:** every override,
-   implementation and call follows, in one call. **Move statements into a new
-   method with `extract_method`** (`start_line`, `end_line`, `name`):
-   parameters, the result and `throws` are worked out for you. **Move a
-   static nested type to its own file with `move_type`** (`file`, `name`:
-   `Outer.Inner`): references, qualifications and widened members follow.
+   code: do not count those two spaces as indentation in `old`. Avoid Read or
+   `cat` of whole `.java` files; each result is sent again on every later turn.
+3. **Prefer a refactoring to an edit.** Renames, signature changes, extract and
+   inline, and the moves carry a change to every use and type-check it; each
+   tool's description says what follows. When a line has two meanings, `name`
+   picks one: `Counter.count` or `local count`.
 4. **Write through the edits:** `create_file` for new files (tests, fixtures),
    `add_declaration` for new members (by `type`, `after`/`before`),
    `replace_declaration` for a whole method, field or type by name (empty
@@ -136,37 +116,27 @@ same arguments and results: `bin/jrefactor list`, `bin/jrefactor rename
 file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
 `-` for stdin), and `content_file=path` (any `key_file`) for long text.
 Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
-call, also one from an earlier run (the stack is kept in
-`~/.cache/jrefactor`, with the classpath and the last type check). A read
-takes about 0.3 s, an edit about 1.2 s on this repo; send several steps as
-one `batch`. The jar is rebuilt when a
-commit changes `pom.xml` or `src/main`, not for uncommitted edits.
-
-Edits the tools cannot make are by hand: log each in `docs/friction-log.md`,
-naming the tool or composition that would have done it.
+call, also one from an earlier run. Send several steps as one `batch`. The jar
+is rebuilt when a commit changes `pom.xml` or `src/main`, not for uncommitted
+edits.
 
 ## Build and test
 
 ```sh
 ./mvnw verify          # compile (-Xlint:all -Werror), run unit and golden tests, check formatting
 ./mvnw -q test         # quieter, tests only
-./mvnw spotless:apply  # format sources (google-java-format, GOOGLE style); run before committing
+./mvnw spotless:apply  # format sources (google-java-format); hand edits are not formatted
 ```
 
 `./mvnw package` (and `verify`) also builds `target/java-refactor-mcp.jar`, the
-server: `java -jar target/java-refactor-mcp.jar <project root>`.
-
-CI (`.github/workflows/ci.yml`) runs `./mvnw verify` on JDK 21 and `./mvnw spotless:check`
-on every push to `main` and every pull request. Dependabot (`.github/dependabot.yml`)
-opens weekly PRs for Maven dependencies and GitHub Actions versions.
+server: `java -jar target/java-refactor-mcp.jar <project root>`. CI runs
+`./mvnw verify` on JDK 21 and `spotless:check` on every push to `main` and every
+pull request.
 
 - JDK 21 (a full JDK with `javac`, not only the JRE). Maven comes from the
-  wrapper: `./mvnw` downloads the Maven pinned in `.mvn/wrapper/maven-wrapper.properties`
-  (3.9.16, with its SHA-256) into `~/.m2/wrapper` on first run. Set `JAVA_HOME`
-  to the JDK 21 if the default `java` is another version.
-- Pinned versions (checked against Maven Central on 2026-11-02): JDT Core 3.47.0,
-  MCP SDK 2.1.0, JUnit 6.1.3 (Dependabot, merged 2026-11-02). Bump them in
-  `pom.xml` and note the change in `docs/session-notes.md`.
+  wrapper (`.mvn/wrapper/maven-wrapper.properties`). Set `JAVA_HOME` to the
+  JDK 21 if the default `java` is another version.
+- Versions are pinned in `pom.xml`; note a bump in `docs/session-notes.md`.
 - In the agent sandbox, Maven does not use the egress proxy by itself, so it fails
   to resolve `repo.maven.apache.org` by name. Fix: a `~/.m2/settings.xml` with an
   active `https` proxy at the host and port in `$HTTPS_PROXY` (the port changes
