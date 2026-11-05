@@ -1,12 +1,8 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -29,40 +25,14 @@ final class InvertIf {
   private InvertIf() {}
 
   static Outcome run(SourceProject project, String rel, Integer line) throws Exception {
-    if (line == null) {
-      throw new Refusal("invert_if needs line, the 1-based line the if starts on.");
-    }
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    List<IfStatement> found = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean preVisit2(ASTNode node) {
-            if (node instanceof IfStatement s && Lines.number(text, s.getStartPosition()) == line) {
-              found.add(s);
-            }
-            return true;
-          }
-        });
-    if (found.isEmpty()) {
-      throw new Refusal(
-          "no if statement starts on line "
-              + line
-              + " of "
-              + rel
-              + ". Pass the line where the if starts.");
-    }
-    if (found.size() > 1) {
-      throw new Refusal(
-          "several if statements start on line "
-              + line
-              + " of "
-              + rel
-              + ". Put each on a line of its own first.");
-    }
-    IfStatement ifs = found.get(0);
+    Precondition.require(
+        Precondition.that(
+            () -> line != null, () -> "invert_if needs line, the 1-based line the if starts on."));
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    IfStatement ifs =
+        opened.startingOn(line, IfStatement.class, s -> true, "if statement", "", "the if");
     Statement elseBranch = ifs.getElseStatement();
     if (elseBranch == null) {
       throw new Refusal(

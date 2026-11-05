@@ -44,62 +44,57 @@ final class MoveMember {
   private MoveMember() {}
 
   static Outcome run(SourceProject project, String rel, String name, String to) throws Exception {
-    if (to == null || to.isBlank()) {
-      throw new Refusal(
-          "move_member needs to, the top-level type of the same file to move the method to.");
-    }
-    int dot = name.indexOf('.');
-    if (dot < 0) {
-      throw new Refusal("name is Type.method, the class and the method to move, not " + name + ".");
-    }
-    String typeName = name.substring(0, dot);
-    String member = name.substring(dot + 1);
-    Path file = project.javaFile(rel).toAbsolutePath().normalize();
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration source = MemberMove.typeNamed(unit, typeName);
-    if (source == null || source.resolveBinding() == null) {
-      throw new Refusal(typeName + " is not a top-level class of " + rel + " that resolves.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> to != null && !to.isBlank(),
+            () ->
+                "move_member needs to, the top-level type of the same file to move the method to."));
+    Qualified q = Qualified.of(name, "Type.method, the class and the method to move");
+    String typeName = q.type();
+    String member = q.member();
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    CompilationUnit unit = opened.unit();
+    TypeDeclaration source = opened.topLevel(typeName);
     TypeDeclaration target = MemberMove.typeNamed(unit, to);
-    if (target == null || target.resolveBinding() == null || to.equals(typeName)) {
-      throw new Refusal(
-          to
-              + " is not another top-level type of "
-              + rel
-              + " that resolves. move_member moves a method to a type in the same file.");
-    }
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move_member");
-    if (!(declared instanceof MethodDeclaration m)) {
-      throw new Refusal(
-          name
-              + " is a field. move_member moves a method; push_down or pull_up move a field to a"
-              + " subtype or supertype.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> target != null && target.resolveBinding() != null && !to.equals(typeName),
+            () ->
+                to
+                    + " is not another top-level type of "
+                    + rel
+                    + " that resolves. move_member moves a method to a type in the same file."),
+        Precondition.that(
+            () -> declared instanceof MethodDeclaration,
+            () ->
+                name
+                    + " is a field. move_member moves a method; push_down or pull_up move a field"
+                    + " to a subtype or supertype."));
+    MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
-    if (method == null) {
-      throw new Refusal(name + " does not resolve.");
-    }
-    if (m.isConstructor()) {
-      throw new Refusal(name + " is a constructor, which move_member does not move.");
-    }
-    if (m.getBody() == null) {
-      throw new Refusal(name + " has no body (abstract or native), so there is nothing to move.");
-    }
-    if (!source.typeParameters().isEmpty()) {
-      throw new Refusal(
-          typeName
-              + " is generic. The receiver parameter is typed by the class's name, so a method of"
-              + " a generic class is not moved yet.");
-    }
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a && a.getTypeName().getFullyQualifiedName().equals("Override")) {
-        throw new Refusal(
-            name
-                + " overrides a method of a supertype. Moving it would change which method the"
-                + " class runs; leave it in place.");
-      }
-    }
+    Precondition.require(
+        Precondition.that(() -> method != null, () -> name + " does not resolve."),
+        Precondition.that(
+            () -> !m.isConstructor(),
+            () -> name + " is a constructor, which move_member does not move."),
+        Precondition.that(
+            () -> m.getBody() != null,
+            () -> name + " has no body (abstract or native), so there is nothing to move."),
+        Precondition.that(
+            () -> source.typeParameters().isEmpty(),
+            () ->
+                typeName
+                    + " is generic. The receiver parameter is typed by the class's name, so a"
+                    + " method of a generic class is not moved yet."),
+        Precondition.that(
+            () -> !overrides(m),
+            () ->
+                name
+                    + " overrides a method of a supertype. Moving it would change which method"
+                    + " the class runs; leave it in place."));
     checkBody(m, method, name);
 
     boolean isStatic = Modifier.isStatic(m.getModifiers());
@@ -237,6 +232,16 @@ final class MoveMember {
             + (callFiles == 1 ? "" : "s")
             + (widened ? "; private widened to package access" : ""),
         declared2);
+  }
+
+  /** Whether {@code m} is marked {@code @Override}. */
+  private static boolean overrides(MethodDeclaration m) {
+    for (Object o : m.modifiers()) {
+      if (o instanceof Annotation a && a.getTypeName().getFullyQualifiedName().equals("Override")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The refusals about the body: what its names would mean in the target. */

@@ -525,3 +525,14 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   member do not overlap), and `Declarations.memberIndent` falls back to 2
   spaces, not 4, when neither the file nor the content shows a step: the
   tools that move members write 2.
+
+- One shape for a refactoring (roadmap #71, 2026-11-04,
+  `docs/sessions/refactoring-shape.md`): `Opened.of(project, rel)` reads and
+  parses a tool's file; `topLevel(name)` and `startingOn(line, ...)` find its
+  target with one refusal wording each; `Qualified.of(name, shape)` splits
+  `Type.member` at the first dot; `Precondition.that(holds, refusal)` and
+  `require(...)` hold a tool's up-front checks as values, checked in order.
+  Twelve tools use them; `Rename`, `MoveType`, `Extract`, `Declarations` and
+  the signature tools keep their own resolvers. A new tool starts from
+  `Opened` and `Precondition`. Decided by this session while the user was
+  away: mid-algorithm refusals stay `throw`.

@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +29,10 @@ final class InlineVariable {
 
   static Outcome run(SourceProject project, String rel, int line, String name, Integer column)
       throws Exception {
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    CompilationUnit unit = opened.unit();
     IVariableBinding variable = variableAt(unit, text, name, line, column);
     if (variable.isField()) {
       throw new Refusal(

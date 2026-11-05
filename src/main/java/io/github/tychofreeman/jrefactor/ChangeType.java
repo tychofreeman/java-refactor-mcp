@@ -1,9 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -18,22 +16,17 @@ final class ChangeType {
   private ChangeType() {}
 
   static Outcome run(SourceProject project, String rel, String name, String type) throws Exception {
-    if (type == null || type.isBlank()) {
-      throw new Refusal("change_type needs type, the new type as written, such as long.");
-    }
-    int dot = name.lastIndexOf('.');
-    if (dot < 0) {
-      throw new Refusal("name is Type.field, the class and the field whose type to change.");
-    }
-    String typeName = name.substring(0, dot);
-    String field = name.substring(dot + 1);
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration owner = MemberMove.typeNamed(unit, typeName);
-    if (owner == null || owner.resolveBinding() == null) {
-      throw new Refusal(typeName + " is not a top-level class of " + rel + " that resolves.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> type != null && !type.isBlank(),
+            () -> "change_type needs type, the new type as written, such as long."));
+    Qualified q = Qualified.of(name, "Type.field, the class and the field whose type to change");
+    String typeName = q.type();
+    String field = q.member();
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    TypeDeclaration owner = opened.topLevel(typeName);
     FieldDeclaration decl = null;
     for (FieldDeclaration f : owner.getFields()) {
       for (Object o : f.fragments()) {

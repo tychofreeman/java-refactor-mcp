@@ -38,20 +38,14 @@ final class EncapsulateField {
   static Outcome run(
       SourceProject project, String rel, String name, String getterArg, String setterArg)
       throws Exception {
-    int dot = name.indexOf('.');
-    if (dot < 0) {
-      throw new Refusal(
-          "name is Type.field, the class and the field to encapsulate, not " + name + ".");
-    }
-    String typeName = name.substring(0, dot);
-    String field = name.substring(dot + 1);
-    Path file = project.javaFile(rel).toAbsolutePath().normalize();
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration owner = MemberMove.typeNamed(unit, typeName);
-    if (owner == null || owner.resolveBinding() == null) {
-      throw new Refusal(typeName + " is not a top-level class of " + rel + " that resolves.");
-    }
+    Qualified q = Qualified.of(name, "Type.field, the class and the field to encapsulate");
+    String typeName = q.type();
+    String field = q.member();
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    CompilationUnit unit = opened.unit();
+    TypeDeclaration owner = opened.topLevel(typeName);
     FieldDeclaration fd = null;
     for (FieldDeclaration f : owner.getFields()) {
       for (Object o : f.fragments()) {

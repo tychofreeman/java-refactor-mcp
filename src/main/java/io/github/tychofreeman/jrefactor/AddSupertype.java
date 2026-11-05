@@ -1,10 +1,8 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -21,35 +19,33 @@ final class AddSupertype {
   static Outcome run(
       SourceProject project, String rel, String name, String relation, String supertype)
       throws Exception {
-    if (supertype == null || supertype.isBlank()) {
-      throw new Refusal("add_supertype needs supertype, the supertype as written, such as Base.");
-    }
-    if (!"extends".equals(relation) && !"implements".equals(relation)) {
-      throw new Refusal("relation is extends or implements, the clause the supertype goes in.");
-    }
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    TypeDeclaration owner = MemberMove.typeNamed(unit, name);
-    if (owner == null || owner.resolveBinding() == null) {
-      throw new Refusal(
-          name + " is not a top-level class or interface of " + rel + " that resolves.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> supertype != null && !supertype.isBlank(),
+            () -> "add_supertype needs supertype, the supertype as written, such as Base."),
+        Precondition.that(
+            () -> "extends".equals(relation) || "implements".equals(relation),
+            () -> "relation is extends or implements, the clause the supertype goes in."));
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    TypeDeclaration owner = opened.topLevel(name);
     boolean isInterface = owner.isInterface();
-    if (isInterface && "implements".equals(relation)) {
-      throw new Refusal(
-          name
-              + " is an interface, which extends its supertypes and does not implement them. Use"
-              + " relation=extends.");
-    }
-    if (!isInterface && "extends".equals(relation) && owner.getSuperclassType() != null) {
-      throw new Refusal(
-          name
-              + " already extends "
-              + owner.getSuperclassType()
-              + ". A class has one superclass; a second supertype is an interface, added with"
-              + " relation=implements.");
-    }
+    Precondition.require(
+        Precondition.that(
+            () -> !isInterface || !"implements".equals(relation),
+            () ->
+                name
+                    + " is an interface, which extends its supertypes and does not implement them."
+                    + " Use relation=extends."),
+        Precondition.that(
+            () -> isInterface || !"extends".equals(relation) || owner.getSuperclassType() == null,
+            () ->
+                name
+                    + " already extends "
+                    + owner.getSuperclassType()
+                    + ". A class has one superclass; a second supertype is an interface, added"
+                    + " with relation=implements."));
     List<Type> interfaces = new ArrayList<>();
     for (Object o : owner.superInterfaceTypes()) {
       interfaces.add((Type) o);

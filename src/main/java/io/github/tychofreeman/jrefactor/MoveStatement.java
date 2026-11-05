@@ -1,18 +1,15 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -42,45 +39,24 @@ final class MoveStatement {
   static Outcome run(
       SourceProject project, String rel, Integer line, String direction, boolean namesOnly)
       throws Exception {
-    if (line == null) {
-      throw new Refusal("move_statement needs line, the 1-based line the statement starts on.");
-    }
-    if (!"up".equals(direction) && !"down".equals(direction)) {
-      throw new Refusal("direction is up or down, the way the statement moves.");
-    }
-    Path file = project.javaFile(rel);
-    String text = Files.readString(file);
-    CompilationUnit unit = Jdt.parse(project, file, text);
-    List<Statement> found = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean preVisit2(ASTNode node) {
-            if (node instanceof Statement s
-                && s.getParent() instanceof Block
-                && Lines.number(text, s.getStartPosition()) == line) {
-              found.add(s);
-            }
-            return true;
-          }
-        });
-    if (found.isEmpty()) {
-      throw new Refusal(
-          "no statement starts on line "
-              + line
-              + " of "
-              + rel
-              + ", directly in a block. Pass the line where the statement starts.");
-    }
-    if (found.size() > 1) {
-      throw new Refusal(
-          "several statements start on line "
-              + line
-              + " of "
-              + rel
-              + ". Put each on a line of its own first.");
-    }
-    Statement moved = found.get(0);
+    Precondition.require(
+        Precondition.that(
+            () -> line != null,
+            () -> "move_statement needs line, the 1-based line the statement starts on."),
+        Precondition.that(
+            () -> "up".equals(direction) || "down".equals(direction),
+            () -> "direction is up or down, the way the statement moves."));
+    Opened opened = Opened.of(project, rel);
+    Path file = opened.file();
+    String text = opened.text();
+    Statement moved =
+        opened.startingOn(
+            line,
+            Statement.class,
+            s -> s.getParent() instanceof Block,
+            "statement",
+            ", directly in a block",
+            "the statement");
     if (isJump(moved)) {
       throw new Refusal(
           "the statement at line "
