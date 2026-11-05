@@ -383,6 +383,41 @@ final class Tools {
                   args.integer("column"),
                   args.required("to")));
 
+  static final Def CONVERT_TO_RECORD =
+      new Def(
+          "convert_to_record",
+          """
+          Turn a class whose instance fields are final into a record: the fields become its \
+          components, its one constructor (which only assigns each field from its parameter, in \
+          order) is the canonical one, an accessor x() becomes public, and its other members stay. \
+          name is a top-level class of file.
+          A record generates value-based equals, hashCode and toString for those the class does \
+          not define: pass value_semantics=true to accept that change.
+          Refuses, saying why: a superclass, a subclass, an abstract class, a field that is not \
+          final or has an initializer, an instance initializer, other constructors, a missing \
+          equals, hashCode or toString without value_semantics, or a change that adds compile \
+          errors.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":            {"type": "string", "description": "Java file that declares the class, relative to the project root."},
+              "name":            {"type": "string", "description": "The top-level class."},
+              "value_semantics": {"type": "boolean", "description": "Accept the record's generated equals, hashCode and toString where the class has none."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name", "value_semantics"),
+          Kind.REFACTORING,
+          (project, args) ->
+              ConvertToRecord.run(
+                  project,
+                  args.required("file"),
+                  args.required("name"),
+                  args.flag("value_semantics")));
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -973,6 +1008,7 @@ final class Tools {
           ADD_SUPERTYPE,
           EXTRACT_SUPERTYPE,
           CONVERT_LAMBDA,
+          CONVERT_TO_RECORD,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,

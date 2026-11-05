@@ -234,6 +234,27 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
   there (the gate). Result: `converted the lambda at line 7 of <file> to
   String::length`.
 
+## `convert_to_record` (built)
+
+Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
+`value_semantics` (boolean).
+
+- The instance fields (all `final`, no initializers) become the components, in
+  declaration order; the one constructor, which only does `this.f = p;` for each
+  field in order, is the canonical one and is removed; an accessor `x()` that is
+  not public becomes public; every other member stays (getters too), and the
+  class's modifiers but `final` and `static`, its type parameters and its
+  `implements` carry over.
+- A record generates value-based `equals`, `hashCode` and `toString` for those
+  the class does not define, which changes behavior: refused without
+  `value_semantics=true` ("Pass value_semantics=true if that is wanted, or
+  define them first").
+- Refused also: a superclass; a class of the project that extends it; an
+  abstract class; a field that is not final or has an initializer; an instance
+  initializer; other constructors. Result: `converted Point to a record (x, y)
+  in <file>; it now has the record's equals, hashCode and toString; made x()
+  public`.
+
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`
