@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -13,7 +14,6 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
@@ -48,7 +48,6 @@ final class ExtractVariable {
     Expression e = find(unit, text, expression.strip(), lineStart, lineEnd, line, column);
     Statement statement = enclosingStatement(e);
     checkPlace(e, statement, expression.strip());
-    checkTryResources(project, e, statement, expression.strip(), text);
 
     ITypeBinding type = e.resolveTypeBinding();
     if (type == null || type.isRecovered() || type.isNullType()) {
@@ -76,6 +75,11 @@ final class ExtractVariable {
       edits.add(new TextEdit(stmtStart, stmtStart, decl + " "));
     }
     edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
+    Behavior.check(
+        project,
+        new Behavior.Move(e, statement, List.of(statement), source, "extracting " + source),
+        Map.of(file, text),
+        Map.of(file, edits));
     String after = TextEdit.apply(text, edits, 0);
 
     Edits.Written written =
@@ -167,7 +171,10 @@ final class ExtractVariable {
     return (Statement) n;
   }
 
-  /** Refuses an expression that would run other than once, before its statement, or assigned. */
+  /**
+   * Refuses an expression whose statement is not directly in a block, or one that is assigned to;
+   * where it runs and what it crosses are the behavior gate's.
+   */
   private static void checkPlace(Expression e, Statement s, String source) {
     if (!(s.getParent() instanceof Block)) {
       throw new Refusal(
@@ -177,37 +184,6 @@ final class ExtractVariable {
     }
     if (e.getParent() instanceof Assignment a && a.getLeftHandSide() == e) {
       throw new Refusal(source + " is assigned to, so it cannot be named as a value.");
-    }
-    String where = Effects.later(e, s);
-    if (where == null) {
-      where = Effects.sometimes(e, s);
-    }
-    if (where != null) {
-      throw new Refusal(
-          source
-              + " is "
-              + where
-              + ", so it may not run where its statement does, or not once. Name it inside, or"
-              + " extract it by hand.");
-    }
-    checkEarlierEffects(e, s, source);
-    if (Effects.of(e).changes()) {
-      throw new Refusal(
-          source
-              + " calls, assigns or changes a variable, and moving it before its statement could"
-              + " change the order of those effects. Extract the statement's other parts first.");
-    }
-  }
-
-  /** Refuses an effect that comes earlier in the statement: the read would move ahead of it. */
-  private static void checkEarlierEffects(Expression e, Statement s, String source) {
-    if (Effects.of(s).all().stream()
-        .anyMatch(x -> x.changes() && x.end() <= e.getStartPosition())) {
-      throw new Refusal(
-          source
-              + " comes after an effect before it in the same statement (a call, an assignment or"
-              + " a ++ or --), so declaring it earlier would move its read ahead of that effect."
-              + " Name the part of the statement before it first.");
     }
   }
 
@@ -234,34 +210,6 @@ final class ExtractVariable {
                   + ", so a use of the field in this method would read the new variable. Use"
                   + " another name.");
         }
-      }
-    }
-  }
-
-  /**
-   * Reports, or under preserve_exceptions refuses, an expression that may throw taken out of the
-   * resources of a try: that try's catch clauses caught what it threw, and its finally ran after.
-   */
-  private static void checkTryResources(
-      SourceProject project, Expression e, Statement s, String source, String text) {
-    if (!(s instanceof TryStatement t)
-        || (t.catchClauses().isEmpty() && t.getFinally() == null)
-        || Effects.of(e).mayThrow().isEmpty()) {
-      return;
-    }
-    for (Object r : t.resources()) {
-      if (Nodes.within(e, ((ASTNode) r))) {
-        Exceptional.change(
-            project,
-            source
-                + " may throw, and moves out of the resources of the try at line "
-                + Lines.number(text, t.getStartPosition())
-                + ", whose "
-                + (t.catchClauses().isEmpty()
-                    ? "finally no longer runs after it"
-                    : "catch clauses no longer catch it"),
-            "leave it in the try");
-        return;
       }
     }
   }

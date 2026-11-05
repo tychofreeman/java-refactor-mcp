@@ -1,1 +1,1 @@
-assigned after the declaration
+would read another value

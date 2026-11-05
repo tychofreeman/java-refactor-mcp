@@ -529,13 +529,17 @@ arguments.
   (its exact source text), `name`, and `column` (1-based, only when the text
   occurs twice on that line).
 - Result: `extracted <expression> as <name>, declared at line N of <file>`.
-- Refuses: an expression that runs only sometimes or more than once (a loop
-  condition or update, right of `&&` or `||`, a branch of `?:`; the condition
-  of a `?:` and the left of `&&` are allowed) or later (a lambda or anonymous
-  class); assigned to; one that calls, assigns or
-  changes a variable; a statement not directly in a block; a type that does
-  not resolve; an effect (a call, assignment or `++`/`--`) earlier in the same
-  statement, which the read would move ahead of; a new name that a field of the
+- Checked by the behavior gate (`Behavior`, roadmap #96): refuses an expression
+  with an effect that would run in another order (an effect earlier in its
+  statement) or at another time (out of a `?:` branch, right of `&&`/`||`, a
+  loop, a lambda); one in a loop condition, update or body that reads a
+  variable; one that may throw out from under its guard (right of `&&`/`||`, a
+  branch) or out of a try (body or resources) that catches or finishes; one
+  that reads state an earlier effect could change, or that an earlier write
+  assigns. Allowed: the first effect of a statement (`f(p.bin(), p.bin())`
+  names the first `p.bin()`, roadmap #99), and pure code from a branch
+  (`any ? price * qty : 0`). Also refuses: assigned to; a statement not
+  directly in a block; a type that does not resolve; a new name that a field of the
   enclosing class or its superclasses already has, which the local would hide.
   `all_occurrences` and `pointer` are not built yet.
 - `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
