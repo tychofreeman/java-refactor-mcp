@@ -207,7 +207,11 @@ Each was chosen from options; the record named beside it has the options it beat
   back by the next one.
 - The stress tests see only compile errors. A tool that moves expressions or
   members also needs probes for evaluation order and name capture: probes found
-  seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`).
+  seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`),
+  and one more in `fold` (#186). Add them as cases of `ProbeTest`
+  (`src/test/resources/probes/<case>`: `in/p/Main.java` printing what it did,
+  `args.properties`, `probe.properties` with `expect` applied, refused or changed);
+  they run with every build.
   The refusals that followed are conservative, and compare first uses only.
 - A/B runs use gorefactor's harness from its checkout: `go run ./cmd/refactor-ab
   -model sonnet -arms mcp,manual -runs 4 -tasks <this repo>/eval-tasks/warehouse.json

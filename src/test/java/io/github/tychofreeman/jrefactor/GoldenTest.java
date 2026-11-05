@@ -92,7 +92,7 @@ class GoldenTest {
    * arguments (whole numbers and true/false as such), and each {@code <arg>.txt} file of the case
    * is that argument's text, for content with several lines. Returns the tool's outcome.
    */
-  private static Outcome call(String tool, SourceProject project, Properties props, Path caseDir)
+  static Outcome call(String tool, SourceProject project, Properties props, Path caseDir)
       throws Exception {
     Tools.Def def = Tools.named(tool);
     Map<String, Object> values = new LinkedHashMap<>();
@@ -156,7 +156,7 @@ class GoldenTest {
     }
   }
 
-  private static void copyTree(Path from, Path to) throws IOException {
+  static void copyTree(Path from, Path to) throws IOException {
     try (Stream<Path> files = Files.walk(from)) {
       for (Path src : files.filter(Files::isRegularFile).toList()) {
         Path dst = to.resolve(from.relativize(src).toString());
@@ -166,7 +166,7 @@ class GoldenTest {
     }
   }
 
-  private static void deleteTree(Path root) throws IOException {
+  static void deleteTree(Path root) throws IOException {
     if (!Files.exists(root)) {
       return;
     }

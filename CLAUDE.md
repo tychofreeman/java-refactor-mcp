@@ -156,6 +156,8 @@ pull request.
 - **Golden cases first.** Add `src/test/resources/golden/<case>/{in,out}` (plus
   `args.properties` or `refused.txt`) before or with the code that makes it pass.
   `GoldenTest` runs every case; `refused.txt` holds a fragment the refusal must contain.
+  A refactoring that moves code also gets behavior probes under
+  `src/test/resources/probes` (`ProbeTest` runs the program before and after).
 - **No JDT UI or LTK.** Use JDT Core directly. Do not depend on the Eclipse
   workbench, OSGi runtime or a workspace on disk.
 - **Do not reprint the AST.** Edits are text edits against the original source,
