@@ -344,6 +344,45 @@ final class Tools {
                   args.required("kind"),
                   args.list("members")));
 
+  static final Def CONVERT_LAMBDA =
+      new Def(
+          "convert_lambda",
+          """
+          Rewrite a lambda, a method reference or an anonymous class of a functional interface as \
+          another of the three, where it means the same: s -> s.length() becomes String::length, \
+          String::length becomes (s) -> s.length(), and an anonymous Runnable with its one run \
+          method becomes () -> { ... }, or back. Identify it by file and the line it starts on \
+          (column when several start there); to is lambda, anonymous or method_reference.
+          Type-checks the project: a form that does not compile there (an ambiguous overload) is \
+          refused.
+          Refuses, saying why: a lambda whose body is not one call passing its parameters in \
+          order (for a method reference); a receiver evaluated once by a reference and at each \
+          call by a lambda that may change (a field, a call); this, or a bare call of the \
+          interface's or Object's methods, which would mean another object; an anonymous class \
+          with fields or other methods.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":   {"type": "string", "description": "Java file path relative to the project root."},
+              "line":   {"type": "integer", "description": "1-based line it starts on."},
+              "column": {"type": "integer", "description": "Optional 1-based column, when several start on the line."},
+              "to":     {"type": "string", "enum": ["lambda", "anonymous", "method_reference"], "description": "What it becomes."}
+            },
+            "required": ["file", "line", "to"]
+          }\
+          """,
+          Set.of("file", "line", "column", "to"),
+          Kind.REFACTORING,
+          (project, args) ->
+              ConvertLambda.run(
+                  project,
+                  args.required("file"),
+                  args.integer("line"),
+                  args.integer("column"),
+                  args.required("to")));
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -933,6 +972,7 @@ final class Tools {
           CHANGE_TYPE,
           ADD_SUPERTYPE,
           EXTRACT_SUPERTYPE,
+          CONVERT_LAMBDA,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,

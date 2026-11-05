@@ -212,6 +212,28 @@ generic), `supertype` (the new type's simple name), `kind` (`interface` or
 - Refused: an interface, a generic class, a file of the new name that exists, a
   member not found, a method that is not public or is static (interface).
 
+## `convert_lambda` (built)
+
+Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
+(when several start there), `to` (`lambda`, `anonymous`, `method_reference`).
+
+- Lambda to method reference: a body that is one call passing the parameters in
+  order: `s -> s.length()` is `String::length`, `x -> f(x)` is `this::f` or
+  `Type::f`, `x -> new T(x)` is `T::new`, `x -> out.println(x)` is
+  `out::println` when `out` is a local that does not change or a static final
+  field.
+- Method reference to lambda: `(s) -> s.length()`, the parameters named after
+  their types' first letters, unused in the member; a receiver that may change
+  (a field, a call) is refused, since the reference evaluates it once.
+- Anonymous class to lambda: a functional interface's anonymous class with its
+  one method; its body re-indented. Lambda to anonymous class: `new T() {
+  @Override public R m(P p) { ... } }`, from the lambda's resolved types.
+- Refused: `this`, or a bare call of the interface's or `Object`'s methods, in
+  the code that moves (it would mean another object); an anonymous class with
+  fields or other methods; a type with a wildcard; a form that does not compile
+  there (the gate). Result: `converted the lambda at line 7 of <file> to
+  String::length`.
+
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`
