@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -1000,8 +1002,8 @@ final class Tools {
           "batch",
           """
           Run several refactorings and edits in order as one change, planned from one read. Each \
-          step is {"tool": ..., "args": {...}, "id": optional}: a tool and the arguments it takes \
-          alone.
+          step is {"tool": ..., "args": {...}, "id": optional}: a tool (rename, or as the client \
+          names it, mcp__jrefactor__rename) and the arguments it takes alone.
           Give line numbers as in the code you read before the batch: the batch moves them past \
           earlier steps. A line an earlier step rewrote cannot be given by number; name a line \
           an earlier step changed instead: "$prev.start", "$prev.end", "$2.end", "$id.start+1".
@@ -1199,16 +1201,24 @@ final class Tools {
     return PushDown.run(project, args.required("file"), args.required("name"));
   }
 
-  /** The tool named {@code name}, or a refusal listing the tools there are. */
+  /**
+   * The tool named {@code name}, or by the name a client gives it ({@code mcp__jrefactor__rename},
+   * whatever the server is called there), or a refusal listing the tools there are.
+   */
   static Def named(String name) {
+    Matcher client = CLIENT_NAME.matcher(name);
+    String bare = client.matches() ? client.group(1) : name;
     for (Def def : ALL) {
-      if (def.name().equals(name)) {
+      if (def.name().equals(bare)) {
         return def;
       }
     }
     List<String> names = ALL.stream().map(Def::name).toList();
     throw new Refusal("No tool " + name + ". The tools are " + String.join(", ", names) + ".");
   }
+
+  /** A tool's name as an MCP client gives it: mcp__, the server's name, __, the tool's. */
+  private static final Pattern CLIENT_NAME = Pattern.compile("mcp__.+?__(\\w+)");
 
   /**
    * Runs one call of {@code def}: its arguments checked, then its handler, as one change in the

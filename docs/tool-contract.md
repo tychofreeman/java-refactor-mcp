@@ -727,7 +727,9 @@ field, and the gate's "would add compile errors".
 ## `batch` (built)
 
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
-  alone; `check`: `"each"` (default) or `"end"`.
+  alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
+  names it (`rename`) or as a client does (`mcp__<server>__rename`, any server
+  name; roadmap #100).
 - Line arguments (`line`, `start_line`, `end_line`) are as read before the
   batch; the batch moves them past earlier steps' edits. A line an earlier step
   rewrote with a different line count is refused, naming the step.
