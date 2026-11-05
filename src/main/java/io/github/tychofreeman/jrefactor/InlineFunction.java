@@ -4,13 +4,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
@@ -27,11 +31,17 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NodeFinder;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 /**
  * inline_function: a static method is replaced at each of its calls in the project by its body,
@@ -76,20 +86,23 @@ final class InlineFunction {
             () -> m.getBody() != null,
             () -> name + " has no body (abstract or native), so there is nothing to inline."));
     List<Statement> statements = typed(m.getBody().statements(), Statement.class);
+    Statement last = statements.isEmpty() ? null : statements.get(statements.size() - 1);
+    int returns = returnsIn(m.getBody());
+    // The statements before the last: a call of several statements puts them before its own.
+    List<Statement> prefix =
+        statements.isEmpty() ? List.of() : statements.subList(0, statements.size() - 1);
     Expression value = null;
     Statement body;
-    if (statements.size() == 1
-        && statements.get(0) instanceof ReturnStatement r
-        && r.getExpression() != null) {
+    if (last instanceof ReturnStatement r && r.getExpression() != null && returns == 1) {
       value = r.getExpression();
       body = r;
-    } else if (statements.size() == 1 && statements.get(0) instanceof ExpressionStatement s) {
-      body = s;
+    } else if (last != null && returns == 0) {
+      body = last;
     } else {
       throw new Refusal(
           name
-              + " has a body that is not one return or one statement. Inline its parts by hand, or"
-              + " shorten the method first.");
+              + " has a body that is empty or returns before its last statement. Inline its parts"
+              + " by hand, or end it in its one return first.");
     }
     if (callsItself(m, method)) {
       throw new Refusal(name + " calls itself, so inlining it would not end. Keep it.");
@@ -118,15 +131,20 @@ final class InlineFunction {
       paramBindings.add(p.resolveBinding());
     }
     ASTNode bodyNode = value != null ? value : body;
-    int bodyStart = bodyNode.getStartPosition();
-    int bodyEnd = bodyStart + bodyNode.getLength();
-    List<ParamUse> uses = paramUsesIn(value != null ? value : body, paramBindings);
+    int bodyStart = value != null ? value.getStartPosition() : statements.get(0).getStartPosition();
+    int bodyEnd = bodyNode.getStartPosition() + bodyNode.getLength();
+    List<ParamUse> uses = paramUsesIn(m.getBody(), paramBindings);
+    checkNotAssigned(uses, unit, params, name);
+    Set<String> bodyLocals = declaredIn(m.getBody());
+    for (SingleVariableDeclaration p : params) {
+      bodyLocals.remove(p.getName().getIdentifier());
+    }
     int[] useCount = new int[params.size()];
     for (ParamUse u : uses) {
       useCount[u.index()]++;
     }
 
-    boolean usesOwnMembers = usesMembersOf(bodyNode, type.resolveBinding());
+    boolean usesOwnMembers = usesMembersOf(m.getBody(), type.resolveBinding());
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -181,11 +199,13 @@ final class InlineFunction {
                   + " method, or qualify its uses in the body first.");
         }
         checkNesting(site, sites, name);
-        list.add(
+        list.addAll(
             replacementFor(
                 site,
                 value,
-                body,
+                m.getBody(),
+                prefix,
+                bodyLocals,
                 bodyStart,
                 bodyEnd,
                 uses,
@@ -222,11 +242,17 @@ final class InlineFunction {
         declaredStubs);
   }
 
-  /** The edit that replaces one call with the body, its parameters given the call's arguments. */
-  private static TextEdit replacementFor(
+  /**
+   * The edits that replace one call with the body, its parameters given the call's arguments: the
+   * call itself, and for a body of several statements, those before the last put before the call's
+   * statement.
+   */
+  private static List<TextEdit> replacementFor(
       MethodInvocation site,
       Expression value,
-      Statement body,
+      Block whole,
+      List<Statement> prefix,
+      Set<String> bodyLocals,
       int bodyStart,
       int bodyEnd,
       List<ParamUse> uses,
@@ -237,7 +263,7 @@ final class InlineFunction {
       String declaringText) {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(args, params, useCount, name);
-    checkTiming(args, uses, params, value != null ? value : body, siteText, name);
+    checkTiming(args, uses, params, whole, siteText, name);
     checkOrder(args, uses, params, name);
     for (int i = 0; i < args.size(); i++) {
       if (useCount[i] > 1 && Effects.of(args.get(i)).changes()) {
@@ -252,20 +278,7 @@ final class InlineFunction {
                 + " more than once. Put the argument in a variable first.");
       }
     }
-    String bodyText = declaringText.substring(bodyStart, bodyEnd);
-    StringBuilder out = new StringBuilder(bodyText);
-    List<ParamUse> sorted = new ArrayList<>(uses);
-    sorted.sort((a, b) -> Integer.compare(b.start(), a.start()));
-    for (ParamUse u : sorted) {
-      Expression arg = args.get(u.index());
-      String argText =
-          siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
-      if (InlineVariable.needsParentheses(arg)) {
-        argText = "(" + argText + ")";
-      }
-      out.replace(u.start() - bodyStart, u.end() - bodyStart, argText);
-    }
-    String replaced = out.toString();
+    checkLocals(site, bodyLocals, name);
     if (value != null) {
       if (site.getParent() instanceof ExpressionStatement) {
         throw new Refusal(
@@ -273,17 +286,229 @@ final class InlineFunction {
                 + " returns a value, and a call of it is a statement. Use its result, or keep the"
                 + " method.");
       }
-      if (InlineVariable.needsParentheses(value)) {
+      String replaced = substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText);
+      // A call that is all of an initializer, a return or an assignment's value needs none.
+      boolean entire =
+          site.getParent() instanceof VariableDeclarationFragment
+              || site.getParent() instanceof ReturnStatement
+              || (site.getParent() instanceof Assignment a && a.getRightHandSide() == site);
+      if (!entire && InlineVariable.needsParentheses(value)) {
         replaced = "(" + replaced + ")";
       }
-      return new TextEdit(
-          site.getStartPosition(), site.getStartPosition() + site.getLength(), replaced);
+      TextEdit call =
+          new TextEdit(
+              site.getStartPosition(), site.getStartPosition() + site.getLength(), replaced);
+      if (prefix.isEmpty()) {
+        return List.of(call);
+      }
+      Statement statement = wholeStatement(site, name);
+      int from = prefix.get(0).getStartPosition();
+      Statement end = prefix.get(prefix.size() - 1);
+      String before =
+          reindent(
+              substituted(
+                  declaringText,
+                  from,
+                  end.getStartPosition() + end.getLength(),
+                  uses,
+                  args,
+                  siteText),
+              indentOf(declaringText, from),
+              indentOf(siteText, statement.getStartPosition()));
+      int at = statement.getStartPosition();
+      return List.of(new TextEdit(at, at, before + "\n" + indentOf(siteText, at)), call);
     }
     if (!(site.getParent() instanceof ExpressionStatement stmt)) {
       throw new Refusal(name + " returns nothing, so a call of it can only be a statement.");
     }
-    return new TextEdit(
-        stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced);
+    String replaced =
+        reindent(
+            substituted(declaringText, bodyStart, bodyEnd, uses, args, siteText),
+            indentOf(declaringText, bodyStart),
+            indentOf(siteText, stmt.getStartPosition()));
+    return List.of(
+        new TextEdit(
+            stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced));
+  }
+
+  /**
+   * The text of {@code start}-{@code end} of the declaring file, each parameter use given its
+   * argument.
+   */
+  private static String substituted(
+      String declaringText,
+      int start,
+      int end,
+      List<ParamUse> uses,
+      List<Expression> args,
+      String siteText) {
+    StringBuilder out = new StringBuilder(declaringText.substring(start, end));
+    List<ParamUse> sorted = new ArrayList<>(uses);
+    sorted.sort((a, b) -> Integer.compare(b.start(), a.start()));
+    for (ParamUse u : sorted) {
+      if (u.start() < start || u.end() > end) {
+        continue;
+      }
+      Expression arg = args.get(u.index());
+      String argText =
+          siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
+      if (InlineVariable.needsParentheses(arg)) {
+        argText = "(" + argText + ")";
+      }
+      out.replace(u.start() - start, u.end() - start, argText);
+    }
+    return out.toString();
+  }
+
+  /**
+   * The statement whose value the call is all of, directly in a block: {@code T v = m(..);}, {@code
+   * return m(..);} or {@code v = m(..);}. Refused otherwise: the body's other statements could not
+   * go before it without running before what the statement runs first.
+   */
+  private static Statement wholeStatement(MethodInvocation site, String name) {
+    ASTNode p = site.getParent();
+    if (p instanceof VariableDeclarationFragment f
+        && f.getInitializer() == site
+        && f.getParent() instanceof VariableDeclarationStatement s
+        && s.fragments().size() == 1
+        && s.getParent() instanceof Block) {
+      return s;
+    }
+    if (p instanceof ReturnStatement r && r.getParent() instanceof Block) {
+      return r;
+    }
+    if (p instanceof Assignment a
+        && a.getRightHandSide() == site
+        && a.getLeftHandSide() instanceof SimpleName
+        && a.getParent() instanceof ExpressionStatement s
+        && s.getParent() instanceof Block) {
+      return s;
+    }
+    throw new Refusal(
+        "a call of "
+            + name
+            + ", whose body has several statements, is part of a larger expression or not"
+            + " directly in a block, so those statements cannot go before it. Put the call in a"
+            + " variable of its own first.");
+  }
+
+  /** Refuses a local of the body whose name the member around the call also uses. */
+  private static void checkLocals(MethodInvocation site, Set<String> bodyLocals, String name) {
+    if (bodyLocals.isEmpty()) {
+      return;
+    }
+    ASTNode n = site;
+    while (n != null && !(n instanceof BodyDeclaration)) {
+      n = n.getParent();
+    }
+    if (n == null) {
+      return;
+    }
+    Set<String> used = new HashSet<>();
+    n.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(SimpleName s) {
+            used.add(s.getIdentifier());
+            return true;
+          }
+        });
+    for (String local : bodyLocals) {
+      if (used.contains(local)) {
+        throw new Refusal(
+            "the body of "
+                + name
+                + " declares "
+                + local
+                + ", which the member that calls it also names, so inlined the two would clash."
+                + " Rename one of them first.");
+      }
+    }
+  }
+
+  /** Refuses a body that assigns a parameter: in place of the call it would assign the argument. */
+  private static void checkNotAssigned(
+      List<ParamUse> uses,
+      CompilationUnit unit,
+      List<SingleVariableDeclaration> params,
+      String name) {
+    for (ParamUse u : uses) {
+      ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
+      ASTNode p = n.getParent();
+      if ((p instanceof Assignment a && a.getLeftHandSide() == n)
+          || p instanceof PostfixExpression
+          || (p instanceof PrefixExpression pre
+              && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
+                  || pre.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+        throw new Refusal(
+            name
+                + " assigns its parameter "
+                + params.get(u.index()).getName().getIdentifier()
+                + ", which in place of the call would assign the caller's argument. Assign a local"
+                + " in the method instead, or keep it.");
+      }
+    }
+  }
+
+  /** The returns of {@code body}, outside lambdas and local or anonymous classes. */
+  private static int returnsIn(Block body) {
+    int[] count = {0};
+    body.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(ReturnStatement r) {
+            count[0]++;
+            return true;
+          }
+
+          @Override
+          public boolean visit(LambdaExpression l) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(AnonymousClassDeclaration a) {
+            return false;
+          }
+
+          @Override
+          public boolean visit(TypeDeclarationStatement t) {
+            return false;
+          }
+        });
+    return count[0];
+  }
+
+  /** The names of the variables {@code node} declares. */
+  private static Set<String> declaredIn(ASTNode node) {
+    Set<String> out = new HashSet<>();
+    node.accept(
+        new ASTVisitor() {
+          @Override
+          public void preVisit(ASTNode n) {
+            if (n instanceof VariableDeclaration d) {
+              out.add(d.getName().getIdentifier());
+            }
+          }
+        });
+    return out;
+  }
+
+  /** The spaces and tabs that start the line {@code at} is on. */
+  private static String indentOf(String text, int at) {
+    int start = Lines.start(text, at);
+    int end = start;
+    while (end < text.length() && (text.charAt(end) == ' ' || text.charAt(end) == '\t')) {
+      end++;
+    }
+    return text.substring(start, end);
+  }
+
+  /**
+   * {@code text} with each line after the first indented by {@code to} in place of {@code from}.
+   */
+  private static String reindent(String text, String from, String to) {
+    return text.replace("\n" + from, "\n" + to);
   }
 
   /**

@@ -411,8 +411,8 @@ arguments put in place of the parameters, then deletes the method. gorefactor's
 declares the method) and `name` (`Type.method`), and inlines every call.
 
 - Result: `inlined Type.method into N calls and deleted the method in <file>`.
-- Refuses: an instance, varargs, generic or abstract method; a body that is not one
-  `return` or one statement; a method that calls itself; a method used as
+- Refuses: an instance, varargs, generic or abstract method; a body that returns
+  before its last statement; a method that calls itself; a method used as
   `Type::name`; a call nested in another call's arguments; a parameter used more than
   once when its argument calls, assigns or changes a variable; a method with no calls;
   an argument with effects for a parameter the body does not use (the call would drop
@@ -425,8 +425,14 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   `&&` / `||` (it would run later, after the effect, or not at all); two such
   arguments, one with an effect, that the body first uses in the other order than the
   call passes them (`f(bump(), count)` with `b + a`).
+- A body of several statements (roadmap #84, 2026-11-04): a void method's call statement
+  becomes the body's statements, re-indented; a method ending in its one `return expr`
+  must be called as all of an initializer, a `return` or an assignment's value, and its
+  other statements go before that statement ("part of a larger expression" otherwise).
+  Refused also: a `return` before the last statement; a body that assigns a parameter;
+  a body local whose name the calling member uses.
 - Not built yet: `line` and `column` addressing, `keep_function`, instance methods,
-  several-statement bodies, inlining one call at a time.
+  inlining one call at a time.
 
 ## `change_type` (built)
 
