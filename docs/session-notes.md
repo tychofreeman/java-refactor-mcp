@@ -108,6 +108,10 @@ Each was chosen from options; the record named beside it has the options it beat
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
 
+- `move_file` (#81, 2026-11-04) is `MoveFile`: each file through `Gate.write` (a null
+  text deletes), so a move, copy or delete is one undo. Text only; Java under a
+  source root is refused for `move_type`.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the

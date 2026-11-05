@@ -1,0 +1,1 @@
+copied docs/a.md to docs/b.md
