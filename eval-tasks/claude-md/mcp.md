@@ -18,6 +18,6 @@ Treat the code as a structure you reshape with operations, not text you rewrite.
 
 Moves that work:
 
-- **Merge near-duplicates.** Name what differs in each copy (extract_variable), so the rest of the copies is the same. extract_method the rest from one copy, then replace the other copies with calls to it.
+- **Merge near-duplicates.** Write the shared method with what differs as its parameters (add_declaration, or extract_method from one copy), then fold it: every copy becomes a call. A %s in a String.format of the method matches constant text in the copies, so the text that differs can be a parameter.
 - **Change a signature: expand, migrate, contract.** For one parameter, add_parameter, remove_parameter, move_parameter and change_type do it in one step, every call and override included.
 - **Name before you move.** rename, extract_variable and extract_method give the parts names; the later operations then address them by name, which stays valid after earlier steps.

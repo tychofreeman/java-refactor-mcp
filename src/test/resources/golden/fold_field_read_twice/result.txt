@@ -1,0 +1,1 @@
+folded 1 match of Gauge.near into calls: com/example/Gauge.java line 11
