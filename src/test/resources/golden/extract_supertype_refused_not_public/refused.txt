@@ -1,0 +1,1 @@
+Flat.price is not a public instance method

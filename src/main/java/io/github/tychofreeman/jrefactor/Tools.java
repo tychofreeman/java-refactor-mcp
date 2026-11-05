@@ -302,6 +302,44 @@ final class Tools {
           Kind.REFACTORING,
           Tools::addSupertype);
 
+  static final Def EXTRACT_SUPERTYPE =
+      new Def(
+          "extract_supertype",
+          """
+          Extract a new interface or superclass from members of a class, in a file of its own in \
+          the class's package. kind=interface: the new interface declares the signatures of the \
+          named public instance methods, and the class implements it. kind=class: the named \
+          methods and fields move into the new class (as pull_up moves them), which takes the \
+          class's place in its extends and extends the old superclass.
+          Type-checks the project after each step; any refusal changes nothing.
+          Refuses, saying why: an interface or generic class, a name whose file exists, a member \
+          not found, a method that is not public or is static (kind=interface), or what pull_up \
+          refuses (kind=class).\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":      {"type": "string", "description": "Java file that declares the class, relative to the project root."},
+              "name":      {"type": "string", "description": "The top-level class to extract from."},
+              "supertype": {"type": "string", "description": "The new type's simple name."},
+              "kind":      {"type": "string", "enum": ["interface", "class"], "description": "interface or class."},
+              "members":   {"type": "array", "items": {"type": "string"}, "description": "The members, by name (with parameter types for an overload: price(int))."}
+            },
+            "required": ["file", "name", "supertype", "kind", "members"]
+          }\
+          """,
+          Set.of("file", "name", "supertype", "kind", "members"),
+          Kind.REFACTORING,
+          (project, args) ->
+              ExtractSupertype.run(
+                  project,
+                  args.required("file"),
+                  args.required("name"),
+                  args.required("supertype"),
+                  args.required("kind"),
+                  args.list("members")));
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -890,6 +928,7 @@ final class Tools {
           INLINE_FUNCTION,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
+          EXTRACT_SUPERTYPE,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,

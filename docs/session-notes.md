@@ -123,6 +123,11 @@ Each was chosen from options; the record named beside it has the options it beat
   override of a concrete method. The stub goldens that deleted a used member
   (`stub_after_delete_*`) are now refused there, before the stubs run.
 
+- `extract_supertype` (#85, 2026-11-04) is `ExtractSupertype`, composed in one call
+  from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member
+  `pull_up` or `push_down` removes now takes one blank line beside it with it
+  (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the

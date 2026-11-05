@@ -194,6 +194,24 @@ Calls need no change, since `Sub` inherits the method.
 - Type-checks the project: a method that uses what only `Sub` has is rolled
   back and refused, with the gate's "would add" wording.
 
+## `extract_supertype` (built)
+
+Roadmap #85, 2026-11-04. Arguments: `file`, `name` (a top-level class, not
+generic), `supertype` (the new type's simple name), `kind` (`interface` or
+`class`), `members` (names, with parameter types for an overload).
+
+- `kind=interface`: `<Supertype>.java` in the class's package declares the
+  signatures of the named methods (public instance methods only, with their
+  `throws`), and the class gains `implements <Supertype>` (as `add_supertype`).
+- `kind=class`: `<Supertype>.java` extends the class's old superclass, if any,
+  and takes its place in the class's `extends`; each member moves into it as
+  `pull_up` moves it (fields and methods), with `pull_up`'s refusals.
+- One call: a refusal at any step changes nothing. Result: `extracted interface
+  Pricing (com/example/Pricing.java) from Flat with price; Flat implements it`,
+  or `extracted class Priced (...) from Flat with base and price; Flat extends it`.
+- Refused: an interface, a generic class, a file of the new name that exists, a
+  member not found, a method that is not public or is static (interface).
+
 ## `push_down` (built)
 
 Arguments: `file` (the Java file that declares the class) and `name`
