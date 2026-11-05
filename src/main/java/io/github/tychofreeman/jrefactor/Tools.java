@@ -260,8 +260,14 @@ final class Tools {
           A method's parameter (parameter) or return type (return_type=true) changes in it and \
           every override and implementation, and in lambdas that write the parameter's type; \
           calls are not edited, so one the new type breaks is refused with the error.
+          For a change of or to a primitive or boxed type, a use whose result the type decides \
+          is refused: an operand of arithmetic, a shift, ++ or a compound assignment, an \
+          argument of a call, a cast, a branch of ?:, == on a boxed type (int to long loses an \
+          overflow, int to double changes x / 2, char to int prints a number). Copies, returns \
+          and comparisons are fine.
           Refuses, saying why: a name that is not a field of the class, a declaration of several \
-          fields, a varargs parameter, or a change that adds compile errors, naming them.\
+          fields, a varargs parameter, such a use, or a change that adds compile errors, naming \
+          them.\
           """,
           List.of(
               Arg.FILE.described(

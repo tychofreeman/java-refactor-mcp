@@ -1,1 +1,1 @@
-would add compile errors
+total is an operand of + at line 7

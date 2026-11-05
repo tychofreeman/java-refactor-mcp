@@ -685,6 +685,14 @@ and `type` (the new type as written).
   type of qty of Pricing.price(int) to long ...` or `changed the return type of ...`.
   Refuses: both options or neither with a method; a varargs parameter; a `[]` written
   after the name; a constructor's return type.
+- A change of or to a primitive or boxed type (2026-11-05, the user's rule; `PrimitiveUses`)
+  is refused at a use whose result the type decides: an operand of arithmetic, a shift,
+  bitwise or string `+`, a unary operator other than `!`, `++`/`--`, a compound
+  assignment's target, an argument of a call or `new`, a cast, a branch of `?:`, a
+  switch selector, and for a boxed type `==`/`!=` or a call's receiver: "total is an
+  operand of + at line 7 of F, where changing it from int to long could change the
+  result". The uses are the field's in the project, the parameter's in the family's
+  bodies, or each call's result. Copies, returns and ordering comparisons are allowed.
 - Not built yet: locals, and fields declared with several names.
 
 ## `add_supertype` (built)

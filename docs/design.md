@@ -37,6 +37,16 @@ and `inspect`-style outlines.
 **Decided: Maven.** Group `io.github.tychofreeman`, artifact `java-refactor-mcp`,
 JDK 21.
 
+**Decided: change_type of or to a primitive refuses the uses the type decides (the user,
+2026-11-05).** Probes found `int` to `long`, `int` to `double` and `char` to `int` compile
+and change overflow, division and printing. A use that is an operand of arithmetic, a
+shift, a unary or compound operator, an argument of a call, a cast, a branch of `?:`, a
+switch selector, or `==` on a boxed type is refused (`PrimitiveUses`); copies, returns and
+ordering comparisons are allowed. Options it beat: refusing every primitive type change
+(simplest, but `int` to `long` could no longer be done by the tool), and applying it while
+listing the risky uses in the result (most permissive, but a normal-flow change would be
+made knowingly, against the policy above).
+
 **Decided: the behavior gate checks declared moves (roadmap #96, the user, 2026-11-05).**
 Each refactoring returns, with its edits, what it does to code: a piece moved
 (and what it crosses, and whether it lands where it runs only sometimes or

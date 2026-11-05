@@ -4,7 +4,7 @@ public class Price {
   private long total;
 
   public void add(int amount) {
-    total = total + amount;
+    total = amount;
   }
 
   public long get() {
