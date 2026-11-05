@@ -11,11 +11,17 @@ import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CastExpression;
+import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
+import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -26,8 +32,11 @@ import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.SwitchExpression;
+import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.WhileStatement;
 
 /**
  * What code does when it runs, in its normal flow: each variable it names, declares or writes, each
@@ -326,5 +335,62 @@ final class Effects {
       }
     }
     return out;
+  }
+
+  /**
+   * Where {@code node} runs later than {@code root}, which holds it, as words ("inside a lambda"),
+   * or null when it runs with it.
+   */
+  static String later(ASTNode node, ASTNode root) {
+    for (ASTNode p = node.getParent(); p != null && node != root; node = p, p = p.getParent()) {
+      if (p instanceof LambdaExpression) {
+        return "inside a lambda";
+      }
+      if (p instanceof AnonymousClassDeclaration) {
+        return "inside an anonymous class";
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Where {@code node} runs only sometimes, or more than once, when {@code root}, which holds it,
+   * runs once, as words ("in a branch of an if"), or null when it runs exactly once.
+   */
+  static String sometimes(ASTNode node, ASTNode root) {
+    for (ASTNode p = node.getParent(); p != null && node != root; node = p, p = p.getParent()) {
+      if (p instanceof ConditionalExpression c && node != c.getExpression()) {
+        return "in a branch of ?:";
+      }
+      if (p instanceof InfixExpression in
+          && node != in.getLeftOperand()
+          && (in.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
+              || in.getOperator() == InfixExpression.Operator.CONDITIONAL_OR)) {
+        return "to the right of && or ||";
+      }
+      if (p instanceof IfStatement i && node != i.getExpression()) {
+        return "in a branch of an if";
+      }
+      if ((p instanceof WhileStatement w && node == w.getExpression())
+          || (p instanceof DoStatement d && node == d.getExpression())
+          || (p instanceof ForStatement f
+              && (node == f.getExpression() || f.updaters().contains(node)))) {
+        return "in a loop condition, which runs more than once";
+      }
+      if (p instanceof WhileStatement
+          || p instanceof DoStatement
+          || (p instanceof ForStatement f && node == f.getBody())
+          || (p instanceof EnhancedForStatement ef && node == ef.getBody())) {
+        return "in a loop";
+      }
+      if ((p instanceof SwitchStatement s && node != s.getExpression())
+          || (p instanceof SwitchExpression x && node != x.getExpression())) {
+        return "in a case of a switch";
+      }
+      if (p instanceof CatchClause) {
+        return "in a catch clause";
+      }
+    }
+    return null;
   }
 }

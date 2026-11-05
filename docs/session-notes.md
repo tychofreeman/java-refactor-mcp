@@ -88,7 +88,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `Declarations` and the signature tools keep their own resolvers (roadmap #74).
 - What code reads, writes and calls comes from `Effects.of(node)`
   (`docs/sessions/one-effects-analysis.md`); a new effect kind goes in
-  `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw".
+  `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw";
+  `Effects.later(node, root)` and `Effects.sometimes(node, root)` say where code
+  runs later, or only sometimes or more than once, than the code that holds it
+  (#76; the branches of statements too). A new tool that moves code into or out of
+  a construct asks them, not its own parent walk.
 - A refactoring reports or refuses a change to exceptional behavior through
   `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
