@@ -116,6 +116,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `Signatures.changeType`: the family's declarations and typed lambdas, by
   `SignatureChange.replace`; calls are left to the gate.
 
+- `replace_declaration` with empty content is a safe delete (#83, 2026-11-04):
+  `SafeDelete.check` names the uses by binding before the gate, and refuses an
+  override of a concrete method. The stub goldens that deleted a used member
+  (`stub_after_delete_*`) are now refused there, before the stubs run.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the

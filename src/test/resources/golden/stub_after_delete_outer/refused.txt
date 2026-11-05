@@ -1,1 +1,1 @@
-deleting Outer.label(int) would add compile errors
+Outer.label(int) is used in com/example/Outer.java line 10

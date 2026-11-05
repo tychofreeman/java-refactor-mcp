@@ -162,6 +162,9 @@ final class Declarations {
     BodyDeclaration decl = target.decl();
     int firstLine = Lines.number(text, decl.getStartPosition());
     int lastLine = Lines.number(text, end(decl));
+    if (content.isBlank()) {
+      SafeDelete.check(project, rel, name, target.label());
+    }
 
     if (content.isBlank()
         && decl instanceof AbstractTypeDeclaration

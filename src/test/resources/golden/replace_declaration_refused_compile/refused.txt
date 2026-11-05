@@ -1,1 +1,1 @@
-would add compile errors, so nothing was changed
+A.b() is used in com/example/A.java line 5

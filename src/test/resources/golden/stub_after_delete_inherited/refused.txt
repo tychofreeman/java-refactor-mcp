@@ -1,1 +1,1 @@
-deleting Base.g() would add compile errors
+Base.g() is used in com/example/Child.java line 5
