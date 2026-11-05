@@ -154,6 +154,20 @@ first, passing what it uses from Shop, then move it"); a file of the new name
 that exists ("Rename Shop.Line first, then move it"); a move that adds compile
 errors, with them.
 
+With `package` (roadmap #80, 2026-11-04), `name` is the file's only top-level
+type, and it moves to that package in the same source root: the file moves
+(`a/Shop.java` to `b/Shop.java`) with its package line, every `import a.Shop`
+(and `import a.Shop.Line`, static imports included) and qualified `a.Shop`
+follows, and files of package `a` that name it gain `import b.Shop`. A
+package-private declaration that a use crosses the new boundary with becomes
+public: the type and its members used from another package, and what of
+package `a` the type uses. Result: `moved Shop to package b (b/Shop.java),
+with N references in M files: <file> <lines>; ...; widened Helper, Helper.TAX
+and Shop.price() to public`. Refusals: a name that is not a package name; a
+file with several top-level types ("move the others to files of their own
+first"); the default package ("no other package can import" it); the package
+it is in; a target file that exists ("Rename one of the two types first").
+
 ## `pull_up` (built)
 
 Arguments: `file` (the Java file that declares the class), `name` (`Sub.method`,

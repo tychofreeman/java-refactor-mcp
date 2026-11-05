@@ -252,7 +252,7 @@ final class MoveType {
               + " is a top-level type already. move_type moves a nested type to its own file:"
               + " name it as "
               + example
-              + ".");
+              + ". To move it to another package, pass package.");
     }
     for (int i = 1; at != null && i < parts.length; i++) {
       AbstractTypeDeclaration next = null;

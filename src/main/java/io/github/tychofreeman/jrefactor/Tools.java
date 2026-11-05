@@ -439,20 +439,25 @@ final class Tools {
           boundary become package-private; the result names them.
           name is Outer.Inner, as written in file. Type-checks the project: a move that adds \
           compile errors is rolled back and refused.
-          Refuses, saying why: an inner (non-static) class, a top-level type, a file of that \
-          name that exists.\
+          With package, the file's only top-level type moves to that package (same source root): \
+          its file moves, imports and qualified names follow, files of its old package import it, \
+          and package-private declarations used across the new boundary become public (named).
+          Refuses, saying why: an inner (non-static) class, a top-level type without package, a \
+          file of that name that exists, a file with several top-level types or in the default \
+          package when moving to a package.\
           """,
           """
           {
             "type": "object",
             "properties": {
               "file": {"type": "string", "description": "Java file that declares the type, relative to the project root."},
-              "name": {"type": "string", "description": "The nested type, as Outer.Inner."}
+              "name": {"type": "string", "description": "The nested type, as Outer.Inner; with package, the file's top-level type."},
+              "package": {"type": "string", "description": "Optional: move the file's only top-level type to this package instead (same source root)."}
             },
             "required": ["file", "name"]
           }\
           """,
-          Set.of("file", "name"),
+          Set.of("file", "name", "package"),
           Kind.REFACTORING,
           Tools::moveType);
 
@@ -867,6 +872,10 @@ final class Tools {
   }
 
   private static Outcome moveType(SourceProject project, Args args) throws Exception {
+    if (args.has("package")) {
+      return MoveToPackage.run(
+          project, args.required("file"), args.required("name"), args.required("package"));
+    }
     return MoveType.run(project, args.required("file"), args.required("name"));
   }
 
