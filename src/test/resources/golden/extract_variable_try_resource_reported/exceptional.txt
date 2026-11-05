@@ -1,2 +1,0 @@
-exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
-- p.name may throw, and moves out of the resources of the try at line 8, whose catch clauses no longer catch it

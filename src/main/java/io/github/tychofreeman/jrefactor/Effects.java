@@ -393,4 +393,21 @@ final class Effects {
     }
     return null;
   }
+
+  /**
+   * The outermost loop below {@code root} in which {@code node} runs each pass (its body, condition
+   * or update), or null.
+   */
+  static ASTNode loopOf(ASTNode node, ASTNode root) {
+    ASTNode loop = null;
+    for (ASTNode p = node.getParent(); p != null && node != root; node = p, p = p.getParent()) {
+      if (p instanceof WhileStatement
+          || p instanceof DoStatement
+          || (p instanceof ForStatement f && !f.initializers().contains(node))
+          || (p instanceof EnhancedForStatement ef && node != ef.getExpression())) {
+        loop = p;
+      }
+    }
+    return loop;
+  }
 }

@@ -151,11 +151,13 @@ final class Tools {
           to, instead of a local; it must then be literals and constants only.
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
-          Refuses, saying why: an expression that runs only sometimes or more than once (a loop \
-          condition or update, right of && or ||, a branch of ?:) or later (a lambda), \
-          assigned to, one that calls, assigns or changes a \
-          variable (its order would change), a statement not directly in a block, or a type \
-          that does not resolve.\
+          Refuses, saying why: an expression with an effect that would run in another order \
+          (after an earlier effect of its statement) or at another time (out of a branch, a \
+          loop or a lambda); one in a loop that reads a variable; one that may throw, out from \
+          under its guard (right of && or ||) or out of a try that catches it; one that reads \
+          what an earlier effect could change; assigned to; a statement not directly in a \
+          block; or a type that does not resolve. The first call of a statement can be named: \
+          f(p.next(), p.next()) gives a = p.next(); f(a, p.next()).\
           """,
           List.of(
               Arg.FILE,

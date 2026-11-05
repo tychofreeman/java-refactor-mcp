@@ -100,7 +100,8 @@ Each was chosen from options; the record named beside it has the options it beat
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
   the gate runs the effect, place, copy, exceptional and `NameCheck` rules (#96,
   the user's choice of 2026-11-05). New rules go there, not in a tool. Migrated so
-  far: `inline_variable`.
+  far: `inline_variable`, `extract_variable`. Per the policy, code that may throw
+  leaving a guard or a catching try is refused there; entering one is reported.
 - A refactoring reports or refuses a change to exceptional behavior through
   `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
