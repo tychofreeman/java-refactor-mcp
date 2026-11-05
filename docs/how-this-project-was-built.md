@@ -4,7 +4,8 @@ A record of the practices behind java-refactor-mcp, written to decide which
 are worth repeating, as gorefactor's `docs/how-this-project-was-built.md`
 does for the Go project. It draws on the git history, `docs/friction-log.md`,
 `docs/session-notes.md`, `docs/design.md` and the records in `docs/sessions/`.
-It was started on 2026-11-04, covering the work from 2026-11-02 (PRs #1-#103).
+It was started on 2026-11-04, covering the work from 2026-11-02 (PRs #1-#103), and
+extended the same day through PR #130.
 Judgments are Claude's; figures are from the records named beside them.
 Extend it in the PR that changes a decision, as gorefactor's was.
 
@@ -33,6 +34,17 @@ Extend it in the PR that changes a decision, as gorefactor's was.
    (PR #103). A comparison with gorefactor (Go and TypeScript), Fowler's
    catalog and IntelliJ found about 35 refactorings that are composites of
    our tools, most of them through `replace_text`.
+6. **2026-11-04: the ten higher-level tools** (PRs #105-#115), one PR each,
+   in the user's order: `extract_variable`, `inline_variable`,
+   `inline_function`, `change_type`, `add_supertype`, `move_statement`,
+   `invert_if`, `remove_else`, `move_member`, `encapsulate_field`. Each was
+   written by hand: no tool writes a new tool.
+7. **2026-11-04: behavior that type-checks.** Probes after the stress run
+   found seven rewrites that compiled and changed behavior (effect order,
+   name capture). They became refusals (#116, #119, and later read-order and
+   pull-up fixes). Then the user set the policy on what a refactoring must
+   preserve (below), and a review of the code's abstractions put two shared
+   shapes ahead of the flag that policy needed (#71, #72, then #73).
 
 ## Why `replace_text` carried so much
 
@@ -87,10 +99,69 @@ real uses, but the friction log has not yet been counted to show that.
 That count is the first step before the first of the ten is merged, and
 the result goes in the first tool's record.
 
+## The stress run sees compile errors, not behavior
+
+`RefactoringStressTest` ran 220 calls of the new tools on Commons Lang and
+Math with no failure, and probes written by hand then found seven changes in
+behavior that type-checked (`docs/sessions/stress-new-tools.md`): an
+argument's call dropped, two calls reordered, `half(3)` turned into integer
+division, a name binding to another class's field, a read moved ahead of an
+increment, a local hiding a field. The gate cannot see these, by design. The
+lesson, recorded in the session notes: a tool that moves expressions or
+members needs probes for evaluation order and name capture, not only a
+stress run. The fixes were refusals, not rewrites, and are conservative: a
+safe case of the same shape is refused too.
+
+Two sessions fixed the same roadmap row (#67) at once that day. The user
+kept one session's refusals and closed the other's PR (#118). Since then,
+a session checks `main` and the open branches for a row before fixing it.
+
+## What a refactoring preserves
+
+On 2026-11-04 the user set the rule, as an extension of "behavior-preserving
+transformation": no transformation keeps every kind of behavior, so a
+refactoring is defined by the kinds it keeps. Normal logic flow (calls,
+assignments, reads and their order) is kept. Exceptional behavior is kept
+only where a guard or a try/catch makes it part of the normal logic;
+elsewhere it is a concession, made knowingly and reported. The model can
+require it with `preserve_exceptions`, and a tool that changes it without
+the flag names each change in a separate part of its result. The options
+the user chose between (one flag or one per kind; the alert in the text or
+apart) are in `docs/design.md`, open question 0.
+
+## Abstractions before the cross-cutting flag
+
+Building the flag on the code as it was would have meant editing fourteen
+`run` methods and every tool schema, and adding a fifth partial model of
+effects. A review of the abstractions (2026-11-04) found the infrastructure
+well factored (`Jdt`, `Gate`, `Journal`, `TextEdit`, `Lines`) and the tool
+layer without a shared shape: each tool parsed and located its target its
+own way and refused from inside its algorithm. The user agreed to build two
+abstractions first, each behavior-neutral and checked by the goldens:
+`Opened`/`Precondition` (#71) and one `Effects` analysis (#72). The flag
+(#73) then attached once, in the `Def` constructor. All three were done by
+another session the same evening, through the tools.
+
+## Through the tools, or around them
+
+The ten tools and the effect-order refusals were written by hand, by Edit
+and Write, in a session that had no java-refactor-mcp tools loaded. One of
+its records first called that work "through the tools"; it was corrected
+(#123). The sessions that built #71-#73 had the tools and made almost every
+Java change through them (21, 19 and 53 edit steps, plus `add_parameter`
+and `inline_function`, by `bin/session-report`). That is the first
+evidence in this project of the difference the user asked about: whether a
+session thinks about changes as operations when it has the tools, or as
+text when it does not. It is not yet a measurement of token cost; the A/B
+harness (roadmap #13) is.
+
 ## Open at the time of writing
 
-- The first of the ten tools will remove the "literals" line from CLAUDE.md
-  as well, since literals are an `replace_expression` case under B.
-- `docs/friction-log.md` has not been counted for `replace_text` use.
-- The ten tools are not built yet. Only the tool-count limit (roadmap #15)
-  is in.
+- `CLAUDE.md` still lists literals as a `replace_text` use; option B's
+  `replace_expression` was not built, so the line stands until a tool covers
+  literals.
+- `docs/friction-log.md` was never counted for `replace_text` use before the
+  ten tools were built; the claim in "Why `replace_text` carried so much"
+  rests on reading the composites.
+- Follow-ups that lived only in records are now roadmap rows #74-#79.
+- The A/B harness (roadmap #13) waits for the user's yes, since it costs money.
