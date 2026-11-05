@@ -141,6 +141,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; extract class is not built.
 
+- Instance to static in place is `move_member` with `to` its own class; static to
+  instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the

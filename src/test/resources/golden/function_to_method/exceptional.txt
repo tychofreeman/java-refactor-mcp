@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- a null s passed to Shape.area(Shape, int) now fails at the call, before the other arguments run, not where the body used it: s in com/example/Use.java

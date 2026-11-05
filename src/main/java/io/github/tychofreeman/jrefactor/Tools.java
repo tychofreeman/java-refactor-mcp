@@ -449,6 +449,35 @@ final class Tools {
           Kind.REFACTORING,
           ExtractStruct::run);
 
+  static final Def FUNCTION_TO_METHOD =
+      new Def(
+          "function_to_method",
+          """
+          Make a static method whose first parameter is of its own class an instance method of \
+          that class, the parameter its receiver: static int area(Shape s, int k) becomes int \
+          area(int k), s in the body becomes this, and Shape.area(x, 3) becomes x.area(3) (area(2) \
+          for a call passing this). The other way, instance to static in place, is move_member \
+          with to set to the method's own class.
+          A null first argument now fails at the call, not where the body used it: reported as a \
+          change to exceptional behavior, refused under preserve_exceptions.
+          Refuses, saying why: a method that is not static, a first parameter not of its class \
+          or varargs, a body that assigns it, lambdas or method references of it.\
+          """,
+          """
+          {
+            "type": "object",
+            "properties": {
+              "file":    {"type": "string", "description": "Java file that declares the method, relative to the project root."},
+              "name":    {"type": "string", "description": "Type.member, or with (parameter types) for an overload."},
+              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
+            },
+            "required": ["file", "name"]
+          }\
+          """,
+          Set.of("file", "name", "imports"),
+          Kind.REFACTORING,
+          FunctionToMethod::run);
+
   static final Def MOVE_STATEMENT =
       new Def(
           "move_statement",
@@ -535,7 +564,8 @@ final class Tools {
       new Def(
           "move_member",
           """
-          Move a method of a top-level class to another top-level class of the same file. An \
+          Move a method of a top-level class to another top-level class of the same file, or, \
+          with to its own class, make it static in place. An \
           instance method becomes static in the target and takes the instance it used as its first \
           parameter, named receiver; every call in the project passes that instance. A private \
           method is widened to package access. The name is Type.method, or Type.method(params) for \
@@ -1041,6 +1071,7 @@ final class Tools {
           CONVERT_LAMBDA,
           CONVERT_TO_RECORD,
           EXTRACT_STRUCT,
+          FUNCTION_TO_METHOD,
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,
