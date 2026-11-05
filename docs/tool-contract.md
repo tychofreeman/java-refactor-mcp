@@ -665,9 +665,11 @@ Result: `moved the statement at line L up|down, past the statement at line M in 
 return, break, continue, throw or yield (on either side), no neighbour in that direction, a shared
 name, two side effects under the strict rule, a statement with a side effect and one that may leave
 the block early (a `return`, or a `break`, `continue` or `yield` that leaves it: an `if` that
-returns is a guard), and the gate's "would add compile errors". A statement that may throw swapped
-with such a guard is a change to exceptional behavior (reported, or refused under
-`preserve_exceptions`).
+returns is a guard), a statement that may throw lifted above such a guard (the guard is kept, by
+the policy), a call moved past a read of a field or element it could change (`int y = count;
+bump();`), and the gate's "would add compile errors". Checked by the behavior gate (roadmap #96)
+beyond the shared-name and two-effect rules, which stay the tool's own. A statement that may throw
+swapped with one that changes state is reported.
 
 ## `invert_if` (built)
 
