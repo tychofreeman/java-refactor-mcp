@@ -652,6 +652,7 @@ dropped argument) would need the evaluation order named first, which no tool giv
   ("batch does not take tool").
 - Idea: a JSON object with a `tool` key names the tool, so `bin/jrefactor @file`
   works alone.
+  Done: `Cli.run` and `Cli.arguments` (2026-11-05, `docs/sessions/cli-tool-key.md`).
 
 ## 2026-11-05: a release on every push (the user, as gorefactor's #555)
 

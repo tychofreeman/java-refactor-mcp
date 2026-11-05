@@ -77,6 +77,27 @@ class CliTest {
     assertTrue(Files.readString(file).contains("int next(int by)"), Files.readString(file));
   }
 
+  /** A JSON object alone names its tool with "tool"; after a tool's name, the key may repeat it. */
+  @Test
+  void aJsonObjectAloneNamesItsTool() throws Exception {
+    String json =
+        "{\"tool\": \"rename\", \"file\": \"com/example/Counter.java\", \"line\": 4,"
+            + " \"name\": \"step\", \"new_name\": \"by\"}";
+    Path args = undo.resolve("call.json");
+    Files.writeString(args, json);
+    assertEquals(0, run("@" + args), out());
+    assertTrue(Files.readString(file).contains("int next(int by)"), Files.readString(file));
+    assertEquals(0, run("undo"), out());
+
+    assertEquals(0, run("rename", "@" + args), out());
+    assertEquals(0, run("undo"), out());
+
+    assertEquals(2, run("inline_variable", "@" + args), out());
+    assertTrue(out().contains("names the tool rename"), out());
+    assertEquals(2, run("{\"file\": \"x\"}"), out());
+    assertTrue(out().contains("\"tool\""), out());
+  }
+
   @Test
   void aTextArgumentComesFromAFile() throws Exception {
     Path content = undo.resolve("notes.txt");
