@@ -1,0 +1,7 @@
+Date when() {
+  return null;
+}
+
+Array kind() {
+  return null;
+}

@@ -89,6 +89,9 @@ Each was chosen from options; the record named beside it has the options it beat
   the edit primitives. `extract_method` with several results would reverse
   the choice above: ask before building it. Left off: renaming a package,
   encapsulating a collection.
+- Ambiguous imports (2026-11-05, `docs/design.md`, roadmap #105): an edit takes the class
+  the file imported before the call or batch (`Journal.written`), else the only one in a package
+  it imports from, and names it; otherwise one refusal lists every ambiguous name.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
