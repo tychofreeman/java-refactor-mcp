@@ -459,15 +459,15 @@ final class Tools {
       new Def(
           "function_to_method",
           """
-            Make a static method whose first parameter is of its own class an instance method of \
-            that class, the parameter its receiver: static int area(Shape s, int k) becomes int \
-            area(int k), s in the body becomes this, and Shape.area(x, 3) becomes x.area(3) (area(2) \
-            for a call passing this). The other way, instance to static in place, is move_member \
-            with to set to the method's own class.
-            A null first argument now fails at the call, not where the body used it: reported as a \
-            change to exceptional behavior, refused under preserve_exceptions.
-            Refuses, saying why: a method that is not static, a first parameter not of its class \
-            or varargs, a body that assigns it, lambdas or method references of it, an instance \
+          Make a static method whose first parameter is of its own class an instance method of \
+          that class, the parameter its receiver: static int area(Shape s, int k) becomes int \
+          area(int k), s in the body becomes this, and Shape.area(x, 3) becomes x.area(3) (area(2) \
+          for a call passing this). The other way, instance to static in place, is move_member \
+          with to set to the method's own class.
+          A null first argument now fails at the call, not where the body used it: reported as a \
+          change to exceptional behavior, refused under preserve_exceptions.
+          Refuses, saying why: a method that is not static, a first parameter not of its class \
+          or varargs, a body that assigns it, lambdas or method references of it, an instance \
           method of the new signature in a subclass or supertype (it would override or be \
           overridden).\
           """,

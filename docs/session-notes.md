@@ -184,6 +184,10 @@ Each was chosen from options; the record named beside it has the options it beat
   newline joins the lines. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- A tool description is a text block: a line added at another indentation than
+  its neighbours makes Spotless re-indent the block, and `ServerTest`'s
+  runs-of-spaces check then fails. Write new lines at the block's indentation
+  (twice on 2026-11-04, #151 and #153).
 - Bindings from two parses (the tool's `Opened` parse and `Holding`'s or
   `parseAll`'s) do not compare: `overrides`, `isSubTypeCompatible` and `isEqualTo`
   return false. Compare keys or qualified names, or take both from one parse (hit
