@@ -100,7 +100,7 @@ server (`/mcp`, jrefactor, Reconnect).
    `add_declaration` for new members (by `type`, `after`/`before`),
    `replace_declaration` for a whole method, field or type by name (empty
    content deletes), `replace_text` for a few lines, literals, comments and
-   non-Java files. Imports are added and removed for you; pass `imports` when a
+   non-Java files (`append` adds at the end of a file: a friction-log entry). Imports are added and removed for you; pass `imports` when a
    refusal says a name is ambiguous. Test first: write the test with
    `add_declaration` or `create_file`; the project's methods, constructors and
    classes it calls that nothing declares get "not implemented" stubs, typed

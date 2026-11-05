@@ -80,6 +80,8 @@ Each was chosen from options; the record named beside it has the options it beat
 ## Where code goes
 
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only.
+- Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
+  not a shell redirect.
 - A refusal about a column names the columns where the thing does start
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
