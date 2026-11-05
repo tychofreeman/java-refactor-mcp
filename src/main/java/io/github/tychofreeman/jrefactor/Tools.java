@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -54,6 +55,17 @@ final class Tools {
       }
     }
 
+    /** A tool whose schema and argument names are built from {@code args}. */
+    Def(String name, String description, List<Arg> args, Kind kind, Handler handler) {
+      this(
+          name,
+          description,
+          Arg.schemaOf(args),
+          args.stream().map(Arg::name).collect(Collectors.toSet()),
+          kind,
+          handler);
+    }
+
     /** Whether the tool changes nothing. */
     boolean readOnly() {
       return kind == Kind.READ;
@@ -83,18 +95,10 @@ final class Tools {
           - file + start_line/end_line: those lines (end_line defaults to the end of the file).
           Paths are relative to the project root; lines are 1-based.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string",  "description": "Java file path relative to the project root."},
-              "start_line": {"type": "integer", "description": "First line to show (1-based)."},
-              "end_line":   {"type": "integer", "description": "Last line to show (inclusive)."}
-            },
-            "required": ["file"]
-          }\
-          """,
-          Set.of("file", "start_line", "end_line"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("start_line", "First line to show (1-based)."),
+              Arg.integer("end_line", "Last line to show (inclusive).")),
           Kind.READ,
           Tools::inspect);
 
@@ -118,20 +122,18 @@ final class Tools {
           method, a new name that is not a valid Java name, that the type already has, or that \
           a local would hide at a use of the field.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":     {"type": "string",  "description": "Java file path relative to the project root."},
-              "line":     {"type": "integer", "description": "1-based line of the declaration or any use."},
-              "name":     {"type": "string",  "description": "The current name; Type.name for a member of Type, or local name for a local, when the line has both."},
-              "column":   {"type": "integer", "description": "Optional 1-based column of the name, only to tell two meanings apart."},
-              "new_name": {"type": "string",  "description": "The new name; a valid Java name."}
-            },
-            "required": ["file", "line", "name", "new_name"]
-          }\
-          """,
-          Set.of("file", "line", "name", "column", "new_name"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line of the declaration or any use.").required(),
+              Arg.string(
+                      "name",
+                      "The current name; Type.name for a member of Type, or local name for a "
+                          + "local, when the line has both.")
+                  .required(),
+              Arg.integer(
+                  "column",
+                  "Optional 1-based column of the name, only to tell two meanings apart."),
+              Arg.string("new_name", "The new name; a valid Java name.").required()),
           Kind.REFACTORING,
           Tools::rename);
 
@@ -155,21 +157,25 @@ final class Tools {
           variable (its order would change), a statement not directly in a block, or a type \
           that does not resolve.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string",  "description": "Java file path relative to the project root."},
-              "line":       {"type": "integer", "description": "1-based line on which the expression starts."},
-              "expression": {"type": "string",  "description": "Exact source text of the expression, e.g. price * qty."},
-              "name":       {"type": "string",  "description": "Name for the new variable."},
-              "column":     {"type": "integer", "description": "Optional 1-based column where the expression starts, only when its text occurs twice on the line."},
-              "as":         {"type": "string", "enum": ["constant", "field", "parameter"], "description": "Optional: a private static final constant or private final field of the type, or a new parameter of the method (calls pass the expression), instead of a local. The expression must be literals and constants."}
-            },
-            "required": ["file", "line", "expression", "name"]
-          }\
-          """,
-          Set.of("file", "line", "expression", "name", "column", "as"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line on which the expression starts.").required(),
+              Arg.string("expression", "Exact source text of the expression, e.g. price * qty.")
+                  .required(),
+              Arg.string("name", "Name for the new variable.").required(),
+              Arg.integer(
+                  "column",
+                  "Optional 1-based column where the expression starts, only when its "
+                      + "text occurs twice on the line."),
+              Arg.oneOf(
+                  "as",
+                  "Optional: a private static final constant or private final field of "
+                      + "the type, or a new parameter of the method (calls pass the "
+                      + "expression), instead of a local. The expression must be literals and "
+                      + "constants.",
+                  "constant",
+                  "field",
+                  "parameter")),
           Kind.REFACTORING,
           Tools::extractVariable);
 
@@ -189,19 +195,15 @@ final class Tools {
           calls, assigns or changes a variable; a variable the initializer reads that is assigned \
           after the declaration; a declared type different from the initializer's.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":   {"type": "string",  "description": "Java file path relative to the project root."},
-              "line":   {"type": "integer", "description": "1-based line on which the variable is declared or used."},
-              "name":   {"type": "string",  "description": "The variable's name."},
-              "column": {"type": "integer", "description": "Optional 1-based column of the name, only when the line has two variables of that name."}
-            },
-            "required": ["file", "line", "name"]
-          }\
-          """,
-          Set.of("file", "line", "name", "column"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line on which the variable is declared or used.")
+                  .required(),
+              Arg.string("name", "The variable's name.").required(),
+              Arg.integer(
+                  "column",
+                  "Optional 1-based column of the name, only when the line has two "
+                      + "variables of that name.")),
           Kind.REFACTORING,
           Tools::inlineVariable);
 
@@ -231,17 +233,11 @@ final class Tools {
           (for one with an effect) a branch or a loop, or an argument with an effect and one that reads \
           state used in the other order than passed: put it in a variable first.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the method."},
-              "name": {"type": "string", "description": "Type.method, the static method to inline."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root; the file that declares "
+                      + "the method."),
+              Arg.string("name", "Type.method, the static method to inline.").required()),
           Kind.REFACTORING,
           Tools::inlineFunction);
 
@@ -260,21 +256,24 @@ final class Tools {
           Refuses, saying why: a name that is not a field of the class, a declaration of several \
           fields, a varargs parameter, or a change that adds compile errors, naming them.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the field."},
-              "name": {"type": "string", "description": "Type.field, the field whose type to change; or Type.method (with parameter types for an overload) with parameter or return_type."},
-              "type": {"type": "string", "description": "The new type as written, such as long or List<String>."},
-              "parameter": {"type": "string", "description": "Optional: change this parameter's type in the method and every override."},
-              "return_type": {"type": "boolean", "description": "Optional: change the method's return type, in it and every override."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "name", "type"]
-          }\
-          """,
-          Set.of("file", "name", "type", "parameter", "return_type", "imports"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root; the file that declares "
+                      + "the field."),
+              Arg.string(
+                      "name",
+                      "Type.field, the field whose type to change; or Type.method (with "
+                          + "parameter types for an overload) with parameter or return_type.")
+                  .required(),
+              Arg.string("type", "The new type as written, such as long or List<String>.")
+                  .required(),
+              Arg.string(
+                  "parameter",
+                  "Optional: change this parameter's type in the method and every " + "override."),
+              Arg.bool(
+                  "return_type",
+                  "Optional: change the method's return type, in it and every override."),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::changeType);
 
@@ -291,19 +290,21 @@ final class Tools {
           that already extends one, implements on an interface, or a change that adds compile \
           errors, naming them.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the type."},
-              "name": {"type": "string", "description": "The top-level class or interface to add the supertype to."},
-              "relation": {"type": "string", "enum": ["extends", "implements"], "description": "extends for a superclass, or an interface's supertypes; implements for a class's interfaces."},
-              "supertype": {"type": "string", "description": "The supertype as written, such as Base or List<String>."}
-            },
-            "required": ["file", "name", "relation", "supertype"]
-          }\
-          """,
-          Set.of("file", "name", "relation", "supertype"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root; the file that declares "
+                      + "the type."),
+              Arg.string("name", "The top-level class or interface to add the supertype to.")
+                  .required(),
+              Arg.oneOf(
+                      "relation",
+                      "extends for a superclass, or an interface's supertypes; implements for "
+                          + "a class's interfaces.",
+                      "extends",
+                      "implements")
+                  .required(),
+              Arg.string("supertype", "The supertype as written, such as Base or List<String>.")
+                  .required()),
           Kind.REFACTORING,
           Tools::addSupertype);
 
@@ -321,20 +322,17 @@ final class Tools {
           not found, a method that is not public or is static (kind=interface), or what pull_up \
           refuses (kind=class).\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":      {"type": "string", "description": "Java file that declares the class, relative to the project root."},
-              "name":      {"type": "string", "description": "The top-level class to extract from."},
-              "supertype": {"type": "string", "description": "The new type's simple name."},
-              "kind":      {"type": "string", "enum": ["interface", "class"], "description": "interface or class."},
-              "members":   {"type": "array", "items": {"type": "string"}, "description": "The members, by name (with parameter types for an overload: price(int))."}
-            },
-            "required": ["file", "name", "supertype", "kind", "members"]
-          }\
-          """,
-          Set.of("file", "name", "supertype", "kind", "members"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the class, relative to the project root."),
+              Arg.string("name", "The top-level class to extract from.").required(),
+              Arg.string("supertype", "The new type's simple name.").required(),
+              Arg.oneOf("kind", "interface or class.", "interface", "class").required(),
+              Arg.strings(
+                      "members",
+                      "The members, by name (with parameter types for an overload: "
+                          + "price(int)).")
+                  .required()),
           Kind.REFACTORING,
           (project, args) ->
               ExtractSupertype.run(
@@ -362,19 +360,12 @@ final class Tools {
           interface's or Object's methods, which would mean another object; an anonymous class \
           with fields or other methods.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":   {"type": "string", "description": "Java file path relative to the project root."},
-              "line":   {"type": "integer", "description": "1-based line it starts on."},
-              "column": {"type": "integer", "description": "Optional 1-based column, when several start on the line."},
-              "to":     {"type": "string", "enum": ["lambda", "anonymous", "method_reference"], "description": "What it becomes."}
-            },
-            "required": ["file", "line", "to"]
-          }\
-          """,
-          Set.of("file", "line", "column", "to"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line it starts on.").required(),
+              Arg.integer("column", "Optional 1-based column, when several start on the line."),
+              Arg.oneOf("to", "What it becomes.", "lambda", "anonymous", "method_reference")
+                  .required()),
           Kind.REFACTORING,
           (project, args) ->
               ConvertLambda.run(
@@ -399,18 +390,14 @@ final class Tools {
           equals, hashCode or toString without value_semantics, or a change that adds compile \
           errors.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":            {"type": "string", "description": "Java file that declares the class, relative to the project root."},
-              "name":            {"type": "string", "description": "The top-level class."},
-              "value_semantics": {"type": "boolean", "description": "Accept the record's generated equals, hashCode and toString where the class has none."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name", "value_semantics"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the class, relative to the project root."),
+              Arg.string("name", "The top-level class.").required(),
+              Arg.bool(
+                  "value_semantics",
+                  "Accept the record's generated equals, hashCode and toString where the "
+                      + "class has none.")),
           Kind.REFACTORING,
           (project, args) ->
               ConvertToRecord.run(
@@ -436,23 +423,20 @@ final class Tools {
           one, a method lambdas implement, a varargs parameter, a name in use, or a change that \
           adds compile errors.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string", "description": "Java file that declares the method, relative to the project root."},
-              "name":       {"type": "string", "description": "Type.member, or with (parameter types) for an overload."},
-              "parameters": {"type": "array", "items": {"type": "string"}, "description": "The parameters to group, next to each other."},
-              "struct":     {"type": "string", "description": "The new record's name."},
-              "parameter":  {"type": "string", "description": "The new parameter's name."},
-            "fields":     {"type": "array", "items": {"type": "string"}, "description": "Extract class instead: instance fields of the class name names, moved into the new class."},
-            "field":      {"type": "string", "description": "With fields: the name of the field that holds the new class."},
-              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "name", "struct"]
-          }\
-          """,
-          Set.of("file", "name", "parameters", "struct", "parameter", "fields", "field", "imports"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.member, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.strings("parameters", "The parameters to group, next to each other."),
+              Arg.string("struct", "The new record's name.").required(),
+              Arg.string("parameter", "The new parameter's name."),
+              Arg.strings(
+                  "fields",
+                  "Extract class instead: instance fields of the class name names, moved "
+                      + "into the new class."),
+              Arg.string("field", "With fields: the name of the field that holds the new class."),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           ExtractStruct::run);
 
@@ -472,18 +456,12 @@ final class Tools {
           method of the new signature in a subclass or supertype (it would override or be \
           overridden).\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file that declares the method, relative to the project root."},
-              "name":    {"type": "string", "description": "Type.member, or with (parameter types) for an overload."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name", "imports"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.member, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           FunctionToMethod::run);
 
@@ -496,21 +474,14 @@ final class Tools {
           extract_variable does. The project must type-check no worse after; what new calls that \
           nothing declares is declared as stubs; imports are added and removed.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string", "description": "Java file path relative to the project root."},
-              "line":       {"type": "integer", "description": "1-based line the expression starts on."},
-              "expression": {"type": "string", "description": "Its exact source text."},
-              "column":     {"type": "integer", "description": "Optional 1-based column, when the text occurs twice on the line."},
-              "new":        {"type": "string", "description": "The expression to put in its place."},
-              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "line", "expression", "new"]
-          }\
-          """,
-          Set.of("file", "line", "expression", "column", "new", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the expression starts on.").required(),
+              Arg.string("expression", "Its exact source text.").required(),
+              Arg.integer(
+                  "column", "Optional 1-based column, when the text occurs twice on the line."),
+              Arg.string("new", "The expression to put in its place.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           Primitives::replaceExpression);
 
@@ -523,20 +494,12 @@ final class Tools {
           that statement is. The project must type-check no worse after; stubs and imports as \
           for every edit.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file path relative to the project root."},
-              "line":    {"type": "integer", "description": "1-based line a statement starts on."},
-              "where":   {"type": "string", "enum": ["before", "after"], "description": "Before or after it (default after)."},
-              "content": {"type": "string", "description": "The statements."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "line", "content"]
-          }\
-          """,
-          Set.of("file", "line", "where", "content", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line a statement starts on.").required(),
+              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
+              Arg.string("content", "The statements.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           Primitives::insertStatements);
 
@@ -550,20 +513,12 @@ final class Tools {
           edit.
           Refuses an end_line that does not end a statement of that block, naming the lines that do.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string", "description": "Java file path relative to the project root."},
-              "start_line": {"type": "integer", "description": "1-based line the first statement starts on."},
-              "end_line":   {"type": "integer", "description": "1-based line the last statement ends on."},
-              "content":    {"type": "string", "description": "The new statements; empty to delete."},
-              "imports":    {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "start_line", "end_line", "content"]
-          }\
-          """,
-          Set.of("file", "start_line", "end_line", "content", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("start_line", "1-based line the first statement starts on.").required(),
+              Arg.integer("end_line", "1-based line the last statement ends on.").required(),
+              Arg.string("content", "The new statements; empty to delete.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           Primitives::replaceStatements);
 
@@ -575,19 +530,11 @@ final class Tools {
           default, or at its end: an edit. content is the case with its statements \
           (case 2: return "two"; or case 2 -> "two";), indented as the other cases.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file path relative to the project root."},
-              "line":    {"type": "integer", "description": "1-based line the switch starts on."},
-              "content": {"type": "string", "description": "The case."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "line", "content"]
-          }\
-          """,
-          Set.of("file", "line", "content", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the switch starts on.").required(),
+              Arg.string("content", "The case.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           Primitives::addCase);
 
@@ -599,19 +546,11 @@ final class Tools {
           start on a line: an edit. content is the element (3, or RED). An element on a line of \
           its own goes on a new line, as the others.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file path relative to the project root."},
-              "line":    {"type": "integer", "description": "1-based line the initializer or enum starts on."},
-              "content": {"type": "string", "description": "The element."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "line", "content"]
-          }\
-          """,
-          Set.of("file", "line", "content", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the initializer or enum starts on.").required(),
+              Arg.string("content", "The element.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           Primitives::addElement);
 
@@ -633,19 +572,19 @@ final class Tools {
           that direction, a shared name, two side effects under the strict rule, a jump, or a side \
           effect past an early exit.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root."},
-              "line": {"type": "integer", "description": "The 1-based line the statement starts on."},
-              "direction": {"type": "string", "enum": ["up", "down"], "description": "up swaps with the statement before it; down with the one after."},
-              "names_only": {"type": "boolean", "description": "Relax the side-effect rule: only a shared name that one statement writes refuses the swap."}
-            },
-            "required": ["file", "line", "direction"]
-          }\
-          """,
-          Set.of("file", "line", "direction", "names_only"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "The 1-based line the statement starts on.").required(),
+              Arg.oneOf(
+                      "direction",
+                      "up swaps with the statement before it; down with the one after.",
+                      "up",
+                      "down")
+                  .required(),
+              Arg.bool(
+                  "names_only",
+                  "Relax the side-effect rule: only a shared name that one statement "
+                      + "writes refuses the swap.")),
           Kind.REFACTORING,
           Tools::moveStatement);
 
@@ -661,17 +600,7 @@ final class Tools {
           Refuses, saying why: no if on the line, an if with no else, an else if chain (invert the \
           inner if), a float comparison, or a change that adds compile errors, naming them.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root."},
-              "line": {"type": "integer", "description": "The 1-based line the if starts on."}
-            },
-            "required": ["file", "line"]
-          }\
-          """,
-          Set.of("file", "line"),
+          List.of(Arg.FILE, Arg.integer("line", "The 1-based line the if starts on.").required()),
           Kind.REFACTORING,
           Tools::invertIf);
 
@@ -686,17 +615,7 @@ final class Tools {
           in a block, a then-branch that can finish normally (the else's statements would then run \
           after it too), or a change that adds compile errors, naming them.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root."},
-              "line": {"type": "integer", "description": "The 1-based line the if starts on."}
-            },
-            "required": ["file", "line"]
-          }\
-          """,
-          Set.of("file", "line"),
+          List.of(Arg.FILE, Arg.integer("line", "The 1-based line the if starts on.").required()),
           Kind.REFACTORING,
           Tools::removeElse);
 
@@ -715,18 +634,17 @@ final class Tools {
           a call from another class with no instance, or a change that adds compile errors, naming \
           them. A null instance that the method dereferences fails inside it, not at the call.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares both classes."},
-              "name": {"type": "string", "description": "Type.method, or Type.method(params) for an overload: the method to move."},
-              "to": {"type": "string", "description": "The other top-level class of the file that the method moves to."}
-            },
-            "required": ["file", "name", "to"]
-          }\
-          """,
-          Set.of("file", "name", "to"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root; the file that declares "
+                      + "both classes."),
+              Arg.string(
+                      "name",
+                      "Type.method, or Type.method(params) for an overload: the method to "
+                          + "move.")
+                  .required(),
+              Arg.string("to", "The other top-level class of the file that the method moves to.")
+                  .required()),
           Kind.REFACTORING,
           Tools::moveMember);
 
@@ -742,19 +660,15 @@ final class Tools {
           field that is written, a compound write (+=) or ++ or --, a write inside an expression, a \
           statement that also reads the field, or a change that adds compile errors, naming them.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file path relative to the project root; the file that declares the field."},
-              "name": {"type": "string", "description": "Type.field, the field to encapsulate."},
-              "getter": {"type": "string", "description": "The getter's name; default get plus the field's name capitalized."},
-              "setter": {"type": "string", "description": "The setter's name; default set plus the field's name capitalized."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name", "getter", "setter"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root; the file that declares "
+                      + "the field."),
+              Arg.string("name", "Type.field, the field to encapsulate.").required(),
+              Arg.string(
+                  "getter", "The getter's name; default get plus the field's name capitalized."),
+              Arg.string(
+                  "setter", "The setter's name; default set plus the field's name capitalized.")),
           Kind.REFACTORING,
           Tools::encapsulateField);
 
@@ -777,18 +691,17 @@ final class Tools {
           file of that name that exists, a file with several top-level types or in the default \
           package when moving to a package.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file that declares the type, relative to the project root."},
-              "name": {"type": "string", "description": "The nested type, as Outer.Inner; with package, the file's top-level type."},
-              "package": {"type": "string", "description": "Optional: move the file's only top-level type to this package instead (same source root)."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name", "package"),
+          List.of(
+              Arg.FILE.described("Java file that declares the type, relative to the project root."),
+              Arg.string(
+                      "name",
+                      "The nested type, as Outer.Inner; with package, the file's top-level "
+                          + "type.")
+                  .required(),
+              Arg.string(
+                  "package",
+                  "Optional: move the file's only top-level type to this package instead "
+                      + "(same source root).")),
           Kind.REFACTORING,
           Tools::moveType);
 
@@ -808,18 +721,14 @@ final class Tools {
           that matches several overloads (they are listed; name one with its parameter types, as \
           Sub.hello(int)), a class that is not top-level.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file that declares the class, relative to the project root."},
-              "name": {"type": "string", "description": "The class and the method, as Sub.method."},
-              "to": {"type": "string", "description": "Optional simple name of a direct supertype, when the superclass is not the one to pull into."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name", "to"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the class, relative to the project root."),
+              Arg.string("name", "The class and the method, as Sub.method.").required(),
+              Arg.string(
+                  "to",
+                  "Optional simple name of a direct supertype, when the superclass is not "
+                      + "the one to pull into.")),
           Kind.REFACTORING,
           Tools::pullUp);
 
@@ -835,17 +744,10 @@ final class Tools {
           the member, a method that overrides a supertype's method, a bare name that matches several \
           overloads (they are listed; name one with its parameter types), a class that is not top-level.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file": {"type": "string", "description": "Java file that declares the class, relative to the project root."},
-              "name": {"type": "string", "description": "The class and the method, as Sub.method."}
-            },
-            "required": ["file", "name"]
-          }\
-          """,
-          Set.of("file", "name"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the class, relative to the project root."),
+              Arg.string("name", "The class and the method, as Sub.method.").required()),
           Kind.REFACTORING,
           Tools::pushDown);
 
@@ -861,18 +763,10 @@ final class Tools {
           written first compiles); other new errors are refused.
           The file must not exist, unless overwrite is set to replace all of it.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":      {"type": "string",  "description": "Path relative to the project root."},
-              "content":   {"type": "string",  "description": "The whole file."},
-              "overwrite": {"type": "boolean", "description": "Replace the file if it exists."}
-            },
-            "required": ["file", "content"]
-          }\
-          """,
-          Set.of("file", "content", "overwrite"),
+          List.of(
+              Arg.FILE.described("Path relative to the project root."),
+              Arg.string("content", "The whole file.").required(),
+              Arg.bool("overwrite", "Replace the file if it exists.")),
           Kind.EDIT,
           (project, args) -> Edits.createFile(project, args));
 
@@ -886,19 +780,11 @@ final class Tools {
           Refuses, saying why: a path that does not exist, a to that does, a Java file under a \
           source root (move_type moves types), a file that is not UTF-8 text.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":   {"type": "string",  "description": "The file or directory, relative to the project root."},
-              "to":     {"type": "string",  "description": "Its new path, relative to the project root."},
-              "copy":   {"type": "boolean", "description": "Copy it, keeping the original."},
-              "delete": {"type": "boolean", "description": "Delete it instead (no to)."}
-            },
-            "required": ["file"]
-          }\
-          """,
-          Set.of("file", "to", "copy", "delete"),
+          List.of(
+              Arg.FILE.described("The file or directory, relative to the project root."),
+              Arg.string("to", "Its new path, relative to the project root."),
+              Arg.bool("copy", "Copy it, keeping the original."),
+              Arg.bool("delete", "Delete it instead (no to).")),
           Kind.EDIT,
           (project, args) ->
               MoveFile.run(
@@ -920,20 +806,12 @@ final class Tools {
           declares is declared as stubs, as by add_declaration. Imports the new text needs \
           are added and those it leaves unused removed; imports chooses an ambiguous name.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":            {"type": "string",  "description": "Path relative to the project root."},
-              "old":             {"type": "string",  "description": "Text as it is in the file."},
-              "new":             {"type": "string",  "description": "The text to put in its place."},
-              "all_occurrences": {"type": "boolean", "description": "Replace every occurrence, not only one."},
-              "imports":         {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "old", "new"]
-          }\
-          """,
-          Set.of("file", "old", "new", "all_occurrences", "imports"),
+          List.of(
+              Arg.FILE.described("Path relative to the project root."),
+              Arg.string("old", "Text as it is in the file.").required(),
+              Arg.string("new", "The text to put in its place.").required(),
+              Arg.bool("all_occurrences", "Replace every occurrence, not only one."),
+              Arg.IMPORTS),
           Kind.EDIT,
           (project, args) -> Edits.replaceText(project, args));
 
@@ -956,21 +834,13 @@ final class Tools {
           Imports the members need are added, and those they no longer use are removed; when a \
           name could be several classes, the call is refused with them, and imports chooses.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file path relative to the project root."},
-              "content": {"type": "string", "description": "Java member declarations."},
-              "type":    {"type": "string", "description": "Optional: the type to add to, as Outer or Outer.Inner."},
-              "after":   {"type": "string", "description": "Optional: put them just after this member (a name)."},
-              "before":  {"type": "string", "description": "Optional: put them just before this member."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "content"]
-          }\
-          """,
-          Set.of("file", "content", "type", "after", "before", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.string("content", "Java member declarations.").required(),
+              Arg.string("type", "Optional: the type to add to, as Outer or Outer.Inner."),
+              Arg.string("after", "Optional: put them just after this member (a name)."),
+              Arg.string("before", "Optional: put them just before this member."),
+              Arg.IMPORTS),
           Kind.EDIT,
           (project, args) -> Declarations.add(project, args));
 
@@ -989,19 +859,14 @@ final class Tools {
           Imports content needs are added, and those only the old declaration used are \
           removed; when a name could be several classes, imports chooses.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":    {"type": "string", "description": "Java file path relative to the project root."},
-              "name":    {"type": "string", "description": "Type, Type.member or member; with (parameter types) for an overload."},
-              "content": {"type": "string", "description": "The new declaration; empty to delete it."},
-              "imports": {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "name", "content"]
-          }\
-          """,
-          Set.of("file", "name", "content", "imports"),
+          List.of(
+              Arg.FILE,
+              Arg.string(
+                      "name",
+                      "Type, Type.member or member; with (parameter types) for an overload.")
+                  .required(),
+              Arg.string("content", "The new declaration; empty to delete it.").required(),
+              Arg.IMPORTS),
           Kind.EDIT,
           (project, args) -> Declarations.replace(project, args));
 
@@ -1023,22 +888,16 @@ final class Tools {
           reference, varargs, a name that would hide a field a body reads, a value that does \
           not type-check at some call.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
-              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
-              "parameter": {"type": "string", "description": "The new parameter's name."},
-              "type":      {"type": "string", "description": "Its Java type."},
-              "value":     {"type": "string", "description": "The Java expression each call passes."},
-              "before":    {"type": "string", "description": "Optional: the parameter to put it before; default last."},
-              "imports":   {"type": "array", "items": {"type": "string"}, "description": "Optional: fully qualified names to import where a simple name is ambiguous."}
-            },
-            "required": ["file", "name", "parameter", "type", "value"]
-          }\
-          """,
-          Set.of("file", "name", "parameter", "type", "value", "before", "imports"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.string("parameter", "The new parameter's name.").required(),
+              Arg.string("type", "Its Java type.").required(),
+              Arg.string("value", "The Java expression each call passes.").required(),
+              Arg.string("before", "Optional: the parameter to put it before; default last."),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           (project, args) -> Signatures.addParameter(project, args));
 
@@ -1058,18 +917,12 @@ final class Tools {
           effects, a method that overrides a library method, one used as a method reference, \
           varargs.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
-              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
-              "parameter": {"type": "string", "description": "The parameter to remove."}
-            },
-            "required": ["file", "name", "parameter"]
-          }\
-          """,
-          Set.of("file", "name", "parameter"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.string("parameter", "The parameter to remove.").required()),
           Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, args));
 
@@ -1087,19 +940,13 @@ final class Tools {
           Refuses, saying why: two arguments with side effects whose order would change, a \
           method that overrides a library method, one used as a method reference, varargs.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":      {"type": "string", "description": "Java file that declares the method, relative to the project root."},
-              "name":      {"type": "string", "description": "Type.member, member, or with (parameter types) for an overload."},
-              "parameter": {"type": "string", "description": "The parameter to move."},
-              "before":    {"type": "string", "description": "Optional: the parameter to put it before; default last."}
-            },
-            "required": ["file", "name", "parameter"]
-          }\
-          """,
-          Set.of("file", "name", "parameter", "before"),
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.string("parameter", "The parameter to move.").required(),
+              Arg.string("before", "Optional: the parameter to put it before; default last.")),
           Kind.REFACTORING,
           (project, args) -> Signatures.moveParameter(project, args));
 
@@ -1123,20 +970,12 @@ final class Tools {
           in the middle of a void method, this(...) or super(...), an assignment to a final \
           field, a name the type already has.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "file":       {"type": "string",  "description": "Java file path relative to the project root."},
-              "start_line": {"type": "integer", "description": "First line of the statements (1-based)."},
-              "end_line":   {"type": "integer", "description": "Last line of the statements (inclusive)."},
-              "name":       {"type": "string",  "description": "The new method's name."},
-              "doc":        {"type": "string",  "description": "Optional: its Javadoc text, without /** */."}
-            },
-            "required": ["file", "start_line", "end_line", "name"]
-          }\
-          """,
-          Set.of("file", "start_line", "end_line", "name", "doc"),
+          List.of(
+              Arg.FILE,
+              Arg.integer("start_line", "First line of the statements (1-based).").required(),
+              Arg.integer("end_line", "Last line of the statements (inclusive).").required(),
+              Arg.string("name", "The new method's name.").required(),
+              Arg.string("doc", "Optional: its Javadoc text, without /** */.")),
           Kind.REFACTORING,
           (project, args) -> Extract.method(project, args));
 
@@ -1148,13 +987,7 @@ final class Tools {
           or whole batch), restoring each file it wrote. Call it again to step further back.
           Refuses when a file it would restore was changed since, by a tool or by hand.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {}
-          }\
-          """,
-          Set.of(),
+          List.of(),
           Kind.CONTROL,
           (project, args) -> Outcome.of(Journal.undo(project)));
 
@@ -1172,17 +1005,38 @@ final class Tools {
           "end" type-checks once, after the last step, so edits may pass through code that does \
           not compile yet (a signature, then its callers). One undo reverts the whole batch.\
           """,
-          """
-          {
-            "type": "object",
-            "properties": {
-              "steps": {"type": "array", "description": "The steps, in order.", "items": {"type": "object", "properties": {"tool": {"type": "string"}, "args": {"type": "object"}, "id": {"type": "string"}}, "required": ["tool"]}},
-              "check": {"type": "string", "enum": ["each", "end"], "description": "Type-check after each step (default), or once at the end."}
-            },
-            "required": ["steps"]
-          }\
-          """,
-          Set.of("steps", "check"),
+          List.of(
+              Arg.json(
+                      "steps",
+                      """
+                      {
+                        "type": "array",
+                        "description": "The steps, in order.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object"
+                            },
+                            "id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "tool"
+                          ]
+                        }
+                      }\
+                      """)
+                  .required(),
+              Arg.oneOf(
+                  "check",
+                  "Type-check after each step (default), or once at the end.",
+                  "each",
+                  "end")),
           Kind.CONTROL,
           (project, args) -> Batch.run(project, args));
 
