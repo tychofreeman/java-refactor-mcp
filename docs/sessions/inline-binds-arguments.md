@@ -51,5 +51,6 @@ All Java through jrefactor (`replace_text`, `add_declaration`,
 ## Follow-ups
 
 - An unused argument with an effect is bound to an unused local (`int x =
-  next();`); an expression statement (`next();`) would read better.
+  next();`); an expression statement (`next();`) would read better. Done
+  (`docs/sessions/inline-unused-argument.md`).
 - Rerun the A/B inline task to measure.
