@@ -6,7 +6,7 @@ public class Price {
   }
 
   public int total() {
-    int x = next();
+    next();
     return 1;
   }
 }

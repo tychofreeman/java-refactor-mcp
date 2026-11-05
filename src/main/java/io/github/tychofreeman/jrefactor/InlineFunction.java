@@ -376,7 +376,8 @@ final class InlineFunction {
       }
       Statement statement = prefix.isEmpty() ? blockStatement(site) : wholeStatement(site, name);
       int at = statement.getStartPosition();
-      String declared = declarations(args, params, local, siteText, Lines.indentOf(siteText, at));
+      String declared =
+          declarations(args, params, local, siteText, Lines.indentOf(siteText, at), useCount);
       if (prefix.isEmpty()) {
         return List.of(new TextEdit(at, at, declared), call);
       }
@@ -403,7 +404,12 @@ final class InlineFunction {
     }
     String replaced =
         declarations(
-                args, params, local, siteText, Lines.indentOf(siteText, stmt.getStartPosition()))
+                args,
+                params,
+                local,
+                siteText,
+                Lines.indentOf(siteText, stmt.getStartPosition()),
+                useCount)
             + reindent(
                 substituted(
                     declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver),
@@ -510,10 +516,15 @@ final class InlineFunction {
       List<SingleVariableDeclaration> params,
       String[] local,
       String siteText,
-      String indent) {
+      String indent,
+      int[] useCount) {
     StringBuilder out = new StringBuilder();
     for (int i = 0; i < args.size(); i++) {
-      if (local[i] != null) {
+      if (local[i] != null && useCount[i] == 0 && statementExpression(args.get(i))) {
+        // The body does not use it: the argument runs for its effect alone.
+        Expression arg = args.get(i);
+        out.append(siteText, arg.getStartPosition(), Nodes.end(arg)).append(";\n").append(indent);
+      } else if (local[i] != null) {
         Expression arg = args.get(i);
         out.append(Extract.typeName(params.get(i).resolveBinding().getType()))
             .append(' ')
@@ -525,6 +536,20 @@ final class InlineFunction {
       }
     }
     return out.toString();
+  }
+
+  /**
+   * Whether {@code e} can stand as a statement: a call, an assignment, ++ or --, or a new object.
+   */
+  private static boolean statementExpression(Expression e) {
+    return e instanceof MethodInvocation
+        || e instanceof SuperMethodInvocation
+        || e instanceof Assignment
+        || e instanceof ClassInstanceCreation
+        || e instanceof PostfixExpression
+        || (e instanceof PrefixExpression p
+            && (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                || p.getOperator() == PrefixExpression.Operator.DECREMENT));
   }
 
   private static boolean any(String[] local) {

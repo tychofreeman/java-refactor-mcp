@@ -643,7 +643,8 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   of order, is bound to a local before the call's statement instead (roadmap #102),
   with every earlier argument that is not fixed, so they run once, in order: the
   local has the parameter's name and type, numbered when the method already uses the
-  name. The move to before the statement is checked by the gate as an extract; when
+  name; an argument the body does not use, that can stand as a statement (a call, an
+  assignment, `++`/`--`, a `new`), is written as that statement (`next();`). The move to before the statement is checked by the gate as an extract; when
   it is refused (an effect earlier in the statement), the in-place reason is the
   refusal. Each argument is checked by the behavior gate (roadmap #96) as code that
   ran just before the body and lands at its parameter's uses: one with an effect that the body drops,
