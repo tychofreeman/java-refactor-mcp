@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -171,7 +172,7 @@ public final class Server {
                   new ToolAnnotations(null, def.readOnly(), false, def.readOnly(), false, null))
               .build(),
           (exchange, request) ->
-              answer(quiet, () -> Tools.call(def, project, request.arguments()).render()));
+              answerAll(quiet, () -> Tools.call(def, project, request.arguments()).contents()));
     }
     return spec.build();
   }
@@ -185,13 +186,27 @@ public final class Server {
    * Runs {@code body}: its text, a refusal's reason, or an engine error, which is not a refusal.
    */
   static CallToolResult answer(Quiet quiet, Body body) {
+    return answerAll(quiet, () -> List.of(body.run()));
+  }
+
+  /** A tool body that returns the parts of its result, each a text of its own. */
+  interface Contents {
+    List<String> run() throws Exception;
+  }
+
+  /** As {@link #answer}, for a result in several parts (the changes to exceptional behavior). */
+  static CallToolResult answerAll(Quiet quiet, Contents body) {
     quiet.calls.incrementAndGet();
     try {
-      String text;
+      List<String> texts;
       synchronized (quiet.oneAtATime) {
-        text = body.run();
+        texts = body.run();
       }
-      return CallToolResult.builder().addTextContent(text).isError(false).build();
+      CallToolResult.Builder result = CallToolResult.builder();
+      for (String text : texts) {
+        result.addTextContent(text);
+      }
+      return result.isError(false).build();
     } catch (Refusal refusal) {
       return CallToolResult.builder()
           .addTextContent(Refusal.PREFIX + refusal.getMessage())

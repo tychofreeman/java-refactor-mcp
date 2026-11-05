@@ -546,3 +546,16 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `fixed`); their own models are gone, removed by `inline_function` where
   they had become one-line delegates. A new effect kind (what may throw, for
   #73) goes in `Effects.Kind`.
+
+- `preserve_exceptions` (roadmap #73, 2026-11-04, `docs/sessions/preserve-exceptions.md`):
+  every `Kind.REFACTORING` `Def` gains the argument in its constructor (schema
+  and allowed arguments), so a new refactoring has it without a schema edit.
+  `Tools.call` sets `Session.preserveExceptions` for the call and collects
+  `Session.exceptional` into `Outcome.exceptional`; a batch step's changes go
+  to its batch. A tool reports or refuses through `Exceptional.change`, or
+  keeps the behavior itself and reports through `Exceptional.report`
+  (`move_member` writes `requireNonNull`). The result's part of its own is a
+  second MCP text block (`Outcome.contents`, `Server.answerAll`); goldens pin
+  it in `exceptional.txt`, and a case without that file must report nothing.
+  `Effects.Kind.MAY_THROW` and `Effects.mayThrow()` are the syntax-only "may
+  throw".

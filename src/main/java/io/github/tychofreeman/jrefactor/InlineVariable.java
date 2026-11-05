@@ -10,6 +10,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
@@ -94,6 +95,7 @@ final class InlineVariable {
               + ", not its initializer's, so each use would change type. Keep the variable.");
     }
 
+    checkExceptional(project, block, stmt, init, usesIn(block, variable, after), name, text);
     String source =
         text.substring(init.getStartPosition(), init.getStartPosition() + init.getLength());
     String inlined = needsParentheses(init) ? "(" + source + ")" : source;
@@ -129,6 +131,43 @@ final class InlineVariable {
             + rel
             + written.fixed().said(),
         written.declared());
+  }
+
+  /**
+   * Reports, or under preserve_exceptions refuses, an initializer that may throw moved past a
+   * statement that changes state: the exception would come after that change, not before it.
+   */
+  private static void checkExceptional(
+      SourceProject project,
+      Block block,
+      Statement declaration,
+      Expression init,
+      List<SimpleName> uses,
+      String name,
+      String text) {
+    List<ASTNode> throwing = Effects.of(init).mayThrow();
+    if (throwing.isEmpty() || uses.isEmpty()) {
+      return;
+    }
+    int first = uses.get(0).getStartPosition();
+    for (Object o : block.statements()) {
+      Statement s = (Statement) o;
+      if (s.getStartPosition() > declaration.getStartPosition()
+          && s.getStartPosition() + s.getLength() <= first
+          && Effects.of(s).changes()) {
+        Exceptional.change(
+            project,
+            "the initializer of "
+                + name
+                + " may throw ("
+                + throwing.get(0)
+                + "), and inlining moves it past the statement at line "
+                + Lines.number(text, s.getStartPosition())
+                + ", which changes state: an exception would now come after that change",
+            "keep the variable, or move that statement above the declaration first");
+        return;
+      }
+    }
   }
 
   /** The one variable named {@code name} on {@code line}, by column if it is needed. */

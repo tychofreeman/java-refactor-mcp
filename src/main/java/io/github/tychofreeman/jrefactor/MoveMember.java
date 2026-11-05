@@ -13,6 +13,7 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -24,11 +25,13 @@ import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
+import org.eclipse.jdt.core.dom.TypeLiteral;
 
 /**
  * move_member: a method moves from its class to another top-level type of the same file. An
@@ -116,6 +119,7 @@ final class MoveMember {
     Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+    List<String> nullable = new ArrayList<>();
     int calls = 0;
     int callFiles = 0;
     for (Path p : parsed.keySet()) {
@@ -172,10 +176,39 @@ final class MoveMember {
       }
       List<TextEdit> list = edits.computeIfAbsent(p, k -> new ArrayList<>());
       for (MethodInvocation site : sites) {
-        list.add(rewrite(site, fileText, sourceKey, typeName, to, member, isStatic, name, key));
+        if (!isStatic && site.getExpression() != null && mayBeNull(site.getExpression())) {
+          nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
+        }
+        list.add(
+            rewrite(
+                site,
+                fileText,
+                sourceKey,
+                typeName,
+                to,
+                member,
+                isStatic,
+                name,
+                key,
+                Exceptional.preserved(project)));
       }
       calls += sites.size();
       callFiles++;
+    }
+    if (!nullable.isEmpty()) {
+      Exceptional.report(
+          project,
+          "a null receiver of "
+              + typeName
+              + "."
+              + member
+              + " now fails inside "
+              + to
+              + "."
+              + member
+              + ", when it uses the receiver and after the other arguments run (or not at all),"
+              + " not at the call: "
+              + String.join(", ", nullable));
     }
 
     int ms = m.getStartPosition();
@@ -399,12 +432,17 @@ final class MoveMember {
       String member,
       boolean isStatic,
       String name,
-      String key) {
+      String key,
+      boolean keep) {
     Expression expr = site.getExpression();
     List<String> parts = new ArrayList<>();
     if (!isStatic) {
       if (expr != null) {
-        parts.add(source(fileText, expr));
+        // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
+        parts.add(
+            keep && mayBeNull(expr)
+                ? "java.util.Objects.requireNonNull(" + source(fileText, expr) + ")"
+                : source(fileText, expr));
       } else {
         ASTNode owner = owningType(site);
         if (owner instanceof AnonymousClassDeclaration) {
@@ -451,6 +489,14 @@ final class MoveMember {
     int s = site.getStartPosition();
     return new TextEdit(
         s, s + site.getLength(), to + "." + member + "(" + String.join(", ", parts) + ")");
+  }
+
+  /** Whether {@code receiver} may be null: anything but this, a new object or a literal. */
+  private static boolean mayBeNull(Expression receiver) {
+    return !(receiver instanceof ThisExpression
+        || receiver instanceof ClassInstanceCreation
+        || receiver instanceof StringLiteral
+        || receiver instanceof TypeLiteral);
   }
 
   private static boolean callsMember(Expression arg, String key) {

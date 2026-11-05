@@ -66,7 +66,13 @@ class GoldenTest {
           () -> "expected refusal containing '" + expected + "', got: " + refusal.getMessage());
       assertTreesEqual(caseDir.resolve("in"), work);
     } else {
-      String text = call(tool, project, args, caseDir);
+      Outcome outcome = call(tool, project, args, caseDir);
+      String text = outcome.render();
+      Path exceptional = caseDir.resolve("exceptional.txt");
+      assertEquals(
+          Files.exists(exceptional) ? Files.readString(exceptional).strip() : "",
+          outcome.renderExceptional(),
+          "changes to exceptional behavior (exceptional.txt)");
       Path out = caseDir.resolve("out");
       assertTreesEqual(Files.isDirectory(out) ? out : caseDir.resolve("in"), work);
       if (Files.exists(result)) {
@@ -84,9 +90,9 @@ class GoldenTest {
   /**
    * Calls the tool a case names through its definition, as the server does: properties are its
    * arguments (whole numbers and true/false as such), and each {@code <arg>.txt} file of the case
-   * is that argument's text, for content with several lines. Returns the tool's text.
+   * is that argument's text, for content with several lines. Returns the tool's outcome.
    */
-  private static String call(String tool, SourceProject project, Properties props, Path caseDir)
+  private static Outcome call(String tool, SourceProject project, Properties props, Path caseDir)
       throws Exception {
     Tools.Def def = Tools.named(tool);
     Map<String, Object> values = new LinkedHashMap<>();
@@ -98,7 +104,10 @@ class GoldenTest {
     try (Stream<Path> files = Files.list(caseDir)) {
       for (Path f : files.sorted().toList()) {
         String name = f.getFileName().toString();
-        if (name.endsWith(".txt") && !name.equals("refused.txt") && !name.equals("result.txt")) {
+        if (name.endsWith(".txt")
+            && !name.equals("refused.txt")
+            && !name.equals("result.txt")
+            && !name.equals("exceptional.txt")) {
           values.put(name.substring(0, name.length() - 4), Files.readString(f));
         } else if (name.endsWith(".json")) {
           values.put(
@@ -107,7 +116,7 @@ class GoldenTest {
         }
       }
     }
-    return Tools.call(def, project, values).render();
+    return Tools.call(def, project, values);
   }
 
   private static Object value(String text) {

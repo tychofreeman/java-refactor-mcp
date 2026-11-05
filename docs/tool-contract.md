@@ -15,6 +15,29 @@ check each point against `tychofreeman/go-refactor-mcp` (README "Status" and
   rolls back as a whole.
 - **1-based lines.** Columns are 1-based. Paths are relative to the project root.
 
+## Exceptional behavior (`preserve_exceptions`, every refactoring)
+
+A refactoring keeps every effect of the normal flow; it does not keep
+exceptional behavior (where an exception is thrown, or whether one is) by
+default (`docs/design.md`, Decisions).
+
+- Argument: `preserve_exceptions` (boolean, optional) on every refactoring.
+  When true, the tool keeps exceptional behavior where it can, or refuses with
+  "<the change>. preserve_exceptions is set, so nothing was changed: <how to
+  keep it>".
+- Result: without the flag, each change to exceptional behavior the tool
+  knows of is listed in a part of the result of its own: a second text block
+  in MCP, a section after a blank line on the command line, starting
+  "exceptional behavior changed (pass preserve_exceptions=true to keep it, or
+  to be refused):", one change per line.
+- What is detected so far (syntax only): `move_member`, a receiver that may be
+  null (kept with `java.util.Objects.requireNonNull(receiver)`);
+  `inline_variable`, an initializer that may throw moved past a statement
+  that changes state (refused); `move_statement`, a statement that may throw
+  swapped with one that changes state (refused). "May throw" is a dereference
+  of a variable or expression, an array element, an integer `/` or `%`, a
+  reference cast, a call or a new object.
+
 ## Tools (planned, by gorefactor's names)
 
 Names and groups follow gorefactor. A tool is added here only when it is

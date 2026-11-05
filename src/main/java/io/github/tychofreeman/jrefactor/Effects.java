@@ -10,18 +10,23 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
@@ -41,7 +46,13 @@ final class Effects {
     WRITE,
     CALL,
     CREATE,
-    NEW_ARRAY
+    NEW_ARRAY,
+    /**
+     * What may throw where it stands, as the syntax shows it: a dereference of a variable or an
+     * expression ({@code p.x}, {@code e.m()}), an array element, an integer {@code /} or {@code %},
+     * a reference cast. Calls may throw too; {@link #mayThrow} counts them.
+     */
+    MAY_THROW
   }
 
   /**
@@ -133,6 +144,42 @@ final class Effects {
           @Override
           public boolean visit(MethodInvocation n) {
             add(Kind.CALL, n, null);
+            Expression on = n.getExpression();
+            if (on != null
+                && !(on instanceof ThisExpression)
+                && !(on instanceof Name name && name.resolveBinding() instanceof ITypeBinding)) {
+              add(Kind.MAY_THROW, n, null);
+            }
+            return true;
+          }
+
+          @Override
+          public boolean visit(QualifiedName n) {
+            if (n.getQualifier().resolveBinding() instanceof IVariableBinding) {
+              add(Kind.MAY_THROW, n, null);
+            }
+            return true;
+          }
+
+          @Override
+          public boolean visit(InfixExpression n) {
+            ITypeBinding type = n.resolveTypeBinding();
+            if ((n.getOperator() == InfixExpression.Operator.DIVIDE
+                    || n.getOperator() == InfixExpression.Operator.REMAINDER)
+                && type != null
+                && type.isPrimitive()
+                && !type.getName().equals("double")
+                && !type.getName().equals("float")) {
+              add(Kind.MAY_THROW, n, null);
+            }
+            return true;
+          }
+
+          @Override
+          public boolean visit(CastExpression n) {
+            if (!n.getType().isPrimitiveType()) {
+              add(Kind.MAY_THROW, n, null);
+            }
             return true;
           }
 
@@ -157,12 +204,16 @@ final class Effects {
           @Override
           public boolean visit(ArrayAccess n) {
             add(Kind.ELEMENT, n, null);
+            add(Kind.MAY_THROW, n, null);
             return true;
           }
 
           @Override
           public boolean visit(FieldAccess n) {
             add(Kind.ELEMENT, n, null);
+            if (!(n.getExpression() instanceof ThisExpression)) {
+              add(Kind.MAY_THROW, n, null);
+            }
             return true;
           }
 
@@ -249,7 +300,7 @@ final class Effects {
       if (e.deferred()) {
         continue;
       }
-      if (e.kind() != Kind.NAME && e.kind() != Kind.DECLARE) {
+      if (e.kind() != Kind.NAME && e.kind() != Kind.DECLARE && e.kind() != Kind.MAY_THROW) {
         return false;
       }
       if (e.kind() == Kind.NAME
@@ -259,5 +310,21 @@ final class Effects {
       }
     }
     return true;
+  }
+
+  /**
+   * The nodes that may throw where they stand, outside lambdas and anonymous classes, in order:
+   * what {@link Kind#MAY_THROW} marks, and every call and new object.
+   */
+  List<ASTNode> mayThrow() {
+    List<ASTNode> out = new ArrayList<>();
+    for (Effect e : all) {
+      if (!e.deferred()
+          && (e.kind() == Kind.MAY_THROW || e.kind() == Kind.CALL || e.kind() == Kind.CREATE)
+          && !out.contains(e.node())) {
+        out.add(e.node());
+      }
+    }
+    return out;
   }
 }

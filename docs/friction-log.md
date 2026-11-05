@@ -582,3 +582,11 @@ to `InlineFunction`, `ExtractVariable` and `InlineVariable` in one change
 change, each of the three tools accepted a rewrite that compiled and changed behavior. A
 refusal-only fix is the chosen rule; a tool that rewrote the call (for example, a temporary for the
 dropped argument) would need the evaluation order named first, which no tool gives.
+
+## 2026-11-04: probing uncommitted server code from the command line
+- Task: roadmap #73 (`docs/sessions/preserve-exceptions.md`).
+- Tool: `bin/jrefactor` rebuilds its jar only for a commit newer than the
+  jar, so probing the branch's uncommitted change took a temporary commit and
+  a soft reset.
+- Idea: a `--rebuild` option (or `JREFACTOR_REBUILD=1`) that builds from the
+  working tree first.

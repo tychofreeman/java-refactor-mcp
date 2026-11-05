@@ -55,6 +55,7 @@ class EffectsTest {
             Effects.Kind.CALL,
             Effects.Kind.NAME,
             Effects.Kind.ELEMENT,
+            Effects.Kind.MAY_THROW,
             Effects.Kind.NAME,
             Effects.Kind.NAME),
         e.all().stream().map(Effects.Effect::kind).toList());

@@ -344,6 +344,17 @@ class ServerTest {
     assertTrue(text.contains("ServerTest."), text);
   }
 
+  @Test
+  void changesToExceptionalBehaviorAreAPartOfTheirOwn() {
+    Outcome outcome =
+        Outcome.of("moved").withExceptional(List.of("a null receiver now fails later"));
+    CallToolResult result = Server.answerAll(new Server.Quiet(), outcome::contents);
+    assertEquals(2, result.content().size());
+    assertEquals("moved", ((TextContent) result.content().get(0)).text());
+    assertTrue(
+        ((TextContent) result.content().get(1)).text().contains("a null receiver now fails later"));
+  }
+
   @SuppressWarnings("unchecked")
   private static Map<String, Object> asMap(Object value) {
     return (Map<String, Object>) value;

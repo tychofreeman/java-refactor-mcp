@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- a null receiver of Price.charge now fails inside Fees.charge, when it uses the receiver and after the other arguments run (or not at all), not at the call: p in com/example/Shop.java

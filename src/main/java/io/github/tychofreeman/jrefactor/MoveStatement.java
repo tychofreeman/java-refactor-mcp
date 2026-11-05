@@ -99,6 +99,7 @@ final class MoveStatement {
               + " that one writes.");
     }
 
+    checkExceptional(project, early, late, a, b, text);
     int s1 = early.getStartPosition();
     int e1 = s1 + early.getLength();
     int s2 = late.getStartPosition();
@@ -130,6 +131,39 @@ final class MoveStatement {
             + rel
             + written.fixed().said(),
         written.declared());
+  }
+
+  /**
+   * Reports, or under preserve_exceptions refuses, a swap of a statement that may throw with one
+   * that changes state: the exception would come after that change, or stop it.
+   */
+  private static void checkExceptional(
+      SourceProject project, Statement early, Statement late, Effects a, Effects b, String text) {
+    int earlyLine = Lines.number(text, early.getStartPosition());
+    int lateLine = Lines.number(text, late.getStartPosition());
+    String change = null;
+    if (!a.mayThrow().isEmpty() && b.changes()) {
+      change =
+          "the statement at line "
+              + earlyLine
+              + " may throw ("
+              + a.mayThrow().get(0)
+              + ") and now runs after the one at line "
+              + lateLine
+              + ", which changes state: an exception would now come after that change";
+    } else if (!b.mayThrow().isEmpty() && a.changes()) {
+      change =
+          "the statement at line "
+              + lateLine
+              + " may throw ("
+              + b.mayThrow().get(0)
+              + ") and now runs before the one at line "
+              + earlyLine
+              + ", which changes state: an exception would now stop that change";
+    }
+    if (change != null) {
+      Exceptional.change(project, change, "move the statements another way");
+    }
   }
 
   private static boolean isJump(Statement s) {
