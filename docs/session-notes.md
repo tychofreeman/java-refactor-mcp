@@ -103,6 +103,11 @@ Each was chosen from options; the record named beside it has the options it beat
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
 
+- `move_type` with `package` (#80, 2026-11-04) is `MoveToPackage`: a file's only
+  top-level type to another package of its source root; package-private
+  declarations a use crosses the new boundary with become public, found by
+  binding (`findDeclaringNode` by key) in the file its package and name imply.
+
 ## Testing
 
 - Every golden write case is undone by `undo` and must return to `in/`, and the
