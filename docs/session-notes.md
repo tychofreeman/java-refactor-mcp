@@ -152,7 +152,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the
-  edits); `inline_function`, `inline_variable` and `convert_lambda` do.
+  edits, and the call sites' arguments when the tool rewrites calls); `inline_function`,
+  `inline_variable`, `convert_lambda`, `pull_up`, `push_down` and `move_member` do.
 
 ## Testing
 

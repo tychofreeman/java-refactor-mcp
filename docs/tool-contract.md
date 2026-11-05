@@ -40,8 +40,8 @@ default (`docs/design.md`, Decisions).
 
 ## Moved code keeps its meaning (`NameCheck`)
 
-Roadmap #77, 2026-11-04. `inline_function`, `inline_variable` and `convert_lambda`
-check, before writing, that each name in the text they write resolves to a
+Roadmap #77, 2026-11-04. `inline_function`, `inline_variable`, `convert_lambda`,
+`pull_up`, `push_down` and `move_member` check, before writing, that each name in the text they write resolves to a
 declaration it resolved to where the text came from (the body, the arguments, the
 initializer, the lambda). A name the moved text declares itself, or one it did not
 have (a qualifier the tool added), is not checked. Refused: "inlining Cart.total

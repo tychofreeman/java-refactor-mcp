@@ -615,3 +615,12 @@ dropped argument) would need the evaluation order named first, which no tool giv
 - Idea: in a batch, when a name a step needs was imported by the file before
   the batch, choose that import rather than refuse.
   Done: `bin/jrefactor --rebuild` (roadmap #79, 2026-11-04).
+
+## 2026-11-04: a refused batch leaves the directories its create_file steps made
+- Task: `docs/sessions/same-meaning-check.md`.
+- Tool: a batch with `create_file` steps for a new golden case was refused at
+  the end (an unhandled exception in another step); the files were removed,
+  but their new directories stayed, empty, and `GoldenTest` then failed on the
+  case directory with no `args.properties`.
+- Idea: the journal removes directories that a refused or undone call created
+  and left empty.

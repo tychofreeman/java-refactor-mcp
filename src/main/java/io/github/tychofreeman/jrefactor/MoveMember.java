@@ -121,6 +121,8 @@ final class MoveMember {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     List<String> nullable = new ArrayList<>();
+    // What the moved text means where it is written: the method, and each call's arguments.
+    List<ASTNode> fragments = new ArrayList<>(List.of(m));
     int calls = 0;
     int callFiles = 0;
     for (Path p : parsed.keySet()) {
@@ -177,6 +179,12 @@ final class MoveMember {
       }
       List<TextEdit> list = edits.computeIfAbsent(p, k -> new ArrayList<>());
       for (MethodInvocation site : sites) {
+        for (Object a : site.arguments()) {
+          fragments.add((ASTNode) a);
+        }
+        if (site.getExpression() != null) {
+          fragments.add(site.getExpression());
+        }
         if (!isStatic && site.getExpression() != null && mayBeNull(site.getExpression())) {
           nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
@@ -240,6 +248,8 @@ final class MoveMember {
         widened = true;
       }
     }
+    NameCheck.require(
+        project, texts, edits, NameCheck.meanings(fragments), "moving " + name + " to " + to);
     Stubs.Declared declared2 =
         MemberMove.gate(
             project,
