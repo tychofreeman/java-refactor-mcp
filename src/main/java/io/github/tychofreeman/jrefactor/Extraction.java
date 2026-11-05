@@ -90,12 +90,12 @@ final class Extraction {
   Outcome apply() throws Exception {
     Plan p = plan();
     String invocation = name + "(" + String.join(", ", names(p.params())) + ")";
-    Call c = callOf(p, invocation);
+    Call c = callOf(p, invocation, recordName());
     String method = methodText(p, c);
 
     int insertAt = Extract.lineEndOffset(unit, text, line(Extract.endOf(member) - 1));
-    String callLine =
-        indentOf(lineStartOffset(sel.statements().get(0).getStartPosition())) + c.call() + "\n";
+    String callIndent = indentOf(lineStartOffset(sel.statements().get(0).getStartPosition()));
+    String callLine = callIndent + c.call().replace("\n", "\n" + callIndent) + "\n";
     String edited =
         text.substring(0, sel.startOffset())
             + callLine
@@ -125,7 +125,11 @@ final class Extraction {
             + rel
             + " into "
             + signature(p)
-            + (p.results().isEmpty() ? "" : ", returning " + p.results().get(0).getName())
+            + (p.results().isEmpty()
+                ? ""
+                : p.results().size() == 1
+                    ? ", returning " + p.results().get(0).getName()
+                    : ", returning " + Extract.and(names(p.results())) + " as " + recordName())
             + ", at lines "
             + first
             + "-"
@@ -137,6 +141,11 @@ final class Extraction {
                 : "")
             + fixed.said(),
         stubs);
+  }
+
+  /** The record a method of several results returns: its name with Result, {@code BothResult}. */
+  private String recordName() {
+    return Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Result";
   }
 
   /** What the extraction works out before it writes: the parameters, the value and the returns. */
@@ -170,12 +179,7 @@ final class Extraction {
       }
     }
     if (results.size() > 1) {
-      throw new Refusal(
-          sel.lines()
-              + " set "
-              + Extract.and(names(results))
-              + ", which the code after them uses, and a method returns one value. Extract"
-              + " fewer lines, so that at most one of them is set and used later.");
+      refuseRecordClash();
     }
     List<ReturnStatement> returns = returns();
     ITypeBinding enclosingResult = enclosingResult();
@@ -229,7 +233,26 @@ final class Extraction {
   private record Call(String resultType, String returnLine, String call) {}
 
   /** The call line for {@code invocation} (the new method's call), by what the method returns. */
-  private static Call callOf(Plan p, String invocation) {
+  private static Call callOf(Plan p, String invocation, String record) {
+    if (p.results().size() > 1) {
+      // Several results: a record holds them, and each is taken out of it after the call.
+      String holder = Character.toLowerCase(record.charAt(0)) + record.substring(1);
+      StringBuilder call = new StringBuilder(record + " " + holder + " = " + invocation + ";");
+      for (IVariableBinding r : p.results()) {
+        call.append("\n");
+        if (p.declaredInside().contains(r)) {
+          call.append(Modifier.isFinal(r.getModifiers()) ? "final " : "")
+              .append(Extract.typeName(r.getType()))
+              .append(" ");
+        }
+        call.append(r.getName()).append(" = ").append(holder).append(".").append(r.getName());
+        call.append("();");
+      }
+      return new Call(
+          record,
+          "return new " + record + "(" + String.join(", ", names(p.results())) + ");",
+          call.toString());
+    }
     if (!p.results().isEmpty()) {
       IVariableBinding r = p.results().get(0);
       String resultType = Extract.typeName(r.getType());
@@ -293,6 +316,20 @@ final class Extraction {
       method.append(bodyIndent).append(c.returnLine()).append("\n");
     }
     method.append(memberIndent).append("}\n");
+    if (p.results().size() > 1) {
+      List<String> components = new ArrayList<>();
+      for (IVariableBinding r : p.results()) {
+        components.add(Extract.typeName(r.getType()) + " " + r.getName());
+      }
+      method
+          .append("\n")
+          .append(memberIndent)
+          .append("private record ")
+          .append(c.resultType())
+          .append("(")
+          .append(String.join(", ", components))
+          .append(") {}\n");
+    }
     return method.toString();
   }
 
@@ -332,6 +369,43 @@ final class Extraction {
         todo.add(t.getSuperclass());
       }
       todo.addAll(List.of(t.getInterfaces()));
+    }
+  }
+
+  /**
+   * Refuses a record name the enclosing type already has as a member type, and a holder name the
+   * member around the lines already uses: the call of a method of several results declares both.
+   */
+  void refuseRecordClash() {
+    String record = recordName();
+    String holder = Character.toLowerCase(record.charAt(0)) + record.substring(1);
+    if (member.getParent() instanceof AbstractTypeDeclaration t && t.resolveBinding() != null) {
+      for (ITypeBinding inner : t.resolveBinding().getDeclaredTypes()) {
+        if (inner.getName().equals(record)) {
+          throw new Refusal(
+              t.getName().getIdentifier()
+                  + " already has a type "
+                  + record
+                  + ", which the method's result would be. Choose another method name.");
+        }
+      }
+    }
+    boolean[] used = {false};
+    member.accept(
+        new ASTVisitor() {
+          @Override
+          public boolean visit(SimpleName n) {
+            used[0] |= n.getIdentifier().equals(holder);
+            return true;
+          }
+        });
+    if (used[0]) {
+      throw new Refusal(
+          holder
+              + " is a name the code around "
+              + sel.lines()
+              + " uses, and the call would declare it for the method's result. Choose another"
+              + " method name.");
     }
   }
 

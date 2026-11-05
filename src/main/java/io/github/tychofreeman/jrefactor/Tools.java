@@ -796,11 +796,13 @@ final class Tools {
           unchanged.
           start_line and end_line (inclusive, as inspect numbers them) cover whole statements \
           of one block; comments and blank lines may be in the range. The locals they use \
-          become parameters; the one they set or declare that later code uses is returned. \
+          become parameters; the one they set or declare that later code uses is returned, \
+          and several are returned in a record named after the method (sum and count as \
+          TotalsResult, taken out after the call: int sum = totalsResult.sum();). \
           The method is static when the enclosing one is, and declares the checked exceptions \
           the statements throw. doc becomes its Javadoc.
           Refuses, saying why: a range that cuts a statement (with the statement lines there), \
-          two or more results, a break, continue or yield that leaves the statements, a return \
+          a break, continue or yield that leaves the statements, a return \
           in the middle of a void method, this(...) or super(...), an assignment to a final \
           field, a name the type already has.\
           """,

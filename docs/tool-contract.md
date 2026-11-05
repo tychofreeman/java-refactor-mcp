@@ -352,14 +352,19 @@ Java's name for gorefactor's `extract_function` (roadmap #23).
   use, in order of first use, typed from their bindings. Its result is the one
   local the statements declare, or assign, that later code uses (or that they
   assign inside a loop it outlives); the call is `T x = m(...)` or
-  `x = m(...)`. It declares the checked exceptions the statements throw and do
+  `x = m(...)`. Several such locals (roadmap #84, 2026-11-04, the user's choice
+  over refusing): the method returns `new BothResult(x, y)`, a `private record
+  BothResult(int x, int y) {}` declared after it, and the call is
+  `BothResult bothResult = both(a);` then `int x = bothResult.x();` for each.
+  Refused then: a record name the type already has, a holder name the code
+  around already uses. It declares the checked exceptions the statements throw and do
   not catch, and the enclosing method's type parameters.
 - `return`: in a method with a result, the call is `return m(...)` and the
   statements must return on every path; in a void method, only statements
   that end the body.
 - The text moves, comments included, re-indented (text blocks as they are).
 - Refused: a range that cuts a statement (with the statement lines of that
-  list), no statements, not in a body, two or more results (named), a return
+  list), no statements, not in a body, a return
   and a result, a `break`/`continue`/`yield` whose target is outside, a return
   on some paths only, a return mid-way through a void method (with the range to
   the end of the body), `this(...)`/`super(...)`, an assignment to a final
