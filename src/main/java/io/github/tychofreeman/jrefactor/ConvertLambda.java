@@ -386,8 +386,17 @@ final class ConvertLambda {
    */
   private static void refuseSelf(ASTNode body, ITypeBinding type, String from, String to) {
     Set<String> own = new HashSet<>(List.of("toString", "equals", "hashCode", "getClass"));
-    for (IMethodBinding m : type.getDeclaredMethods()) {
-      own.add(m.getName());
+    // Its own methods and every supertype's: an inherited default means the object too.
+    List<ITypeBinding> todo = new ArrayList<>(List.of(type));
+    for (int i = 0; i < todo.size(); i++) {
+      ITypeBinding t = todo.get(i);
+      for (IMethodBinding m : t.getDeclaredMethods()) {
+        own.add(m.getName());
+      }
+      if (t.getSuperclass() != null) {
+        todo.add(t.getSuperclass());
+      }
+      todo.addAll(List.of(t.getInterfaces()));
     }
     body.accept(
         new ASTVisitor() {
