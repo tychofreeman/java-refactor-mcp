@@ -5,9 +5,13 @@ are worth repeating, as gorefactor's `docs/how-this-project-was-built.md`
 does for the Go project. It draws on the git history, `docs/friction-log.md`,
 `docs/session-notes.md`, `docs/design.md` and the records in `docs/sessions/`.
 It was started on 2026-11-04, covering the work from 2026-11-02 (PRs #1-#103), and
-extended the same day through PR #130.
+has been extended since; it now runs through PR #204 (2026-11-05).
 Judgments are Claude's; figures are from the records named beside them.
-Extend it in the PR that changes a decision, as gorefactor's was.
+Extend it in the PR that changes a decision, as gorefactor's was: add a line to
+the arc, and a dated section in order when the decision needs its reasons.
+
+`#N` is a pull request of this repository; `roadmap #N` is a row of the roadmap in
+`docs/design.md` (its `#` column); a gorefactor PR is named as such.
 
 ## The arc in brief
 
@@ -23,9 +27,9 @@ Extend it in the PR that changes a decision, as gorefactor's was.
    `remove_parameter`, `move_parameter` across overrides and implementations;
    `extract_method`; `move_type`; `pull_up` and `push_down`, for methods,
    fields and overloads (PRs #99-#102).
-4. **2026-11-03: performance and measurement.** A narrowed type check (#56,
-   after a stress run found its first rule missed three of 60 random edits
-   through inheritance); a classpath cache; `bin/jrefactor` for sessions
+4. **2026-11-03: performance and measurement.** A narrowed type check (#61,
+   fixed in #67 after a stress run found its first rule missed three of 60
+   random edits through inheritance); a classpath cache; `bin/jrefactor` for sessions
    where the server cannot run; a session log of every tool call. Measured
    costs are in `docs/sessions/measure-call-cost.md` and
    `docs/sessions/cli-cache.md`.
@@ -44,9 +48,33 @@ Extend it in the PR that changes a decision, as gorefactor's was.
    name capture). They became refusals (#116, #119, and later read-order and
    pull-up fixes). Then the user set the policy on what a refactoring must
    preserve (below), and a review of the code's abstractions put two shared
-   shapes ahead of the flag that policy needed (#71, #72, then #73).
+   shapes ahead of the flag that policy needed (roadmap #71 and #72, then #73;
+   PRs #127-#129).
+8. **2026-11-04: the missing refactorings.** The notes were pruned (#131,
+   #132). Then roadmap #80-#91, in the user's order (#136-#151): a type to
+   another package, `move_file`, a signature type change, safe delete,
+   `extract_supertype`, introduce constant, field and parameter,
+   `convert_lambda`, `convert_to_record`, `extract_struct` and extract class,
+   static and instance in place, and the edit primitives. `NameCheck`, one
+   check that moved code keeps its meaning (roadmap #77, #158-#160).
+9. **2026-11-05: the A/B runs and what they found.** Three runs of
+   gorefactor's harness on a Java port of its warehouse traps (#166, #179,
+   #183); between them, the mechanisms the runs named (roadmap #99-#103) and
+   the behavior gate, where a tool declares the code it moves (roadmap #96,
+   #173-#176). The tools' extra cost fell from 31% to 2% (below). Every push
+   to `main` that changes code is now released (#182).
+10. **2026-11-05: probes as tests.** Behavior probes became `ProbeTest`, run
+    with every build (#192), and were written for every tool that moves code
+    (#193, #195). They found bugs that type-checked: `fold`'s overload
+    resolution (#186), `move_statement` past an array alias (#193), `rename`
+    into an overload (#195) and capturing a name (#197, #200), and
+    `change_type` of a primitive (#196).
+11. **2026-11-05: the guards, and search moved into `inspect`.** The read and
+    write guards (#185, roadmap #15 and #104); a relaxation of the read guard
+    (#201), reverted once `inspect` gained `pattern` and `names` (#202-#204;
+    below).
 
-## Why `replace_text` carried so much
+## Why `replace_text` carried so much (2026-11-04)
 
 This is the record the user asked for on 2026-11-04. Three things explain it.
 
@@ -71,7 +99,7 @@ was not searched for it before the 2026-11-04 comparison, so the claim
 "most of them through `replace_text`" is from reading the composites, not
 from counts. A count is the first thing to add to the records.
 
-## The decision: ten higher-level tools
+## The decision: ten higher-level tools (2026-11-04)
 
 On 2026-11-04 the options were:
 
@@ -99,7 +127,7 @@ real uses, but the friction log has not yet been counted to show that.
 That count is the first step before the first of the ten is merged, and
 the result goes in the first tool's record.
 
-## The stress run sees compile errors, not behavior
+## The stress run sees compile errors, not behavior (2026-11-04)
 
 `RefactoringStressTest` ran 220 calls of the new tools on Commons Lang and
 Math with no failure, and probes written by hand then found seven changes in
@@ -112,11 +140,11 @@ members needs probes for evaluation order and name capture, not only a
 stress run. The fixes were refusals, not rewrites, and are conservative: a
 safe case of the same shape is refused too.
 
-Two sessions fixed the same roadmap row (#67) at once that day. The user
+Two sessions fixed the same roadmap row (roadmap #67) at once that day. The user
 kept one session's refusals and closed the other's PR (#118). Since then,
 a session checks `main` and the open branches for a row before fixing it.
 
-## What a refactoring preserves
+## What a refactoring preserves (2026-11-04)
 
 On 2026-11-04 the user set the rule, as an extension of "behavior-preserving
 transformation": no transformation keeps every kind of behavior, so a
@@ -129,7 +157,7 @@ the flag names each change in a separate part of its result. The options
 the user chose between (one flag or one per kind; the alert in the text or
 apart) are in `docs/design.md`, question 0.
 
-## Abstractions before the cross-cutting flag
+## Abstractions before the cross-cutting flag (2026-11-04)
 
 Building the flag on the code as it was would have meant editing fourteen
 `run` methods and every tool schema, and adding a fifth partial model of
@@ -138,24 +166,24 @@ well factored (`Jdt`, `Gate`, `Journal`, `TextEdit`, `Lines`) and the tool
 layer without a shared shape: each tool parsed and located its target its
 own way and refused from inside its algorithm. The user agreed to build two
 abstractions first, each behavior-neutral and checked by the goldens:
-`Opened`/`Precondition` (#71) and one `Effects` analysis (#72). The flag
-(#73) then attached once, in the `Def` constructor. All three were done by
+`Opened`/`Precondition` (roadmap #71, #127) and one `Effects` analysis (roadmap
+#72, #128). The flag (roadmap #73, #129) then attached once, in the `Def` constructor. All three were done by
 another session the same evening, through the tools.
 
-## Through the tools, or around them
+## Through the tools, or around them (2026-11-04)
 
 The ten tools and the effect-order refusals were written by hand, by Edit
 and Write, in a session that had no java-refactor-mcp tools loaded. One of
 its records first called that work "through the tools"; it was corrected
-(#123). The sessions that built #71-#73 had the tools and made almost every
+(#123). The sessions that built roadmap #71-#73 had the tools and made almost every
 Java change through them (21, 19 and 53 edit steps, plus `add_parameter`
 and `inline_function`, by `bin/session-report`). That is the first
 evidence in this project of the difference the user asked about: whether a
 session thinks about changes as operations when it has the tools, or as
 text when it does not. It is not yet a measurement of token cost; the A/B
-harness (roadmap #13) is.
+harness (roadmap #11) is.
 
-## What every session loads
+## What every session loads (2026-11-04)
 
 By the evening of 2026-11-04 every session loaded `CLAUDE.md` (222 lines) and
 the session notes it imports (561 lines, about 5,900 words) before doing
@@ -168,18 +196,7 @@ testing practice and traps (157 lines), and say that history goes in the
 records and here. `CLAUDE.md` lost its tool lists, which named 13 of 25 tools,
 and the text it said twice.
 
-## Open at the time of writing
-
-- `CLAUDE.md` still lists literals as a `replace_text` use; option B's
-  `replace_expression` was not built, so the line stands until a tool covers
-  literals.
-- `docs/friction-log.md` was never counted for `replace_text` use before the
-  ten tools were built; the claim in "Why `replace_text` carried so much"
-  rests on reading the composites.
-- Follow-ups that lived only in records are now roadmap rows #74-#79.
-- The A/B harness (roadmap #13) waits for the user's yes, since it costs money.
-
-## The first A/B run (2026-11-05)
+## The A/B runs (2026-11-05)
 
 The user asked for it. gorefactor's harness ran this server with no change
 but a two-line Bash allowlist and a wrapper for its `-C` flag, on a Java port
@@ -190,11 +207,20 @@ refused each unsafe step (the reordered `p.bin()` calls, the short-circuited
 `charge`, the captured `markup`), and the model then did by hand the
 extraction the refusal asked for, because `extract_variable` refused that
 too. As in gorefactor, the run's value was the list of mechanisms it found
-(#99-#101), not the verdict. Details in `docs/sessions/ab-warehouse.md`.
+(roadmap #99-#101), not the verdict. Details in `docs/sessions/ab-warehouse.md`.
+
+Two more runs measured those mechanisms (#179, #183). With roadmap #99-#101 the
+tools' extra cost was 24%; with `inline_function` binding an argument to a local
+(roadmap #102) and `fold` (roadmap #103), 2%: $0.095 per run against $0.093.
+`inline` became cheaper than by hand ($0.077 against $0.086); `dedupe` stayed
+dearer ($0.112 against $0.085), and one of its runs merged less than the task
+asked. The set is small and every trap was handled safely in both arms, so the
+result is parity on it, not a saving. Details in `docs/sessions/ab-warehouse-2.md`
+and `ab-warehouse-3.md`.
 
 ## A guard relaxed, then the search moved into the tool (2026-11-05)
 
-The read guard (roadmap #16) denies reading a `.java` file other than
+The read guard (roadmap #15) denies reading a `.java` file other than
 through `inspect`, `grep` included. On 2026-11-05 a session hit it five
 times and logged the friction: a `grep -c DEBUG` of `Rename.java` (to
 confirm a temporary debug line was gone, a count with no source text), a
@@ -224,3 +250,14 @@ question is what the blocked command was for, and whether the tool should
 answer it. Relaxing the guard made the friction go away without making the
 work go through the tools; the tool option, which the session had ranked
 last as "more work", cost two small PRs.
+
+## Open at the time of writing (2026-11-05)
+
+- `CLAUDE.md` still lists literals as a `replace_text` use, though
+  `replace_expression` exists since the edit primitives (#150).
+- `docs/friction-log.md` was never counted for `replace_text` use before the
+  ten tools were built; the claim in "Why `replace_text` carried so much"
+  rests on reading the composites.
+- The A/B runs used one small task set, at parity in cost after the third
+  run; whether the tools save cost on larger feature work is not measured
+  (gorefactor's `ab-features` set is not ported).
