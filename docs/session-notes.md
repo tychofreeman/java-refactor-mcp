@@ -515,3 +515,10 @@ reason, not a diary. The roadmap is in `docs/design.md`.
   `checkTiming` and the two-effects rule, these cover the orders the probes
   found; the rules compare first uses only, so they are a check on the
   shapes tested, not a proof.
+
+- A body on one line is opened up when a tool adds a member (2026-11-04,
+  `docs/sessions/one-line-body-layout.md`): `MemberMove.appendTo` returns
+  its edits as a list (`{ int x; }` takes two, so the other edits inside the
+  member do not overlap), and `Declarations.memberIndent` falls back to 2
+  spaces, not 4, when neither the file nor the content shows a step: the
+  tools that move members write 2.

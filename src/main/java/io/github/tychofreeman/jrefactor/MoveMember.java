@@ -202,7 +202,7 @@ final class MoveMember {
     }
     List<TextEdit> own = edits.computeIfAbsent(file, k -> new ArrayList<>());
     own.add(new TextEdit(start, end, ""));
-    own.add(MemberMove.appendTo(text, target, moved));
+    own.addAll(MemberMove.appendTo(text, target, moved));
     edits.entrySet().removeIf(e -> e.getValue().isEmpty());
 
     boolean widened = false;
