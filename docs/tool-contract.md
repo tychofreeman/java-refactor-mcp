@@ -525,7 +525,12 @@ in the same turn only if it is sent after it.
   of Cart.total(): write its assertion in place of fail`. With `JREFACTOR_SKELETON_ONLY=1`
   (an experiment, off by default), Java `content` whose types declare members is refused
   ("skeleton-only creation is on: ..."); headers, enum constants and record components
-  pass, and so do `declaration` and `test_for`. With `declaration` (a
+  pass, and so do `declaration` and `test_for`. Under the flag, also refused (2026-11-06), each
+  naming the operation that writes it: `add_declaration` content with a constructor that only
+  assigns its parameters to fields of their names (`constructor`), or an `@Override` that only
+  throws "not implemented" or only calls the supertype's method with its parameters
+  (`implement`); `replace_statements` content that is the replaced statements wrapped in one
+  `try`, `if`, `for`, `while` or `synchronized` (`surround`). Bodies with logic are not refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes

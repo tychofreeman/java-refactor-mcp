@@ -1,0 +1,4 @@
+Cart(String owner, int size) {
+  this.owner = owner;
+  this.size = size;
+}

@@ -175,6 +175,9 @@ final class Primitives {
               statements,
               text.substring(method.getStartPosition(), Nodes.end(method)));
     }
+    if (project.session().skeletonOnly && surround == null && !content.isBlank()) {
+      Generated.checkSurround(text.substring(start, end), content);
+    }
     String after;
     String said;
     if (content.isBlank()) {
