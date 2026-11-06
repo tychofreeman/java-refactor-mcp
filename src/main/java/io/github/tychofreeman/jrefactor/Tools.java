@@ -1034,14 +1034,18 @@ final class Tools {
           interface or abstract class Shape declares double area();, and Circle and Square each \
           get @Override public double area() returning their case's expression, the pattern \
           variable as the receiver (c.r() becomes r()).
-          Refuses, saying why: a switch statement, a default, a guard, a case that is not a type \
-          pattern giving an expression, a type that is not the project's or already has name(), \
-          a case that uses a local, a parameter, this or the method's own class's members, or a \
-          change that adds compile errors.\
+          A switch statement of arrow cases, or an if chain of s instanceof T v, makes a void \
+          method of each case's statements; a default (or final else) becomes Shape's own \
+          implementation (a default method of an interface).
+          Refuses, saying why: a guard, a case that is not an arrow case of a type pattern, a \
+          type that is not the project's or already has name(), a case that uses a local of the \
+          method, a parameter, this or the method's own class's members, a return, break or \
+          continue that leaves a case, or a change that adds compile errors.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line the switch expression starts on.").required(),
+              Arg.integer("line", "1-based line the switch, or the first if, starts on.")
+                  .required(),
               Arg.string("name", "The new method's name.").required()),
           Kind.REFACTORING,
           TypeSwitch::run);
