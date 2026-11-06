@@ -46,6 +46,10 @@ fact here becomes wrong, fix or remove it in the same PR.
   (`bin/session-log`, `bin/session-report`) is the measured part.
 - Before fixing a roadmap row, check `main` and the open branches for the same
   row: two sessions once fixed #67 at once, and one PR (#118) was closed.
+- gorefactor's `docs/parity.md` (Go, TypeScript and Java at parity) is the source of roadmap
+  #119-#130 (2026-11-06, the user asked for it to be merged with this repo's next items); the
+  merged order is "Next, in order" in `docs/design.md`. When an item there is done, mark it
+  in parity.md too (gorefactor's repo, its own PR).
 - The roadmap's open items are ordered by evidence (gorefactor's, then this
   repo's friction log), not only by what unblocks what; the reasons are under
   "Why this order" in `docs/design.md`.
