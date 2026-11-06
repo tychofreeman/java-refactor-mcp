@@ -48,8 +48,7 @@ final class Tools {
             .put("type", "boolean")
             .put(
                 "description",
-                "Optional: true to refuse a change to where or whether an exception is thrown, rather"
-                    + " than make it and list it.");
+                "Optional: true to refuse a change to where or whether an exception is thrown.");
         schema = root.toString();
         Set<String> all = new HashSet<>(args);
         all.add(Exceptional.FLAG);
