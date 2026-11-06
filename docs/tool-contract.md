@@ -337,9 +337,13 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
 
 ## `extract_struct` (built)
 
-Roadmap #89, 2026-11-04, gorefactor's name. Arguments: `file`, `name` (the method,
-as the signature tools take it), `parameters` (next to each other), `struct` (the
-new record), `parameter` (the new parameter's name), `imports`.
+Roadmap #89, 2026-11-04, gorefactor's name. Arguments (one shape since 2026-11-06, the user's
+choice): `file`, `name`, `members`, `struct`, `as`, `value_semantics`, `imports`. What is grouped
+follows from `name`: a top-level class of `file` (its fields: extract class, below), a record
+(its components, below), else a method (its parameters: a parameter object). `members` are
+those, `as` the parameter, field or component that holds the new type. The names before
+(`parameters` and `fields`, `parameter` and `field`) are still accepted (`Tools.ARG_ALIASES`),
+not published; the text below uses them where it was written with them.
 
 - `public record Size(int width, int height) {}` goes in a new file beside the
   method's class; the parameters become `Size size` in every declaration of the

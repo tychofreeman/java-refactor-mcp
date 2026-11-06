@@ -376,14 +376,14 @@ final class Tools {
       new Def(
           "extract_struct",
           """
-          Group a method's parameters, a class's fields or a record's components into a new type \
-          in its own file, every use following.
-          - Parameter object: name Shipping.cost, parameters [width, height], struct Size, \
-          parameter size: cost(int weight, int width, int height) becomes cost(int weight, Size \
-          size), its body reads size.width(), and calls pass new Size(3, 4).
-          - Extract class: name Person, fields [street, city], struct Address, field home: the \
+          Group members of a method, class or record into a new type in its own file, every use \
+          following; what is grouped follows from what name is.
+          - A method's parameters (a parameter object): name Shipping.cost, members [width, \
+          height], struct Size, as size: cost(int weight, int width, int height) becomes \
+          cost(int weight, Size size), its body reads size.width(), and calls pass new Size(3, 4).
+          - A class's fields: name Person, members [street, city], struct Address, as home: the \
           fields move into a class Address that Person holds in home, and uses become home.street.
-          - A record's components: name Order, fields [street, city], struct Address, field \
+          - A record's components: name Order, members [street, city], struct Address, as \
           address: new Order(id, s, c) becomes new Order(id, new Address(s, c)), and o.street() \
           becomes o.address().street(); value_semantics=true accepts the changed toString.\
           """,
@@ -393,22 +393,18 @@ final class Tools {
                       + " root."),
               Arg.string(
                       "name",
-                      "With parameters, the method (Type.member, with (parameter types) for an"
-                          + " overload); with fields, the class or record.")
+                      "The method (Type.member, with (parameter types) for an overload), or a"
+                          + " top-level class or record of file.")
                   .required(),
-              Arg.strings("parameters", "The method's parameters to group, next to each other."),
-              Arg.string(
-                      "struct", "The new type's name: a record, or a class for a class's fields.")
-                  .required(),
-              Arg.string("parameter", "With parameters: the name of the parameter that holds it."),
               Arg.strings(
-                  "fields",
-                  "In place of parameters: the class's fields, or the record's components (next"
-                      + " to each other), to group."),
-              Arg.string("field", "With fields: the name of the field or component that holds it."),
-              Arg.bool(
-                  "value_semantics",
-                  "With fields on a record: accept the change to its generated toString."),
+                      "members",
+                      "What to group: the method's parameters or the record's components (next to"
+                          + " each other), or the class's fields.")
+                  .required(),
+              Arg.string("struct", "The new type's name.").required(),
+              Arg.string("as", "The name of the parameter, field or component that holds it.")
+                  .required(),
+              Arg.bool("value_semantics", "For a record: accept its changed generated toString."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           ExtractStruct::run);
@@ -1317,6 +1313,15 @@ final class Tools {
           "inline_variable",
           INLINE_VARIABLE);
 
+  /**
+   * Argument names a tool still accepts under its published ones, by tool: extract_struct's
+   * parameters and fields became members, parameter and field became as.
+   */
+  static final Map<String, Map<String, String>> ARG_ALIASES =
+      Map.of(
+          "extract_struct",
+          Map.of("parameters", "members", "fields", "members", "parameter", "as", "field", "as"));
+
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
     int dot = name.indexOf('.');
@@ -1503,7 +1508,8 @@ final class Tools {
    * journal, so {@code undo} can revert it; a call that fails leaves nothing changed.
    */
   static Outcome call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
-    Args args = new Args(def.name(), values);
+    Args args =
+        new Args(def.name(), values).renamed(ARG_ALIASES.getOrDefault(def.name(), Map.of()));
     args.check(def.args());
     Journal.begin(project, def.name());
     Session session = project.session();
