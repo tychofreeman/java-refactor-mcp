@@ -92,6 +92,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - Ambiguous imports (2026-11-05, `docs/design.md`, roadmap #105): an edit takes the class
   the file imported before the call or batch (`Journal.written`), else the only one in a package
   it imports from, and names it; otherwise one refusal lists every ambiguous name.
+- Parity with Go and TypeScript (2026-11-05, row 112, gorefactor's `docs/parity.md`):
+  one name per operation across the servers, the more generic one, the others kept as
+  aliases. Here that renames extract_method to extract_function, move_type to
+  move_declaration and extract_supertype stays; move_member, move_statement and
+  change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
