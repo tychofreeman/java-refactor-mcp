@@ -1,0 +1,4 @@
+[
+  {"tool": "add_declaration", "args": {"file": "com/example/A.java", "content": "Query parse(String text) {\n  return new Query(text);\n}\n"}},
+  {"tool": "add_declaration", "args": {"file": "com/example/A.java", "content": "record Query(String text) {}\n"}}
+]

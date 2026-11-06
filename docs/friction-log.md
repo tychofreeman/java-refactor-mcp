@@ -277,8 +277,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Idea: in a batch checked at the end, fix imports once at the end too, or
   have a later step's import fix drop an import that a member type of the
   file now shadows.
-- Follow-up: open (roadmap #108; reproduced 2026-11-05: `javax.management.Query`
-  imported for a member record a later step adds).
+- Follow-up: done (roadmap #108, 2026-11-06): the later step's import fix removes it.
 
 ## 2026-11-03: one refused step costs the whole batch again
 - Task: roadmap #9.

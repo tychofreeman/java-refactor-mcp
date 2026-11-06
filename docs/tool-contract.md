@@ -424,7 +424,9 @@ that has a static method of that name (`assertFalse` beside `import static
 ...Assertions.assertEquals`), before stubs are declared; in a file that imports from JUnit
 Jupiter (`org.junit.jupiter`) or JUnit 4 (`org.junit`), also from its assertion class
 (`Assertions`, `Assert`) when that class has a method the call resolves to. Static imports
-added to a file with none go first, a blank line before the others. Results end with
+added to a file with none go first, a blank line before the others. An import the running call
+or batch added that a type declared in the file now shadows is removed by the next fix (a later
+step declared the name it was found for; roadmap #108). Results end with
 `; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
 content is a whole file and keeps its own imports.
 
