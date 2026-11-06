@@ -81,7 +81,8 @@ the arc, and a dated section in order when the decision needs its reasons.
     thesis: a model needs operations that construct code as well as ones that
     change it, typing only expressions and statements, as in an IDE. A Java file
     then starts as a declaration, and tests from their target (design note
-    "Constructive transformations"; roadmap #114-#116).
+    "Constructive transformations"; roadmap #114-#116; the conversation that led
+    there is "From refactorings to transformations" below).
 
 ## Why `replace_text` carried so much (2026-11-04)
 
@@ -259,6 +260,47 @@ question is what the blocked command was for, and whether the tool should
 answer it. Relaxing the guard made the friction go away without making the
 work go through the tools; the tool option, which the session had ranked
 last as "more work", cost two small PRs.
+
+## From refactorings to transformations (2026-11-05)
+
+The question started with tests. The user observed that the model wrote each test
+wholesale, and asked what the options were. The session offered four: copying a
+declaration with substitutions (most new tests are a neighbour with a few values changed),
+tests as table rows (`add_element`), snapshot tests recorded from a call, and a test
+skeleton from a signature. It recommended the first. Asked how a new Java file is made
+today, the session answered `create_file`, and found on the way that a class stub declared
+from a test lands in the test tree (roadmap #113, #211).
+
+The user then named `create_file` as a loophole: the one place the model writes a lot of
+code. The session framed it as retyping and measured it. About 400 `create_file` calls had
+written about 11,000 lines of Java since the session log began, the largest a 592-line tool
+in one call. The options it offered were a skeleton-only `create_file`, a refusal for code
+that repeats existing lines (with a copy tool for the next step), a size cap, and measuring
+first. It recommended measuring, then the refusal.
+
+The user corrected the frame. The worry was not retyping. It was that the model has no
+tools to describe what it wants at a high enough level of abstraction, so the thesis may be
+that transformations as a whole, not only refactorings, enable higher-level thinking. The
+user's picture was a good IDE: "I only type things sometimes. But the tricky bit is that I
+do type code sometimes. When I do, I'm thinking about what the structures are, not what
+letters I'm typing." Seen that way, the size cap became the right direction, sharpened: a
+file starts as a type's declaration, members come from operations (implement, stubs from
+usage, a test from its target), and typing is left to statements and expressions. The
+session's table of IDE moves by level (file and type, members from structure, members from
+usage, tests, statements, expressions) showed `create_file` as the one level with no
+operation at all.
+
+The user approved the description and the first slice: the design note "Constructive
+transformations" in `docs/design.md` (#212), `create_file` with `declaration` (#213),
+`test_for` on `create_file` and `add_declaration` (#214), and skeleton-only creation behind
+`JREFACTOR_SKELETON_ONLY=1` (#215). The measure changes with the thesis: beside the share
+of edits made through the tools, the share of typed text that is statements and expressions
+rather than structure. Testing it needs feature tasks, not refactoring traps, so the next
+step was porting gorefactor's shop feature tasks to Java and running an arm with the flag on.
+
+The lesson for this project: when the user names a symptom ("a loophole for writing code"),
+ask what it is a symptom of before measuring it. The session measured the symptom it
+assumed, retyping; the user's concern was the vocabulary.
 
 ## Open at the time of writing (2026-11-05)
 
