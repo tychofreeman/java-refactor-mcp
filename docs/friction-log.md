@@ -871,3 +871,14 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   top-level type ... that resolves"); the model had reached for a transformation to make
   `Address`. It then used `extract_struct` on `Shipping.validAddress`'s parameters and
   `move_type`, and edited `Order` by hand. Open: roadmap #118.
+
+## 2026-11-05: a batch refused for one name resent whole (extract-struct-record)
+- Task: roadmap #118, `docs/sessions/extract-struct-record.md`.
+- Tool: a batch of a `replace_text`, a 236-line `add_declaration` (`ExtractStruct.components`)
+  and a `Tools.java` `replace_text` was refused twice: first for a duplicate local (`declared`,
+  one line), then for the third step's `old` two spaces too deep (the separator trap again,
+  roadmap #106). Each refusal sent the 236 lines again; three sends of new behavior for two
+  one-line mistakes. Sequences tried: none fits; a batch is all or nothing, and a step
+  cannot be corrected by itself. Idea: roadmap #110 (a refusal that offers the fix as a
+  later step), or a batch that keeps the steps before the refused one for a resend of the
+  rest.

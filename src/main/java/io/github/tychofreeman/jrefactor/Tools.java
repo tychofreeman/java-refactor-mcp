@@ -448,6 +448,11 @@ final class Tools {
           home, the fields move into a new class Address, Person holds one in home, and every \
           use becomes home.street; refused for a field used outside the class, or whose \
           initializer reads anything but constants.
+          On a record, fields names components next to each other: they become one component \
+          of a new record, every new Order(...) passes new Address(...) in their place, and \
+          o.street() becomes o.address().street(); pass value_semantics=true to accept the \
+          change to its generated toString. Refused for a record with a constructor, a method \
+          reference to it or its accessors, or a record pattern of it.
           Refuses, saying why: parameters that are not next to each other, a body that assigns \
           one, a method lambdas implement, a varargs parameter, a name in use, or a change that \
           adds compile errors.\
@@ -465,6 +470,9 @@ final class Tools {
                   "Extract class instead: instance fields of the class name names, moved "
                       + "into the new class."),
               Arg.string("field", "With fields: the name of the field that holds the new class."),
+              Arg.bool(
+                  "value_semantics",
+                  "With fields on a record: accept the change to its generated toString."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           ExtractStruct::run);
