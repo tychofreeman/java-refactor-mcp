@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -53,14 +54,20 @@ final class Signatures {
   private Signatures() {}
 
   static Outcome addParameter(SourceProject project, Args args) throws Exception {
+    String value = args.required("value");
+    parsesAs("value", value, "class X { Object x = " + value + "; }");
+    return addParameter(project, args, c -> value);
+  }
+
+  /** add_parameter with {@code value} giving the argument each call passes. */
+  static Outcome addParameter(SourceProject project, Args args, Function<Call, String> value)
+      throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
-    String value = args.required("value");
     if (!SourceVersion.isName(parameter)) {
       throw new Refusal("parameter " + parameter + " is not a valid Java name.");
     }
     parsesAs("type", type, "class X { " + type + " x; }");
-    parsesAs("value", value, "class X { Object x = " + value + "; }");
     MethodFamily family = MethodFamily.of(project, args);
     int at = family.index(args.string("before"), "before", true);
     family.refuseHiding(parameter);
@@ -69,7 +76,7 @@ final class Signatures {
       change.insert(d.file(), d.m().parameters(), d.open(), -1, at, type + " " + parameter);
     }
     for (Call c : family.calls) {
-      change.insert(c.file(), c.arguments(), c.open(), c.bare(), at, value);
+      change.insert(c.file(), c.arguments(), c.open(), c.bare(), at, value.apply(c));
     }
     for (Lambda l : family.lambdas) {
       List<String> params = l.params();

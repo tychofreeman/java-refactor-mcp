@@ -169,7 +169,9 @@ final class Tools {
           the text occurs twice on that line, pass column, the 1-based column where it starts.
           as=constant, field or parameter makes it a private static final constant or private \
           final field of the type, or a new parameter of the method that every call passes it \
-          to, instead of a local; it must then be literals and constants only.
+          to, instead of a local; it must then be literals and constants only, or, as a \
+          parameter, also the method's parameters: each call passes it with its own arguments in \
+          their place (qty / 10 becomes bonus, and total(n + 1, 3) passes (n + 1) / 10).
           Applies the edit, then type-checks the project: an edit that adds compile errors is \
           rolled back and refused.
           Refuses, saying why: an expression with an effect that would run in another order \
