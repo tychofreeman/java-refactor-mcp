@@ -413,7 +413,7 @@ sections 3 and 4.
 | 119 | 126 | `merge_duplicate_function`: two methods with the same body become one, the calls of the other following | Done 2026-11-06 as a composition (the user's choice over an option and a tool): a batch of `fold` then `inline`, named in `fold`'s description | gorefactor `docs/parity.md` section 3; `fold` covers part of it (a body matched by its parameters) |
 | 120 | 127 | The type switch pair: `prepare_switch_for_types` and `type_switch_to_method` (an `instanceof` chain, or a switch over a sealed type, becomes a method on each type) | Open | gorefactor `docs/parity.md` section 3 |
 | 121 | 128 | `split` (a method into phases) and inline class (`inline_struct`, inside #122) | Open | gorefactor `docs/parity.md` section 3 |
-| 122 | 129 | `add_field`: a field added to a class or record and filled at every constructor or construction, as Go's | Open | gorefactor `docs/parity.md` section 3; one hand edit of a record component (friction log, 2026-11-02) |
+| 122 | 129 | `add_field`: a field added to a class or record and filled at every constructor or construction, as Go's | Done 2026-11-06 (the user: `add_parameter` on a record, over a new tool): a component, every construction passing the value; a class keeps the composition | gorefactor `docs/parity.md` section 3; one hand edit of a record component (friction log, 2026-11-02) |
 | 123 | 130 | Options behind Go and TypeScript: `fold` of instance methods, `encapsulate_field`'s compound writes and `++`, line/column addressing on the signature tools | Open, as the friction log raises each | gorefactor `docs/parity.md` section 4 |
 
 ### The 2026-11-04 list

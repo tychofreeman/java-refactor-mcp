@@ -1160,6 +1160,8 @@ final class Tools {
           for an overload; a constructor by its type's name). value is a Java expression every \
           call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
+          With name a record (Line) whose canonical constructor is implicit or compact, it adds a \
+          component, and every new Line(...) passes value.
           Refuses, saying why: a method that overrides a library method, one used as a method \
           reference, varargs, a name that would hide a field a body reads, a value that does \
           not type-check at some call.\

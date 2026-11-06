@@ -361,6 +361,16 @@ new record), `parameter` (the new parameter's name), `imports`.
   Result: `moved street and city of Order into Address (com/example/Address.java),
   held in address; changed com/example/Order.java, ...`.
 
+## `add_parameter` on a record
+
+Roadmap #129, 2026-11-06 (gorefactor's `add_field`; the user chose this over a tool): with `name`
+a record whose canonical constructor is implicit or compact, `add_parameter` adds a component
+(at the end, or before `before`) and every `new Line(...)` and `this(...)` passes `value`.
+Refused: a record that writes its canonical constructor out, a component of that name, a record
+pattern of it. Result: `added the component int unitCents to Line; 1 construction passes 0`. For
+a class, adding a field filled by its constructors stays a composition: `add_declaration` of the
+field, `add_parameter` of the constructor, `insert_statements` of the assignment.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`

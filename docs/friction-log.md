@@ -891,3 +891,12 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
 - Idea: when the package rule's pick does not type-check and another candidate would, take
   that one (the check already runs); or prefer `java.*` when the use calls a member the
   package's class lacks. Open: no row yet; one case.
+
+## 2026-11-06: add_declaration's after refused an overload by the label it listed
+- Task: roadmap #129, `docs/sessions/add-parameter-record.md`.
+- Tool: `add_declaration` with `after` `addParameter(SourceProject, Args)` was refused ("no member
+  addParameter(SourceProject, Args)") by a refusal that listed that exact label among the
+  members; `after` takes a bare name. Resent with another member's name (the batch, 120 lines,
+  sent twice).
+- Idea: `after` and `before` take the labels the refusal lists (an overload with its parameter
+  types). Open: no row yet; one case.

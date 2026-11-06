@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,8 +21,10 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.BooleanLiteral;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CharacterLiteral;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -37,6 +40,8 @@ import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
+import org.eclipse.jdt.core.dom.RecordPattern;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
@@ -56,6 +61,14 @@ final class Signatures {
   static Outcome addParameter(SourceProject project, Args args) throws Exception {
     String value = args.required("value");
     parsesAs("value", value, "class X { Object x = " + value + "; }");
+    Opened opened = Opened.of(project, args.required("file"));
+    for (Object t : opened.unit().types()) {
+      if (t instanceof RecordDeclaration r
+          && r.getName().getIdentifier().equals(args.required("name"))
+          && r.resolveBinding() != null) {
+        return addComponent(project, args, opened, r, value);
+      }
+    }
     return addParameter(project, args, c -> value);
   }
 
@@ -334,6 +347,133 @@ final class Signatures {
         throw new Refusal(what + " " + text + " does not parse: " + p.getMessage() + ".");
       }
     }
+  }
+
+  /**
+   * add_parameter on a record whose canonical constructor is implicit or compact: a component, at
+   * the end or before {@code before}, and every construction ({@code new Line(...)}, {@code
+   * this(...)}) passes {@code value}.
+   */
+  private static Outcome addComponent(
+      SourceProject project, Args args, Opened opened, RecordDeclaration r, String value)
+      throws Exception {
+    String parameter = args.required("parameter");
+    String type = args.required("type");
+    if (!SourceVersion.isName(parameter)) {
+      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
+    }
+    parsesAs("type", type, "class X { " + type + " x; }");
+    String name = r.getName().getIdentifier();
+    List<?> components = r.recordComponents();
+    int at = components.size();
+    for (int i = 0; i < components.size(); i++) {
+      String c = ((SingleVariableDeclaration) components.get(i)).getName().getIdentifier();
+      if (c.equals(parameter)) {
+        throw new Refusal(name + " already has a component " + parameter + ".");
+      }
+      if (c.equals(args.string("before"))) {
+        at = i;
+      }
+    }
+    if (args.string("before") != null && at == components.size()) {
+      throw new Refusal(name + " has no component " + args.string("before") + " to put it before.");
+    }
+    for (Object o : r.bodyDeclarations()) {
+      if (o instanceof MethodDeclaration m
+          && m.isConstructor()
+          && !m.isCompactConstructor()
+          && m.parameters().size() == components.size()) {
+        throw new Refusal(
+            name
+                + " writes its canonical constructor out, and a parameter of it is not a"
+                + " component; add_parameter adds a component to a record whose canonical"
+                + " constructor is implicit or compact.");
+      }
+    }
+    String key = r.resolveBinding().getErasure().getKey();
+    Holding holding = Holding.of(project, name, opened.file());
+    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+    int constructions = 0;
+    for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+      String text = holding.texts().get(e.getKey());
+      List<TextEdit> list = new ArrayList<>();
+      for (RecordPattern p : Nodes.all(e.getValue(), RecordPattern.class)) {
+        ITypeBinding b = p.getPatternType().resolveBinding();
+        if (b != null && b.getErasure().getKey().equals(key)) {
+          throw new Refusal(
+              "the record pattern at "
+                  + project.relative(e.getKey())
+                  + " line "
+                  + e.getValue().getLineNumber(p.getStartPosition())
+                  + " takes every component of "
+                  + name
+                  + "; it would need one more.");
+        }
+      }
+      for (ClassInstanceCreation c : Nodes.all(e.getValue(), ClassInstanceCreation.class)) {
+        IMethodBinding b = c.resolveConstructorBinding();
+        if (b != null && b.getDeclaringClass().getErasure().getKey().equals(key)) {
+          list.add(
+              insertAt(text, c.arguments(), text.indexOf('(', Nodes.end(c.getType())), at, value));
+          constructions++;
+        }
+      }
+      for (ConstructorInvocation c : Nodes.all(e.getValue(), ConstructorInvocation.class)) {
+        IMethodBinding b = c.resolveConstructorBinding();
+        if (b != null && b.getDeclaringClass().getErasure().getKey().equals(key)) {
+          list.add(
+              insertAt(text, c.arguments(), text.indexOf('(', c.getStartPosition()), at, value));
+          constructions++;
+        }
+      }
+      if (e.getKey().equals(opened.file())) {
+        list.add(
+            insertAt(
+                text,
+                components,
+                text.indexOf('(', Nodes.end(r.getName())),
+                at,
+                type + " " + parameter));
+      }
+      if (!list.isEmpty()) {
+        edits.put(e.getKey(), list);
+      }
+    }
+    Stubs.Declared declared =
+        MemberMove.gate(
+            project,
+            holding.texts(),
+            edits,
+            "adding " + type + " " + parameter + " to " + name,
+            "Check that " + value + " type-checks as " + type + " at each construction.");
+    return new Outcome(
+        "added the component "
+            + type
+            + " "
+            + parameter
+            + " to "
+            + name
+            + "; "
+            + constructions
+            + (constructions == 1 ? " construction passes " : " constructions pass ")
+            + value,
+        declared);
+  }
+
+  /**
+   * The edit that puts {@code item} at index {@code at} of {@code list}, whose ( is at {@code
+   * open}.
+   */
+  private static TextEdit insertAt(String text, List<?> list, int open, int at, String item) {
+    if (list.isEmpty()) {
+      return new TextEdit(open + 1, open + 1, item);
+    }
+    if (at >= list.size()) {
+      int end = Nodes.end((ASTNode) list.get(list.size() - 1));
+      return new TextEdit(end, end, ", " + item);
+    }
+    int start = ((ASTNode) list.get(at)).getStartPosition();
+    return new TextEdit(start, start, item + ", ");
   }
 
   /** A file of the project, read and parsed with bindings. */
