@@ -17,25 +17,38 @@ final class Edits {
     String rel = args.required("file");
     String content = args.string("content");
     String declaration = args.string("declaration");
-    if ((content == null) == (declaration == null)) {
+    String testFor = args.string("test_for");
+    int given =
+        (content == null ? 0 : 1) + (declaration == null ? 0 : 1) + (testFor == null ? 0 : 1);
+    if (given != 1) {
       throw new Refusal(
-          content == null
-              ? "create_file needs content, or declaration for a .java file."
-              : "create_file takes content or declaration, not both.");
+          given == 0
+              ? "create_file needs content (or, for a .java file, declaration or test_for)."
+              : "create_file takes one of content, declaration and test_for.");
     }
     Path path = project.file(rel);
     List<String> stubbed = List.of();
-    if (declaration != null) {
+    String made = "";
+    if (declaration != null || testFor != null) {
       String pkg = project.packageOf(path);
       if (!rel.endsWith(".java") || pkg == null) {
         throw new Refusal(
-            "declaration makes a .java file under a source root; give "
+            (declaration != null ? "declaration" : "test_for")
+                + " makes a .java file under a source root; give "
                 + rel
                 + " its content instead.");
       }
-      Skeleton.Made made = Skeleton.of(project, path, pkg, declaration);
-      content = made.text();
-      stubbed = made.stubbed();
+      if (declaration != null) {
+        Skeleton.Made skeleton = Skeleton.of(project, path, pkg, declaration);
+        content = skeleton.text();
+        stubbed = skeleton.stubbed();
+      } else {
+        TestFor.Framework framework = TestFor.framework(project);
+        TestFor.Target target = TestFor.target(project, testFor);
+        String className = path.getFileName().toString().replaceFirst("\\.java$", "");
+        content = TestFor.file(pkg, className, target, framework);
+        made = target.method() == null ? "" : TestFor.note(target);
+      }
     }
     boolean exists = Files.exists(path);
     Stubs.Declared stubs = Stubs.Declared.NONE;
@@ -84,7 +97,8 @@ final class Edits {
             + fixed.said()
             + (stubbed.isEmpty()
                 ? ""
-                : "; stubs for what its supertypes leave abstract: " + String.join(", ", stubbed)),
+                : "; stubs for what its supertypes leave abstract: " + String.join(", ", stubbed))
+            + made,
         stubs);
   }
 

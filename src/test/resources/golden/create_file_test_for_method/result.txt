@@ -1,0 +1,1 @@
+created com/example/CartTest.java (14 lines); a red test of Cart.total(): write its assertion in place of fail

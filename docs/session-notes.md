@@ -209,6 +209,10 @@ Each was chosen from options; the record named beside it has the options it beat
   bindings, then stubs for `Skeleton.unimplemented` (abstract methods of the supertypes that
   nothing in the hierarchy implements, by `isSubsignature` within one parse).
 
+- `test_for` on `create_file` and `add_declaration` (#115, 2026-11-05) is `TestFor`: the
+  target through `Holding`, the framework through `Imports.known`; `add_declaration` passes
+  the framework's classes as chosen imports, so the import fix places them.
+
 - The edit primitives (#91, 2026-11-04) are `Primitives`: `replace_expression`,
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.
@@ -223,6 +227,8 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Testing
 
+- A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
+  JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
   cached type count must equal `TypeCheck.uncached`.
 - A rule in the gate that skips work (such as the narrowed check) is checked by

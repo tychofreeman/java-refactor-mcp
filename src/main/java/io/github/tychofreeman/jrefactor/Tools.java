@@ -793,7 +793,10 @@ final class Tools {
           The file must not exist, unless overwrite is set to replace all of it.
           With declaration in place of content, a .java file starts as its type: the package \
           line and the declaration (final class Cart implements Priced), with a stub for each \
-          method its supertypes leave abstract; add members after with add_declaration.\
+          method its supertypes leave abstract; add members after with add_declaration.
+          With test_for in place of content (Cart.total, Cart.add(int) for one overload), a test \
+          file starts from its target: JUnit's imports, and a red test method that builds the \
+          receiver, calls the method and ends in fail; type the assertion in place of fail.\
           """,
           List.of(
               Arg.FILE.described("Path relative to the project root."),
@@ -802,6 +805,10 @@ final class Tools {
                   "declaration",
                   "For a .java file, in place of content: its type's header, such as final"
                       + " class Cart implements Priced or record Line(int qty)."),
+              Arg.string(
+                  "test_for",
+                  "For a test file, in place of content: what it tests, as Type, Type.method or"
+                      + " Type.method(int)."),
               Arg.bool("overwrite", "Replace the file if it exists.")),
           Kind.EDIT,
           (project, args) -> Edits.createFile(project, args));
@@ -872,11 +879,17 @@ final class Tools {
           Imports the members need are added, and those they no longer use are removed; when a \
           name could be several classes, the one the file imported before, or the only one in a \
           package it imports from, is taken and named; otherwise the call is refused with every \
-          such name, and imports chooses.\
+          such name, and imports chooses.
+          With test_for in place of content (Cart.total), the member is a red test of that \
+          method: the receiver built, the call made, and fail where the assertion goes.\
           """,
           List.of(
               Arg.FILE,
-              Arg.string("content", "Java member declarations.").required(),
+              Arg.string("content", "Java member declarations (or test_for in their place)."),
+              Arg.string(
+                  "test_for",
+                  "In place of content, in a test class: the method to test, as Type.method or"
+                      + " Type.method(int)."),
               Arg.string("type", "Optional: the type to add to, as Outer or Outer.Inner."),
               Arg.string("after", "Optional: put them just after this member (a name)."),
               Arg.string("before", "Optional: put them just before this member."),

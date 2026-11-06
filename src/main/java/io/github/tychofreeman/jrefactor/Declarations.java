@@ -45,7 +45,14 @@ final class Declarations {
 
   static Outcome add(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    String content = args.required("content");
+    String content = args.string("content");
+    String testFor = args.string("test_for");
+    if ((content == null) == (testFor == null)) {
+      throw new Refusal(
+          content == null
+              ? "add_declaration needs content, or test_for for a test of a method."
+              : "add_declaration takes content or test_for, not both.");
+    }
     String after = args.string("after");
     String before = args.string("before");
     if (after != null && before != null) {
@@ -53,6 +60,28 @@ final class Declarations {
     }
     Path path = project.javaFile(rel);
     String text = Files.readString(path);
+    List<String> chosen = new ArrayList<>(args.list("imports"));
+    String made = "";
+    if (testFor != null) {
+      TestFor.Framework framework = TestFor.framework(project);
+      TestFor.Target target = TestFor.target(project, testFor);
+      if (target.method() == null) {
+        throw new Refusal(
+            "test_for in add_declaration names a method ("
+                + testFor
+                + ".method); for a test class, use create_file with test_for.");
+      }
+      boolean staticFail =
+          text.contains("import static " + framework.assertions() + ".fail;")
+              || text.contains("import static " + framework.assertions() + ".*;");
+      String name = TestFor.freeName(text, target.method().getName());
+      content = TestFor.method(target, framework, name, staticFail);
+      chosen.add(framework.test());
+      if (!staticFail) {
+        chosen.add(framework.assertions());
+      }
+      made = TestFor.note(target);
+    }
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
     Edits.Written written =
@@ -61,7 +90,7 @@ final class Declarations {
             path,
             text,
             planned.text(),
-            args.list("imports"),
+            chosen,
             "adding to " + planned.where(),
             "Declare what the new members use first.");
     Imports.Fixed fixed = written.fixed();
@@ -78,7 +107,7 @@ final class Declarations {
                   c.blockLength(),
                   fixed.lineShift()));
     }
-    return new Outcome(String.join("; ", said) + fixed.said(), stubs);
+    return new Outcome(String.join("; ", said) + fixed.said() + made, stubs);
   }
 
   /**
