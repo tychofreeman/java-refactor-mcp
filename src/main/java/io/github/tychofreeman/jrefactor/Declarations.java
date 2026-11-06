@@ -91,6 +91,9 @@ final class Declarations {
       }
       made = TestFor.note(target);
     }
+    if (project.session().skeletonOnly && args.string("content") != null) {
+      Generated.checkMembers(members(content));
+    }
     if (implement != null) {
       content = Implement.members(project, path, text, args.string("type"), implement);
     }

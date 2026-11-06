@@ -154,7 +154,9 @@ the server's environment (the `env` of its entry in `.mcp.json`), a new Java
 file can only start as a type's header: `create_file` with `declaration`
 (`final class Cart implements Priced`, stubs for what the supertypes require)
 or `test_for` (`Cart.total`, a red test), and members come one at a time
-through `add_declaration`. It tests whether building code from operations,
+through `add_declaration`; a typed constructor that only assigns fields, an override that
+only calls `super`, and a typed `try` or `if` around unchanged statements are refused for the
+operation that writes them (`constructor`, `implement`, `surround`). It tests whether building code from operations,
 as in an IDE, beats typing whole files (`docs/design.md`, "Constructive
 transformations").
 
