@@ -241,12 +241,7 @@ final class Tools {
           class of the file.
           A method's parameter (parameter) or return type (return_type=true) changes in it and \
           every override and implementation, and in lambdas that write the parameter's type; \
-          calls are not edited, so one the new type breaks is refused with the error.
-          For a change of or to a primitive or boxed type, a use whose result the type decides \
-          is refused: an operand of arithmetic, a shift, ++ or a compound assignment, an \
-          argument of a call, a cast, a branch of ?:, == on a boxed type (int to long loses an \
-          overflow, int to double changes x / 2, char to int prints a number). Copies, returns \
-          and comparisons are fine.\
+          calls are not edited.\
           """,
           List.of(
               Arg.FILE.described(
@@ -382,34 +377,36 @@ final class Tools {
       new Def(
           "extract_struct",
           """
-          Introduce a parameter object: consecutive parameters of a method become one parameter of \
-          a new record, in a file beside the method's class: cost(int weight, int width, int \
-          height) with parameters [width, height], struct Size and parameter size becomes \
-          cost(int weight, Size size), each body reads size.width() for width, and every call \
-          passes new Size(3, 4). Every override and implementation changes too.
-          Extract class: with fields [street, city], name Person, struct Address and field \
-          home, the fields move into a new class Address, Person holds one in home, and every \
-          use becomes home.street; refused for a field used outside the class, or whose \
-          initializer reads anything but constants.
-          On a record, fields names components next to each other: they become one component \
-          of a new record, every new Order(...) passes new Address(...) in their place, and \
-          o.street() becomes o.address().street(); pass value_semantics=true to accept the \
-          change to its generated toString. Refused for a record with a constructor, a method \
-          reference to it or its accessors, or a record pattern of it.\
+          Group a method's parameters, a class's fields or a record's components into a new type \
+          in its own file, every use following.
+          - Parameter object: name Shipping.cost, parameters [width, height], struct Size, \
+          parameter size: cost(int weight, int width, int height) becomes cost(int weight, Size \
+          size), its body reads size.width(), and calls pass new Size(3, 4).
+          - Extract class: name Person, fields [street, city], struct Address, field home: the \
+          fields move into a class Address that Person holds in home, and uses become home.street.
+          - A record's components: name Order, fields [street, city], struct Address, field \
+          address: new Order(id, s, c) becomes new Order(id, new Address(s, c)), and o.street() \
+          becomes o.address().street(); value_semantics=true accepts the changed toString.\
           """,
           List.of(
               Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
-              Arg.string("name", "Type.member, or with (parameter types) for an overload.")
+                  "Java file that declares the method, class or record, relative to the project"
+                      + " root."),
+              Arg.string(
+                      "name",
+                      "With parameters, the method (Type.member, with (parameter types) for an"
+                          + " overload); with fields, the class or record.")
                   .required(),
-              Arg.strings("parameters", "The parameters to group, next to each other."),
-              Arg.string("struct", "The new record's name.").required(),
-              Arg.string("parameter", "The new parameter's name."),
+              Arg.strings("parameters", "The method's parameters to group, next to each other."),
+              Arg.string(
+                      "struct", "The new type's name: a record, or a class for a class's fields.")
+                  .required(),
+              Arg.string("parameter", "With parameters: the name of the parameter that holds it."),
               Arg.strings(
                   "fields",
-                  "Extract class instead: instance fields of the class name names, moved "
-                      + "into the new class."),
-              Arg.string("field", "With fields: the name of the field that holds the new class."),
+                  "In place of parameters: the class's fields, or the record's components (next"
+                      + " to each other), to group."),
+              Arg.string("field", "With fields: the name of the field or component that holds it."),
               Arg.bool(
                   "value_semantics",
                   "With fields on a record: accept the change to its generated toString."),
@@ -427,7 +424,7 @@ final class Tools {
           for a call passing this). The other way, instance to static in place, is move \
           with to set to the method's own class.
           A null first argument now fails at the call, not where the body used it: reported as a \
-          change to exceptional behavior, refused under preserve_exceptions.\
+          change to exceptional behavior.\
           """,
           List.of(
               Arg.FILE.described(
@@ -482,8 +479,7 @@ final class Tools {
           ending on end_line, with content (statements, re-indented); empty content deletes them.
           With surround in place of content (try, if (ready), for (Item i : items), while (more), \
           synchronized (lock)), the statements go inside that block; a try catches and rethrows \
-          the checked exceptions they throw.
-          Refuses an end_line that does not end a statement of that block, naming the lines that do.\
+          the checked exceptions they throw.\
           """,
           List.of(
               Arg.FILE,
@@ -566,8 +562,7 @@ final class Tools {
           Invert an if that has an else: its branches swap and its condition is negated, so the \
           code runs the same. Identify the if by the line it starts on.
           The condition is negated by its opposite operator (== and !=, < and >=, <= and >), a \
-          !x loses its !, and any other condition is wrapped in !(...). An ordering comparison on \
-          a float or double is refused: it is not the opposite when a value is NaN.\
+          !x loses its !, and any other condition is wrapped in !(...).\
           """,
           List.of(Arg.FILE, Arg.integer("line", "The 1-based line the if starts on.").required()),
           Kind.REFACTORING,
@@ -1031,11 +1026,7 @@ final class Tools {
           Javadoc; a file's only top-level type takes the file with it (undo restores it).
           name is Type, Type.member, or member (of the file's only top-level type); for one of \
           several overloads, add its parameter types: Cart.add(int, String).
-          The old Javadoc stays unless content has its own. Callers a new signature breaks are \
-          refused. A deletion is refused while anything uses it (the uses are named), and for a \
-          method that overrides a concrete one, whose callers would then run the inherited one.
-          Imports content needs are added, and those only the old declaration used are \
-          removed; when a name could be several classes, imports chooses.\
+          The old Javadoc stays unless content has its own.\
           """,
           List.of(
               Arg.FILE,
@@ -1152,8 +1143,7 @@ final class Tools {
           "undo",
           """
           Undo the last change made through these tools in this session (one edit, refactoring \
-          or whole batch), restoring each file it wrote. Call it again to step further back.
-          Refuses when a file it would restore was changed since, by a tool or by hand.\
+          or whole batch), restoring each file it wrote. Call it again to step further back.\
           """,
           List.of(),
           Kind.CONTROL,
@@ -1169,7 +1159,7 @@ final class Tools {
           Give line numbers as in the code you read before the batch: the batch moves them past \
           earlier steps. A line an earlier step rewrote cannot be given by number; name a line \
           an earlier step changed instead: "$prev.start", "$prev.end", "$2.end", "$id.start+1".
-          If a step is refused, nothing changes and the result says which step and why. check \
+          The steps apply together or not at all. check \
           "end" type-checks once, after the last step, so edits may pass through code that does \
           not compile yet (a signature, then its callers). One undo reverts the whole batch.
           After a refusal, retry: true resends that batch with only the steps that change: \
