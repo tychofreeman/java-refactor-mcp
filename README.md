@@ -148,6 +148,15 @@ run from a clone with the jar built (`./mvnw package`; without the jar they
 allow everything): add `examples/guards.json` to your project's
 `.claude/settings.json`, with the path to your clone.
 
+**Skeleton-only creation (an experiment).** With `JREFACTOR_SKELETON_ONLY=1` in
+the server's environment (the `env` of its entry in `.mcp.json`), a new Java
+file can only start as a type's header: `create_file` with `declaration`
+(`final class Cart implements Priced`, stubs for what the supertypes require)
+or `test_for` (`Cart.total`, a red test), and members come one at a time
+through `add_declaration`. It tests whether building code from operations,
+as in an IDE, beats typing whole files (`docs/design.md`, "Constructive
+transformations").
+
 ## Troubleshooting
 
 - **The server is connected but Claude never calls it.** That is the

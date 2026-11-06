@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.compiler.IProblem;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
 /** Edits: changes of behavior on purpose, held to the same type-check gate as refactorings. */
@@ -48,6 +49,20 @@ final class Edits {
         String className = path.getFileName().toString().replaceFirst("\\.java$", "");
         content = TestFor.file(pkg, className, target, framework);
         made = target.method() == null ? "" : TestFor.note(target);
+      }
+    }
+    if (project.session().skeletonOnly
+        && declaration == null
+        && testFor == null
+        && rel.endsWith(".java")) {
+      for (Object o : parses(content, rel).types()) {
+        if (!((AbstractTypeDeclaration) o).bodyDeclarations().isEmpty()) {
+          throw new Refusal(
+              "skeleton-only creation is on: create_file writes a type's header, not its members."
+                  + " Start the file with declaration (final class Cart implements Priced) or, for"
+                  + " a test, test_for (Cart.total); then add members with add_declaration, where"
+                  + " stubs and test_for give their shells.");
+        }
       }
     }
     boolean exists = Files.exists(path);

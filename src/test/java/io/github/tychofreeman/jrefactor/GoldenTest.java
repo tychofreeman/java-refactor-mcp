@@ -60,6 +60,7 @@ class GoldenTest {
         args.getProperty("classpath", "").equals("junit")
             ? new SourceProject(work, List.of(work), junitJars(), null, new Session())
             : SourceProject.of(work);
+    project.session().skeletonOnly = args.getProperty("skeleton_only", "").equals("true");
 
     Path refused = caseDir.resolve("refused.txt");
     Path result = caseDir.resolve("result.txt");
@@ -115,7 +116,7 @@ class GoldenTest {
     Tools.Def def = Tools.named(tool);
     Map<String, Object> values = new LinkedHashMap<>();
     for (String key : props.stringPropertyNames()) {
-      if (!key.equals("tool") && !key.equals("classpath")) {
+      if (!List.of("tool", "classpath", "skeleton_only").contains(key)) {
         values.put(key, value(props.getProperty(key)));
       }
     }

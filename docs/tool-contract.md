@@ -419,7 +419,10 @@ in the same turn only if it is sent after it.
   a JUnit test class (Jupiter, else JUnit 4, else refused) with a red test of the method:
   the receiver from its fewest-argument constructor with placeholder arguments, the call,
   its result in a local, and `fail("write the assertion")`; the result ends `; a red test
-  of Cart.total(): write its assertion in place of fail`. With `declaration` (a
+  of Cart.total(): write its assertion in place of fail`. With `JREFACTOR_SKELETON_ONLY=1`
+  (an experiment, off by default), Java `content` whose types declare members is refused
+  ("skeleton-only creation is on: ..."); headers, enum constants and record components
+  pass, and so do `declaration` and `test_for`. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes

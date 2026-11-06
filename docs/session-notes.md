@@ -227,6 +227,7 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Testing
 
+- A golden case with `skeleton_only=true` runs with `Session.skeletonOnly` on (roadmap #116).
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
