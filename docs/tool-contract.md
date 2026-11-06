@@ -78,7 +78,14 @@ that package. `name` (`Type.member`) with `to`: the method or static field to th
 `name`, `copy` or `delete` with `name`, `to` and `package` together. Each route's own arguments,
 results and refusals are those of its section below. Where Java still differs, the name says
 so: `change_type` is for fields. `pull_up`, `push_down`, `add_supertype` and `encapsulate_field`
-have no gorefactor counterpart (Go has no nested types or inheritance). gorefactor's edit
+have no gorefactor counterpart (Go has no nested types or inheritance).
+
+One `inline` (roadmap #122, 2026-11-06, as gorefactor's): published in place of
+`inline_variable` and `inline_function`, which become aliases. With `line` (and `column`), the
+local variable `name` declared or used there; without `line`, `name` as `Type.method`, every
+call of the static method, which is deleted. A bare name without `line` is refused, naming both
+forms. Each route's arguments, results and refusals are its section's below; Java has no
+per-call inline yet, and inline class (gorefactor's `field`) is roadmap #128. gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
 `replace_statements`, `add_case`, `add_element`, roadmap #91).
 

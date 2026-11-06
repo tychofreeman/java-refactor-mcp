@@ -107,7 +107,8 @@ Each was chosen from options; the record named beside it has the options it beat
   names as aliases (#121, 2026-11-06: `Tools.move` routes by its arguments, as gorefactor's
   `Router`); refusals name `move`, since a model calls only what is published. `rename` of a
   file path renames the file. One `inline` likewise replaces inline_function and
-  inline_variable, and takes inline class when it is built.
+  inline_variable (#122, 2026-11-06: `Tools.inline`, `line` for a local, `Type.method` for a
+  static method), and takes inline class when it is built (#128).
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 

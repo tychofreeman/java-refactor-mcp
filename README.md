@@ -39,7 +39,7 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   will change.
 - **Refactorings:** `rename` (any kind of name); `extract_function`,
   `extract_variable` (also as a constant, field or parameter),
-  `inline_function`, `inline_variable`; `add_parameter`, `remove_parameter`,
+  `inline` (a local variable, or a static method's calls); `add_parameter`, `remove_parameter`,
   `move_parameter`, `change_type`, `extract_struct` (a parameter object, or
   extract class); `move` (a nested type to its own file, a type to a package, a method or
   static field to another class, a file),
