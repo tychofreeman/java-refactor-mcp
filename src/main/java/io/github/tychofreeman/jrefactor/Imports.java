@@ -7,6 +7,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -97,6 +98,11 @@ final class Imports {
     List<String> chose = new ArrayList<>();
     Set<String> add = toImport(project, missing, imported, picks, prior, packages, chose);
     add.addAll(staticImports(unit, beforeUnit));
+    Set<String> using = new TreeSet<>(add);
+    for (Object o : unit.imports()) {
+      using.add(((ImportDeclaration) o).getName().getFullyQualifiedName());
+    }
+    add.addAll(assertions(project, file, after, unit, beforeUnit, using));
     // A name in a lambda is reported only once the names around it resolve, so look again with
     // the imports found so far, until no more are needed.
     Set<String> found = new TreeSet<>(add);
@@ -123,13 +129,19 @@ final class Imports {
         kept.isEmpty() && !remove.isEmpty()
             ? Lines.start(after, remove.get(0).getStartPosition())
             : -1;
-    for (String name : add) {
+    // Static imports first; where both kinds go at one place, a blank line between them.
+    List<String> ordered = new ArrayList<>(add);
+    ordered.sort(
+        Comparator.comparing((String n) -> !n.startsWith("static ")).thenComparing(n -> n));
+    for (String name : ordered) {
       int at = replacing >= 0 ? replacing : insertionPoint(after, unit, kept, name);
-      inserts
-          .computeIfAbsent(at, k -> new StringBuilder())
-          .append("import ")
-          .append(name)
-          .append(";\n");
+      StringBuilder lines = inserts.computeIfAbsent(at, k -> new StringBuilder());
+      if (!name.startsWith("static ")
+          && lines.length() > 0
+          && lines.lastIndexOf("import static ") == lines.lastIndexOf("import ")) {
+        lines.append('\n');
+      }
+      lines.append("import ").append(name).append(";\n");
     }
     List<int[]> cuts = new ArrayList<>();
     for (ImportDeclaration i : remove) {
@@ -347,6 +359,56 @@ final class Imports {
       }
     }
     return out;
+  }
+
+  /**
+   * {@code "static org.junit.jupiter.api.Assertions.m"} for each unqualified call in {@code unit}
+   * that resolves to no method and that the test framework's assertion class declares, when the
+   * file imports from that framework ({@code imports}, the names it has and adds). Calls that were
+   * unresolved in {@code before} are left out.
+   */
+  private static Set<String> assertions(
+      SourceProject project,
+      Path file,
+      String text,
+      CompilationUnit unit,
+      CompilationUnit before,
+      Set<String> imports)
+      throws IOException {
+    String from = assertionClass(imports);
+    Set<String> names = uncalled(unit);
+    names.removeAll(uncalled(before));
+    Set<String> out = new TreeSet<>();
+    if (from == null || names.isEmpty() || !known(project, from)) {
+      return out;
+    }
+    CompilationUnit with =
+        Jdt.parse(project, file, withImports(text, unit, Set.of("static " + from + ".*")));
+    for (MethodInvocation call : Nodes.all(with, MethodInvocation.class)) {
+      IMethodBinding m = call.resolveMethodBinding();
+      if (call.getExpression() == null
+          && m != null
+          && names.contains(m.getName())
+          && m.getDeclaringClass().getErasure().getQualifiedName().equals(from)) {
+        out.add("static " + from + "." + m.getName());
+      }
+    }
+    return out;
+  }
+
+  /** JUnit's assertion class for a file that imports {@code imports}, or null for neither. */
+  private static String assertionClass(Set<String> imports) {
+    for (String name : imports) {
+      if (name.startsWith("org.junit.jupiter.")) {
+        return "org.junit.jupiter.api.Assertions";
+      }
+    }
+    for (String name : imports) {
+      if (name.startsWith("org.junit.")) {
+        return "org.junit.Assert";
+      }
+    }
+    return null;
   }
 
   /** The names of unqualified calls in {@code unit} that resolve to no method. */

@@ -406,7 +406,10 @@ several candidates is refused with them; the optional `imports` argument (fully
 qualified names) chooses. An unqualified call to no method is imported
 statically from the one class the file already imports a static member from
 that has a static method of that name (`assertFalse` beside `import static
-...Assertions.assertEquals`), before stubs are declared. Results end with
+...Assertions.assertEquals`), before stubs are declared; in a file that imports from JUnit
+Jupiter (`org.junit.jupiter`) or JUnit 4 (`org.junit`), also from its assertion class
+(`Assertions`, `Assert`) when that class has a method the call resolves to. Static imports
+added to a file with none go first, a blank line before the others. Results end with
 `; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
 content is a whole file and keeps its own imports.
 

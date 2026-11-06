@@ -1,0 +1,4 @@
+@Test
+void total() {
+  assertEquals(5, new Cart(5).total());
+}
