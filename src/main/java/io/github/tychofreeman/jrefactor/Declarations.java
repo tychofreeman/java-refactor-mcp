@@ -127,7 +127,7 @@ final class Declarations {
     List<String> addedLabels = new ArrayList<>();
     for (BodyDeclaration d : added) {
       String block = reindent(content, d, indent);
-      MethodDeclaration stub = d instanceof MethodDeclaration m ? stubFor(owner.decl(), m) : null;
+      BodyDeclaration stub = stubFor(owner.decl(), d, text);
       if (stub != null) {
         int start = Lines.start(text, stub.getStartPosition());
         String said = "replaced the stub " + label(stub) + " in " + where;
@@ -505,18 +505,46 @@ final class Declarations {
   }
 
   /**
-   * A method of {@code type} with {@code m}'s signature whose body only throws "not implemented".
+   * The stub in {@code type} that {@code d} replaces: a method of its name whose parameter types
+   * erase to the same ({@code List} and {@code List<?>}) and whose body only throws "not
+   * implemented", or a field of its name without a value whose line ends in the stub mark.
    */
-  private static MethodDeclaration stubFor(AbstractTypeDeclaration type, MethodDeclaration m) {
+  private static BodyDeclaration stubFor(
+      AbstractTypeDeclaration type, BodyDeclaration d, String text) {
     for (Object o : type.bodyDeclarations()) {
-      if (o instanceof MethodDeclaration old
+      if (d instanceof MethodDeclaration m
+          && o instanceof MethodDeclaration old
           && old.getName().getIdentifier().equals(m.getName().getIdentifier())
-          && types(old).equals(types(m))
+          && erased(types(old)).equals(erased(types(m)))
           && isStub(old)) {
+        return old;
+      }
+      if (d instanceof FieldDeclaration f
+          && o instanceof FieldDeclaration old
+          && old.fragments().size() == 1
+          && names(old).equals(names(f))
+          && ((VariableDeclarationFragment) old.fragments().get(0)).getInitializer() == null
+          && text.substring(end(old) + 1, Lines.end(text, end(old)))
+              .strip()
+              .equals(Stubs.FIELD_MARK)) {
         return old;
       }
     }
     return null;
+  }
+
+  /** {@code types} without their type arguments: {@code Map<K, List<V>>} as {@code Map}. */
+  private static List<String> erased(List<String> types) {
+    List<String> out = new ArrayList<>();
+    for (String t : types) {
+      String e = t;
+      for (String was = null; !e.equals(was); ) {
+        was = e;
+        e = e.replaceAll("<[^<>]*>", "");
+      }
+      out.add(e);
+    }
+    return out;
   }
 
   private static boolean isStub(MethodDeclaration m) {

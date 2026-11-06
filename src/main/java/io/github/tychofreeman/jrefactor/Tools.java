@@ -882,10 +882,12 @@ final class Tools {
           type names the type ("Cart", or "Cart.Line" for a nested one); without it, the file's \
           only top-level type. The members go at the end of the type, or just after or before \
           the member named in after or before.
-          A method with the same name and parameter types whose body is only \
-          throw new UnsupportedOperationException("not implemented") is a stub, and is replaced \
-          rather than added again.
-          Methods, constructors and classes of the project the members use that nothing declares \
+          A method with the same name and parameter types (List and List<?> are the same) whose \
+          body is only throw new UnsupportedOperationException("not implemented") is a stub, and \
+          is replaced rather than added again; so is a field stub (static int MAX; // not \
+          implemented).
+          Methods, constructors, static fields (Limits.MAX) and classes of the project the \
+          members use that nothing declares \
           are declared as such stubs, typed from the use; the result names them ("declared \
           stubs"). Write a test first and call what does not exist yet.
           Imports the members need are added, and those they no longer use are removed; when a \

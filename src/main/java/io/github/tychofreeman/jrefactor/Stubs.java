@@ -113,6 +113,9 @@ final class Stubs {
   private static final String BODY =
       " {\n  throw new UnsupportedOperationException(\"not implemented\");\n}";
 
+  /** What ends a field stub's line, by which add_declaration knows it. */
+  static final String FIELD_MARK = "// not implemented";
+
   /**
    * One stub: {@code type} is the type it goes in ("Cart", "Outer.Inner"), or null for a new class,
    * whose {@code code} is then the whole file; {@code label} is what the result calls it, or null
@@ -261,12 +264,28 @@ final class Stubs {
               constructor(unit, creation);
             }
           }
-          case IProblem.UndefinedName -> {
+          case IProblem.UndefinedName, IProblem.UnresolvedVariable -> {
             // A class that does not exist yet, as the receiver of a static call: Tasks.run().
             if (node instanceof SimpleName n
                 && n.getParent() instanceof MethodInvocation call
                 && call.getExpression() == n) {
               type(file, n.getIdentifier());
+            }
+            // A class that does not exist yet, as the qualifier of a constant: Limits.MAX.
+            if (node instanceof SimpleName n
+                && n.getParent() instanceof QualifiedName q
+                && q.getQualifier() == n
+                && Character.isUpperCase(n.getIdentifier().charAt(0))) {
+              type(file, n.getIdentifier());
+            }
+          }
+          // A static field of a project class that nothing declares: Limits.MAX.
+          case IProblem.UndefinedField -> {
+            if (node instanceof SimpleName n
+                && n.getParent() instanceof QualifiedName q
+                && q.getName() == n
+                && q.getQualifier().resolveBinding() instanceof ITypeBinding) {
+              field(unit, q);
             }
           }
           case IProblem.UndefinedType -> {
@@ -316,6 +335,26 @@ final class Stubs {
               + ")"
               + BODY;
       String label = Names.typeLabel(owner) + "." + name + "(" + String.join(", ", types) + ")";
+      want(target, new Stub(Names.typeLabel(owner), label, label, code));
+    }
+
+    /**
+     * A static field {@code read} names in a project class, typed from the use, with no value: a
+     * stub that {@code add_declaration} of the real field replaces, known by its comment.
+     */
+    private void field(CompilationUnit unit, QualifiedName read) throws IOException {
+      uses.clear();
+      ITypeBinding owner = (ITypeBinding) read.getQualifier().resolveBinding();
+      Path target = sourceOf(owner);
+      if (target == null || owner.isInterface()) {
+        return;
+      }
+      inScope = Set.of();
+      owner = owner.getErasure();
+      String name = read.getName().getIdentifier();
+      String code =
+          visibility(unit, owner) + "static " + resultType(read) + " " + name + "; " + FIELD_MARK;
+      String label = Names.typeLabel(owner) + "." + name;
       want(target, new Stub(Names.typeLabel(owner), label, label, code));
     }
 
