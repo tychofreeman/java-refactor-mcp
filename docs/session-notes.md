@@ -174,6 +174,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Arg.string(...).required()`, ...), not JSON (#97). To check that a rewrite of
   `Tools` keeps every schema, diff two runs of `ToolSchemasTest`
   (`-Djrefactor.schemas.out=<file>`).
+- `Session.refusedBatch` keeps the last refused batch for `batch` `retry` (2026-11-06); a batch
+  that passes clears it.
 - The server runs one tool call at a time (`Server.ONE_AT_A_TIME`): two edits
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.

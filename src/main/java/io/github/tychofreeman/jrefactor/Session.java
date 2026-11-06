@@ -57,4 +57,10 @@ final class Session {
 
   /** How many times the project has been parsed for a type check, for tests of the reuse. */
   int parses;
+
+  /** The steps of the last batch that was refused, for a retry to reuse; null after one passes. */
+  List<Map<String, Object>> refusedBatch;
+
+  /** The check that batch ran with. */
+  String refusedCheck;
 }

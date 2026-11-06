@@ -879,7 +879,8 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   one-line mistakes. Sequences tried: none fits; a batch is all or nothing, and a step
   cannot be corrected by itself. Idea: roadmap #110 (a refusal that offers the fix as a
   later step), or a batch that keeps the steps before the refused one for a resend of the
-  rest.
+  rest. Done (2026-11-06, batch-retry): `retry: true` resends a refused batch with only the
+  steps that change.
 
 ## 2026-11-06: the ambiguous-import rule chose the wrong Pattern (test-stub-main-root)
 - Task: roadmap #113, `docs/sessions/test-stub-main-root.md`.
