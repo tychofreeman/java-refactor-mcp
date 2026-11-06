@@ -140,8 +140,8 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Idea: the nearest lines in "old is not in", and spacing-tolerant matching;
   the likely candidate first in an ambiguity refusal; the lambda import bug.
 - Follow-up: the lambda import is done (#17); the nearest lines and
-  indentation-tolerant `old` are open (roadmap #106); the likely candidate first is
-  open (roadmap #105).
+  indentation-tolerant `old` are done (roadmap #106, 2026-11-06); the likely candidate
+  first is done (roadmap #105, 2026-11-05).
 
 ## 2026-11-02: imports in lambdas, through the tools
 - Task: the import fixing missed `ArrayDeque` in a lambda (#8's follow-up).
@@ -182,7 +182,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Idea: discourage `.internal.` packages in the import index; name every
   ambiguous name in one refusal; a way to list the project's Java files.
 - Follow-up: `.internal.` packages are left out (#19); every ambiguous name in one
-  refusal is open (roadmap #105); listing the project's files is open (roadmap
+  refusal is done (roadmap #105, 2026-11-05); listing the project's files is open (roadmap
   #111).
 
 ## 2026-11-02: stubs for a class used as a static receiver
@@ -291,7 +291,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
   candidate in the same package family as the file's other imports
   (`org.eclipse.jdt.core.dom`, like the file's 14 others) rather than refuse;
   and a deleted declaration still used could be deferred to the end check.
-- Follow-up: the ambiguous import is open (roadmap #105); a deleted declaration
+- Follow-up: the ambiguous import is done (roadmap #105, 2026-11-05); a deleted declaration
   still used is refused before the gate, naming the uses (#139).
 
 ## 2026-11-03: stubs declared a local assertEquals for a missing static import
@@ -335,7 +335,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Idea: when a name is ambiguous, prefer `java.*` (or what the file imported
   before, or what its other imports' packages suggest) over library classes,
   and say which was chosen in the result.
-- Follow-up: open (roadmap #105).
+- Follow-up: done (roadmap #105, 2026-11-05).
 
 ## 2026-11-03: overload name with a generic parameter typed by hand
 - Task: roadmap #36 (`docs/sessions/overload-generic-params.md`).
@@ -619,7 +619,7 @@ that would have written them: none yet; the case is the tool being built.
   ambiguous name, and preferring a package the file already imports from,
   would have saved two calls.
 - Follow-up: done: roadmap #67-#70 and `NameCheck` (roadmap #77, #158-#160); the
-  ambiguous-import part is open (roadmap #105).
+  ambiguous-import part is done (roadmap #105, 2026-11-05).
 
 ## 2026-11-04: change_type's cases written by hand (before the tool existed)
 
@@ -711,7 +711,7 @@ dropped argument) would need the evaluation order named first, which no tool giv
   again was refused as ambiguous, with a suggestion from another package.
 - Idea: in a batch, when a name a step needs was imported by the file before
   the batch, choose that import rather than refuse.
-- Follow-up: open (roadmap #105).
+- Follow-up: done (roadmap #105, 2026-11-05).
 
 ## 2026-11-04: a refused batch leaves the directories its create_file steps made
 - Task: `docs/sessions/same-meaning-check.md`.
@@ -865,12 +865,12 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   `declaration` (no imports) declared `assertEquals(boolean, boolean)` as a "not
   implemented" stub on the test class instead of a static import from JUnit; the model
   then spent six calls removing it. Idea: an unresolved call named like an assertion, in a
-  file under the test root with JUnit on the classpath, imports it statically. Open:
-  roadmap #117.
+  file under the test root with JUnit on the classpath, imports it statically. Done:
+  roadmap #117 (#219, 2026-11-05).
 - Tool: `extract_struct` with `fields` on the record `Order` refused ("Order is not a
   top-level type ... that resolves"); the model had reached for a transformation to make
   `Address`. It then used `extract_struct` on `Shipping.validAddress`'s parameters and
-  `move_type`, and edited `Order` by hand. Open: roadmap #118.
+  `move_type`, and edited `Order` by hand. Done: roadmap #118 (#220, 2026-11-05).
 
 ## 2026-11-05: a batch refused for one name resent whole (extract-struct-record)
 - Task: roadmap #118, `docs/sessions/extract-struct-record.md`.
