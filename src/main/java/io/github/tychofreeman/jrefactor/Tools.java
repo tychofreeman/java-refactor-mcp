@@ -1018,9 +1018,9 @@ final class Tools {
           Kind.REFACTORING,
           (project, args) -> Signatures.moveParameter(project, args));
 
-  static final Def EXTRACT_METHOD =
+  static final Def EXTRACT_FUNCTION =
       new Def(
-          "extract_method",
+          "extract_function",
           """
           Move whole statements into a new private method, declared after the one they are in, \
           and call it in their place: lines 9-12 of print, which sum values into total, become \
@@ -1114,7 +1114,7 @@ final class Tools {
           """
           Replace code that does what an existing static method does with calls of it: every \
           match of the method's body in the project, its parameters standing for any expressions \
-          of their types, becomes a call. The method stays. extract_method makes a method from \
+          of their types, becomes a call. The method stays. extract_function makes a method from \
           one place; fold reuses one, written or extracted, everywhere else.
           What a body matches: one return's expression matches expressions (x * 1.2 becomes \
           withTax(x) for static double withTax(double a) { return a * 1.2; }); a void method's \
@@ -1158,7 +1158,7 @@ final class Tools {
           ADD_PARAMETER,
           REMOVE_PARAMETER,
           MOVE_PARAMETER,
-          EXTRACT_METHOD,
+          EXTRACT_FUNCTION,
           EXTRACT_VARIABLE,
           INLINE_VARIABLE,
           INLINE_FUNCTION,
@@ -1182,6 +1182,40 @@ final class Tools {
           ENCAPSULATE_FIELD,
           BATCH,
           UNDO);
+
+  /** move_member to the method's own class, by Go's name for it: an alias, not published. */
+  static final Def METHOD_TO_FUNCTION =
+      new Def(
+          "method_to_function",
+          """
+          Make an instance method static in its own class, the instance its first parameter: \
+          move_member with to the method's class.\
+          """,
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.method, or Type.method(params) for an overload.")
+                  .required()),
+          Kind.REFACTORING,
+          Tools::methodToFunction);
+
+  /**
+   * Names {@code batch} and the CLI still accept for a tool published under its shared name
+   * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
+   * method_to_function for move_member in place.
+   */
+  static final Map<String, Def> ALIASES =
+      Map.of("extract_method", EXTRACT_FUNCTION, "method_to_function", METHOD_TO_FUNCTION);
+
+  private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
+    String name = args.required("name");
+    int dot = name.indexOf('.');
+    if (dot <= 0) {
+      throw new Refusal(
+          "method_to_function takes the method as Type.method, so it knows the class to keep it in.");
+    }
+    return MoveMember.run(project, args.required("file"), name, name.substring(0, dot));
+  }
 
   private static Outcome inspect(SourceProject project, Args args) throws Exception {
     String pattern = args.string("pattern");
@@ -1337,6 +1371,9 @@ final class Tools {
       if (def.name().equals(bare)) {
         return def;
       }
+    }
+    if (ALIASES.containsKey(bare)) {
+      return ALIASES.get(bare);
     }
     List<String> names = ALL.stream().map(Def::name).toList();
     throw new Refusal("No tool " + name + ". The tools are " + String.join(", ", names) + ".");

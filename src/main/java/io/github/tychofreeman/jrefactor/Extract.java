@@ -33,7 +33,7 @@ final class Extract {
     Integer startArg = args.integer("start_line");
     Integer endArg = args.integer("end_line");
     if (startArg == null || endArg == null) {
-      throw new Refusal("extract_method needs start_line and end_line.");
+      throw new Refusal("extract_function needs start_line and end_line.");
     }
     if (!SourceVersion.isName(name)) {
       throw new Refusal("name " + name + " is not a valid Java name.");

@@ -65,9 +65,11 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `inspect`, `rename`, the signature changes, `extract_variable`,
 `inline_variable`, `inline_function`, `invert_if`, `remove_else`,
 `move_statement`, `create_file`, `add_declaration`, `replace_declaration`,
-`replace_text`, `batch` and `undo`. Where Java differs, the name says so:
-`extract_method` is gorefactor's `extract_function`; `move_member` covers
-gorefactor's `method_to_function`; `change_type` is for fields. `move_type`,
+`replace_text`, `batch` and `undo`, and (roadmap #120, 2026-11-06) `extract_function`, which
+was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI but not
+published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
+`move_member` with `to` the method's own class (taken from `name`, `Type.method`). Where Java
+still differs, the name says so: `change_type` is for fields. `move_type`,
 `pull_up`, `push_down`, `add_supertype` and `encapsulate_field` have no
 gorefactor counterpart (Go has no nested types or inheritance). gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
@@ -554,9 +556,10 @@ edits overlap.
 Result: `added int capacity to Cart.Cart(String) in 1 declaration and 3 calls
 (a.java, b.java)`, then any import notes per file.
 
-## `extract_method` (built)
+## `extract_function` (built; was `extract_method`)
 
-Java's name for gorefactor's `extract_function` (roadmap #23).
+gorefactor's `extract_function` (roadmap #23; the shared name since #120, 2026-11-06, with
+`extract_method` an alias).
 
 - Arguments: `file`, `start_line`, `end_line` (inclusive), `name`, optional
   `doc` (Javadoc text without `/** */`). Blank lines at either end of the range

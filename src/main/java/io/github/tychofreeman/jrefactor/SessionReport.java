@@ -35,6 +35,7 @@ final class SessionReport {
     for (Tools.Def def : Tools.ALL) {
       out.put(def.name(), def.kind());
     }
+    Tools.ALIASES.forEach((alias, def) -> out.put(alias, def.kind()));
     return out;
   }
 
