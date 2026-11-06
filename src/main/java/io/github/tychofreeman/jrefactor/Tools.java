@@ -1323,7 +1323,8 @@ final class Tools {
           Replace code that does what an existing static method does with calls of it: every \
           match of the method's body in the project, its parameters standing for any expressions \
           of their types, becomes a call. The method stays. extract_function makes a method from \
-          one place; fold reuses one, written or extracted, everywhere else.
+          one place; fold reuses one, written or extracted, everywhere else. Two methods with \
+          the same body merge as a batch: fold the one to keep, then inline the other.
           What a body matches: one return's expression matches expressions (x * 1.2 becomes \
           withTax(x) for static double withTax(double a) { return a * 1.2; }); a void method's \
           statements match the same statements in any block, a local it declares standing for a \

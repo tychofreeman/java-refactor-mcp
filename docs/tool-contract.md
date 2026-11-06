@@ -361,6 +361,13 @@ new record), `parameter` (the new parameter's name), `imports`.
   Result: `moved street and city of Order into Address (com/example/Address.java),
   held in address; changed com/example/Order.java, ...`.
 
+## Merging duplicate methods (a composition)
+
+Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`
+(the method to keep) then `inline` (the duplicate, now a call of it): the user chose the
+composition over a `merge` option and a tool. Both methods static, each body one return or one
+statement. Golden `batch_merge_duplicate_methods`.
+
 ## `add_result` (built)
 
 Roadmap #124, 2026-11-06, gorefactor's name (the user chose a record result). Arguments: `file`,
