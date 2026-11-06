@@ -796,7 +796,9 @@ final class Tools {
           method its supertypes leave abstract; add members after with add_declaration.
           With test_for in place of content (Cart.total, Cart.add(int) for one overload), a test \
           file starts from its target: JUnit's imports, and a red test method that builds the \
-          receiver, calls the method and ends in fail; type the assertion in place of fail.\
+          receiver, calls the method and ends in fail; type the assertion in place of fail.
+          When the server runs skeleton-only (JREFACTOR_SKELETON_ONLY=1), Java content may hold \
+          only a type's header: start from declaration or test_for, and add members after.\
           """,
           List.of(
               Arg.FILE.described("Path relative to the project root."),

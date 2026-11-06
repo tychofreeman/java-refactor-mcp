@@ -36,6 +36,13 @@ final class Session {
    */
   boolean preserveExceptions;
 
+  /**
+   * Whether a Java file may only start as a type's header (an experiment, roadmap #116): set by
+   * {@code JREFACTOR_SKELETON_ONLY=1}, it refuses {@code create_file} content that declares
+   * members.
+   */
+  boolean skeletonOnly = "1".equals(System.getenv("JREFACTOR_SKELETON_ONLY"));
+
   /** The changes to exceptional behavior the running call made and reports, in order. */
   List<String> exceptional = new ArrayList<>();
 

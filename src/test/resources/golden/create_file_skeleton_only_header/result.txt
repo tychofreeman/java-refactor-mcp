@@ -1,0 +1,1 @@
+created com/example/Kind.java (6 lines)
