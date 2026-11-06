@@ -282,7 +282,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The client keeps tool descriptions from before a reconnect; the server's are
   current.
 - `inspect` puts two spaces between the line number and the code; they are not
-  indentation in `old`.
+  indentation in `old`. Since #106 (2026-11-06) `replace_text` takes an `old` off by a
+  uniform indentation and shifts `new` with it, so the trap costs a note in the result, not
+  a resend.
 - A heredoc ends at the first line equal to its delimiter, also inside the text: a
   README example containing `EOF`, sent through `<<'EOF'`, ran the rest as shell
   commands (a `bin/jrefactor undo` among them; it refused). Pick a delimiter the text

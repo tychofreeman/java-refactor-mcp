@@ -473,7 +473,14 @@ in the same turn only if it is sent after it.
     after the last element (on a new line when the elements are one per line).
 - `replace_text`: `file`, `old`, `new`, `all_occurrences`, `append`. `old` must occur
   once unless `all_occurrences`; refused with the lines it occurs on. Result:
-  `replaced <n> occurrence(s) in <file>, line(s) ...`. `append=true` in place of `old`
+  `replaced <n> occurrence(s) in <file>, line(s) ...`. Not found exactly, an `old` whose
+  every non-blank line is off by the same indentation, and then occurs once, is taken, and
+  `new` is shifted by as much: `...; old was 2 spaces deeper than the file, so new was
+  shifted 2 spaces shallower` (roadmap #106; the user's choice, 2026-11-06, over
+  gorefactor's rule, any run of spaces within lines for any other with `new` as sent, and
+  over a refusal with a hint only). Spacing within a line must match. Not found at all, the
+  refusal names where a line of `old` is, spacing ignored (`; its line int b() { is at line
+  8`), as gorefactor's does. `append=true` in place of `old`
   adds `new` at the end of the file, after a line break when the file does not end in
   one (gorefactor's `append`, 2026-11-05): `appended <n> line(s) to <file>, line(s) ...`;
   refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused.
