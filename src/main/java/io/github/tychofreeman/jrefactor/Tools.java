@@ -897,11 +897,19 @@ final class Tools {
           such name, and imports chooses. In a file that imports from JUnit, an assertion it calls \
           (assertEquals) is imported statically from the framework, not declared as a stub.
           With test_for in place of content (Cart.total), the member is a red test of that \
-          method: the receiver built, the call made, and fail where the assertion goes.\
+          method: the receiver built, the call made, and fail where the assertion goes.
+          With implement in place of content, the members come from the supertypes: * stubs every \
+          abstract method left unimplemented; a name (describe, Base.describe, describe(int)) \
+          overrides that one, a stub if abstract, else calling super.\
           """,
           List.of(
               Arg.FILE,
-              Arg.string("content", "Java member declarations (or test_for in their place)."),
+              Arg.string(
+                  "content", "Java member declarations (or test_for or implement in their place)."),
+              Arg.string(
+                  "implement",
+                  "In place of content: * for every abstract method the supertypes leave, or a"
+                      + " supertype's method to override (toString, Base.describe(int))."),
               Arg.string(
                   "test_for",
                   "In place of content, in a test class: the method to test, as Type.method or"
