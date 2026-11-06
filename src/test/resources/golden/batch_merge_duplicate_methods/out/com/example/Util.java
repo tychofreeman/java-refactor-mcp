@@ -6,6 +6,6 @@ class Util {
   }
 
   int use(int n) {
-    return twice(n) + twice((n + 1));
+    return twice(n) + twice(n + 1);
   }
 }

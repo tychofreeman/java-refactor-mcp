@@ -57,7 +57,12 @@ final class InlineFunction {
   private InlineFunction() {}
 
   /** One use of a parameter in the body: the range of its name and which parameter it is. */
-  private record ParamUse(int start, int end, int index) {}
+  /**
+   * A use of a parameter in the body: where it is, which parameter, and whether it stands alone (a
+   * whole argument, return value, initializer or right-hand side), so its argument needs no
+   * parentheses there.
+   */
+  private record ParamUse(int start, int end, int index, boolean alone) {}
 
   static Outcome run(SourceProject project, String rel, String name) throws Exception {
     Qualified q = Qualified.of(name, "Type.method, the class and the static method to inline");
@@ -584,7 +589,7 @@ final class InlineFunction {
           siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
       if (local[u.index()] != null) {
         argText = local[u.index()];
-      } else if (InlineVariable.needsParentheses(arg)) {
+      } else if (!u.alone() && InlineVariable.needsParentheses(arg)) {
         argText = "(" + argText + ")";
       }
       all.add(new TextEdit(u.start(), u.end(), argText));
@@ -597,6 +602,20 @@ final class InlineFunction {
       }
     }
     return out.toString();
+  }
+
+  /**
+   * Whether {@code n} is a whole argument of a call, a whole return value, initializer or
+   * right-hand side: no operator around it binds into what replaces it.
+   */
+  private static boolean standsAlone(ASTNode n) {
+    ASTNode p = n.getParent();
+    return (p instanceof MethodInvocation m && m.arguments().contains(n))
+        || (p instanceof ClassInstanceCreation c && c.arguments().contains(n))
+        || (p instanceof SuperMethodInvocation s && s.arguments().contains(n))
+        || p instanceof ReturnStatement
+        || (p instanceof VariableDeclarationFragment f && f.getInitializer() == n)
+        || (p instanceof Assignment a && a.getRightHandSide() == n);
   }
 
   /**
@@ -1110,7 +1129,11 @@ final class InlineFunction {
               for (int i = 0; i < params.size(); i++) {
                 if (params.get(i) != null && params.get(i).isEqualTo(v)) {
                   uses.add(
-                      new ParamUse(n.getStartPosition(), n.getStartPosition() + n.getLength(), i));
+                      new ParamUse(
+                          n.getStartPosition(),
+                          n.getStartPosition() + n.getLength(),
+                          i,
+                          standsAlone(n)));
                 }
               }
             }

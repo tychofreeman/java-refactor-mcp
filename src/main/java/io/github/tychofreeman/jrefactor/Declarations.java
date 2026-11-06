@@ -454,7 +454,7 @@ final class Declarations {
     BodyDeclaration found = null;
     for (Object o : owner.decl().bodyDeclarations()) {
       BodyDeclaration d = (BodyDeclaration) o;
-      if (names(d).contains(name) || label(d).equals(name.replace(" ", ""))) {
+      if (names(d).contains(name) || label(d).replace(" ", "").equals(name.replace(" ", ""))) {
         found = d;
         if (!last) {
           break;

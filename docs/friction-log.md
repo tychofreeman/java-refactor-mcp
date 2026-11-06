@@ -901,7 +901,7 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   members; `after` takes a bare name. Resent with another member's name (the batch, 120 lines,
   sent twice).
 - Idea: `after` and `before` take the labels the refusal lists (an overload with its parameter
-  types). Open: no row yet; one case.
+  types). Done (2026-11-06, small-fixes): the label was compared with its spaces kept.
 
 ## 2026-11-06: move refused for an import it cannot be told (A/B, shop-duplication)
 - Task: the A/B check of the merged list, `docs/sessions/ab-merged-tools.md`.
