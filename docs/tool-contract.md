@@ -851,6 +851,14 @@ package (`com.example.shop.Tax`) when several files declare one; refused naming 
 Imports follow in every file; a method moved to another package becomes public, and what its body
 uses that the target cannot reach is the gate's compile error.
 
+A static field (roadmap #109, 2026-11-06): `name` `Shop.MAX` moves its declaration (Javadoc
+and all, widened from private, public across packages) to the end of `to`; `Shop.MAX`, a bare
+`MAX` and `this.MAX` become `Config.MAX`, and a static import of it imports it from there (that
+file's bare uses kept). Refused: an instance field (naming `extract_struct` and `pull_up`), a
+declaration of several fields, an initializer that reads anything but constants (it would run
+when the new class is initialized). Result: `moved Shop.MAX to Config (com/example/Config.java);
+2 uses now name Config`.
+
 An instance method becomes static in the target and takes the source instance as its first parameter,
 named `receiver`; every call in the project passes it (`Type.m(instance, args)`). A private method is
 widened to package access (named in the result). Result: `moved Type.m to T in file; N calls rewritten

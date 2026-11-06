@@ -19,8 +19,10 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
@@ -34,6 +36,7 @@ import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.TypeLiteral;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
  * move_member: a method moves from its class to another top-level type of the same file. An
@@ -68,13 +71,9 @@ final class MoveMember {
             ? file
             : targetFile(project, to, rel);
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move_member");
-    Precondition.require(
-        Precondition.that(
-            () -> declared instanceof MethodDeclaration,
-            () ->
-                name
-                    + " is a field. move_member moves a method; push_down or pull_up move a field"
-                    + " to a subtype or supertype."));
+    if (declared instanceof FieldDeclaration fd) {
+      return field(project, opened, fd, typeName, member, toName, targetFile);
+    }
     MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
     Precondition.require(
@@ -282,6 +281,159 @@ final class MoveMember {
             + (callFiles == 1 ? "" : "s")
             + (widened ? "; private widened to package access" : ""),
         declared2);
+  }
+
+  /**
+   * move_member of a static field: its declaration moves to the end of {@code toName} in {@code
+   * targetFile}, widened from private (to public across packages), and every use names the new
+   * class: {@code Shop.MAX} and a bare {@code MAX} become {@code Config.MAX}, a static import of it
+   * imports it from there. Its initializer must run alone, since it now runs when the new class is
+   * initialized.
+   */
+  private static Outcome field(
+      SourceProject project,
+      Opened opened,
+      FieldDeclaration fd,
+      String typeName,
+      String member,
+      String toName,
+      Path targetFile)
+      throws Exception {
+    Path file = opened.file();
+    String text = opened.text();
+    Precondition.require(
+        Precondition.that(
+            () -> Modifier.isStatic(fd.getModifiers()),
+            () ->
+                member
+                    + " is an instance field; move_member moves methods and static fields. Move"
+                    + " instance fields into a new class with extract_struct (fields), or to a"
+                    + " supertype or subtype with pull_up or push_down."),
+        Precondition.that(
+            () -> fd.fragments().size() == 1,
+            () -> "the declaration of " + member + " declares several fields. Split it first."));
+    VariableDeclarationFragment frag = (VariableDeclarationFragment) fd.fragments().get(0);
+    Expression init = frag.getInitializer();
+    Precondition.require(
+        Precondition.that(
+            () -> init == null || ExtractStruct.initializedAlone(init),
+            () ->
+                "the initializer of "
+                    + member
+                    + " reads a field, a local or a call, and in "
+                    + toName
+                    + " it would run when that class is initialized, not "
+                    + typeName
+                    + ". Make it a constant first, or leave it in place."));
+    String key = frag.resolveBinding().getVariableDeclaration().getKey();
+
+    Map<Path, String> texts = new LinkedHashMap<>();
+    for (Path p : project.javaFiles()) {
+      Path n = p.toAbsolutePath().normalize();
+      String content = n.equals(file) ? text : Files.readString(n);
+      if (n.equals(file) || n.equals(targetFile) || content.contains(member)) {
+        texts.put(n, content);
+      }
+    }
+    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
+    TypeDeclaration target = MemberMove.typeNamed(parsed.get(targetFile), toName);
+    Precondition.require(
+        Precondition.that(
+            () -> target != null && target.resolveBinding() != null,
+            () ->
+                toName + " is not a class of " + project.relative(targetFile) + " that resolves."));
+    String targetPkg = project.packageOf(targetFile);
+    boolean crosses = !Objects.equals(project.packageOf(file), targetPkg);
+    String qualifiedTo =
+        targetPkg == null || targetPkg.isEmpty() ? toName : targetPkg + "." + toName;
+
+    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+    int uses = 0;
+    for (Map.Entry<Path, CompilationUnit> e : parsed.entrySet()) {
+      List<TextEdit> list = new ArrayList<>();
+      boolean imported = false;
+      List<SimpleName> bare = new ArrayList<>();
+      for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
+        if (n.isDeclaration()
+            || !(n.resolveBinding() instanceof IVariableBinding v)
+            || !v.getVariableDeclaration().getKey().equals(key)) {
+          continue;
+        }
+        ASTNode p = n.getParent();
+        if (p instanceof QualifiedName q && q.getParent() instanceof ImportDeclaration i) {
+          list.add(
+              new TextEdit(
+                  q.getStartPosition(), Nodes.end(q), qualifiedTo + "." + n.getIdentifier()));
+          imported = i.isStatic();
+        } else if (p instanceof QualifiedName q && q.getName() == n) {
+          list.add(
+              new TextEdit(
+                  q.getQualifier().getStartPosition(), Nodes.end(q.getQualifier()), toName));
+        } else if (p instanceof FieldAccess f && f.getName() == n) {
+          list.add(
+              new TextEdit(
+                  f.getExpression().getStartPosition(), Nodes.end(f.getExpression()), toName));
+        } else {
+          bare.add(n);
+        }
+        uses++;
+      }
+      if (!imported) {
+        for (SimpleName n : bare) {
+          list.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), toName + "."));
+        }
+      }
+      if (!list.isEmpty()) {
+        edits.put(e.getKey(), list);
+      }
+    }
+
+    int fs = fd.getStartPosition();
+    List<TextEdit> inner = new ArrayList<>();
+    int at = fd.getType().getStartPosition();
+    for (Object o : fd.modifiers()) {
+      if (o instanceof org.eclipse.jdt.core.dom.Modifier mod) {
+        at = Math.min(at, mod.getStartPosition());
+        if (mod.isPrivate() || (crosses && mod.isProtected())) {
+          inner.add(
+              new TextEdit(
+                  mod.getStartPosition() - fs,
+                  mod.getStartPosition() + mod.getLength() + 1 - fs,
+                  ""));
+        }
+      }
+    }
+    if (crosses && !Modifier.isPublic(fd.getModifiers())) {
+      inner.add(new TextEdit(at - fs, at - fs, "public "));
+    }
+    inner.sort((a, b) -> b.start() - a.start());
+    String moved = TextEdit.apply(text.substring(fs, Nodes.end(fd)), inner, 0);
+    edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, fd));
+    edits
+        .computeIfAbsent(targetFile, k -> new ArrayList<>())
+        .addAll(MemberMove.appendTo(texts.get(targetFile), target, moved));
+    Stubs.Declared declared =
+        MemberMove.gate(
+            project,
+            texts,
+            edits,
+            "moving " + typeName + "." + member + " to " + toName,
+            "Check that what the field's initializer names resolves in " + toName + ".");
+    return new Outcome(
+        "moved "
+            + typeName
+            + "."
+            + member
+            + " to "
+            + toName
+            + " ("
+            + project.relative(targetFile)
+            + "); "
+            + uses
+            + (uses == 1 ? " use" : " uses")
+            + " now name "
+            + toName,
+        declared);
   }
 
   /**
