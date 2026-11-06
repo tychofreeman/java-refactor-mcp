@@ -77,6 +77,11 @@ the arc, and a dated section in order when the decision needs its reasons.
     and the open gaps became roadmap #105-#111, ordered by how many entries name
     them; the first, ambiguous imports, was built next on the user's rule (roadmap
     #105: choose on evidence, else refuse with every name).
+13. **2026-11-05: from refactorings to transformations.** The user widened the
+    thesis: a model needs operations that construct code as well as ones that
+    change it, typing only expressions and statements, as in an IDE. A Java file
+    then starts as a declaration, and tests from their target (design note
+    "Constructive transformations"; roadmap #114-#116).
 
 ## Why `replace_text` carried so much (2026-11-04)
 
