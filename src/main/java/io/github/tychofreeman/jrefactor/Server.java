@@ -26,6 +26,20 @@ public final class Server {
   static final String NAME = "java-refactor-mcp";
 
   /**
+   * What every tool shares, said once for the client to show the model rather than in each tool's
+   * description.
+   */
+  static final String INSTRUCTIONS =
+      """
+      Tools that change Java keep the project compiling: a change that would add compile errors \
+      is refused. A refusal changes nothing, and says why and what to send instead. Edits \
+      declare "not implemented" stubs for what new code calls and nothing declares, so a test \
+      written first compiles, and add or remove the imports the code needs; pass imports when \
+      a refusal says a name is ambiguous. Lines are 1-based, as inspect numbers them. Several \
+      steps go in one batch.\
+      """;
+
+  /**
    * The version reported to MCP clients: the Implementation-Version of the jar's manifest, which
    * the release workflow sets to the release's tag, or "devel" for any other build.
    */
@@ -171,6 +185,7 @@ public final class Server {
     var spec =
         McpServer.sync(new StdioServerTransportProvider(json, in, out))
             .serverInfo(NAME, version())
+            .instructions(INSTRUCTIONS)
             .capabilities(ServerCapabilities.builder().tools(false).build());
     for (Tools.Def def : Tools.ALL) {
       spec.toolCall(

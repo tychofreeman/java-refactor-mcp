@@ -48,9 +48,8 @@ final class Tools {
             .put("type", "boolean")
             .put(
                 "description",
-                "Optional: true to keep exceptional behavior (where an exception is thrown, or"
-                    + " whether one is): the tool keeps it or refuses. Without it, the changes it"
-                    + " makes to it are listed in a part of the result of their own.");
+                "Optional: true to refuse a change to where or whether an exception is thrown, rather"
+                    + " than make it and list it.");
         schema = root.toString();
         Set<String> all = new HashSet<>(args);
         all.add(Exceptional.FLAG);
@@ -135,13 +134,7 @@ final class Tools {
           name means two things on the line (this.count = count), name the one you mean: \
           "Counter.count" for the member of Counter, "local count" for the local or parameter, \
           or pass column.
-          Applies the edit, then type-checks the project: an edit that adds compile errors is \
-          rolled back and refused. Returns the lines changed in each file.
-          Refuses, saying why: a declaration of a library, a method that overrides a library \
-          method, a new name that is not a valid Java name, that the type already has, that it \
-          or a supertype has for a method of as many parameters (an overload), that a local \
-          would hide at a use of the field, or that a nested, enclosing or subclass declaration \
-          would capture (a renamed use would mean it, or a use of it the renamed one).\
+          Returns the lines changed in each file.\
           """,
           List.of(
               Arg.FILE,
@@ -171,16 +164,7 @@ final class Tools {
           final field of the type, or a new parameter of the method that every call passes it \
           to, instead of a local; it must then be literals and constants only, or, as a \
           parameter, also the method's parameters: each call passes it with its own arguments in \
-          their place (qty / 10 becomes bonus, and total(n + 1, 3) passes (n + 1) / 10).
-          Applies the edit, then type-checks the project: an edit that adds compile errors is \
-          rolled back and refused.
-          Refuses, saying why: an expression with an effect that would run in another order \
-          (after an earlier effect of its statement) or at another time (out of a branch, a \
-          loop or a lambda); one in a loop that reads a variable; one that may throw, out from \
-          under its guard (right of && or ||) or out of a try that catches it; one that reads \
-          what an earlier effect could change; assigned to; a statement not directly in a \
-          block; or a type that does not resolve. The first call of a statement can be named: \
-          f(p.next(), p.next()) gives a = p.next(); f(a, p.next()).\
+          their place (qty / 10 becomes bonus, and total(n + 1, 3) passes (n + 1) / 10).\
           """,
           List.of(
               Arg.FILE,
@@ -212,14 +196,7 @@ final class Tools {
           the inverse of extract_variable. int subtotal = price * qty; return subtotal + tax; \
           becomes return (price * qty) + tax;.
           Identify the variable by file, a line on which it is declared or used, and its name. \
-          When the name means two variables on the line, pass column.
-          Applies the edit, then type-checks the project: an edit that adds compile errors is \
-          rolled back and refused.
-          Refuses, saying why: a field or a parameter; a declaration of several variables or \
-          without an initializer; a variable assigned after its declaration; an initializer with \
-          an effect used twice, or moved past another effect or into a branch, loop or lambda; \
-          one that reads state a call or assignment before a use could change; a declared type \
-          different from the initializer's.\
+          When the name means two variables on the line, pass column.\
           """,
           List.of(
               Arg.FILE,
@@ -244,21 +221,8 @@ final class Tools {
           A body of several statements: a void method's call becomes its statements; a method \
           ending in its one return must be called as all of an initializer, a return or an \
           assignment's value, and its other statements go before that statement.
-          Applies the edit, then type-checks the project: an edit that adds compile errors is \
-          rolled back and refused.
           An instance method's receiver takes the place of this, and of the bare members the \
-          body uses (c.total() with return count * 2 becomes c.count * 2).
-          Refuses, saying why: a varargs, generic or abstract method; an instance method that \
-          another overrides, or called on a receiver that is not a local, parameter or this, or \
-          whose body uses super; a body that \
-          returns before its last statement; a body that assigns a parameter, or declares a name \
-          the caller uses; a method that calls itself; a method used as Type::name; \
-          a call nested in another call's arguments; a method with no calls.
-          An argument that inlined in place would run at another time (an effect dropped, used \
-          twice, after another effect, in a branch, loop or lambda, or out of order) is bound \
-          to a local before the call's statement instead, with the arguments before it: \
-          both(reserve(t), charge(t)) gives a = reserve(t); b = charge(t); a && b. Refused when \
-          that move is unsafe too (it would cross an effect earlier in the statement).\
+          body uses (c.total() with return count * 2 becomes c.count * 2).\
           """,
           List.of(
               Arg.FILE.described(
@@ -275,8 +239,6 @@ final class Tools {
           Change the declared type of a field, so that its uses must still compile: the field \
           Price.total of type int becomes long. Identify the field as Type.field, a top-level \
           class of the file.
-          Applies the edit, then type-checks the project: a change that a use no longer compiles \
-          with is rolled back and refused.
           A method's parameter (parameter) or return type (return_type=true) changes in it and \
           every override and implementation, and in lambdas that write the parameter's type; \
           calls are not edited, so one the new type breaks is refused with the error.
@@ -284,10 +246,7 @@ final class Tools {
           is refused: an operand of arithmetic, a shift, ++ or a compound assignment, an \
           argument of a call, a cast, a branch of ?:, == on a boxed type (int to long loses an \
           overflow, int to double changes x / 2, char to int prints a number). Copies, returns \
-          and comparisons are fine.
-          Refuses, saying why: a name that is not a field of the class, a declaration of several \
-          fields, a varargs parameter, such a use, or a change that adds compile errors, naming \
-          them.\
+          and comparisons are fine.\
           """,
           List.of(
               Arg.FILE.described(
@@ -316,12 +275,7 @@ final class Tools {
           """
           Add a supertype to a top-level class or interface, in its header: relation extends or \
           implements, and the supertype as written, such as Base or Priced. Identify the type by \
-          name, a top-level type of the file.
-          Applies the edit, then type-checks the project: a supertype that does not resolve, or a \
-          change that adds compile errors, is rolled back and refused.
-          Refuses, saying why: a name that is not a top-level type of the file, extends on a class \
-          that already extends one, implements on an interface, or a change that adds compile \
-          errors, naming them.\
+          name, a top-level type of the file.\
           """,
           List.of(
               Arg.FILE.described(
@@ -349,11 +303,7 @@ final class Tools {
           the class's package. kind=interface: the new interface declares the signatures of the \
           named public instance methods, and the class implements it. kind=class: the named \
           methods and fields move into the new class (as pull_up moves them), which takes the \
-          class's place in its extends and extends the old superclass.
-          Type-checks the project after each step; any refusal changes nothing.
-          Refuses, saying why: an interface or generic class, a name whose file exists, a member \
-          not found, a method that is not public or is static (kind=interface), or what pull_up \
-          refuses (kind=class).\
+          class's place in its extends and extends the old superclass.\
           """,
           List.of(
               Arg.FILE.described(
@@ -384,14 +334,7 @@ final class Tools {
           another of the three, where it means the same: s -> s.length() becomes String::length, \
           String::length becomes (s) -> s.length(), and an anonymous Runnable with its one run \
           method becomes () -> { ... }, or back. Identify it by file and the line it starts on \
-          (column when several start there); to is lambda, anonymous or method_reference.
-          Type-checks the project: a form that does not compile there (an ambiguous overload) is \
-          refused.
-          Refuses, saying why: a lambda whose body is not one call passing its parameters in \
-          order (for a method reference); a receiver evaluated once by a reference and at each \
-          call by a lambda that may change (a field, a call); this, or a bare call of the \
-          interface's or Object's methods, which would mean another object; an anonymous class \
-          with fields or other methods.\
+          (column when several start there); to is lambda, anonymous or method_reference.\
           """,
           List.of(
               Arg.FILE,
@@ -417,11 +360,7 @@ final class Tools {
           order) is the canonical one, an accessor x() becomes public, and its other members stay. \
           name is a top-level class of file.
           A record generates value-based equals, hashCode and toString for those the class does \
-          not define: pass value_semantics=true to accept that change.
-          Refuses, saying why: a superclass, a subclass, an abstract class, a field that is not \
-          final or has an initializer, an instance initializer, other constructors, a missing \
-          equals, hashCode or toString without value_semantics, or a change that adds compile \
-          errors.\
+          not define: pass value_semantics=true to accept that change.\
           """,
           List.of(
               Arg.FILE.described(
@@ -456,10 +395,7 @@ final class Tools {
           of a new record, every new Order(...) passes new Address(...) in their place, and \
           o.street() becomes o.address().street(); pass value_semantics=true to accept the \
           change to its generated toString. Refused for a record with a constructor, a method \
-          reference to it or its accessors, or a record pattern of it.
-          Refuses, saying why: parameters that are not next to each other, a body that assigns \
-          one, a method lambdas implement, a varargs parameter, a name in use, or a change that \
-          adds compile errors.\
+          reference to it or its accessors, or a record pattern of it.\
           """,
           List.of(
               Arg.FILE.described(
@@ -491,11 +427,7 @@ final class Tools {
           for a call passing this). The other way, instance to static in place, is move \
           with to set to the method's own class.
           A null first argument now fails at the call, not where the body used it: reported as a \
-          change to exceptional behavior, refused under preserve_exceptions.
-          Refuses, saying why: a method that is not static, a first parameter not of its class \
-          or varargs, a body that assigns it, lambdas or method references of it, an instance \
-          method of the new signature in a subclass or supertype (it would override or be \
-          overridden).\
+          change to exceptional behavior, refused under preserve_exceptions.\
           """,
           List.of(
               Arg.FILE.described(
@@ -510,10 +442,9 @@ final class Tools {
       new Def(
           "replace_expression",
           """
-          Replace one expression with new text: an edit. Find it by file, the line it starts on \
+          Replace one expression with new text. Find it by file, the line it starts on \
           and its exact source text (column when the text occurs twice on the line), as \
-          extract_variable does. The project must type-check no worse after; what new calls that \
-          nothing declares is declared as stubs; imports are added and removed.\
+          extract_variable does.\
           """,
           List.of(
               Arg.FILE,
@@ -531,9 +462,8 @@ final class Tools {
           "insert_statements",
           """
           Insert statements before or after the statement that starts on a line (directly in a \
-          block): an edit. content is the statements, at any indentation; they are indented as \
-          that statement is. The project must type-check no worse after; stubs and imports as \
-          for every edit.\
+          block). content is the statements, at any indentation; they are indented as \
+          that statement is.\
           """,
           List.of(
               Arg.FILE,
@@ -549,9 +479,7 @@ final class Tools {
           "replace_statements",
           """
           Replace whole statements of one block, from the one starting on start_line to the one \
-          ending on end_line, with content (statements, re-indented); empty content deletes them: \
-          an edit. The project must type-check no worse after; stubs and imports as for every \
-          edit.
+          ending on end_line, with content (statements, re-indented); empty content deletes them.
           With surround in place of content (try, if (ready), for (Item i : items), while (more), \
           synchronized (lock)), the statements go inside that block; a try catches and rethrows \
           the checked exceptions they throw.
@@ -574,7 +502,7 @@ final class Tools {
           "add_case",
           """
           Add a case to the switch (statement or expression) that starts on a line: before its \
-          default, or at its end: an edit. content is the case with its statements \
+          default, or at its end. content is the case with its statements \
           (case 2: return "two"; or case 2 -> "two";), indented as the other cases.\
           """,
           List.of(
@@ -590,7 +518,7 @@ final class Tools {
           "add_element",
           """
           Add an element at the end of the array initializer ({1, 2}) or the enum constants that \
-          start on a line: an edit. content is the element (3, or RED). An element on a line of \
+          start on a line. content is the element (3, or RED). An element on a line of \
           its own goes on a new line, as the others.\
           """,
           List.of(
@@ -613,11 +541,7 @@ final class Tools {
           swap order: pass it only when the order of the calls does not matter.
           A return, break, continue, throw or yield never moves, and neither a statement with a \
           side effect nor one that may throw moves past one that may leave the block early (an \
-          if that returns), nor a call past a read of what it could change. Applies the edit, then type-checks the project: a swap that \
-          adds compile errors is rolled back and refused.
-          Refuses, saying why: no statement starts on the line, a statement with no neighbour in \
-          that direction, a shared name, two side effects under the strict rule, a jump, or a side \
-          effect past an early exit.\
+          if that returns), nor a call past a read of what it could change.\
           """,
           List.of(
               Arg.FILE,
@@ -643,9 +567,7 @@ final class Tools {
           code runs the same. Identify the if by the line it starts on.
           The condition is negated by its opposite operator (== and !=, < and >=, <= and >), a \
           !x loses its !, and any other condition is wrapped in !(...). An ordering comparison on \
-          a float or double is refused: it is not the opposite when a value is NaN.
-          Refuses, saying why: no if on the line, an if with no else, an else if chain (invert the \
-          inner if), a float comparison, or a change that adds compile errors, naming them.\
+          a float or double is refused: it is not the opposite when a value is NaN.\
           """,
           List.of(Arg.FILE, Arg.integer("line", "The 1-based line the if starts on.").required()),
           Kind.REFACTORING,
@@ -657,10 +579,7 @@ final class Tools {
           """
           Remove the else of an if whose then-branch cannot finish normally (it ends in a return, \
           throw, break, continue or yield). The else's statements then follow the if, at its \
-          indentation, so the code runs the same. Identify the if by the line it starts on.
-          Refuses, saying why: no if on the line, an if with no else, an if that is not directly \
-          in a block, a then-branch that can finish normally (the else's statements would then run \
-          after it too), or a change that adds compile errors, naming them.\
+          indentation, so the code runs the same. Identify the if by the line it starts on.\
           """,
           List.of(Arg.FILE, Arg.integer("line", "The 1-based line the if starts on.").required()),
           Kind.REFACTORING,
@@ -678,11 +597,7 @@ final class Tools {
           instance method becomes static in the target and takes the instance it used as its first \
           parameter, named receiver; every call in the project passes that instance. A private \
           method is widened to package access. The name is Type.method, or Type.method(params) for \
-          an overload; to is the target class.
-          Refuses, saying why: an override, a method another class overrides, a constructor, a \
-          method reference to it, a call of itself, super, an anonymous or local class in the body, \
-          a call from another class with no instance, or a change that adds compile errors, naming \
-          them. A null instance that the method dereferences fails inside it, not at the call.\
+          an overload; to is the target class.\
           """,
           List.of(
               Arg.FILE.described(
@@ -709,10 +624,7 @@ final class Tools {
           Encapsulate a field: it becomes private, with a getter and a setter (getX and setX, or the \
           names given), and every use in the project goes through them. A read becomes the getter \
           call; a plain assignment statement x = value becomes setX(value). A final field gets a \
-          getter only. Identify the field as Type.field, a top-level class of the file.
-          Refuses, saying why: a name that is not a field, a declaration of several fields, a final \
-          field that is written, a compound write (+=) or ++ or --, a write inside an expression, a \
-          statement that also reads the field, or a change that adds compile errors, naming them.\
+          getter only. Identify the field as Type.field, a top-level class of the file.\
           """,
           List.of(
               Arg.FILE.described(
@@ -736,14 +648,10 @@ final class Tools {
           becomes import a.Line), the moved type's uses of Shop's static members are qualified \
           (label(x) becomes Shop.label(x)), and private members either side uses across the new \
           boundary become package-private; the result names them.
-          name is Outer.Inner, as written in file. Type-checks the project: a move that adds \
-          compile errors is rolled back and refused.
+          name is Outer.Inner, as written in file.
           With package, the file's only top-level type moves to that package (same source root): \
           its file moves, imports and qualified names follow, files of its old package import it, \
-          and package-private declarations used across the new boundary become public (named).
-          Refuses, saying why: an inner (non-static) class, a top-level type without package, a \
-          file of that name that exists, a file with several top-level types or in the default \
-          package when moving to a package.\
+          and package-private declarations used across the new boundary become public (named).\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the type, relative to the project root."),
@@ -765,15 +673,7 @@ final class Tools {
           """
           Move a method or field from its class to its direct superclass, or to a direct supertype named by \
           to: the member leaves Sub and is added to the end of Base. Every call still compiles, \
-          since Sub inherits the method. name is Sub.method.
-          Type-checks the project: a move that adds compile errors (the method uses a field only Sub \
-          has, say) is rolled back and refused.
-          Refuses, saying why: no superclass or to that is not a direct supertype, a supertype that \
-          is not in the project's sources, a member the supertype already declares, a method that \
-          would override a concrete one the supertype inherits (its other subclasses would run it), \
-          a bare name \
-          that matches several overloads (they are listed; name one with its parameter types, as \
-          Sub.hello(int)), a class that is not top-level.\
+          since Sub inherits the method. name is Sub.method.\
           """,
           List.of(
               Arg.FILE.described(
@@ -791,12 +691,7 @@ final class Tools {
           "push_down",
           """
           Move a method or field from its class to each direct subclass in the project: the member leaves \
-          Sub and is added to the end of each subclass. name is Sub.method.
-          Type-checks the project: a caller that uses the method through Sub (Sub s; s.hello()) \
-          no longer compiles, so the move is rolled back and refused.
-          Refuses, saying why: no direct subclass in the project, a subclass that already declares \
-          the member, a method that overrides a supertype's method, a bare name that matches several \
-          overloads (they are listed; name one with its parameter types), a class that is not top-level.\
+          Sub and is added to the end of each subclass. name is Sub.method.\
           """,
           List.of(
               Arg.FILE.described(
@@ -809,12 +704,9 @@ final class Tools {
       new Def(
           "create_file",
           """
-          Create a new file, Java or not (a test, a fixture, a doc), with any missing directories: \
-          an edit.
+          Create a new file, Java or not (a test, a fixture, a doc), with any missing directories.
           A .java file must parse and declare the package its directory implies under a source \
-          root, and the project must type-check no worse after. Methods, constructors and \
-          classes of the project it uses that nothing declares are declared as stubs (a test \
-          written first compiles); other new errors are refused.
+          root.
           The file must not exist, unless overwrite is set to replace all of it.
           With declaration in place of content, a .java file starts as its type: the package \
           line and the declaration (final class Cart implements Priced), with a stub for each \
@@ -845,10 +737,8 @@ final class Tools {
           "move_file",
           """
           Move or copy a file or directory that is not Java under a source root (a fixture, a doc, \
-          a golden case), or delete it with delete=true: an edit. Missing directories are \
-          created, and directories a move or delete empties are removed. undo puts every file back.
-          Refuses, saying why: a path that does not exist, a to that does, a Java file under a \
-          source root (move_type moves types), a file that is not UTF-8 text.\
+          a golden case), or delete it with delete=true. Missing directories are \
+          created, and directories a move or delete empties are removed. undo puts every file back.\
           """,
           List.of(
               Arg.FILE.described("The file or directory, relative to the project root."),
@@ -883,10 +773,7 @@ final class Tools {
           the instance as its first parameter, receiver, and every call passes it. To its own \
           class, a method is made static in place.
           - no name, to a path: the file or directory, not Java under a source root (copy keeps \
-          it; delete=true without to removes it).
-          Type-checks the project; a move that adds compile errors is refused and changes \
-          nothing. The refusals say why: an override, a method reference to a moved method, an \
-          inner class, a path that exists.\
+          it; delete=true without to removes it).\
           """,
           List.of(
               Arg.FILE.described(
@@ -981,11 +868,7 @@ final class Tools {
           0.2);); an argument whose effects would run in another order is bound to a local first.
           - with field, name a class (Person) and field its field (home) holding a class only it \
           uses (Address): Address's members take the field's place, home.street becomes street, \
-          and Address.java is deleted.
-          Type-checks the project; a change that adds compile errors is refused. Refuses, saying \
-          why: a field or parameter, a variable assigned after its declaration, an instance, \
-          varargs, generic or recursive method, a body that is not one return or one statement, \
-          a method used as Type::name.\
+          and Address.java is deleted.\
           """,
           List.of(
               Arg.FILE.described(
@@ -1009,10 +892,7 @@ final class Tools {
           count, int total(...) becomes TotalResult total(...), a record TotalResult(int value, \
           int count) declared after it, each return e; becomes return new TotalResult(e, 0); \
           and each call that uses the result reads total(...).value(). A void method returns \
-          the type instead, each return giving its zero (0, false, null).
-          Refuses, saying why: an override or an overridden method, a method reference to it, a \
-          method that calls itself, a result named value, a record name in use, or a change \
-          that adds compile errors.\
+          the type instead, each return giving its zero (0, false, null).\
           """,
           List.of(
               Arg.FILE.described(
@@ -1036,11 +916,7 @@ final class Tools {
           variable as the receiver (c.r() becomes r()).
           A switch statement of arrow cases, or an if chain of s instanceof T v, makes a void \
           method of each case's statements; a default (or final else) becomes Shape's own \
-          implementation (a default method of an interface).
-          Refuses, saying why: a guard, a case that is not an arrow case of a type pattern, a \
-          type that is not the project's or already has name(), a case that uses a local of the \
-          method, a parameter, this or the method's own class's members, a return, break or \
-          continue that leaves a case, or a change that adds compile errors.\
+          implementation (a default method of an interface).\
           """,
           List.of(
               Arg.FILE,
@@ -1099,10 +975,7 @@ final class Tools {
           old must be as in the file and occur once, or set all_occurrences; spacing within lines \
           may differ (each run of spaces stands for any other), and then new moves to the file's \
           indentation (the result says so). append, in place of \
-          old, adds new at the end of the file (a friction-log entry, a CI job). In a .java file the \
-          project must type-check no worse after, or nothing changes; what it calls that nothing \
-          declares is declared as stubs, as by add_declaration. Imports the new text needs \
-          are added and those it leaves unused removed; imports chooses an ambiguous name.\
+          old, adds new at the end of the file (a friction-log entry, a CI job).\
           """,
           List.of(
               Arg.FILE.described("Path relative to the project root."),
@@ -1118,32 +991,14 @@ final class Tools {
       new Def(
           "add_declaration",
           """
-          Add members (methods, fields, constructors, nested types) to a type: an edit; for a new \
-          file, use create_file. content is Java members with their Javadoc, written at any \
-          indentation; they are indented to match.
-          type names the type ("Cart", or "Cart.Line" for a nested one); without it, the file's \
-          only top-level type. The members go at the end of the type, or just after or before \
-          the member named in after or before.
-          A method with the same name and parameter types (List and List<?> are the same) whose \
-          body is only throw new UnsupportedOperationException("not implemented") is a stub, and \
-          is replaced rather than added again; so is a field stub (static int MAX; // not \
-          implemented).
-          Methods, constructors, static fields (Limits.MAX) and classes of the project the \
-          members use that nothing declares \
-          are declared as such stubs, typed from the use; the result names them ("declared \
-          stubs"). Write a test first and call what does not exist yet.
-          Imports the members need are added, and those they no longer use are removed; when a \
-          name could be several classes, the one the file imported before, or the only one in a \
-          package it imports from, is taken and named; otherwise the call is refused with every \
-          such name, and imports chooses. In a file that imports from JUnit, an assertion it calls \
-          (assertEquals) is imported statically from the framework, not declared as a stub.
-          With test_for in place of content (Cart.total), the member is a red test of that \
-          method: the receiver built, the call made, and fail where the assertion goes.
-          With implement in place of content, the members come from the supertypes: * stubs every \
-          abstract method left unimplemented; a name (describe, Base.describe, describe(int)) \
-          overrides that one, a stub if abstract, else calling super.
-          With constructor (field names, in order) in place of content, a constructor that takes \
-          and assigns them.\
+          Add members (methods, fields, constructors, nested types) to a type (the file's only \
+          top-level one unless type names it), at its end or after or before a named member; \
+          content is the members at any indentation. A member with a stub's signature replaces \
+          the stub.
+          In place of content: test_for (Cart.total) writes a red test of that method; implement \
+          (* for every abstract method left, or a supertype's method such as toString) writes \
+          stubs, or overrides that call super; constructor (field names, in order) writes a \
+          constructor that assigns them.\
           """,
           List.of(
               Arg.FILE,
@@ -1208,10 +1063,7 @@ final class Tools {
           call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
           With name a record (Line) whose canonical constructor is implicit or compact, it adds a \
-          component, and every new Line(...) passes value.
-          Refuses, saying why: a method that overrides a library method, one used as a method \
-          reference, varargs, a name that would hide a field a body reads, a value that does \
-          not type-check at some call.\
+          component, and every new Line(...) passes value.\
           """,
           List.of(
               Arg.FILE.described(
@@ -1237,10 +1089,7 @@ final class Tools {
           it last when taking a feature out: \
           first change the bodies so they no longer read it.
           name finds the method as replace_declaration does. A dropped argument must have no \
-          side effects (a name, a literal, this, a field).
-          Refuses, saying why: a body or lambda that reads the parameter, an argument with side \
-          effects, a method that overrides a library method, one used as a method reference, \
-          varargs.\
+          side effects (a name, a literal, this, a field).\
           """,
           List.of(
               Arg.FILE.described(
@@ -1261,9 +1110,7 @@ final class Tools {
           to before from, void copy(Path from, Path to) becomes void copy(Path to, Path from), \
           and copy(a, b) becomes copy(b, a).
           name finds the method as replace_declaration does; before names the parameter to put \
-          it ahead of (default: last).
-          Refuses, saying why: two arguments with side effects whose order would change, a \
-          method that overrides a library method, one used as a method reference, varargs.\
+          it ahead of (default: last).\
           """,
           List.of(
               Arg.FILE.described(
@@ -1289,11 +1136,7 @@ final class Tools {
           and several are returned in a record named after the method (sum and count as \
           TotalsResult, taken out after the call: int sum = totalsResult.sum();). \
           The method is static when the enclosing one is, and declares the checked exceptions \
-          the statements throw. doc becomes its Javadoc.
-          Refuses, saying why: a range that cuts a statement (with the statement lines there), \
-          a break, continue or yield that leaves the statements, a return \
-          in the middle of a void method, this(...) or super(...), an assignment to a final \
-          field, a name the type already has.\
+          the statements throw. doc becomes its Javadoc.\
           """,
           List.of(
               Arg.FILE,
@@ -1395,10 +1238,7 @@ final class Tools {
           With line (and in), only the matches that start on that line are folded.
           A match the call would not reproduce is left, and the result says why: arguments run in \
           another order or another number of times, one moved out of a branch or past an effect, \
-          a private method called from another class.
-          Refuses, saying why: a method that is not static or has no body, a body that is not one \
-          return or a void method's statements, a parameter the body does not use, varargs, or no \
-          match a call can replace.\
+          a private method called from another class.\
           """,
           List.of(
               Arg.FILE.described(
