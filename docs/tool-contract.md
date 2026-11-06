@@ -389,7 +389,12 @@ the pattern variable as the receiver (`c.r()` becomes `r()`, a bare `c` becomes 
 a switch statement, a `default`, a guard, a case that is not a type pattern giving an
 expression, a type that is not the project's or already has `name()`, a case that uses a local,
 a parameter, `this` or the method's class's members. Result: `declared double area() on Shape,
-implemented in Circle, Square; the switch at line 5 of <file> is now s.area()`.
+implemented in Circle, Square; the switch at line 5 of <file> is now s.area()`. Since
+2026-11-06 also: a switch statement of arrow cases (an expression statement or a block each)
+and an `if` chain of `s instanceof T v` make a void method of each case's statements, and a
+`default` (or a chain's final `else`) becomes `S`'s own implementation (a `default` method of
+an interface, a concrete one of an abstract class), the selector name as `this`; a body may
+declare its own locals; a `return`, `break`, `continue` or `yield` leaving a case is refused.
 
 ## Merging duplicate methods (a composition)
 

@@ -10,33 +10,54 @@ import java.util.Map;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ContinueStatement;
+import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.PatternInstanceofExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
+import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypePattern;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
+import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
 
 final class TypeSwitch {
   private TypeSwitch() {}
 
-  /** One case: the type it matches, its pattern variable, and the expression it gives. */
-  private record Case(ITypeBinding type, String variable, Expression value) {}
+  /**
+   * One case: the type it matches (null for a default or final else, which {@code S} itself
+   * implements), its pattern variable (or the selector's name for a default), and its body: the
+   * expression it gives, or its statements.
+   */
+  private record Case(ITypeBinding type, String variable, ASTNode body) {}
 
   /**
-   * type_switch_to_method: the switch expression on {@code line}, whose cases are type patterns
-   * over a project interface or abstract class, becomes a call of the method {@code name}, which
-   * the supertype declares and each case's type implements with the case's expression.
+   * type_switch_to_method: the switch (expression or statement) or instanceof chain on {@code
+   * line}, over a project interface or abstract class, becomes a call of the method {@code name},
+   * which each case's type implements with the case's body, and the supertype declares (or, with a
+   * default, implements).
    */
   static Outcome run(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
@@ -50,12 +71,37 @@ final class TypeSwitch {
             () -> name + " is not a valid method name."));
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
-    SwitchExpression sw =
+    ASTNode node =
         opened.startingOn(
-            line, SwitchExpression.class, x -> true, "switch expression", "", "the switch");
-    ITypeBinding s = sw.getExpression().resolveTypeBinding();
-    ITypeBinding result = sw.resolveTypeBinding();
+            line,
+            ASTNode.class,
+            x ->
+                x instanceof SwitchExpression
+                    || x instanceof SwitchStatement
+                    || (x instanceof IfStatement i
+                        && i.getExpression() instanceof PatternInstanceofExpression
+                        && !(i.getParent() instanceof IfStatement p && p.getElseStatement() == i)),
+            "switch, or if of instanceof patterns,",
+            "",
+            "the switch or the if");
+    Expression selector;
+    ITypeBinding result = null;
+    List<Case> cases;
+    if (node instanceof SwitchExpression sw) {
+      selector = sw.getExpression();
+      result = sw.resolveTypeBinding();
+      cases = switchCases(sw.statements(), selector, project, true);
+    } else if (node instanceof SwitchStatement ss) {
+      selector = ss.getExpression();
+      cases = switchCases(ss.statements(), selector, project, false);
+    } else {
+      IfStatement first = (IfStatement) node;
+      selector = ((PatternInstanceofExpression) first.getExpression()).getLeftOperand();
+      cases = chain(first, text, selector, project);
+    }
+    ITypeBinding s = selector.resolveTypeBinding();
     Path sFile = s == null ? null : fileOf(project, s);
+    ITypeBinding r0 = result;
     Precondition.require(
         Precondition.that(
             () ->
@@ -68,133 +114,215 @@ final class TypeSwitch {
                     + ", which is not an interface or abstract class of the project to declare "
                     + name
                     + " on."),
-        Precondition.that(() -> result != null, () -> "the switch's type does not resolve."));
-    List<Case> cases = cases(sw, project);
+        Precondition.that(
+            () -> !(node instanceof SwitchExpression) || r0 != null,
+            () -> "the switch's type does not resolve."));
+    String r = result == null ? "void" : Extract.typeName(result);
 
     Map<Path, String> texts = new LinkedHashMap<>();
     texts.put(opened.file(), text);
     texts.putIfAbsent(sFile, Files.readString(sFile));
     for (Case c : cases) {
-      Path f = fileOf(project, c.type());
-      texts.putIfAbsent(f, Files.readString(f));
+      if (c.type() != null) {
+        Path f = fileOf(project, c.type());
+        texts.putIfAbsent(f, Files.readString(f));
+      }
     }
     Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
-    String r = Extract.typeName(result);
-    AbstractTypeDeclaration sDecl = declaration(parsed.get(sFile), s);
-    String abstractMethod = (s.isInterface() ? "" : "public abstract ") + r + " " + name + "();";
+    Case fallback = cases.stream().filter(c -> c.type() == null).findFirst().orElse(null);
+    String own =
+        fallback == null
+            ? (s.isInterface() ? "" : "public abstract ") + r + " " + name + "();"
+            : (s.isInterface() ? "default " : "public ")
+                + r
+                + " "
+                + name
+                + "() {\n"
+                + body(text, fallback, result != null)
+                + "\n  }";
     edits
         .computeIfAbsent(sFile, k -> new ArrayList<>())
-        .addAll(MemberMove.appendTo(texts.get(sFile), sDecl, abstractMethod));
+        .addAll(MemberMove.appendTo(texts.get(sFile), declaration(parsed.get(sFile), s), own));
+    List<String> types = new ArrayList<>();
     for (Case c : cases) {
-      Path f = fileOf(project, c.type());
-      AbstractTypeDeclaration t = declaration(parsed.get(f), c.type());
+      if (c.type() == null) {
+        continue;
+      }
       for (IMethodBinding m : c.type().getDeclaredMethods()) {
         if (m.getName().equals(name) && m.getParameterTypes().length == 0) {
           throw new Refusal(c.type().getName() + " already declares " + name + "().");
         }
       }
-      String body = asReceiver(text, c);
+      Path f = fileOf(project, c.type());
       String method =
-          "@Override\n  public " + r + " " + name + "() {\n    return " + body + ";\n  }";
+          "@Override\n  public "
+              + r
+              + " "
+              + name
+              + "() {\n"
+              + body(text, c, result != null)
+              + "\n  }";
       edits
           .computeIfAbsent(f, k -> new ArrayList<>())
-          .addAll(MemberMove.appendTo(texts.get(f), t, method));
+          .addAll(MemberMove.appendTo(texts.get(f), declaration(parsed.get(f), c.type()), method));
+      types.add(c.type().getName());
     }
-    String selector =
-        text.substring(sw.getExpression().getStartPosition(), Nodes.end(sw.getExpression()));
-    boolean plain = sw.getExpression() instanceof Name;
+    String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+    String call =
+        (selector instanceof Name ? sel : "(" + sel + ")")
+            + "."
+            + name
+            + "()"
+            + (node instanceof SwitchExpression ? "" : ";");
     edits
         .computeIfAbsent(opened.file(), k -> new ArrayList<>())
-        .add(
-            new TextEdit(
-                sw.getStartPosition(),
-                Nodes.end(sw),
-                (plain ? selector : "(" + selector + ")") + "." + name + "()"));
+        .add(new TextEdit(node.getStartPosition(), Nodes.end(node), call));
     Stubs.Declared declared =
         MemberMove.gate(
             project,
             texts,
             edits,
             "turning the switch into " + name + "()",
-            "Check that each case's expression compiles in its type.");
-    List<String> types = new ArrayList<>();
-    for (Case c : cases) {
-      types.add(c.type().getName());
-    }
+            "Check that each case's body compiles in its type.");
     return new Outcome(
-        "declared "
+        (fallback == null ? "declared " : "implemented ")
             + r
             + " "
             + name
             + "() on "
             + s.getName()
-            + ", implemented in "
-            + String.join(", ", types)
-            + "; the switch at line "
+            + (types.isEmpty() ? "" : ", overridden in " + String.join(", ", types))
+            + "; the code at line "
             + line
             + " of "
             + rel
             + " is now "
-            + selector
-            + "."
-            + name
-            + "()",
+            + call,
         declared);
   }
 
-  /** The cases of {@code sw}, each a type pattern giving an expression; refused otherwise. */
-  private static List<Case> cases(SwitchExpression sw, SourceProject project) throws IOException {
+  /**
+   * The body of the method a case becomes, indented for a member: {@code return} its expression
+   * (when the switch gives a value), else its statements, the pattern variable as the receiver.
+   */
+  private static String body(String text, Case c, boolean value) {
+    String b = asReceiver(text, c);
+    if (c.body() instanceof Expression) {
+      b = (value ? "return " : "") + b + ";";
+    } else if (c.body() instanceof Block) {
+      // The lines between the braces, each keeping its indentation, so indent() finds the common
+      // one.
+      b =
+          b.substring(b.indexOf('{') + 1, b.lastIndexOf('}'))
+              .replaceFirst("^[ \\t]*\\n", "")
+              .stripTrailing();
+    }
+    return Primitives.indent(b, "    ");
+  }
+
+  /** The cases of a switch's {@code statements}: arrow cases, each a type pattern or default. */
+  private static List<Case> switchCases(
+      List<?> statements, Expression selector, SourceProject project, boolean value)
+      throws IOException {
     List<Case> out = new ArrayList<>();
-    List<?> statements = sw.statements();
     for (int i = 0; i < statements.size(); i++) {
       if (!(statements.get(i) instanceof SwitchCase c)) {
         continue;
       }
-      if (c.isDefault()) {
+      ASTNode next = i + 1 < statements.size() ? (ASTNode) statements.get(i + 1) : null;
+      ASTNode body =
+          next instanceof YieldStatement y && y.getExpression() != null
+              ? y.getExpression()
+              : !value && next instanceof ExpressionStatement e
+                  ? e.getExpression()
+                  : !value && next instanceof Block ? next : null;
+      if (!c.isSwitchLabeledRule() || body == null) {
         throw new Refusal(
-            "the switch has a default, which type_switch_to_method does not move yet.");
-      }
-      if (!c.isSwitchLabeledRule()
-          || c.expressions().size() != 1
-          || !(c.expressions().get(0) instanceof TypePattern p)
-          || i + 1 >= statements.size()
-          || !(statements.get(i + 1) instanceof YieldStatement y)
-          || y.getExpression() == null) {
-        throw new Refusal(
-            "each case must be a type pattern giving an expression (case Circle c -> ...); the one"
-                + " at "
+            "each case must be an arrow case giving "
+                + (value ? "an expression" : "a statement or a block")
+                + "; the one at "
                 + c.toString().strip()
                 + " is not.");
       }
-      // getPatternVariable2, the node the parse resolved; getPatternVariable's has no bindings.
-      String v = p.getPatternVariable2().getName().getIdentifier();
-      IVariableBinding variable = p.getPatternVariable2().resolveBinding();
-      ITypeBinding bound = variable == null ? null : variable.getType();
-      ITypeBinding t = bound == null ? null : bound.getErasure();
-      if (t == null || fileOf(project, t) == null) {
-        throw new Refusal(
-            "the case "
-                + c.toString().strip()
-                + " is over "
-                + (t == null ? "a type that does not resolve" : t.getQualifiedName())
-                + ", not a type of the project's.");
+      if (c.isDefault()) {
+        String v = selector instanceof SimpleName n ? n.getIdentifier() : null;
+        usesOnly(body, v, "the supertype");
+        out.add(new Case(null, v, body));
+        continue;
       }
-      usesOnly(y.getExpression(), v, t.getName());
-      out.add(new Case(t, v, y.getExpression()));
+      if (c.expressions().size() != 1 || !(c.expressions().get(0) instanceof TypePattern p)) {
+        throw new Refusal(
+            "each case must be a type pattern (case Circle c -> ...); the one at "
+                + c.toString().strip()
+                + " is not.");
+      }
+      out.add(typed(p, body, project, c.toString().strip()));
     }
     return out;
   }
 
+  /** The cases of an if chain of {@code s instanceof T v} conditions, a final else the default. */
+  private static List<Case> chain(
+      IfStatement first, String text, Expression selector, SourceProject project)
+      throws IOException {
+    String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+    List<Case> out = new ArrayList<>();
+    for (Statement at = first; at != null; ) {
+      if (!(at instanceof IfStatement i)) {
+        String v = selector instanceof SimpleName n ? n.getIdentifier() : null;
+        usesOnly(at, v, "the supertype");
+        out.add(new Case(null, v, at));
+        break;
+      }
+      if (!(i.getExpression() instanceof PatternInstanceofExpression p)
+          || !(p.getPattern() instanceof TypePattern tp)
+          || !text.substring(p.getLeftOperand().getStartPosition(), Nodes.end(p.getLeftOperand()))
+              .equals(sel)) {
+        throw new Refusal(
+            "each if of the chain must test " + sel + " instanceof a type with a variable.");
+      }
+      out.add(typed(tp, i.getThenStatement(), project, "if (" + p + ")"));
+      at = i.getElseStatement();
+    }
+    return out;
+  }
+
+  /** The case of the type pattern {@code p} with {@code body}, checked. */
+  private static Case typed(TypePattern p, ASTNode body, SourceProject project, String label)
+      throws IOException {
+    // getPatternVariable2, the node the parse resolved; getPatternVariable's has no bindings.
+    String v = p.getPatternVariable2().getName().getIdentifier();
+    IVariableBinding variable = p.getPatternVariable2().resolveBinding();
+    ITypeBinding bound = variable == null ? null : variable.getType();
+    ITypeBinding t = bound == null ? null : bound.getErasure();
+    if (t == null || fileOf(project, t) == null) {
+      throw new Refusal(
+          "the case "
+              + label
+              + " is over "
+              + (t == null ? "a type that does not resolve" : t.getQualifiedName())
+              + ", not a type of the project's.");
+    }
+    usesOnly(body, v, t.getName());
+    return new Case(t, v, body);
+  }
+
   /**
-   * Refuses an expression that uses anything but {@code v}, statics and constants: a local, a
-   * parameter, {@code this} or a member of the method's own class, which on the case's type would
-   * mean another thing.
+   * Refuses a body that uses anything but {@code v} (the pattern variable, or null), its own
+   * locals, statics and constants: a local, a parameter, {@code this} or a member of the method's
+   * own class would mean another thing on the case's type; a {@code return}, {@code break} or
+   * {@code continue} that leaves the body would leave the new method instead.
    */
-  private static void usesOnly(Expression e, String v, String typeName) {
+  private static void usesOnly(ASTNode e, String v, String typeName) {
+    java.util.Set<String> own = new java.util.HashSet<>();
+    for (VariableDeclaration d : Nodes.all(e, VariableDeclaration.class)) {
+      own.add(d.getName().getIdentifier());
+    }
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
       if (n.resolveBinding() instanceof IVariableBinding b
-          && !isVariable(n, v)
+          && !(v != null && isVariable(n, v))
+          && !own.contains(n.getIdentifier())
           && !Modifier.isStatic(b.getModifiers())
           && !qualifiedByOther(n)) {
         throw new Refusal(
@@ -225,6 +353,44 @@ final class TypeSwitch {
     if (!Nodes.all(e, ThisExpression.class).isEmpty()) {
       throw new Refusal("a case uses this, which on the case's type would mean another object.");
     }
+    for (Statement s : Nodes.all(e, Statement.class)) {
+      boolean jump =
+          s instanceof ReturnStatement
+              || s instanceof BreakStatement
+              || s instanceof ContinueStatement
+              || s instanceof YieldStatement;
+      if (jump && leaves(s, e)) {
+        throw new Refusal(
+            "the case of "
+                + typeName
+                + " has "
+                + s.toString().strip()
+                + ", which in the new method would leave it instead of the code around the switch.");
+      }
+    }
+  }
+
+  /**
+   * Whether the jump {@code s} leaves {@code body}: no lambda, class, loop or switch inside it
+   * holds the jump (a return, only a lambda or class).
+   */
+  private static boolean leaves(Statement s, ASTNode body) {
+    for (ASTNode p = s.getParent(); p != null && p != body; p = p.getParent()) {
+      if (p instanceof LambdaExpression || p instanceof AnonymousClassDeclaration) {
+        return false;
+      }
+      boolean loop =
+          p instanceof ForStatement
+              || p instanceof EnhancedForStatement
+              || p instanceof WhileStatement
+              || p instanceof DoStatement
+              || p instanceof SwitchStatement
+              || p instanceof SwitchExpression;
+      if (loop && !(s instanceof ReturnStatement)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Whether {@code n} is the member part of a name or access qualified by something else. */
@@ -242,15 +408,15 @@ final class TypeSwitch {
   }
 
   /**
-   * The case's expression with its pattern variable as the receiver: {@code c.r()} becomes {@code
-   * r()}, a bare {@code c} becomes {@code this}.
+   * The case's body with its variable as the receiver: {@code c.r()} becomes {@code r()}, a bare
+   * {@code c} becomes {@code this}.
    */
   private static String asReceiver(String text, Case c) {
-    Expression e = c.value();
+    ASTNode e = c.body();
     int base = e.getStartPosition();
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
-      if (!isVariable(n, c.variable())) {
+      if (c.variable() == null || !isVariable(n, c.variable())) {
         continue;
       }
       ASTNode p = n.getParent();
