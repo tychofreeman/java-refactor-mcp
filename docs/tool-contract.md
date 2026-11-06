@@ -967,7 +967,8 @@ field, and the gate's "would add compile errors".
   only): after a refused batch, `retry: true` with `steps` of `{"step": N, ...}` (replaces
   step N; its `tool` kept when left out) and `{"after": N, ...}` (adds a step after step N, 0
   for first) runs the refused batch with those changes, its check kept unless given; numbers are
-  the refused batch's. Nothing applies unless every step passes; a batch that passes forgets
+  the refused batch's, and `step` one past the last adds a new last step (2026-11-06). Nothing
+  applies unless every step passes; a batch that passes forgets
   the refused one, and every refused batch ends by saying how to retry. Refused: a retry with no
   refused batch, a change with both or neither of `step` and `after`, a number outside it.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
