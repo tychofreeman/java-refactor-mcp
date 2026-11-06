@@ -900,3 +900,13 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   sent twice).
 - Idea: `after` and `before` take the labels the refusal lists (an overload with its parameter
   types). Open: no row yet; one case.
+
+## 2026-11-06: move refused for an import it cannot be told (A/B, shop-duplication)
+- Task: the A/B check of the merged list, `docs/sessions/ab-merged-tools.md`.
+- Tool: `move` of `Csv.exported` to `Exported` was refused because `Order` could be JUnit's or
+  `shop.order.Order`, "Pass imports ... as imports: [\"org.junit.jupiter.api.Order\"]"; resent
+  with `imports`, it was refused as "move does not take imports". `move_member` behind it fixes
+  imports with no choices. The model wrote the class itself. The suggestion also put the test
+  library's class first over the project's own.
+- Idea: `imports` on `move`, passed to each route; prefer a project class over a library's.
+  Open: roadmap #131.
