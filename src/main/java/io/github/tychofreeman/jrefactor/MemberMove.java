@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
@@ -212,7 +213,7 @@ final class MemberMove {
    * body on one line ({@code {}} or {@code { int x; }}) is opened up first, so the members end up
    * one per line.
    */
-  static List<TextEdit> appendTo(String text, TypeDeclaration type, String moved) {
+  static List<TextEdit> appendTo(String text, AbstractTypeDeclaration type, String moved) {
     int brace = Nodes.end(type) - 1;
     int at = Lines.start(text, brace);
     if (text.substring(at, brace).isBlank()) {

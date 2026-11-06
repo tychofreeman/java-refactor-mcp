@@ -306,6 +306,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - Writing Java through a Python script: use raw strings, or a backslash before a
   newline joins the lines. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.
+- JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
+  `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
 - A tool description is a text block: a line added at another indentation than
   its neighbours makes Spotless re-indent the block, and `ServerTest`'s

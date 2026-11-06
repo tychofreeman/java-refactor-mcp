@@ -1009,6 +1009,28 @@ final class Tools {
           Kind.REFACTORING,
           AddResult::run);
 
+  static final Def TYPE_SWITCH_TO_METHOD =
+      new Def(
+          "type_switch_to_method",
+          """
+          Turn a switch over a value's type into a method on each type: with line the switch \
+          expression starts on and name area, return switch (s) { case Circle c -> Math.PI * \
+          c.r() * c.r(); case Square q -> q.side() * q.side(); } becomes return s.area();, the \
+          interface or abstract class Shape declares double area();, and Circle and Square each \
+          get @Override public double area() returning their case's expression, the pattern \
+          variable as the receiver (c.r() becomes r()).
+          Refuses, saying why: a switch statement, a default, a guard, a case that is not a type \
+          pattern giving an expression, a type that is not the project's or already has name(), \
+          a case that uses a local, a parameter, this or the method's own class's members, or a \
+          change that adds compile errors.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the switch expression starts on.").required(),
+              Arg.string("name", "The new method's name.").required()),
+          Kind.REFACTORING,
+          TypeSwitch::run);
+
   private static Outcome inline(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
     Map<String, Object> values = new LinkedHashMap<>();
@@ -1372,6 +1394,7 @@ final class Tools {
           EXTRACT_VARIABLE,
           INLINE,
           ADD_RESULT,
+          TYPE_SWITCH_TO_METHOD,
           FOLD,
           CHANGE_TYPE,
           ADD_SUPERTYPE,

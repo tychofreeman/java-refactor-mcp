@@ -371,6 +371,19 @@ pattern of it. Result: `added the component int unitCents to Line; 1 constructio
 a class, adding a field filled by its constructors stays a composition: `add_declaration` of the
 field, `add_parameter` of the constructor, `insert_statements` of the assignment.
 
+## `type_switch_to_method` (built)
+
+Roadmap #127, 2026-11-06 (gorefactor's `prepare_switch_for_types` and `type_switch_to_method`
+as one tool, the user's choice). Arguments: `file`, `line` (the switch expression), `name`. A
+switch over a value whose type `S` is a project interface or abstract class, each case a type
+pattern giving an expression, becomes `s.name()`: `S` declares `R name();` (`public abstract`
+in a class), and each case's type gets `@Override public R name()` returning its expression,
+the pattern variable as the receiver (`c.r()` becomes `r()`, a bare `c` becomes `this`). Refused:
+a switch statement, a `default`, a guard, a case that is not a type pattern giving an
+expression, a type that is not the project's or already has `name()`, a case that uses a local,
+a parameter, `this` or the method's class's members. Result: `declared double area() on Shape,
+implemented in Circle, Square; the switch at line 5 of <file> is now s.area()`.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`
