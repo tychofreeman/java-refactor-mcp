@@ -844,8 +844,12 @@ and the gate's "would add compile errors".
 
 ## `move_member` (built)
 
-Moves a method of a top-level class to another top-level class of the same file. Arguments: `file`,
-`name` (`Type.method`, or `Type.method(params)` for an overload), `to` (the target class).
+Moves a method of a top-level class to another top-level class, of the same file or (roadmap #109,
+2026-11-06) another: `to` is the class's name, found as `<to>.java` in the project, or with its
+package (`com.example.shop.Tax`) when several files declare one; refused naming them. Arguments:
+`file`, `name` (`Type.method`, or `Type.method(params)` for an overload), `to` (the target class).
+Imports follow in every file; a method moved to another package becomes public, and what its body
+uses that the target cannot reach is the gate's compile error.
 
 An instance method becomes static in the target and takes the source instance as its first parameter,
 named `receiver`; every call in the project passes it (`Type.m(instance, args)`). A private method is
