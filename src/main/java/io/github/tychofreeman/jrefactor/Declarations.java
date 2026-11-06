@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -559,16 +560,17 @@ final class Declarations {
         && s.getLiteralValue().equals("not implemented");
   }
 
-  /** {@code content} parsed as members of a type, or refused. */
+  /** {@code content} parsed as members of a type, or refused, naming the line where it breaks. */
   private static List<BodyDeclaration> members(String content) {
     ASTNode node = Jdt.parseMembers(content);
-    boolean[] broken = {false};
+    int[] broken = {-1};
     node.accept(
         new ASTVisitor() {
           @Override
           public void preVisit(ASTNode n) {
-            if ((n.getFlags() & (ASTNode.MALFORMED | ASTNode.RECOVERED)) != 0) {
-              broken[0] = true;
+            if ((n.getFlags() & (ASTNode.MALFORMED | ASTNode.RECOVERED)) != 0
+                && (broken[0] < 0 || n.getStartPosition() > broken[0])) {
+              broken[0] = n.getStartPosition();
             }
           }
         });
@@ -578,10 +580,29 @@ final class Declarations {
         members.add((BodyDeclaration) o);
       }
     }
-    if (broken[0] || members.isEmpty()) {
+    if (broken[0] >= 0 || members.isEmpty()) {
+      // The line of the first syntax error, in content wrapped as a class body (one line before
+      // it).
+      int line = broken[0] >= 0 ? Lines.number(content, broken[0]) : 0;
+      for (IProblem p : Jdt.parseSyntax("class X {\n" + content + "\n}").getProblems()) {
+        if (p.isError()) {
+          line = Math.max(1, Math.min(p.getSourceLineNumber() - 1, (int) content.lines().count()));
+          break;
+        }
+      }
+      String where =
+          line == 0
+              ? ""
+              : " from content line "
+                  + line
+                  + " ("
+                  + content.lines().skip(line - 1).findFirst().orElse("").strip()
+                  + ")";
       throw new Refusal(
           "content does not parse as members of a type (methods, fields, constructors, nested"
-              + " types). Send whole declarations, without a package line or imports.");
+              + " types)"
+              + where
+              + ". Send whole declarations, without a package line or imports.");
     }
     return members;
   }

@@ -98,7 +98,8 @@ final class Edits {
             content,
             args.list("imports"),
             (exists ? "replacing " : "creating ") + rel,
-            "Declare what it uses first (add_declaration or create_file), then create it.");
+            "Declare what it uses first (add_declaration or create_file), then create it; or send"
+                + " it in a batch with check \"end\", the steps that declare them after it.");
     Imports.Fixed fixed = written.fixed();
     stubs = written.declared();
     content = fixed.text();

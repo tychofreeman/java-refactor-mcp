@@ -1,0 +1,6 @@
+int a2() {
+  return 1;
+}
+
+int c( {
+}
