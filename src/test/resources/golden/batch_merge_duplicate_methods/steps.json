@@ -1,0 +1,4 @@
+[
+  {"tool": "fold", "args": {"file": "com/example/Util.java", "name": "Util.twice"}},
+  {"tool": "inline", "args": {"file": "com/example/Util.java", "name": "Util.doubled"}}
+]
