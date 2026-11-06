@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -485,7 +486,7 @@ final class Tools {
           Make a static method whose first parameter is of its own class an instance method of \
           that class, the parameter its receiver: static int area(Shape s, int k) becomes int \
           area(int k), s in the body becomes this, and Shape.area(x, 3) becomes x.area(3) (area(2) \
-          for a call passing this). The other way, instance to static in place, is move_member \
+          for a call passing this). The other way, instance to static in place, is move \
           with to set to the method's own class.
           A null first argument now fails at the call, not where the body used it: reported as a \
           change to exceptional behavior, refused under preserve_exceptions.
@@ -860,6 +861,97 @@ final class Tools {
                   args.flag("copy"),
                   args.flag("delete")));
 
+  /**
+   * One tool for every move (gorefactor's {@code docs/parity.md}): it routes to move_type,
+   * move_member or move_file by its arguments, which stay names batch and the CLI accept.
+   */
+  static final Def MOVE =
+      new Def(
+          "move",
+          """
+          Move a type, a member or a file, and update every reference to it. What moves follows \
+          from the arguments:
+          - name Outer.Inner: the static nested type to its own file in the package (Shop.Line \
+          becomes Line.java; Shop.Line becomes Line everywhere).
+          - name Type with package: the file's only top-level type to that package of its source \
+          root; imports follow, package-private declarations used across become public.
+          - name Type.member with to: a method or a static field to the class to, in this file \
+          or another (to=Tax, or com.example.Tax); an instance method becomes static there with \
+          the instance as its first parameter, receiver, and every call passes it. To its own \
+          class, a method is made static in place.
+          - no name, to a path: the file or directory, not Java under a source root (copy keeps \
+          it; delete=true without to removes it).
+          Type-checks the project; a move that adds compile errors is refused and changes \
+          nothing. The refusals say why: an override, a method reference to a moved method, an \
+          inner class, a path that exists.\
+          """,
+          List.of(
+              Arg.FILE.described(
+                  "The file that declares what moves, or, without name, the file or directory to"
+                      + " move; relative to the project root."),
+              Arg.string(
+                  "name",
+                  "What moves: Outer.Inner, Type (with package), or Type.member (with to); omit it"
+                      + " to move the file itself."),
+              Arg.string(
+                  "to",
+                  "With Type.member, the class it moves to; without name, the file's new path."),
+              Arg.string("package", "With name Type: the package it moves to."),
+              Arg.bool("copy", "Without name: copy the file, keeping the original."),
+              Arg.bool("delete", "Without name: delete the file instead (no to).")),
+          Kind.REFACTORING,
+          Tools::move);
+
+  private static Outcome move(SourceProject project, Args args) throws Exception {
+    String name = args.string("name");
+    String to = args.string("to");
+    String pkg = args.string("package");
+    Map<String, Object> values = new LinkedHashMap<>();
+    values.put("file", args.required("file"));
+    Def target;
+    if (name == null) {
+      if (pkg != null) {
+        throw new Refusal("package moves a type: give name, the file's top-level type.");
+      }
+      target = MOVE_FILE;
+      if (to != null) {
+        values.put("to", to);
+      }
+      if (args.flag("copy")) {
+        values.put("copy", true);
+      }
+      if (args.flag("delete")) {
+        values.put("delete", true);
+      }
+    } else {
+      if (args.flag("copy") || args.flag("delete")) {
+        throw new Refusal(
+            "copy and delete are for a file: leave out name to move the file itself.");
+      }
+      if (to != null && pkg != null) {
+        throw new Refusal(
+            "give to (the class a member moves to) or package (where the file's type moves), not"
+                + " both.");
+      }
+      values.put("name", name);
+      if (to != null) {
+        target = MOVE_MEMBER;
+        values.put("to", to);
+      } else {
+        target = MOVE_TYPE;
+        if (pkg != null) {
+          values.put("package", pkg);
+        }
+      }
+      if (args.flag(Exceptional.FLAG)) {
+        values.put(Exceptional.FLAG, true);
+      }
+    }
+    Args routed = new Args(target.name(), values);
+    routed.check(target.args());
+    return target.handler().run(project, routed);
+  }
+
   static final Def REPLACE_TEXT =
       new Def(
           "replace_text",
@@ -1173,11 +1265,10 @@ final class Tools {
       List.of(
           INSPECT,
           RENAME,
-          MOVE_TYPE,
+          MOVE,
           PULL_UP,
           PUSH_DOWN,
           CREATE_FILE,
-          MOVE_FILE,
           REPLACE_TEXT,
           ADD_DECLARATION,
           REPLACE_DECLARATION,
@@ -1204,7 +1295,6 @@ final class Tools {
           MOVE_STATEMENT,
           INVERT_IF,
           REMOVE_ELSE,
-          MOVE_MEMBER,
           ENCAPSULATE_FIELD,
           BATCH,
           UNDO);
@@ -1231,7 +1321,17 @@ final class Tools {
    * method_to_function for move_member in place.
    */
   static final Map<String, Def> ALIASES =
-      Map.of("extract_method", EXTRACT_FUNCTION, "method_to_function", METHOD_TO_FUNCTION);
+      Map.of(
+          "extract_method",
+          EXTRACT_FUNCTION,
+          "method_to_function",
+          METHOD_TO_FUNCTION,
+          "move_type",
+          MOVE_TYPE,
+          "move_member",
+          MOVE_MEMBER,
+          "move_file",
+          MOVE_FILE);
 
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
     String name = args.required("name");

@@ -63,7 +63,7 @@ final class MoveToPackage {
                 rel
                     + " declares "
                     + unit.types().size()
-                    + " top-level types. move_type with package moves a file's only top-level"
+                    + " top-level types. move with package moves a file's only top-level"
                     + " type: move the others to files of their own first."),
         Precondition.that(
             () -> !old.isEmpty(),

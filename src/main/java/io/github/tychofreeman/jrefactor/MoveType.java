@@ -255,7 +255,7 @@ final class MoveType {
       }
       throw new Refusal(
           name
-              + " is a top-level type already. move_type moves a nested type to its own file:"
+              + " is a top-level type already. move moves a nested type to its own file:"
               + " name it as "
               + example
               + ". To move it to another package, pass package.");
