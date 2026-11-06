@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -69,14 +70,24 @@ final class Imports {
 
     Map<String, ImportDeclaration> imported = new HashMap<>();
     List<ImportDeclaration> remove = new ArrayList<>();
+    // An import this call or its batch added that a type of the file now shadows: a later step
+    // declared the name the import was found for.
+    String start = Journal.written(project).get(file);
+    Set<String> hadAtStart = importsOf(start == null ? before : start);
+    Set<String> declared = new TreeSet<>();
+    for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+      declared.add(t.getName().getIdentifier());
+    }
     for (Object o : unit.imports()) {
       ImportDeclaration i = (ImportDeclaration) o;
       if (i.isStatic() || i.isOnDemand()) {
         continue;
       }
-      String simple = simpleName(i.getName().getFullyQualifiedName());
+      String qualified = i.getName().getFullyQualifiedName();
+      String simple = simpleName(qualified);
       imported.put(simple, i);
-      if (usedBefore.contains(simple) && !usedAfter.contains(simple)) {
+      if ((usedBefore.contains(simple) && !usedAfter.contains(simple))
+          || (declared.contains(simple) && !hadAtStart.contains(qualified))) {
         remove.add(i);
       }
     }
