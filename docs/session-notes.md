@@ -286,6 +286,8 @@ Each was chosen from options; the record named beside it has the options it beat
   was run, as the manual arm does not see the tool list.
 - The constructive task set is `eval-tasks/library.json` (2026-11-06, `docs/sessions/constructive-tasks.md`):
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
+- The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went
+  unused even where the tasks call for them; manual was cheapest and passed every run.
 - The skeleton arm was rerun on 2026-11-06 (`docs/sessions/ab-constructive-ops.md`): cheaper
   and less typed, but the constructive options went unused on these tasks.
 - The feature tasks are `eval-tasks/shop.json` (gorefactor's `design-*` shop tasks, ported

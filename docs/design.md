@@ -196,6 +196,13 @@ arm again, after #123 and the day's fixes: 8/8, $0.186 a run (from $0.217), 564 
 `batch` `retry`, which a model found from its refusal text and used. These tasks give the
 constructive options little to do; a task set that does is the next measurement.
 
+**The third measurement (2026-11-06, `docs/sessions/ab-library.md`):** a task set built for the
+constructive operations (a new implementation, a class from fields, a try around a call, tests).
+Manual 8/8 at $0.082 a run; mcp 6/8 at $0.097; skeleton-only 7/8 at $0.117. No run used
+`implement`, `constructor` or `surround`; the three failures wrote Java by shell, were refused by
+the guard and never called a tool. Options inside descriptions are not found; a refusal that
+names them (as skeleton-only names `declaration`) is the mechanism left to try.
+
 ## Questions (all answered)
 
 No question is open. These were open when the design was written; each says how it
