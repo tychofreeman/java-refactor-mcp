@@ -85,7 +85,13 @@ One `inline` (roadmap #122, 2026-11-06, as gorefactor's): published in place of
 local variable `name` declared or used there; without `line`, `name` as `Type.method`, every
 call of the static method, which is deleted. A bare name without `line` is refused, naming both
 forms. Each route's arguments, results and refusals are its section's below; Java has no
-per-call inline yet, and inline class (gorefactor's `field`) is roadmap #128. gorefactor's edit
+per-call inline yet. With `field` (roadmap #128, 2026-11-06, gorefactor's `inline_struct`),
+`name` a class and `field` its field holding a project class nothing else uses: that class's
+members take the field's place, `home.x` becomes `x` (`this.x` where a local hides it),
+`home.m()` becomes `m()`, and the class's file is deleted (the inverse of `extract_struct`
+`fields`). Refused: the class used elsewhere, a superclass or interfaces, a constructor with
+work, an initializer other than `new Address()`, the field used other than to reach a member, a
+name the holder has. gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
 `replace_statements`, `add_case`, `add_element`, roadmap #91).
 
