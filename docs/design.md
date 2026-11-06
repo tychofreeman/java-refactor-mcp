@@ -120,6 +120,65 @@ suggested first. Options it beat: choosing only a prior import (fewer guesses, b
 `org.eclipse.jdt.core.dom` family case still refused), and never choosing (one refusal for all
 names, but still a resend). The type check stays behind every choice.
 
+## Constructive transformations (2026-11-05)
+
+The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
+higher level, but that transformations as a whole do. In a good IDE a programmer types only
+sometimes, and then thinks about structures, not letters: the class, its constructor, the stubs an
+interface asks for, a test method's shell and the `try` around a call come from commands; what is
+typed is the idea, an expression or a few statements. Here `create_file` was the one place with no
+such commands, so a model typed whole classes through it: about 5,600 lines of `src/main` and
+2,000 of `src/test` since the session log began, the largest a 592-line tool in one call.
+
+The vocabulary, by level, and what it has:
+
+| Level | IDE move | Here | Missing |
+|---|---|---|---|
+| File and type | new class, interface or record in a package, with supertypes | `create_file` (whole text) | a type by its declaration, in the right source root |
+| Members from structure | implement or override methods, generate a constructor, accessors, `equals`/`hashCode`, delegates | `encapsulate_field`; stubs from usage | implement/override; constructor from fields |
+| Members from usage | create a method from a call | stubs, automatically | |
+| Tests | create a test for a class or method | nothing | a test class, and a test method that calls the target |
+| Statements | surround with if, for or try; introduce a variable; add a case or element | `insert_statements`, `replace_statements`, `extract_variable`, `add_case`, `add_element` | surround with |
+| Expressions | typed | `replace_expression` | (typing belongs here) |
+
+What is measured changes with it: beside the share of edits made through the tools, the share of
+typed text that is statements and expressions rather than structure. The A/B harness can test the
+thesis on feature tasks (gorefactor's `ab-features`, ported), an arm with skeleton-only creation and
+the constructive tools against the current tools.
+
+**The first slice (the user, 2026-11-05), one PR each, in this order:**
+
+1. `create_file` with `declaration` in place of `content` (roadmap #114): the package line and the
+   declaration (`class Cart implements Priced`, `record Line(int qty)`), with an empty body; with
+   supertypes, a stub for each abstract method they leave unimplemented. The file's path follows
+   from the package and the type's name, in the main source root unless `test` is set.
+2. A test from its target (roadmap #115): `create_file` with `test_for` (`Cart`) writes the empty
+   test class in the test root's mirrored package; `add_declaration` with `test_for`
+   (`Cart.total`) adds a test method that builds the receiver and calls the method, ending in
+   `fail(...)`, so it is red until the model types the assertion.
+3. Skeleton-only creation, an experiment behind a flag (roadmap #116): a Java `create_file` with
+   member declarations in its content is refused, naming the operations above. Off by default, as
+   the write guard started; the A/B arm turns it on.
+
+Choices in the slice and the options they beat (recorded as defaults; reopen with evidence):
+
+- **Options on existing tools, not new ones** (CLAUDE.md's rule): `declaration` and `test_for` on
+  `create_file`, `test_for` on `add_declaration`. Beat: a `create_type` and a `create_test` tool,
+  clearer names but two more tools to describe, against the evidence that fewer, wider tools served
+  gorefactor's models.
+- **A generated test is red** (`fail("write the assertion")`): test-first, as CLAUDE.md works.
+  Beat: an empty body that passes (a green test that tests nothing), and a guessed assertion on the
+  result (wrong more often than not).
+- **The test framework from the classpath:** JUnit Jupiter when it resolves, else JUnit 4, else
+  refused. Beat: a framework argument (one more thing for the model to state).
+- **The flag covers `create_file` only:** `add_declaration` keeps whole members, one per call, so
+  the model types a member at a time and the stub, implement and test operations give the shells.
+  Beat: refusing bodies in `add_declaration` too (a stricter test of the thesis, but it needs the
+  member-level generators first).
+
+Next after the slice, by what its use logs: implement/override as its own operation on an
+existing type, a constructor from fields, and surround with.
+
 ## Questions (all answered)
 
 No question is open. These were open when the design was written; each says how it
@@ -310,6 +369,9 @@ friction log; reorder when this repo's own log says otherwise.
 | 104 | 111 | `inspect` with no arguments lists the project's source files, as gorefactor's module overview | Open, low priority | Friction triage: one probe guessed Maven paths (2026-11-02); `pattern` finds files by their content meanwhile |
 | 105 | 112 | Go, TypeScript and Java at parity: the bugs, one name per operation across the servers, the tools and options Java lacks (add_result, parameterize, merge_duplicate_function, the type switch pair, split, inline class), and those Go and TypeScript lack from here. The survey and order are gorefactor's `docs/parity.md` (roadmap 54) | Planned (2026-11-05, the user) | Section 1 there lists this repo's bugs: replace_text's silent match inside indentation first, then #106-#108 |
 | 106 | 113 | A class stub declared from a test file goes in the main source root, in the test's package: today it lands beside the test (`src/test/java`), and no tool moves Java between source roots | Open | Friction log 2026-11-05 (a probe of creating a file test first): `create_file` of a test using an undeclared `Cart` put `Cart.java` in `src/test/java`; `move_file` and `move_type` cannot move it to `src/main/java`; creating the empty class first works |
+| 107 | 114 | `create_file` with `declaration`: a type from its declaration, empty, in the main source root (or the test root with `test`), with stubs for the abstract methods its supertypes leave unimplemented | Next | The first slice of constructive transformations (the user, 2026-11-05; "Constructive transformations" above) |
+| 108 | 115 | A test from its target: `create_file` with `test_for` (the test class, mirrored package), `add_declaration` with `test_for` (a red test method calling the target) | Planned, after #114 | The first slice |
+| 109 | 116 | Skeleton-only creation, an experiment flag: a Java `create_file` with member declarations is refused, naming the constructive operations | Planned, after #115 | The first slice; off by default, an A/B arm turns it on |
 
 ### The 2026-11-04 list
 
