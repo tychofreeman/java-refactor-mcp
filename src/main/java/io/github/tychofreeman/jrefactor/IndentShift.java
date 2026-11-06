@@ -27,6 +27,12 @@ record IndentShift(int start, int end, int by, boolean whole) {
     return found.size() == 1 ? found.get(0) : null;
   }
 
+  /** Whether {@code at} is inside its line's indentation: after its start, only spaces before. */
+  static boolean insideIndent(String text, int at) {
+    int start = text.lastIndexOf('\n', at - 1) + 1;
+    return at > start && text.substring(start, at).isBlank();
+  }
+
   /** The match of the lines {@code o} at line {@code i} of {@code f}, or null. */
   private static IndentShift at(String[] f, int[] starts, int i, String[] o) {
     Integer by = null;
