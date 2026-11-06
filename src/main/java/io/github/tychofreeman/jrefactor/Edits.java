@@ -140,15 +140,33 @@ final class Edits {
       return append(project, path, rel, text, replacement, args);
     }
 
+    String match = old;
+    String put = replacement;
+    String shifted = "";
     List<Integer> at = new ArrayList<>();
     for (int i = text.indexOf(old); i >= 0; i = text.indexOf(old, i + old.length())) {
       at.add(i);
     }
     if (at.isEmpty()) {
-      throw new Refusal(
-          "old is not in "
-              + rel
-              + ". Copy it from the file exactly (from inspect, without the line numbers).");
+      IndentShift s = IndentShift.find(text, old);
+      if (s == null) {
+        throw new Refusal(
+            "old is not in "
+                + rel
+                + IndentShift.hint(text, old)
+                + ". Copy it from the file exactly (from inspect, without the line numbers).");
+      }
+      match = text.substring(s.start(), s.end());
+      put = IndentShift.shift(replacement, s.by(), s.whole());
+      at.add(s.start());
+      int n = Math.abs(s.by());
+      shifted =
+          "; old was "
+              + n
+              + (s.by() < 0 ? " spaces deeper" : " spaces shallower")
+              + " than the file, so new was shifted "
+              + n
+              + (s.by() < 0 ? " spaces shallower" : " spaces deeper");
     }
     if (at.size() > 1 && !args.flag("all_occurrences")) {
       List<Integer> lines = new ArrayList<>();
@@ -171,10 +189,10 @@ final class Edits {
     for (int i : at) {
       out.append(text, from, i);
       int first = Lines.number(out, out.length());
-      out.append(replacement);
-      int last = replacement.isEmpty() ? first : Lines.number(out, Math.max(out.length() - 1, 0));
+      out.append(put);
+      int last = put.isEmpty() ? first : Lines.number(out, Math.max(out.length() - 1, 0));
       spans.add(new int[] {first, last});
-      from = i + old.length();
+      from = i + match.length();
     }
     out.append(text, from, text.length());
 
@@ -204,7 +222,7 @@ final class Edits {
                 rel,
                 one ? "line" : "lines",
                 String.join(", ", ranges),
-                fixed.said()),
+                shifted + fixed.said()),
         written.declared());
   }
 
