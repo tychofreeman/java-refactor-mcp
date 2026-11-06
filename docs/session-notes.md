@@ -158,10 +158,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - A tool's result is an `Outcome`; `render()` gives the text the model reads,
   with the stubs named after it.
 - Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a
-  refactoring that leaves a name unresolved is refused. A stub goes in the
-  source root of the file that uses it, so a new class first used by a test lands in
-  `src/test/java`, and no tool moves it to `src/main/java` (roadmap #113): create the
-  empty class in `src/main/java` first, then the test.
+  refactoring that leaves a name unresolved is refused. A class stub goes in the main
+  (first) source root, the using file's package, so a test written first declares its subject
+  in `src/main/java`; a name that reads as a test double or helper (`Stubs.TEST_DOUBLE`:
+  `Fake*`, `*Helper`, ...) stays in the test's root (#113, the user's choice, 2026-11-06, over
+  always the main root and over a move between roots).
 - The session report counts by `Tools.Def.kind`, so a new tool needs only its
   `Kind`.
 - A new tool's arguments are a `List<Arg>` (`Arg.FILE`, `Arg.IMPORTS`,

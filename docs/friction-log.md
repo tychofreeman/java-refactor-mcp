@@ -855,7 +855,7 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   first; then the test's member stubs go into it.
 - Idea: a class stub declared from a test file goes in the main source root (same
   package), as a test's subject does; or `move_type` takes another source root.
-  Open: roadmap #113.
+  Done: roadmap #113 (2026-11-06), test doubles and helpers excepted.
 
 ## 2026-11-05: A/B on the shop tasks: an assertion stubbed, extract_struct on a record
 - Task: `docs/sessions/ab-shop-tasks.md` (the skeleton-only arm's transcripts).
@@ -880,3 +880,14 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   cannot be corrected by itself. Idea: roadmap #110 (a refusal that offers the fix as a
   later step), or a batch that keeps the steps before the refused one for a resend of the
   rest.
+
+## 2026-11-06: the ambiguous-import rule chose the wrong Pattern (test-stub-main-root)
+- Task: roadmap #113, `docs/sessions/test-stub-main-root.md`.
+- Tool: a batch adding `Pattern.compile(...)` to `Stubs`, which imports many
+  `org.eclipse.jdt.core.dom` classes: #105's rule took `org.eclipse.jdt.core.dom.Pattern` (the
+  only candidate in a package the file imports from) over `java.util.regex.Pattern`; the type
+  check refused the batch ("compile(String) is undefined for the type Pattern"), and the resend
+  passed `imports`. One resend; nothing wrong was written.
+- Idea: when the package rule's pick does not type-check and another candidate would, take
+  that one (the check already runs); or prefer `java.*` when the use calls a member the
+  package's class lacks. Open: no row yet; one case.
