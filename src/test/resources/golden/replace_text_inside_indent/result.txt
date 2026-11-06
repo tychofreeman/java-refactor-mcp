@@ -1,1 +1,1 @@
-replaced 1 occurrence in com/example/A.java, lines 5-6; old was 2 spaces shallower than the file, so new was shifted 2 spaces deeper
+replaced 1 occurrence in com/example/A.java, lines 5-6; old matched with the spacing within lines ignored, and new was moved 2 spaces deeper to the file's indentation
