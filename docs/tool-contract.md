@@ -498,8 +498,11 @@ Jupiter (`org.junit.jupiter`) or JUnit 4 (`org.junit`), also from its assertion 
 (`Assertions`, `Assert`) when that class has a method the call resolves to. Static imports
 added to a file with none go first, a blank line before the others. An import the running call
 or batch added that a type declared in the file now shadows is removed by the next fix (a later
-step declared the name it was found for; roadmap #108). When neither the file's earlier imports nor its packages decide an ambiguous name, the only
-candidate in the project's own sources is taken and named (`chose shop.order.Order over
+step declared the name it was found for; roadmap #108). When the file's earlier imports do not decide an ambiguous name, the candidate that the other
+files of its directory import most is taken (strictly more than the others; `chose
+org.eclipse.jdt.core.dom.Name over ...: 12 other files of this package import it`, 2026-11-06);
+then the only one in a package the file imports from; then the only candidate in the project's
+own sources is taken and named (`chose shop.order.Order over
 org.junit.jupiter.api.Order: it is the project's`, roadmap #131); a refusal suggests the
 project's class first, then `java.*`. Results end with
 `; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`

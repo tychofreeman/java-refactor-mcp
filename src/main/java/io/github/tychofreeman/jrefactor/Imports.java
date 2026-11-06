@@ -107,7 +107,7 @@ final class Imports {
       }
     }
     List<String> chose = new ArrayList<>();
-    Set<String> add = toImport(project, missing, imported, picks, prior, packages, chose);
+    Set<String> add = toImport(project, file, missing, imported, picks, prior, packages, chose);
     add.addAll(staticImports(unit, beforeUnit));
     Set<String> using = new TreeSet<>(add);
     for (Object o : unit.imports()) {
@@ -120,7 +120,7 @@ final class Imports {
     while (!found.isEmpty()) {
       Set<String> still = unresolved(Jdt.parse(project, file, withImports(after, unit, add)));
       still.removeAll(unresolvedBefore);
-      found = toImport(project, still, imported, picks, prior, packages, chose);
+      found = toImport(project, file, still, imported, picks, prior, packages, chose);
       found.removeAll(add);
       add.addAll(found);
     }
@@ -233,6 +233,7 @@ final class Imports {
    */
   private static Set<String> toImport(
       SourceProject project,
+      Path file,
       Set<String> names,
       Map<String, ImportDeclaration> imported,
       Map<String, String> picks,
@@ -256,7 +257,7 @@ final class Imports {
         pick =
             candidates.size() == 1
                 ? candidates.get(0)
-                : chosen(project, candidates, prior, packages, notes);
+                : chosen(project, file, candidates, prior, packages, notes);
         if (pick == null) {
           String last = candidates.get(candidates.size() - 1);
           ambiguous.add(
@@ -291,18 +292,41 @@ final class Imports {
 
   /**
    * Of several {@code candidates} for a name, the one the file imported before the call or batch
-   * ({@code prior}), else the only one in a package the file imports from ({@code packages}), else
-   * the only one in the project's own sources, with the reason added to {@code notes}; null when
-   * none decides.
+   * ({@code prior}), else the one the package's other files import most, else the only one in a
+   * package the file imports from ({@code packages}), else the only one in the project's own
+   * sources, with the reason added to {@code notes}; null when none decides.
    */
   private static String chosen(
       SourceProject project,
+      Path file,
       List<String> candidates,
       Set<String> prior,
       Set<String> packages,
       List<String> notes) {
     String pick = candidates.stream().filter(prior::contains).findFirst().orElse(null);
     String why = "the file imported it before";
+    // What the package's other files import is stronger evidence than the packages this file
+    // imports from: a file of JDT nodes may still want java.util.regex.Pattern.
+    if (pick == null) {
+      Map<String, Integer> counts = packageImports(file);
+      int best = 0;
+      boolean tie = false;
+      for (String c : candidates) {
+        int n = counts.getOrDefault(c, 0);
+        if (n > best) {
+          best = n;
+          pick = c;
+          tie = false;
+        } else if (n == best && n > 0) {
+          tie = true;
+        }
+      }
+      if (tie) {
+        pick = null;
+      } else if (pick != null) {
+        why = best + (best == 1 ? " other file" : " other files") + " of this package import it";
+      }
+    }
     if (pick == null) {
       List<String> near = candidates.stream().filter(c -> packages.contains(packageOf(c))).toList();
       if (near.size() == 1) {
@@ -336,6 +360,25 @@ final class Imports {
       }
     }
     return false;
+  }
+
+  /** How many of the other Java files in {@code file}'s directory import each class. */
+  private static Map<String, Integer> packageImports(Path file) {
+    Map<String, Integer> out = new HashMap<>();
+    Path dir = file.getParent();
+    if (dir == null || !Files.isDirectory(dir)) {
+      return out;
+    }
+    try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+      for (Path f : files.filter(p -> p.toString().endsWith(".java") && !p.equals(file)).toList()) {
+        for (String i : importsOf(Files.readString(f))) {
+          out.merge(i, 1, Integer::sum);
+        }
+      }
+    } catch (IOException e) {
+      return out;
+    }
+    return out;
   }
 
   private static String packageOf(String qualified) {

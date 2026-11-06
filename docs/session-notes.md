@@ -98,6 +98,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - Ambiguous imports (2026-11-05, `docs/design.md`, roadmap #105): an edit takes the class
   the file imported before the call or batch (`Journal.written`), else the only one in a package
   it imports from, else (#131, 2026-11-06) the only one in the project's own sources, and names it;
+  the package's other files' imports come second, before the packages rule (2026-11-06,
+  `docs/sessions/package-import-evidence.md`: a new file has no imports of its own to go by);
   otherwise one refusal lists every ambiguous name, the project's class suggested first.
 - Parity with Go and TypeScript (2026-11-05, row 112, gorefactor's `docs/parity.md`):
   one name per operation across the servers, the more generic one, the others kept as
