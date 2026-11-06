@@ -152,7 +152,9 @@ Each was chosen from options; the record named beside it has the options it beat
   with the stubs named after it.
 - Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a
   refactoring that leaves a name unresolved is refused. A stub goes in the
-  source root of the file that uses it.
+  source root of the file that uses it, so a new class first used by a test lands in
+  `src/test/java`, and no tool moves it to `src/main/java` (roadmap #113): create the
+  empty class in `src/main/java` first, then the test.
 - The session report counts by `Tools.Def.kind`, so a new tool needs only its
   `Kind`.
 - A new tool's arguments are a `List<Arg>` (`Arg.FILE`, `Arg.IMPORTS`,
