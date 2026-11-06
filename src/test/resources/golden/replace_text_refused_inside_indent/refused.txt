@@ -1,1 +1,1 @@
-only inside a line's indentation (lines 5, 9)
+old occurs 2 times in com/example/A.java with the spacing within lines ignored (lines 5, 9)

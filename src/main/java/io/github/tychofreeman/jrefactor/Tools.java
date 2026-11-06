@@ -1096,9 +1096,9 @@ final class Tools {
           Replace exact text in a file: an edit, for what the other tools do not cover: string \
           literals, comments, a few lines of code, and files that are not Java (pom.xml, \
           fixtures, docs).
-          old must be as in the file and occur once, or set all_occurrences; an old whose every \
-          line is off by the same indentation, and then occurs once, is taken, and new is \
-          shifted by as much (the result says so); so is one found inside a line's indentation. append, in place of \
+          old must be as in the file and occur once, or set all_occurrences; spacing within lines \
+          may differ (each run of spaces stands for any other), and then new moves to the file's \
+          indentation (the result says so). append, in place of \
           old, adds new at the end of the file (a friction-log entry, a CI job). In a .java file the \
           project must type-check no worse after, or nothing changes; what it calls that nothing \
           declares is declared as stubs, as by add_declaration. Imports the new text needs \

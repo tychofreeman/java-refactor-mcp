@@ -1,31 +1,31 @@
 package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class IndentShiftTest {
   @Test
-  void find() {
+  void aLooseMatchSaysHowFarNewMoves() {
     String text = "class A {\n  void a() {\n\n    run();\n  }\n}\n";
-    IndentShift s = IndentShift.find(text, "    void a() {\n\n      run();\n");
-    assertEquals(new IndentShift(10, text.indexOf("  }"), -2, true), s);
+    List<IndentShift> found = IndentShift.locate(text, "    void a() {\n\n      run();\n");
+    assertEquals(List.of(new IndentShift(10, text.indexOf("  }"), -2, true)), found);
   }
 
   @Test
-  void twoMatchesAreNone() {
-    assertNull(IndentShift.find("  a();\n  a();\n", "    a();"));
+  void eachLooseMatchIsFound() {
+    assertEquals(2, IndentShift.locate("  a();\n  a();\n", "    a();").size());
   }
 
   @Test
-  void unevenShiftsAreNone() {
-    assertNull(IndentShift.find("  a();\n  b();\n", "    a();\n      b();"));
+  void spacingWithinALineMayDiffer() {
+    assertEquals(1, IndentShift.locate("  int x = 1;\n", "int x  = 1;").size());
   }
 
   @Test
-  void spacingWithinALineMustMatch() {
-    assertNull(IndentShift.find("  int x = 1;\n", "    int x  = 1;"));
+  void aLineBreakMustStayALineBreak() {
+    assertEquals(0, IndentShift.locate("  a(); b();\n", "a();\nb();").size());
   }
 
   @Test

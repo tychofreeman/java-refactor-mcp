@@ -145,44 +145,50 @@ final class Edits {
     String put = replacement;
     String shifted = "";
     List<Integer> at = new ArrayList<>();
-    List<Integer> inside = new ArrayList<>();
     for (int i = text.indexOf(old); i >= 0; i = text.indexOf(old, i + old.length())) {
-      // An old that starts with spaces, found inside a line's indentation, is shifted, not exact.
-      if (old.startsWith(" ") && IndentShift.insideIndent(text, i)) {
-        inside.add(Lines.number(text, i));
-      } else {
+      // An old that starts with spaces, found inside a line's indentation, is not exact: the
+      // loose match below takes the whole indentation, and new moves with it.
+      if (!(old.startsWith(" ") && IndentShift.insideIndent(text, i))) {
         at.add(i);
       }
     }
     if (at.isEmpty()) {
-      IndentShift s = IndentShift.find(text, old);
-      if (s == null && !inside.isEmpty()) {
-        throw new Refusal(
-            "old is in "
-                + rel
-                + " only inside a line's indentation ("
-                + Lines.list(inside)
-                + "), so new would land at the wrong indentation. Start old at the line's start,"
-                + " with all of its indentation.");
-      }
-      if (s == null) {
+      List<IndentShift> loose = IndentShift.locate(text, old);
+      if (loose.isEmpty()) {
         throw new Refusal(
             "old is not in "
                 + rel
+                + ", though spacing within lines may differ"
                 + IndentShift.hint(text, old)
-                + ". Copy it from the file exactly (from inspect, without the line numbers).");
+                + ". Copy it from the file (from inspect, without the line numbers).");
       }
+      if (loose.size() > 1) {
+        List<Integer> lines = new ArrayList<>();
+        for (IndentShift s : loose) {
+          lines.add(Lines.number(text, s.start()));
+        }
+        throw new Refusal(
+            "old occurs "
+                + loose.size()
+                + " times in "
+                + rel
+                + " with the spacing within lines ignored ("
+                + Lines.list(lines)
+                + "). Make old longer so it occurs once.");
+      }
+      IndentShift s = loose.get(0);
       match = text.substring(s.start(), s.end());
-      put = IndentShift.shift(replacement, s.by(), s.whole());
+      put = s.by() == 0 ? replacement : IndentShift.shift(replacement, s.by(), s.whole());
       at.add(s.start());
       int n = Math.abs(s.by());
       shifted =
-          "; old was "
-              + n
-              + (s.by() < 0 ? " spaces deeper" : " spaces shallower")
-              + " than the file, so new was shifted "
-              + n
-              + (s.by() < 0 ? " spaces shallower" : " spaces deeper");
+          "; old matched with the spacing within lines ignored"
+              + (n == 0
+                  ? ""
+                  : ", and new was moved "
+                      + n
+                      + (s.by() < 0 ? " spaces shallower" : " spaces deeper")
+                      + " to the file's indentation");
     }
     if (at.size() > 1 && !args.flag("all_occurrences")) {
       List<Integer> lines = new ArrayList<>();

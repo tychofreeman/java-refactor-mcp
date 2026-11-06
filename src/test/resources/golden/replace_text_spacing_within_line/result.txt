@@ -1,0 +1,1 @@
+replaced 1 occurrence in com/example/A.java, line 4; old matched with the spacing within lines ignored

@@ -2,87 +2,73 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 record IndentShift(int start, int end, int by, boolean whole) {
   /**
-   * Where {@code old} is in {@code text} with the indentation of each of its non-blank lines off by
-   * one amount ({@code by}: the file's minus old's, in spaces), when it matches so exactly once;
-   * null otherwise. Spacing within a line must match. {@code whole} says the match starts at a
-   * line's start (old's first line was indented), not inside one.
+   * Every place {@code old} is in {@code text} with the spacing within its lines ignored (each run
+   * of spaces and tabs standing for any other, line breaks kept: gorefactor's rule), each with
+   * {@code by}, the file's indentation minus old's on the first line that has both, which {@code
+   * new} moves by. {@code whole} says the match starts at a line's start (old's first line was
+   * indented).
    */
-  static IndentShift find(String text, String old) {
+  static List<IndentShift> locate(String text, String old) {
+    List<IndentShift> out = new ArrayList<>();
     String[] o = old.split("\n", -1);
-    String[] f = text.split("\n", -1);
-    int[] starts = new int[f.length];
-    for (int i = 1; i < f.length; i++) {
-      starts[i] = starts[i - 1] + f[i - 1].length() + 1;
-    }
-    List<IndentShift> found = new ArrayList<>();
-    for (int i = 0; i + o.length <= f.length; i++) {
-      IndentShift s = at(f, starts, i, o);
-      if (s != null) {
-        found.add(s);
+    Matcher m = spacingIgnored(old).matcher(text);
+    while (m.find()) {
+      int s = m.start();
+      int lineStart = text.lastIndexOf('\n', s - 1) + 1;
+      boolean whole = indent(o[0]) > 0;
+      int by = 0;
+      String[] f = text.substring(lineStart, m.end()).split("\n", -1);
+      for (int k = whole ? 0 : 1; k < o.length && k < f.length; k++) {
+        if (!o[k].isBlank()) {
+          by = indent(f[k]) - indent(o[k]);
+          break;
+        }
       }
+      out.add(new IndentShift(s, m.end(), by, whole));
     }
-    return found.size() == 1 ? found.get(0) : null;
+    return out;
+  }
+
+  /**
+   * A pattern for {@code text} with each run of spaces and tabs standing for any other, line breaks
+   * kept (gorefactor's {@code spacingIgnored}); a run at the end takes no next line's indentation.
+   */
+  private static Pattern spacingIgnored(String text) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < text.length(); ) {
+      char c = text.charAt(i);
+      if (c != ' ' && c != '\t' && c != '\n') {
+        sb.append(Pattern.quote(String.valueOf(c)));
+        i++;
+        continue;
+      }
+      int j = i;
+      while (j < text.length() && " \t\n".indexOf(text.charAt(j)) >= 0) {
+        j++;
+      }
+      long breaks = text.substring(i, j).chars().filter(x -> x == '\n').count();
+      if (breaks > 0) {
+        sb.append("[ \\t]*\\n".repeat((int) breaks));
+        if (j < text.length()) {
+          sb.append("[ \\t]*");
+        }
+      } else {
+        sb.append("[ \\t]+");
+      }
+      i = j;
+    }
+    return Pattern.compile(sb.toString());
   }
 
   /** Whether {@code at} is inside its line's indentation: after its start, only spaces before. */
   static boolean insideIndent(String text, int at) {
     int start = text.lastIndexOf('\n', at - 1) + 1;
     return at > start && text.substring(start, at).isBlank();
-  }
-
-  /** The match of the lines {@code o} at line {@code i} of {@code f}, or null. */
-  private static IndentShift at(String[] f, int[] starts, int i, String[] o) {
-    Integer by = null;
-    int start = starts[i];
-    int end = start;
-    boolean whole = indent(o[0]) > 0;
-    for (int k = 0; k < o.length; k++) {
-      String ol = o[k];
-      String fl = f[i + k];
-      String oc = ol.substring(indent(ol));
-      String fc = fl.substring(indent(fl));
-      boolean first = k == 0;
-      boolean last = k == o.length - 1;
-      if (oc.isBlank()) {
-        if (last) {
-          end = starts[i + k];
-          continue;
-        }
-        if (!fc.isBlank()) {
-          return null;
-        }
-        continue;
-      }
-      boolean matches;
-      if (o.length == 1) {
-        matches = whole && fc.startsWith(oc);
-      } else if (first) {
-        matches = whole ? fc.equals(oc) : fc.endsWith(oc);
-      } else if (last) {
-        matches = fc.startsWith(oc);
-      } else {
-        matches = fc.equals(oc);
-      }
-      if (!matches) {
-        return null;
-      }
-      if (first && !whole) {
-        start = starts[i] + fl.length() - oc.length();
-      } else {
-        int d = indent(fl) - indent(ol);
-        if (by != null && by != d) {
-          return null;
-        }
-        by = d;
-      }
-      if (last) {
-        end = starts[i + k] + indent(fl) + oc.length();
-      }
-    }
-    return by == null || by == 0 ? null : new IndentShift(start, end, by, whole);
   }
 
   /** The number of spaces {@code line} starts with. */
