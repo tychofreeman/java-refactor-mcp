@@ -361,6 +361,18 @@ new record), `parameter` (the new parameter's name), `imports`.
   Result: `moved street and city of Order into Address (com/example/Address.java),
   held in address; changed com/example/Order.java, ...`.
 
+## `add_result` (built)
+
+Roadmap #124, 2026-11-06, gorefactor's name (the user chose a record result). Arguments: `file`,
+`name` (`Type.method`), `type`, `result`. The method returns one more value that its callers
+ignore: a value-returning method returns `<Method>Result(<old type> value, <type> <result>)`, a
+record declared after it, each `return e;` becoming `return new TotalResult(e, 0);` (the type's
+zero: 0, false or null) and each call whose value is used reading `.value()`; a void method
+returns `type`, each `return;` and the end of the body giving the zero. Refused: an override or
+overridden method, a method reference to it, a method that calls itself, a result named `value`,
+a record name in use. Result: `added the result count (int) to Cart.total: it returns
+TotalResult(value, count), each return giving 0; 1 call reads .value()`.
+
 ## `function_to_method` (built), and `move_member` in place
 
 Roadmap #90, 2026-11-04 (gorefactor's `method_to_function`, `function_to_method`).

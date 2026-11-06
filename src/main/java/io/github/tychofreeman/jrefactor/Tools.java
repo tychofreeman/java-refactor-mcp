@@ -983,6 +983,30 @@ final class Tools {
           Kind.REFACTORING,
           Tools::inline);
 
+  static final Def ADD_RESULT =
+      new Def(
+          "add_result",
+          """
+          Make a method return one more value, which its callers ignore, so behavior is \
+          unchanged until the method computes it: with name Cart.total, type int and result \
+          count, int total(...) becomes TotalResult total(...), a record TotalResult(int value, \
+          int count) declared after it, each return e; becomes return new TotalResult(e, 0); \
+          and each call that uses the result reads total(...).value(). A void method returns \
+          the type instead, each return giving its zero (0, false, null).
+          Refuses, saying why: an override or an overridden method, a method reference to it, a \
+          method that calls itself, a result named value, a record name in use, or a change \
+          that adds compile errors.\
+          """,
+          List.of(
+              Arg.FILE.described(
+                  "Java file that declares the method, relative to the project root."),
+              Arg.string("name", "Type.method, or with (parameter types) for an overload.")
+                  .required(),
+              Arg.string("type", "The new value's Java type.").required(),
+              Arg.string("result", "The new value's name, a component of the record.").required()),
+          Kind.REFACTORING,
+          AddResult::run);
+
   private static Outcome inline(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
     Map<String, Object> values = new LinkedHashMap<>();
@@ -1342,6 +1366,7 @@ final class Tools {
           EXTRACT_FUNCTION,
           EXTRACT_VARIABLE,
           INLINE,
+          ADD_RESULT,
           FOLD,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
