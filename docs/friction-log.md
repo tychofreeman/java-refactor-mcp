@@ -182,8 +182,8 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Idea: discourage `.internal.` packages in the import index; name every
   ambiguous name in one refusal; a way to list the project's Java files.
 - Follow-up: `.internal.` packages are left out (#19); every ambiguous name in one
-  refusal is done (roadmap #105, 2026-11-05); listing the project's files is open (roadmap
-  #111).
+  refusal is done (roadmap #105, 2026-11-05); listing the project's files is done (roadmap
+  #111, 2026-11-06: `inspect` with no arguments).
 
 ## 2026-11-02: stubs for a class used as a static receiver
 - Task: registering #22's tools with handlers not written yet

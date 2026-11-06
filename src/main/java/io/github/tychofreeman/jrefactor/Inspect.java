@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -374,5 +375,63 @@ public final class Inspect {
       return path;
     }
     throw new Refusal("No Java file " + file + " in the project." + project.javaFilesHint(file));
+  }
+
+  /**
+   * The project at a glance: its source roots, and in each its packages with their files' line
+   * counts, the totals, why the classpath is empty when it is, and how to read further.
+   */
+  static String overview(SourceProject project) throws IOException {
+    StringBuilder out =
+        new StringBuilder(
+            "Source roots, and in each its packages, one a line, with their files' line counts:\n");
+    int packages = 0;
+    int files = 0;
+    int total = 0;
+    List<Path> all = project.javaFiles();
+    for (Path root : project.sourceRoots()) {
+      String rel = project.relative(root);
+      out.append(rel.isEmpty() || rel.equals(".") ? ". (the project root)" : rel).append('\n');
+      Map<String, List<String>> byPackage = new TreeMap<>();
+      Map<String, Integer> lines = new TreeMap<>();
+      for (Path f : all) {
+        if (!f.startsWith(root)) {
+          continue;
+        }
+        Path dir = root.relativize(f).getParent();
+        String pkg = dir == null ? "(the default package)" : dir.toString().replace('/', '.');
+        int n = (int) Files.readString(f).lines().count();
+        byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(f.getFileName() + " " + n);
+        lines.merge(pkg, n, Integer::sum);
+        files++;
+        total += n;
+      }
+      for (Map.Entry<String, List<String>> e : byPackage.entrySet()) {
+        out.append("  ")
+            .append(e.getKey())
+            .append(" (")
+            .append(lines.get(e.getKey()))
+            .append(" lines): ")
+            .append(String.join(", ", e.getValue()))
+            .append('\n');
+        packages++;
+      }
+    }
+    out.append('\n')
+        .append(packages)
+        .append(packages == 1 ? " package, " : " packages, ")
+        .append(files)
+        .append(files == 1 ? " file, " : " files, ")
+        .append(total)
+        .append(" lines\n");
+    if (project.classpathProblem() != null) {
+      out.append("\nThe classpath is empty, so library types do not resolve: ")
+          .append(project.classpathProblem())
+          .append('\n');
+    }
+    return out.append(
+            "\nRead code with inspect: file for an outline (start_line and end_line for lines),"
+                + " pattern to find lines, names for declarations by name.")
+        .toString();
   }
 }
