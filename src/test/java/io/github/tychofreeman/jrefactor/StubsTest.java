@@ -30,4 +30,28 @@ class StubsTest {
     assertTrue(Files.exists(test.resolve("com/example/Helper.java")));
     assertFalse(Files.exists(main.resolve("com/example/Helper.java")));
   }
+
+  @Test
+  void aProductionClassATestUsesFirstDeclaredInTheMainRoot(@TempDir Path root) throws Exception {
+    Path main = root.resolve("src/main/java");
+    Path test = root.resolve("src/test/java");
+    Files.createDirectories(main);
+    Files.createDirectories(test);
+    Session session = new Session();
+    session.editing = true;
+    SourceProject project = new SourceProject(root, List.of(main, test), List.of(), null, session);
+    Path file = test.resolve("com/example/CartTest.java");
+
+    Edits.gated(
+        project,
+        file,
+        "",
+        "package com.example;\n\nclass CartTest {\n  Cart cart;\n}\n",
+        List.of(),
+        "creating CartTest",
+        "Fix it.");
+
+    assertTrue(Files.exists(main.resolve("com/example/Cart.java")));
+    assertFalse(Files.exists(test.resolve("com/example/Cart.java")));
+  }
 }

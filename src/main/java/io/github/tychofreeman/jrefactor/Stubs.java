@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -115,6 +116,11 @@ final class Stubs {
 
   /** What ends a field stub's line, by which add_declaration knows it. */
   static final String FIELD_MARK = "// not implemented";
+
+  /** Names of test doubles and helpers, whose stub classes stay in the test's root. */
+  private static final Pattern TEST_DOUBLE =
+      Pattern.compile(
+          "(Fake|Stub|Mock|Dummy|Spy)[A-Z].*|.*(Test|Tests|Fixture|Helper|Fake|Stub|Mock)");
 
   /**
    * One stub: {@code type} is the type it goes in ("Cart", "Outer.Inner"), or null for a new class,
@@ -395,8 +401,8 @@ final class Stubs {
     }
 
     /**
-     * A class named {@code name} in the package of {@code file}, under the source root that holds
-     * {@code file} (so a class a test uses is declared in the test tree), else the first root.
+     * A class named {@code name} in the package of {@code file}, under the main (first) source
+     * root; a name that reads as a test double or helper, under the root that holds {@code file}.
      */
     private void type(Path file, String name) {
       String pkg = project.packageOf(file);
@@ -406,11 +412,15 @@ final class Stubs {
           || name.contains(".")) {
         return;
       }
+      // The main root (the first), in the using file's package; a test double or helper a test
+      // uses stays in the test's own root.
       Path dir = project.sourceRoots().get(0);
-      for (Path sourceRoot : project.sourceRoots()) {
-        if (file.startsWith(sourceRoot)) {
-          dir = sourceRoot;
-          break;
+      if (TEST_DOUBLE.matcher(name).matches()) {
+        for (Path sourceRoot : project.sourceRoots()) {
+          if (file.startsWith(sourceRoot)) {
+            dir = sourceRoot;
+            break;
+          }
         }
       }
       if (!pkg.isEmpty()) {

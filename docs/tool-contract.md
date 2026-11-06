@@ -408,7 +408,9 @@ the gate behind an empty stub class):
   <type> NAME; // not implemented`, the type from the use as for a method's result, no value;
 - a class nothing declares (a type, the receiver of a static call
   `Tasks.run()`, or a capitalized qualifier `Limits.MAX`), in the using file's package under
-  the first source root, as `public class T {}`.
+  the first (main) source root, as `public class T {}`; a name that reads as a test double or
+  helper (`Fake*`, `Stub*`, `Mock*`, `Dummy*`, `Spy*`, `*Test`, `*Tests`, `*Fixture`,
+  `*Helper`, `*Fake`, `*Stub`, `*Mock`) under the root of the file that uses it (roadmap #113).
 A call that is a lambda's body, or returned from one, gets the result type of
 the method the lambda implements.
 The body is `throw new UnsupportedOperationException("not implemented");`,
