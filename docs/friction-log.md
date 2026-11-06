@@ -114,7 +114,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
 - Cost: not measured (roadmap #18).
 - Idea: batch (#8, next); line numbers in the members-do-not-parse refusal.
 - Follow-up: batch is done (roadmap #8); the members-do-not-parse refusal
-  still names no line (roadmap #110); the unmatched `old` was indentation (next
+  names its line since roadmap #110 (2026-11-06); the unmatched `old` was indentation (next
   entry).
 
 ## 2026-11-02: undo and batch, through the tools
@@ -239,8 +239,8 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
   file and then `replace_text` it, which works today; say so in the refusal
   for a large file ("send it in a batch with check end, with the fixes as later
   steps").
-- Follow-up: open: a `create_file` compile refusal does not suggest a batch with
-  check "end" (roadmap #110); a batch's refusal does.
+- Follow-up: done (roadmap #110, 2026-11-06): a `create_file` compile refusal suggests a
+  batch with check "end".
 
 ## 2026-11-03: a refused create_file left a stub class behind
 - Task: roadmap #18 (session log), writing its test first.
