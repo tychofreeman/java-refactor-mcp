@@ -257,6 +257,10 @@ Each was chosen from options; the record named beside it has the options it beat
   current.
 - `inspect` puts two spaces between the line number and the code; they are not
   indentation in `old`.
+- A heredoc ends at the first line equal to its delimiter, also inside the text: a
+  README example containing `EOF`, sent through `<<'EOF'`, ran the rest as shell
+  commands (a `bin/jrefactor undo` among them; it refused). Pick a delimiter the text
+  does not contain (`<<'JAVA'`), for `key_file=-` too.
 - Writing Java through a Python script: use raw strings, or a backslash before a
   newline joins the lines. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.
