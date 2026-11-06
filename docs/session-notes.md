@@ -253,6 +253,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `src/main` during a run: the wrapper rebuilds the jar from this checkout. The
   tools appear as `mcp__gorefactor__*` there. The fixture's checks run Maven
   offline (`-o`), so `~/.m2` must hold JUnit 6.1.3 and the plugins.
+- The feature tasks are `eval-tasks/shop.json` (gorefactor's `design-*` shop tasks, ported
+  2026-11-05, each validated: hidden tests fail on the fixture and pass with a reference
+  solution). The skeleton arm is a second run with `-arms mcp` and
+  `-mcp <this repo>/eval-tasks/jrefactor-ab-server-skeleton` (`JREFACTOR_SKELETON_ONLY=1`).
 - Measure call costs with `GateCostTest` (`-Djrefactor.cost.root`,
   `-Djrefactor.cost.call`), not from old figures.
 
