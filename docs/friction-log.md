@@ -890,7 +890,8 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   passed `imports`. One resend; nothing wrong was written.
 - Idea: when the package rule's pick does not type-check and another candidate would, take
   that one (the check already runs); or prefer `java.*` when the use calls a member the
-  package's class lacks. Open: no row yet; one case.
+  package's class lacks. Done (2026-11-06, #245): what the package's other files import comes
+  before the packages rule, and they import `java.util.regex.Pattern`.
 
 ## 2026-11-06: add_declaration's after refused an overload by the label it listed
 - Task: roadmap #129, `docs/sessions/add-parameter-record.md`.
