@@ -280,7 +280,7 @@ final class TypeSwitch {
   }
 
   /** The project file that declares the top-level type {@code t}, or null. */
-  private static Path fileOf(SourceProject project, ITypeBinding t) throws IOException {
+  static Path fileOf(SourceProject project, ITypeBinding t) throws IOException {
     if (t.getDeclaringClass() != null) {
       return null;
     }

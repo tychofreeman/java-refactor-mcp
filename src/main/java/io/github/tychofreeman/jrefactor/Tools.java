@@ -970,6 +970,9 @@ final class Tools {
           the arguments in place of the parameters, and the method is deleted (return a + \
           tax(a) with static double tax(double x) { return x * 0.2; } becomes return a + (a * \
           0.2);); an argument whose effects would run in another order is bound to a local first.
+          - with field, name a class (Person) and field its field (home) holding a class only it \
+          uses (Address): Address's members take the field's place, home.street becomes street, \
+          and Address.java is deleted.
           Type-checks the project; a change that adds compile errors is refused. Refuses, saying \
           why: a field or parameter, a variable assigned after its declaration, an instance, \
           varargs, generic or recursive method, a body that is not one return or one statement, \
@@ -981,7 +984,10 @@ final class Tools {
                       + " declares the method."),
               Arg.string("name", "The variable, or Type.method for a static method.").required(),
               Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
-              Arg.integer("column", "Optional 1-based column of the name, when the line has two.")),
+              Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
+              Arg.string(
+                  "field",
+                  "With name a class: its field whose class, used by nothing else, folds into it.")),
           Kind.REFACTORING,
           Tools::inline);
 
@@ -1033,6 +1039,12 @@ final class Tools {
 
   private static Outcome inline(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
+    if (args.string("field") != null) {
+      if (args.integer("line") != null) {
+        throw new Refusal("field folds a class into its holder; leave out line.");
+      }
+      return InlineClass.run(project, args.required("file"), name, args.string("field"));
+    }
     Map<String, Object> values = new LinkedHashMap<>();
     values.put("file", args.required("file"));
     values.put("name", name);
