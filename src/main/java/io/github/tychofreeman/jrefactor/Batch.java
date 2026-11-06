@@ -85,11 +85,24 @@ final class Batch {
                 + " number of the one it follows), not both or neither.");
       }
       int n = ((Number) (replace != null ? replace : after)).intValue();
-      if (n < (replace != null ? 1 : 0) || n > base.size()) {
+      // A step numbered one past the last is a new last step, as after the last one.
+      boolean appended = replace != null && n == base.size() + 1;
+      if (n < (replace != null ? 1 : 0) || (n > base.size() && !appended)) {
         throw new Refusal(
-            "the refused batch has steps 1 to " + base.size() + "; " + n + " is none of them.");
+            "the refused batch has steps 1 to "
+                + base.size()
+                + "; "
+                + n
+                + " is none of them (step "
+                + (base.size() + 1)
+                + " adds one at the end).");
       }
-      if (replace != null) {
+      if (appended) {
+        if (!step.containsKey("tool")) {
+          throw new Refusal("step " + n + " is a new step, so it needs its tool.");
+        }
+        added.computeIfAbsent(base.size(), k -> new ArrayList<>()).add(step);
+      } else if (replace != null) {
         if (!step.containsKey("tool")) {
           step.put("tool", base.get(n - 1).get("tool"));
         }

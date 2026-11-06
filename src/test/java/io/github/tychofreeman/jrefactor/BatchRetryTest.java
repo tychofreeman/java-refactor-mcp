@@ -89,4 +89,24 @@ class BatchRetryTest {
                     Map.of("retry", true, "steps", List.of(Map.of("step", 1, "args", Map.of())))));
     assertTrue(refused.getMessage().contains("no refused batch"), refused.getMessage());
   }
+
+  @Test
+  void aStepOnePastTheEndIsAddedLast(@TempDir Path root) throws Exception {
+    SourceProject project = project(root);
+    assertThrows(
+        Refusal.class,
+        () ->
+            Tools.call(
+                Tools.named("batch"),
+                project,
+                Map.of("steps", List.of(ADD, replace("return 7;", "return 2;")))));
+
+    Map<String, Object> fixed = new java.util.HashMap<>(replace("return 1;", "return 2;"));
+    fixed.put("step", 2);
+    Map<String, Object> last = new java.util.HashMap<>(replace("return 2;", "return 3;"));
+    last.put("step", 3);
+    Tools.call(Tools.named("batch"), project, Map.of("retry", true, "steps", List.of(fixed, last)));
+
+    assertTrue(Files.readString(root.resolve("com/example/A.java")).contains("return 3;"));
+  }
 }
