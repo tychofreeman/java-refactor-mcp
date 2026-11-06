@@ -1,0 +1,30 @@
+[
+  {
+    "name": "library-sms",
+    "dir": "testdata/library",
+    "tests": "testdata/library-sms",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add an SmsNotifier in package lib.notify that implements Notifier: its channel is \"sms\", and format(to, text) gives \"SMS to <to>: <text>\", with the text cut to its first 140 characters. Add a test of it."
+  },
+  {
+    "name": "library-reservation",
+    "dir": "testdata/library",
+    "tests": "testdata/library-reservation",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add a class lib.loan.Reservation that holds a Book, a Member and a java.time.LocalDate due date, in final fields with getters book(), member() and due(), and a constructor that takes them in that order. Then add Library.reserve(Book book, Member member, LocalDate today), which returns a Reservation due 14 days after today."
+  },
+  {
+    "name": "library-missing-file",
+    "dir": "testdata/library",
+    "tests": "testdata/library-missing-file",
+    "check": "./mvnw -q -o test",
+    "prompt": "Library.load in package lib.loan throws when the catalog file does not exist. Make it return an empty library instead (every ISBN with 0 copies). Any other error reading the file must still be thrown as before."
+  },
+  {
+    "name": "library-fines",
+    "dir": "testdata/library",
+    "tests": "testdata/library-fines",
+    "check": "./mvnw -q -o test",
+    "prompt": "Fines.fine(daysLate) in package lib.loan should charge nothing for the first 3 days late, then 25 cents a day, and never more than 500 cents; a book returned early or on time costs nothing. Today it charges 25 cents from the first day, with no cap. Fix it, and add tests of it."
+  }
+]
