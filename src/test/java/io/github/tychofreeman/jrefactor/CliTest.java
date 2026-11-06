@@ -3,7 +3,9 @@ package io.github.tychofreeman.jrefactor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -104,6 +106,24 @@ class CliTest {
     Files.writeString(content, "first line\nsecond line\n");
     assertEquals(0, run("create_file", "file=notes.txt", "content_file=" + content), out());
     assertEquals("first line\nsecond line\n", Files.readString(root.resolve("notes.txt")));
+  }
+
+  /** A key_file of "-" reads the text from stdin, as a shell heredoc gives it; only one may. */
+  @Test
+  void aTextArgumentComesFromStdin() throws Exception {
+    InputStream stdin = System.in;
+    try {
+      System.setIn(
+          new ByteArrayInputStream("first line\nsecond line\n".getBytes(StandardCharsets.UTF_8)));
+      assertEquals(0, run("create_file", "file=notes.txt", "content_file=-"), out());
+      assertEquals("first line\nsecond line\n", Files.readString(root.resolve("notes.txt")));
+
+      System.setIn(new ByteArrayInputStream("x".getBytes(StandardCharsets.UTF_8)));
+      assertEquals(2, run("replace_text", "file=notes.txt", "old_file=-", "new_file=-"), out());
+      assertTrue(out().contains("one argument can come from stdin"), out());
+    } finally {
+      System.setIn(stdin);
+    }
   }
 
   @Test

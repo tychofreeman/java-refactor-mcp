@@ -173,8 +173,16 @@ bin/jrefactor list
 bin/jrefactor rename file=src/main/java/p/Bed.java line=7 name=t new_name=total
 bin/jrefactor rename '{"file":"src/main/java/p/Bed.java","line":7,"name":"t","new_name":"total"}'
 bin/jrefactor -C /path/to/project batch @steps.json
+bin/jrefactor add_declaration file=src/main/java/p/Bed.java type=Bed content_file=- <<'JAVA'
+  int size() {
+    return plants.size();
+  }
+JAVA
 bin/jrefactor undo
 ```
+
+A text argument comes from a file with `key_file=path` (`content_file`,
+`new_file`, `old_file`), or from stdin with `key_file=-`, one per call.
 
 Exit status: `0` done, `2` refused, `1` error.
 

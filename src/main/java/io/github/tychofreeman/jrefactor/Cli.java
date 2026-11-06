@@ -36,8 +36,9 @@ final class Cli {
 
       The project is the nearest directory with a pom.xml at or above dir (default: the
       current directory); files are relative to it. key_file=path gives the text argument
-      key from a file (content_file, new_file, old_file). @file reads the JSON arguments
-      from a file, - from stdin. undo reverts the last call, also one made by an earlier run.
+      key from a file (content_file, new_file, old_file); key_file=- gives it from stdin, so
+      a heredoc can pass it (one argument per call). @file reads the JSON arguments from a
+      file, - from stdin. undo reverts the last call, also one made by an earlier run.
       Exit status: 0 done, 2 refused (nothing changed), 1 error.
       """;
 
@@ -79,7 +80,7 @@ final class Cli {
                   + " or put the tool's name before it.");
         }
         def = Tools.named(tool);
-        values = withFiles(def, json);
+        values = withFiles(def, json, name.equals("-"));
       } else {
         def = Tools.named(name);
         values = arguments(def, words);
@@ -164,7 +165,7 @@ final class Cli {
         values.put(key, typed(key, value, type));
       }
     }
-    return withFiles(def, values);
+    return withFiles(def, values, words.size() == 1 && words.get(0).equals("-"));
   }
 
   /** One JSON object: {@code word} itself, the file after its {@code @}, or stdin for {@code -}. */
@@ -177,15 +178,28 @@ final class Cli {
   }
 
   /**
-   * {@code values} with each {@code key_file} that {@code def} does not take read into {@code key}.
+   * {@code values} with each {@code key_file} that {@code def} does not take read into {@code key}:
+   * from the file, or from stdin for {@code -}, which one argument may use, and none when {@code
+   * stdinRead} (the JSON object came from it).
    */
-  private static Map<String, Object> withFiles(Tools.Def def, Map<String, Object> values)
-      throws IOException {
+  private static Map<String, Object> withFiles(
+      Tools.Def def, Map<String, Object> values, boolean stdinRead) throws IOException {
     for (String key : List.copyOf(values.keySet())) {
       String base = key.endsWith("_file") ? key.substring(0, key.length() - "_file".length()) : "";
       if (!base.isEmpty() && !def.args().contains(key) && def.args().contains(base)) {
-        Object path = values.remove(key);
-        values.put(base, Files.readString(Path.of(String.valueOf(path))));
+        String path = String.valueOf(values.remove(key));
+        if (path.equals("-")) {
+          if (stdinRead) {
+            throw new Refusal(
+                "only one argument can come from stdin; give "
+                    + key
+                    + " a file's path, or send the arguments as one JSON object.");
+          }
+          stdinRead = true;
+          values.put(base, new String(System.in.readAllBytes(), StandardCharsets.UTF_8));
+        } else {
+          values.put(base, Files.readString(Path.of(path)));
+        }
       }
     }
     return values;
