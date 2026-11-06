@@ -51,6 +51,13 @@ final class MoveMember {
   private MoveMember() {}
 
   static Outcome run(SourceProject project, String rel, String name, String to) throws Exception {
+    return run(project, rel, name, to, List.of());
+  }
+
+  /** {@link #run}, with {@code imports} the classes to import where a name is ambiguous. */
+  static Outcome run(
+      SourceProject project, String rel, String name, String to, List<String> imports)
+      throws Exception {
     Precondition.require(
         Precondition.that(
             () -> to != null && !to.isBlank(),
@@ -70,7 +77,7 @@ final class MoveMember {
             : targetFile(project, to, rel);
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move");
     if (declared instanceof FieldDeclaration fd) {
-      return field(project, opened, fd, typeName, member, toName, targetFile);
+      return field(project, opened, fd, typeName, member, toName, targetFile, imports);
     }
     MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
@@ -258,7 +265,8 @@ final class MoveMember {
             texts,
             edits,
             "moving " + name + " to " + to,
-            "Check that the moved method's names resolve in " + to + ", where it now lives.");
+            "Check that the moved method's names resolve in " + to + ", where it now lives.",
+            imports);
     return new Outcome(
         "moved "
             + typeName
@@ -294,7 +302,8 @@ final class MoveMember {
       String typeName,
       String member,
       String toName,
-      Path targetFile)
+      Path targetFile,
+      List<String> imports)
       throws Exception {
     Path file = opened.file();
     String text = opened.text();
@@ -415,7 +424,8 @@ final class MoveMember {
             texts,
             edits,
             "moving " + typeName + "." + member + " to " + toName,
-            "Check that what the field's initializer names resolves in " + toName + ".");
+            "Check that what the field's initializer names resolves in " + toName + ".",
+            imports);
     return new Outcome(
         "moved "
             + typeName

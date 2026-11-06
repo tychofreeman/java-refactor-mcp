@@ -909,4 +909,4 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   imports with no choices. The model wrote the class itself. The suggestion also put the test
   library's class first over the project's own.
 - Idea: `imports` on `move`, passed to each route; prefer a project class over a library's.
-  Open: roadmap #131.
+  Done: roadmap #131 (2026-11-06).
