@@ -246,7 +246,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `args.properties`, `probe.properties` with `expect` applied, refused or changed);
   they run with every build.
   The refusals that followed are conservative, and compare first uses only.
-- A/B runs use gorefactor's harness from its checkout: `go run ./cmd/refactor-ab
+- A/B runs use gorefactor's harness from its checkout, started with JDK 21 first
+  (`export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=$JAVA_HOME/bin:$PATH`; without
+  it every Maven check fails, "release version 21 not supported", 2026-11-05): `go run ./cmd/refactor-ab
   -model sonnet -arms mcp,manual -runs 4 -tasks <this repo>/eval-tasks/warehouse.json
   -claude-md <this repo>/eval-tasks/claude-md -mcp <this repo>/eval-tasks/jrefactor-ab-server
   -out <this repo>/eval-runs/<name>` (about $3.40 for 32 runs). Do not change

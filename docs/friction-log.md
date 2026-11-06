@@ -858,3 +858,16 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
 - Idea: a class stub declared from a test file goes in the main source root (same
   package), as a test's subject does; or `move_type` takes another source root.
   Open: roadmap #113.
+
+## 2026-11-05: A/B on the shop tasks: an assertion stubbed, extract_struct on a record
+- Task: `docs/sessions/ab-shop-tasks.md` (the skeleton-only arm's transcripts).
+- Tool: `add_declaration` of test methods into a class made by `create_file` with
+  `declaration` (no imports) declared `assertEquals(boolean, boolean)` as a "not
+  implemented" stub on the test class instead of a static import from JUnit; the model
+  then spent six calls removing it. Idea: an unresolved call named like an assertion, in a
+  file under the test root with JUnit on the classpath, imports it statically. Open:
+  roadmap #117.
+- Tool: `extract_struct` with `fields` on the record `Order` refused ("Order is not a
+  top-level type ... that resolves"); the model had reached for a transformation to make
+  `Address`. It then used `extract_struct` on `Shipping.validAddress`'s parameters and
+  `move_type`, and edited `Order` by hand. Open: roadmap #118.
