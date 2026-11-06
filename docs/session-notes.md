@@ -94,9 +94,11 @@ Each was chosen from options; the record named beside it has the options it beat
   it imports from, and names it; otherwise one refusal lists every ambiguous name.
 - Parity with Go and TypeScript (2026-11-05, row 112, gorefactor's `docs/parity.md`):
   one name per operation across the servers, the more generic one, the others kept as
-  aliases. Here that renames extract_method to extract_function, move_type to
-  move_declaration and extract_supertype stays; move_member, move_statement and
-  change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
+  aliases. Here that renames extract_method to extract_function and extract_supertype stays;
+  move_statement and change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
+  One `move` (the user, 2026-11-05) replaces move_type and move_member, the old names as
+  aliases, after Go and TypeScript make theirs; row 109 is built inside it. `rename` of a
+  file path renames the file.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
