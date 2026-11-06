@@ -845,3 +845,16 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   Three more calls to put the block back.
 - Idea: an `old` that starts with spaces matches only from the start of a line, or
   the refusal says it matched inside the indentation; with roadmap #106.
+
+## 2026-11-05: a class stub declared from a test lands in the test tree
+- Task: answering how to create a new Java file test first (a probe on a scratch
+  Maven layout, not a change).
+- Tool: `create_file` of `src/test/java/p/CartTest.java`, which uses a `Cart` nothing
+  declares, declared the stub class in `src/test/java/p/Cart.java`. A production class
+  belongs in `src/main/java`, and no tool moves it there: `move_file` refuses Java under
+  a source root, and `move_type` with `package` stays in the file's source root.
+- Composition that works: `create_file` of an empty `class Cart {}` in `src/main/java`
+  first; then the test's member stubs go into it.
+- Idea: a class stub declared from a test file goes in the main source root (same
+  package), as a test's subject does; or `move_type` takes another source root.
+  Open: roadmap #113.
