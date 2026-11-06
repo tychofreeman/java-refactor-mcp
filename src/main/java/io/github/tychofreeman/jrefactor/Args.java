@@ -107,4 +107,18 @@ final class Args {
   String tool() {
     return tool;
   }
+
+  /**
+   * These arguments with each key of {@code renames} that is given, and whose new name is not,
+   * under its new name: old names a tool still accepts.
+   */
+  Args renamed(Map<String, String> renames) {
+    Map<String, Object> out = new java.util.LinkedHashMap<>(values);
+    for (Map.Entry<String, String> r : renames.entrySet()) {
+      if (out.containsKey(r.getKey()) && !out.containsKey(r.getValue())) {
+        out.put(r.getValue(), out.remove(r.getKey()));
+      }
+    }
+    return new Args(tool, out);
+  }
 }

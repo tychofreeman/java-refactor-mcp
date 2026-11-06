@@ -213,6 +213,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `equals`/`hashCode`/`toString` change behavior, so the class must define them or the
   model must pass `value_semantics=true` (this session's decision).
 
+- `extract_struct` takes one shape since 2026-11-06 (`name`, `members`, `struct`, `as`): the case
+  follows from what `name` is; old argument names are renamed in `Tools.call` (`ARG_ALIASES`).
 - `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
   (`ExtractStruct.fields`), for fields only their class uses. On a record, `fields` is

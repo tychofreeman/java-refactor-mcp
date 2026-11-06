@@ -14,6 +14,7 @@ import java.util.TreeSet;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -45,10 +46,22 @@ final class ExtractStruct {
 
   private ExtractStruct() {}
 
+  /**
+   * extract_struct: {@code members} of what {@code name} is, grouped into {@code struct} held as
+   * {@code as}: a top-level class's fields or record's components of {@code file}, else a method's
+   * parameters.
+   */
   static Outcome run(SourceProject project, Args args) throws Exception {
-    if (args.has("fields")) {
-      return fields(project, args);
+    String name = args.required("name");
+    for (Object t : Opened.of(project, args.required("file")).unit().types()) {
+      if (((AbstractTypeDeclaration) t).getName().getIdentifier().equals(name)) {
+        return fields(project, args.renamed(Map.of("members", "fields", "as", "field")));
+      }
     }
+    return parameters(project, args.renamed(Map.of("members", "parameters", "as", "parameter")));
+  }
+
+  static Outcome parameters(SourceProject project, Args args) throws Exception {
     String struct = args.required("struct");
     String parameter = args.required("parameter");
     List<String> chosen = args.list("parameters");
