@@ -881,7 +881,8 @@ final class Tools {
           Imports the members need are added, and those they no longer use are removed; when a \
           name could be several classes, the one the file imported before, or the only one in a \
           package it imports from, is taken and named; otherwise the call is refused with every \
-          such name, and imports chooses.
+          such name, and imports chooses. In a file that imports from JUnit, an assertion it calls \
+          (assertEquals) is imported statically from the framework, not declared as a stub.
           With test_for in place of content (Cart.total), the member is a red test of that \
           method: the receiver built, the call made, and fail where the assertion goes.\
           """,

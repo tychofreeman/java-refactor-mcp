@@ -213,6 +213,10 @@ Each was chosen from options; the record named beside it has the options it beat
   target through `Holding`, the framework through `Imports.known`; `add_declaration` passes
   the framework's classes as chosen imports, so the import fix places them.
 
+- An unresolved call in a file that imports from JUnit is tried against the framework's
+  assertion class (`Imports.assertions`, #117, 2026-11-05) before stubs: a test class made by
+  `declaration` has no static imports for `staticImports` to follow.
+
 - The edit primitives (#91, 2026-11-04) are `Primitives`: `replace_expression`,
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.
