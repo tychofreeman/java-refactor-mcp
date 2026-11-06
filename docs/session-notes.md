@@ -284,6 +284,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - The merged list (one `move`, one `inline`, `extract_function`) was A/B-checked on 2026-11-06
   (`docs/sessions/ab-merged-tools.md`): every run passed, cost as the baselines; the mcp arm alone
   was run, as the manual arm does not see the tool list.
+- The constructive task set is `eval-tasks/library.json` (2026-11-06, `docs/sessions/constructive-tasks.md`):
+  four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The skeleton arm was rerun on 2026-11-06 (`docs/sessions/ab-constructive-ops.md`): cheaper
   and less typed, but the constructive options went unused on these tasks.
 - The feature tasks are `eval-tasks/shop.json` (gorefactor's `design-*` shop tasks, ported
