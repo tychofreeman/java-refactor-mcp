@@ -63,7 +63,9 @@ Each was chosen from options; the record named beside it has the options it beat
   guard or a try/catch; elsewhere a tool may change it and names each change.
   `preserve_exceptions` (one flag on every refactoring) makes it refuse instead;
   the changes are a separate part of the result.
-- Stubs: declared automatically by edits, no `create_from_usage` tool. A class
+- Stubs: declared automatically by edits, no `create_from_usage` tool. A static field read
+  `T.NAME` gets `static <type> NAME; // not implemented` (#107, 2026-11-06): a field cannot
+  throw, so the comment is what `add_declaration` knows it by (`Stubs.FIELD_MARK`). A class
   the same call created gets no default-constructor stub. A lambda argument to
   an undefined method gets a functional interface by its arity (`Supplier`,
   `Function`, `BiFunction`), a guess. Stub type variables are written by name

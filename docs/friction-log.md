@@ -223,8 +223,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
     `last`; with "named priority, at the end", one `add_parameter` call.
 - Cost: not measured (roadmap #18).
 - Idea: stub replacement by erasure.
-- Follow-up: open: replacing a stub by erasure (roadmap #107; reproduced
-  2026-11-05).
+- Follow-up: done: a stub is replaced by erasure (roadmap #107, 2026-11-06).
 
 ## 2026-11-03: extract method, through the tools
 - Task: roadmap #23 (`docs/sessions/extract-function.md`).
@@ -266,7 +265,7 @@ In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
   held the constant first. One extra call, and the test resent whole.
 - Idea: a stub for a static field read as `T.NAME` (typed from the use, as
   methods are, with a default value) when the type is the project's.
-- Follow-up: open: no stub for `T.NAME` (roadmap #107; reproduced 2026-11-05).
+- Follow-up: done: `T.NAME` gets a static field stub (roadmap #107, 2026-11-06).
 
 ## 2026-11-03: an import for a name a later batch step declares
 - Task: roadmap #9 (`docs/sessions/rename-across-files.md`).

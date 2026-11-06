@@ -397,15 +397,17 @@ the gate behind an empty stub class):
   argument's); else Object;
 - a constructor of a project class, and `T() {}` beside it when T had only the
   implicit one;
-- a class nothing declares (a type, or the receiver of a static call
-  `Tasks.run()`), in the using file's package under the first source root, as
-  `public class T {}`.
+- a static field read as `T.NAME` on a project class (roadmap #107, 2026-11-06): `static
+  <type> NAME; // not implemented`, the type from the use as for a method's result, no value;
+- a class nothing declares (a type, the receiver of a static call
+  `Tasks.run()`, or a capitalized qualifier `Limits.MAX`), in the using file's package under
+  the first source root, as `public class T {}`.
 A call that is a lambda's body, or returned from one, gets the result type of
 the method the lambda implements.
 The body is `throw new UnsupportedOperationException("not implemented");`,
 which `add_declaration` replaces. Members are public only when the type is in
-another package. Not declared: methods of interfaces or library types, fields,
-and a method or constructor the edit removed. The result ends
+another package. Not declared: methods of interfaces or library types, instance
+fields, fields of interfaces, and a method or constructor the edit removed. The result ends
 `; declared stubs Cart.total(), Cart.add(String, int) in com/example/Cart.java;
 class Basket in ...`.
 
@@ -494,8 +496,9 @@ in the same turn only if it is sent after it.
 - `add_declaration`: `file`, `content` (members), `type` (`Outer` or
   `Outer.Inner`; default the file's only top-level type), `after` / `before` (a
   member name). Members are re-indented to match. A method with the same name
-  and parameter types whose body is only `throw new
-  UnsupportedOperationException("not implemented")` is replaced. Result: `added
+  and parameter types, compared erased (`List` and `List<?>`, roadmap #107), whose body is
+  only `throw new UnsupportedOperationException("not implemented")` is replaced, and so is a
+  field of the same name with no value whose line ends in `// not implemented`. Result: `added
   <members> to <type> in <file>, lines a-b` or `replaced the stub <m> ...`.
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
   `(parameter types)` for an overload), `content` (empty deletes, with the
