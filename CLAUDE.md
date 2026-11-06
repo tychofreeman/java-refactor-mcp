@@ -156,7 +156,13 @@ pull request.
   compile error is rolled back and reported, never left applied.
 - **Refusals are model-facing.** Each refusal names the reason and the fix the
   model should try next, in plain words. Refusal wording is part of the contract.
-  Change a tool's description in the PR that changes what it refuses.
+  A tool's description says what the tool does, not what it refuses: the refusal
+  explains itself when it happens (the user, 2026-11-06). `docs/tool-contract.md`
+  keeps the list of each tool's refusals.
+- **Descriptions do not repeat what every tool shares.** Type-checking, stubs,
+  imports and how refusals work are said once, in the server's instructions
+  (`Server.INSTRUCTIONS`); a description gives the tool's own behavior, its
+  arguments' meaning, and an example.
 - **Golden cases first.** Add `src/test/resources/golden/<case>/{in,out}` (plus
   `args.properties` or `refused.txt`) before or with the code that makes it pass.
   `GoldenTest` runs every case; `refused.txt` holds a fragment the refusal must contain.

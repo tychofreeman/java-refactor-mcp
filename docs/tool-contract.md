@@ -59,6 +59,14 @@ would make count at line 11 of <file> mean the field count of an anonymous class
 not what it meant where it was written: a closer declaration of that name hides it
 there. Rename one of them, or qualify it, first."
 
+## What every tool shares
+
+The server's MCP `instructions` (`Server.INSTRUCTIONS`, 2026-11-06) say once what descriptions
+used to repeat: a change that would add compile errors is refused; a refusal changes nothing
+and says why and what to send instead; edits declare stubs and fix imports; lines are 1-based.
+A description says what its tool does; the refusals each tool makes are listed in its section
+here, not in its description (the user, 2026-11-06).
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:

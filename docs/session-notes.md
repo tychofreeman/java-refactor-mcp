@@ -326,6 +326,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- Tool descriptions say what a tool does: no refusal lists, nothing every tool shares (that is
+  `Server.INSTRUCTIONS`), per CLAUDE.md (the user, 2026-11-06).
 - A tool description is a text block: a line added at another indentation than
   its neighbours makes Spotless re-indent the block, and `ServerTest`'s
   runs-of-spaces check then fails. Write new lines at the block's indentation
