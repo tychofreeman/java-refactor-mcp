@@ -254,7 +254,9 @@ final class Imports {
           continue;
         }
         pick =
-            candidates.size() == 1 ? candidates.get(0) : chosen(candidates, prior, packages, notes);
+            candidates.size() == 1
+                ? candidates.get(0)
+                : chosen(project, candidates, prior, packages, notes);
         if (pick == null) {
           String last = candidates.get(candidates.size() - 1);
           ambiguous.add(
@@ -265,9 +267,13 @@ final class Imports {
                   + last);
           suggested.add(
               candidates.stream()
-                  .filter(c -> c.startsWith("java."))
+                  .filter(c -> own(project, c))
                   .findFirst()
-                  .orElse(candidates.get(0)));
+                  .orElse(
+                      candidates.stream()
+                          .filter(c -> c.startsWith("java."))
+                          .findFirst()
+                          .orElse(candidates.get(0))));
           continue;
         }
       }
@@ -285,20 +291,32 @@ final class Imports {
 
   /**
    * Of several {@code candidates} for a name, the one the file imported before the call or batch
-   * ({@code prior}), else the only one in a package the file imports from ({@code packages}), with
-   * the reason added to {@code notes}; null when neither decides.
+   * ({@code prior}), else the only one in a package the file imports from ({@code packages}), else
+   * the only one in the project's own sources, with the reason added to {@code notes}; null when
+   * none decides.
    */
   private static String chosen(
-      List<String> candidates, Set<String> prior, Set<String> packages, List<String> notes) {
+      SourceProject project,
+      List<String> candidates,
+      Set<String> prior,
+      Set<String> packages,
+      List<String> notes) {
     String pick = candidates.stream().filter(prior::contains).findFirst().orElse(null);
     String why = "the file imported it before";
     if (pick == null) {
       List<String> near = candidates.stream().filter(c -> packages.contains(packageOf(c))).toList();
-      if (near.size() != 1) {
+      if (near.size() == 1) {
+        pick = near.get(0);
+        why = "the file imports from " + packageOf(pick);
+      }
+    }
+    if (pick == null) {
+      List<String> own = candidates.stream().filter(c -> own(project, c)).toList();
+      if (own.size() != 1) {
         return null;
       }
-      pick = near.get(0);
-      why = "the file imports from " + packageOf(pick);
+      pick = own.get(0);
+      why = "it is the project's";
     }
     List<String> others = new ArrayList<>(candidates);
     others.remove(pick);
@@ -307,6 +325,17 @@ final class Imports {
       notes.add(note);
     }
     return pick;
+  }
+
+  /** Whether the top-level class {@code qualified} is in the project's sources. */
+  private static boolean own(SourceProject project, String qualified) {
+    String path = qualified.replace('.', '/') + ".java";
+    for (Path root : project.sourceRoots()) {
+      if (Files.exists(root.resolve(path))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static String packageOf(String qualified) {

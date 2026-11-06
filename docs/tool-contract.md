@@ -74,8 +74,9 @@ One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `m
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
 file or directory (`to`, `copy`, `delete`). `name` with `package`: the file's top-level type to
 that package. `name` (`Type.member`) with `to`: the method or static field to that class.
-`name` alone (`Outer.Inner`): the nested type to its own file. Refused: `package` without
-`name`, `copy` or `delete` with `name`, `to` and `package` together. Each route's own arguments,
+`name` alone (`Outer.Inner`): the nested type to its own file. `imports` (roadmap #131) goes to
+the member route's import fix, as for `move_member`, and is refused on the others. Refused:
+`package` without `name`, `copy` or `delete` with `name`, `to` and `package` together. Each route's own arguments,
 results and refusals are those of its section below. Where Java still differs, the name says
 so: `change_type` is for fields. `pull_up`, `push_down`, `add_supertype` and `encapsulate_field`
 have no gorefactor counterpart (Go has no nested types or inheritance).
@@ -497,7 +498,10 @@ Jupiter (`org.junit.jupiter`) or JUnit 4 (`org.junit`), also from its assertion 
 (`Assertions`, `Assert`) when that class has a method the call resolves to. Static imports
 added to a file with none go first, a blank line before the others. An import the running call
 or batch added that a type declared in the file now shadows is removed by the next fix (a later
-step declared the name it was found for; roadmap #108). Results end with
+step declared the name it was found for; roadmap #108). When neither the file's earlier imports nor its packages decide an ambiguous name, the only
+candidate in the project's own sources is taken and named (`chose shop.order.Order over
+org.junit.jupiter.api.Order: it is the project's`, roadmap #131); a refusal suggests the
+project's class first, then `java.*`. Results end with
 `; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
 content is a whole file and keeps its own imports.
 

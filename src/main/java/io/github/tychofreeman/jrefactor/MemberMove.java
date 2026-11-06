@@ -252,13 +252,25 @@ final class MemberMove {
       String what,
       String fix)
       throws IOException {
+    return gate(project, texts, edits, what, fix, List.of());
+  }
+
+  /** {@link #gate}, with {@code chosen} the classes to import where a name is ambiguous. */
+  static Stubs.Declared gate(
+      SourceProject project,
+      Map<Path, String> texts,
+      Map<Path, List<TextEdit>> edits,
+      String what,
+      String fix,
+      List<String> chosen)
+      throws IOException {
     Map<Path, String> changed = new LinkedHashMap<>();
     for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
       String before = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
       List<TextEdit> list = new ArrayList<>(e.getValue());
       list.sort((a, b) -> b.start() - a.start());
       String after = TextEdit.apply(before, list, 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), before, after, List.of()).text());
+      changed.put(e.getKey(), Imports.fix(project, e.getKey(), before, after, chosen).text());
     }
     return Gate.applyOrRefuse(project, changed, what, fix);
   }

@@ -697,7 +697,8 @@ final class Tools {
                       "to",
                       "The top-level class the method moves to: of this file, or another (with its"
                           + " package when several share the name).")
-                  .required()),
+                  .required(),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::moveMember);
 
@@ -900,7 +901,8 @@ final class Tools {
                   "With Type.member, the class it moves to; without name, the file's new path."),
               Arg.string("package", "With name Type: the package it moves to."),
               Arg.bool("copy", "Without name: copy the file, keeping the original."),
-              Arg.bool("delete", "Without name: delete the file instead (no to).")),
+              Arg.bool("delete", "Without name: delete the file instead (no to)."),
+              Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::move);
 
@@ -939,6 +941,9 @@ final class Tools {
       if (to != null) {
         target = MOVE_MEMBER;
         values.put("to", to);
+        if (!args.list("imports").isEmpty()) {
+          values.put("imports", args.list("imports"));
+        }
       } else {
         target = MOVE_TYPE;
         if (pkg != null) {
@@ -948,6 +953,10 @@ final class Tools {
       if (args.flag(Exceptional.FLAG)) {
         values.put(Exceptional.FLAG, true);
       }
+    }
+    if (target != MOVE_MEMBER && !args.list("imports").isEmpty()) {
+      throw new Refusal(
+          "imports is for moving a member (name Type.member with to), whose import fix takes it.");
     }
     Args routed = new Args(target.name(), values);
     routed.check(target.args());
@@ -1591,7 +1600,11 @@ final class Tools {
 
   private static Outcome moveMember(SourceProject project, Args args) throws Exception {
     return MoveMember.run(
-        project, args.required("file"), args.required("name"), args.required("to"));
+        project,
+        args.required("file"),
+        args.required("name"),
+        args.required("to"),
+        args.list("imports"));
   }
 
   private static Outcome encapsulateField(SourceProject project, Args args) throws Exception {
