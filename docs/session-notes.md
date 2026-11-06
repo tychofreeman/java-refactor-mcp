@@ -284,6 +284,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - The merged list (one `move`, one `inline`, `extract_function`) was A/B-checked on 2026-11-06
   (`docs/sessions/ab-merged-tools.md`): every run passed, cost as the baselines; the mcp arm alone
   was run, as the manual arm does not see the tool list.
+- The skeleton arm was rerun on 2026-11-06 (`docs/sessions/ab-constructive-ops.md`): cheaper
+  and less typed, but the constructive options went unused on these tasks.
 - The feature tasks are `eval-tasks/shop.json` (gorefactor's `design-*` shop tasks, ported
   2026-11-05, each validated: hidden tests fail on the fixture and pass with a reference
   solution). The skeleton arm is a second run with `-arms mcp` and

@@ -189,6 +189,13 @@ typing; the member-level operations above are what would. One run built its new 
 transformation (`extract_struct`, then `move_type`) and was stopped by a gap on records
 (roadmap #118).
 
+**The second measurement (2026-11-06, `docs/sessions/ab-constructive-ops.md`):** the skeleton
+arm again, after #123 and the day's fixes: 8/8, $0.186 a run (from $0.217), 564 typed lines (from
+791), errors 18 (from 34), about the cost of the arm without the flag. `implement`,
+`constructor`, `surround` and `test_for` went unused: the gain came from refusals, imports and
+`batch` `retry`, which a model found from its refusal text and used. These tasks give the
+constructive options little to do; a task set that does is the next measurement.
+
 ## Questions (all answered)
 
 No question is open. These were open when the design was written; each says how it
