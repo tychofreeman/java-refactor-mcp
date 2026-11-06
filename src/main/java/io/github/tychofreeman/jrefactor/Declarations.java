@@ -29,7 +29,7 @@ final class Declarations {
   private Declarations() {}
 
   /** A type of the file, with its name as a tool argument writes it ("A.Inner"). */
-  private record Owner(AbstractTypeDeclaration decl, String label) {}
+  record Owner(AbstractTypeDeclaration decl, String label) {}
 
   /**
    * One replacement of {@code text[start, end)}: {@code said} is what it does, and the lines
@@ -49,13 +49,18 @@ final class Declarations {
     String content = args.string("content");
     String testFor = args.string("test_for");
     String implement = args.string("implement");
-    int given = (content == null ? 0 : 1) + (testFor == null ? 0 : 1) + (implement == null ? 0 : 1);
+    boolean constructor = args.has("constructor");
+    int given =
+        (content == null ? 0 : 1)
+            + (testFor == null ? 0 : 1)
+            + (implement == null ? 0 : 1)
+            + (constructor ? 1 : 0);
     if (given != 1) {
       throw new Refusal(
           given == 0
-              ? "add_declaration needs content, test_for for a test of a method, or implement for"
-                  + " methods of a supertype."
-              : "add_declaration takes one of content, test_for and implement.");
+              ? "add_declaration needs content, test_for for a test of a method, implement for"
+                  + " methods of a supertype, or constructor for one from fields."
+              : "add_declaration takes one of content, test_for, implement and constructor.");
     }
     String after = args.string("after");
     String before = args.string("before");
@@ -88,6 +93,9 @@ final class Declarations {
     }
     if (implement != null) {
       content = Implement.members(project, path, text, args.string("type"), implement);
+    }
+    if (constructor) {
+      content = FromFields.constructor(text, rel, args.string("type"), args.list("constructor"));
     }
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
@@ -400,7 +408,7 @@ final class Declarations {
     return at;
   }
 
-  private static Owner owner(CompilationUnit unit, String type, String rel) {
+  static Owner owner(CompilationUnit unit, String type, String rel) {
     if (type == null) {
       List<?> types = unit.types();
       if (types.size() == 1) {

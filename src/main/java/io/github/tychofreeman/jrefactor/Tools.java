@@ -900,7 +900,9 @@ final class Tools {
           method: the receiver built, the call made, and fail where the assertion goes.
           With implement in place of content, the members come from the supertypes: * stubs every \
           abstract method left unimplemented; a name (describe, Base.describe, describe(int)) \
-          overrides that one, a stub if abstract, else calling super.\
+          overrides that one, a stub if abstract, else calling super.
+          With constructor (field names, in order) in place of content, a constructor that takes \
+          and assigns them.\
           """,
           List.of(
               Arg.FILE,
@@ -910,6 +912,9 @@ final class Tools {
                   "implement",
                   "In place of content: * for every abstract method the supertypes leave, or a"
                       + " supertype's method to override (toString, Base.describe(int))."),
+              Arg.strings(
+                  "constructor",
+                  "In place of content: the fields a new constructor takes and assigns, in order."),
               Arg.string(
                   "test_for",
                   "In place of content, in a test class: the method to test, as Type.method or"

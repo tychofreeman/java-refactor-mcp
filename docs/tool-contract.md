@@ -518,6 +518,10 @@ in the same turn only if it is sent after it.
   calls it (`return super.describe(n);`, `I.super.m()` for a default method). Refused: `*` with
   nothing left, a name no supertype declares (listing what it can take), several overloads.
   Private, static and final methods are not offered.
+  `constructor` (field names, in order) in place of `content`: a constructor with a parameter
+  per field, of its type as written, assigning each (`this.owner = owner;`), with the class's
+  access. Refused: a name that is not a field (listing them), a static field, a final field
+  with a value, a type that is not a class.
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
   `(parameter types)` for an overload), `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old
