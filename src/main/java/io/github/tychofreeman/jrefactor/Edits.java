@@ -15,8 +15,28 @@ final class Edits {
 
   static Outcome createFile(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    String content = args.required("content");
+    String content = args.string("content");
+    String declaration = args.string("declaration");
+    if ((content == null) == (declaration == null)) {
+      throw new Refusal(
+          content == null
+              ? "create_file needs content, or declaration for a .java file."
+              : "create_file takes content or declaration, not both.");
+    }
     Path path = project.file(rel);
+    List<String> stubbed = List.of();
+    if (declaration != null) {
+      String pkg = project.packageOf(path);
+      if (!rel.endsWith(".java") || pkg == null) {
+        throw new Refusal(
+            "declaration makes a .java file under a source root; give "
+                + rel
+                + " its content instead.");
+      }
+      Skeleton.Made made = Skeleton.of(project, path, pkg, declaration);
+      content = made.text();
+      stubbed = made.stubbed();
+    }
     boolean exists = Files.exists(path);
     Stubs.Declared stubs = Stubs.Declared.NONE;
     if (exists && !args.flag("overwrite")) {
@@ -61,7 +81,10 @@ final class Edits {
             + " ("
             + lines
             + (lines == 1 ? " line)" : " lines)")
-            + fixed.said(),
+            + fixed.said()
+            + (stubbed.isEmpty()
+                ? ""
+                : "; stubs for what its supertypes leave abstract: " + String.join(", ", stubbed)),
         stubs);
   }
 

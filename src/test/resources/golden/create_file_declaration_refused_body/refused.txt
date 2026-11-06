@@ -1,0 +1,1 @@
+declaration is the header of a type

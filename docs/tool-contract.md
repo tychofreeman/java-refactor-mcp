@@ -414,7 +414,12 @@ The server runs one call at a time: calls sent together in one turn run in the
 order they arrive, so a call that needs an earlier one's result can follow it
 in the same turn only if it is sent after it.
 
-- `create_file`: `file`, `content`, `overwrite`. A `.java` file must declare the
+- `create_file`: `file`, `content` or `declaration`, `overwrite`. With `declaration` (a
+  `.java` file under a source root only), the file is the package line and that type
+  header with an empty body, plus a "not implemented" stub for each abstract method its
+  supertypes leave unimplemented, named in the result (`; stubs for what its supertypes
+  leave abstract: Priced.price()`); a declaration with a body, or naming another type
+  than the file, is refused. A `.java` file must declare the
   package its directory implies under a source root. Result: `created <file>
   (<n> lines)`.
 - `move_file` (roadmap #81, 2026-11-04, gorefactor's name): `file` (a file or
