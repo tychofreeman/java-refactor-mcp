@@ -5,6 +5,7 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ArrayInitializer;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
@@ -139,6 +140,41 @@ final class Primitives {
     int start = Lines.start(text, first.getStartPosition());
     int end = Lines.end(text, Nodes.end(last) - 1);
     String content = args.string("content") == null ? "" : args.string("content");
+    String surround = args.string("surround");
+    if (args.string("content") == null && surround == null) {
+      throw new Refusal(
+          "replace_statements needs content (empty deletes the statements) or surround.");
+    }
+    if (surround != null) {
+      if (!content.isEmpty()) {
+        throw new Refusal("replace_statements takes content or surround, not both.");
+      }
+      String outer = Lines.indentOf(text, block.getStartPosition());
+      String inner = Lines.indentOf(text, first.getStartPosition());
+      String step = inner.length() > outer.length() ? inner.substring(outer.length()) : "  ";
+      List<Statement> statements = new ArrayList<>();
+      boolean in = false;
+      for (Object o : block.statements()) {
+        in |= o == first;
+        if (in) {
+          statements.add((Statement) o);
+        }
+        if (o == last) {
+          break;
+        }
+      }
+      ASTNode method = block;
+      while (method.getParent() != null && !(method instanceof BodyDeclaration)) {
+        method = method.getParent();
+      }
+      content =
+          Surround.wrap(
+              surround,
+              text.substring(start, end).stripTrailing(),
+              step,
+              statements,
+              text.substring(method.getStartPosition(), Nodes.end(method)));
+    }
     String after;
     String said;
     if (content.isBlank()) {

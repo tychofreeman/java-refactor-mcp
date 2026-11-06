@@ -177,7 +177,8 @@ Choices in the slice and the options they beat (recorded as defaults; reopen wit
   member-level generators first).
 
 Next after the slice, by what its use logs: implement/override as its own operation on an
-existing type, a constructor from fields, and surround with.
+existing type, a constructor from fields, and surround with; built 2026-11-06 as
+`add_declaration` `implement` and `constructor` and `replace_statements` `surround` (#123).
 
 **The first measurement (2026-11-05, `docs/sessions/ab-shop-tasks.md`):** on the four shop
 feature tasks, Sonnet, 2 runs each, every arm passed every task; per run manual $0.107,
@@ -406,7 +407,7 @@ sections 3 and 4.
 | 113 | 120 | One name per operation, aliases kept: `extract_method` becomes `extract_function` (the old name an alias), `method_to_function` an alias of `move_member` to its own class; `docs/tool-contract.md` and `examples/CLAUDE.md` follow | Done 2026-11-06: `Tools.ALIASES` (batch and CLI), not published | gorefactor `docs/parity.md` section 2, the user's rule (2026-11-05: the more generic name wins) |
 | 114 | 121 | One `move`: a top-level type (`move_type`), `Type.member` (`move_member`, with #109), or a path (`move_file`), worked out from what it is given; the old names aliases | Open, after Go and TypeScript build theirs (the user, 2026-11-05) | gorefactor `docs/parity.md` section 2; its merged description gets an A/B check against the baselines first (ask) |
 | 115 | 122 | One `inline`: a function's calls, a local's uses, and (with #128) a class into its holder; `inline_function` and `inline_variable` aliases | Open, after Go and TypeScript build theirs | gorefactor `docs/parity.md` section 2 |
-| 116 | 123 | Constructive member operations: implement or override a supertype's method on an existing type, a constructor from fields, surround with (try, if, a loop) | In progress (the user, 2026-11-06: options on `add_declaration` and `replace_statements`, over three new tools and over leaving surround out): `implement` and `constructor` done | This repo's design note ("Constructive transformations") and the shop A/B (2026-11-05): with only the file-level operations, skeleton-only moved typing into `add_declaration` instead of replacing it |
+| 116 | 123 | Constructive member operations: implement or override a supertype's method on an existing type, a constructor from fields, surround with (try, if, a loop) | Done 2026-11-06 (the user: options on `add_declaration` and `replace_statements`, over three new tools and over leaving surround out): `implement`, `constructor`, `surround` | This repo's design note ("Constructive transformations") and the shop A/B (2026-11-05): with only the file-level operations, skeleton-only moved typing into `add_declaration` instead of replacing it |
 | 117 | 124 | `add_result`: a method returns one more value (a record, as `extract_method` does), every call given it | Open | gorefactor `docs/parity.md` section 3 (Java lacks); no Java friction entry yet |
 | 118 | 125 | `parameterize`: a literal or expression in a method's body becomes a parameter that every call passes (beyond `extract_variable` `as=parameter`'s literals and constants) | Open | gorefactor `docs/parity.md` section 3; no Java friction entry yet |
 | 119 | 126 | `merge_duplicate_function`: two methods with the same body become one, the calls of the other following | Open | gorefactor `docs/parity.md` section 3; `fold` covers part of it (a body matched by its parameters) |

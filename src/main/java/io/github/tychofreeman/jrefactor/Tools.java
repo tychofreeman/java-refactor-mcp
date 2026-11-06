@@ -549,13 +549,19 @@ final class Tools {
           ending on end_line, with content (statements, re-indented); empty content deletes them: \
           an edit. The project must type-check no worse after; stubs and imports as for every \
           edit.
+          With surround in place of content (try, if (ready), for (Item i : items), while (more), \
+          synchronized (lock)), the statements go inside that block; a try catches and rethrows \
+          the checked exceptions they throw.
           Refuses an end_line that does not end a statement of that block, naming the lines that do.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("start_line", "1-based line the first statement starts on.").required(),
               Arg.integer("end_line", "1-based line the last statement ends on.").required(),
-              Arg.string("content", "The new statements; empty to delete.").required(),
+              Arg.string("content", "The new statements; empty to delete."),
+              Arg.string(
+                  "surround",
+                  "In place of content: the head of a block to put them in (try, if (cond), ...)."),
               Arg.IMPORTS),
           Kind.EDIT,
           Primitives::replaceStatements);

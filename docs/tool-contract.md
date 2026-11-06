@@ -479,7 +479,12 @@ in the same turn only if it is sent after it.
   - `replace_statements`: `file`, `start_line`, `end_line` (whole statements of
     one block), `content` (empty deletes). Refused: an `end_line` that does not
     end a statement of that block, with the lines that do. Result: `replaced lines
-    5-6 of <file> with 1 line` or `deleted lines 5-6 of <file>`.
+    5-6 of <file> with 1 line` or `deleted lines 5-6 of <file>`. `surround` in place of
+    `content` (roadmap #123, 2026-11-06): the statements go inside a block with that head
+    (`try`, `if (cond)`, `for (...)`, `while (cond)`, `synchronized (lock)`), one
+    indentation step in; a `try` catches the checked exceptions they throw and rethrows them
+    (`catch (IOException e) { throw e; }`, multi-catch for several, a free name), or has an
+    empty `finally` when they throw none. Another head is refused, naming the forms.
   - `add_case`: `file`, `line` (a switch statement or expression), `content`;
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;
