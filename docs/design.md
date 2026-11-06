@@ -179,6 +179,15 @@ Choices in the slice and the options they beat (recorded as defaults; reopen wit
 Next after the slice, by what its use logs: implement/override as its own operation on an
 existing type, a constructor from fields, and surround with.
 
+**The first measurement (2026-11-05, `docs/sessions/ab-shop-tasks.md`):** on the four shop
+feature tasks, Sonnet, 2 runs each, every arm passed every task; per run manual $0.107,
+mcp $0.170, mcp with skeleton-only $0.217. The skeleton rule redirected typing (each
+refused file became `declaration` plus one `add_declaration` of the same members: 811
+typed lines against 575) and `test_for` went unused, so the slice alone does not replace
+typing; the member-level operations above are what would. One run built its new type by
+transformation (`extract_struct`, then `move_type`) and was stopped by a gap on records
+(roadmap #118).
+
 ## Questions (all answered)
 
 No question is open. These were open when the design was written; each says how it
@@ -372,6 +381,8 @@ friction log; reorder when this repo's own log says otherwise.
 | 107 | 114 | `create_file` with `declaration`: a type from its declaration, empty, in the main source root (or the test root with `test`), with stubs for the abstract methods its supertypes leave unimplemented | Done (2026-11-05), local session: `Skeleton`, the path still the `file` argument (the root choice waits for #113); goldens `create_file_declaration_*`; record in `docs/sessions/create-from-declaration.md` | The first slice of constructive transformations (the user, 2026-11-05; "Constructive transformations" above) |
 | 108 | 115 | A test from its target: `create_file` with `test_for` (the test class, mirrored package), `add_declaration` with `test_for` (a red test method calling the target) | Done (2026-11-05), local session: `TestFor`; the path is the `file` argument (no mirrored path yet); goldens `create_file_test_for_*`, `add_declaration_test_for` (with `GoldenTest`'s `classpath=junit`); record in `docs/sessions/test-from-target.md` | The first slice |
 | 109 | 116 | Skeleton-only creation, an experiment flag: a Java `create_file` with member declarations is refused, naming the constructive operations | Done (2026-11-05), local session: `Session.skeletonOnly` from `JREFACTOR_SKELETON_ONLY=1`, checked in `Edits.createFile`; goldens `create_file_skeleton_only_*`; record in `docs/sessions/skeleton-only.md`; the A/B arm waits for the user's yes | The first slice; off by default, an A/B arm turns it on |
+| 110 | 117 | An assertion method used in a test class that imports none (`assertEquals` in members added to a class made by `declaration`) is imported statically from the test framework, not declared as a stub | Open | A/B `shop-sonnet-skeleton` (2026-11-05): the stub `CurrencyExportTest.assertEquals(boolean, boolean)` was declared, then fought for six calls (`docs/sessions/ab-shop-tasks.md`) |
+| 111 | 118 | `extract_struct` with `fields` on a record: components grouped into a new record, every construction and accessor use following | Open | A/B `shop-sonnet-skeleton` (2026-11-05): the address task's model tried it on `Order` first and was refused ("not a top-level type ... that resolves") |
 
 ### The 2026-11-04 list
 

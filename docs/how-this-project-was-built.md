@@ -298,6 +298,14 @@ of edits made through the tools, the share of typed text that is statements and 
 rather than structure. Testing it needs feature tasks, not refactoring traps, so the next
 step was porting gorefactor's shop feature tasks to Java and running an arm with the flag on.
 
+The first measurement of the slice (shop feature tasks, Sonnet, 2 runs each) found every arm
+passing and the tools dearer: manual $0.107 per run, mcp $0.170, skeleton-only $0.217. The
+skeleton rule worked as a refusal but, with only the file-level operation built, moved typing
+from `create_file` to `add_declaration`; `test_for` went unused. One run made its new type by
+transformation (`extract_struct`, `move_type`) until a gap on records stopped it. The thesis is
+neither supported nor refuted by this: it waits on the member-level operations
+(`docs/sessions/ab-shop-tasks.md`).
+
 The lesson for this project: when the user names a symptom ("a loophole for writing code"),
 ask what it is a symptom of before measuring it. The session measured the symptom it
 assumed, retyping; the user's concern was the vocabulary.
