@@ -669,7 +669,9 @@ final class Tools {
           """
           Move a method of a top-level class to another top-level class, in the same file or \
           another (to=Tax, or com.example.Tax when several files declare one; public when it \
-          crosses packages), or, with to its own class, make it static in place. An \
+          crosses packages), or, with to its own class, make it static in place. A static field \
+          (Shop.MAX) moves too, every use then naming the new class; its initializer must be \
+          constants. An \
           instance method becomes static in the target and takes the instance it used as its first \
           parameter, named receiver; every call in the project passes that instance. A private \
           method is widened to package access. The name is Type.method, or Type.method(params) for \

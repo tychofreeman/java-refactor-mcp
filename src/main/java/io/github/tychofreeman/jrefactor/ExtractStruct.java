@@ -667,7 +667,7 @@ final class ExtractStruct {
   }
 
   /** Whether an initializer can run when the holder is made: constants and new objects of them. */
-  private static boolean initializedAlone(Expression init) {
+  static boolean initializedAlone(Expression init) {
     for (Effects.Effect e : Effects.of(init).all()) {
       switch (e.kind()) {
         case NAME -> {
