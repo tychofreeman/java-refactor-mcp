@@ -308,6 +308,7 @@ friction log; reorder when this repo's own log says otherwise.
 | 102 | 109 | `move_member` to a class in another file | Open | Friction triage: two moves into another file's class done by hand (2026-11-03, the end-of-batch check into `Gate`, the file writers into `Journal`); `move_member` moves within one file |
 | 103 | 110 | Refusals that say where: content that does not parse as members names its line, and a `create_file` refused for compile errors says that a batch with check "end" can fix them in later steps | Open | Friction triage: one blind retry (2026-11-02), one large file sent again (2026-11-03) |
 | 104 | 111 | `inspect` with no arguments lists the project's source files, as gorefactor's module overview | Open, low priority | Friction triage: one probe guessed Maven paths (2026-11-02); `pattern` finds files by their content meanwhile |
+| 105 | 112 | Go, TypeScript and Java at parity: the bugs, one name per operation across the servers, the tools and options Java lacks (add_result, parameterize, merge_duplicate_function, the type switch pair, split, inline class), and those Go and TypeScript lack from here. The survey and order are gorefactor's `docs/parity.md` (roadmap 54) | Planned (2026-11-05, the user) | Section 1 there lists this repo's bugs: replace_text's silent match inside indentation first, then #106-#108 |
 
 ### The 2026-11-04 list
 
