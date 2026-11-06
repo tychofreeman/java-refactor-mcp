@@ -52,7 +52,7 @@ final class Guard {
       "Change Java through the tools: a refactoring, or an edit (add_declaration,"
           + " replace_declaration, replace_statements, insert_statements, replace_expression,"
           + " add_case, add_element, replace_text for a few lines; create_file for a new file,"
-          + " move_file for files), several as one batch; from a shell, bin/jrefactor. Where no"
+          + " move for types, members and files), several as one batch; from a shell, bin/jrefactor. Where no"
           + " tool or sequence of tools makes the change, say so in docs/friction-log.md and ask"
           + " the user. Files under a resources directory may be written directly.";
 

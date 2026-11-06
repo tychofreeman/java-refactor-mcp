@@ -39,13 +39,12 @@ import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
- * move_member: a method moves from its class to another top-level type of the same file. An
- * instance method becomes static in the target and takes the source instance as its first
- * parameter, named receiver; every call in the project passes the instance. A private method is
- * widened to package access, since the target is a different class. Refused: an override, or a
- * method another class overrides; a constructor, a generic class, an anonymous or local class in
- * the body, super, a call of itself, a method reference to it, and a call from another class
- * without an instance.
+ * move: a method moves from its class to another top-level type of the same file. An instance
+ * method becomes static in the target and takes the source instance as its first parameter, named
+ * receiver; every call in the project passes the instance. A private method is widened to package
+ * access, since the target is a different class. Refused: an override, or a method another class
+ * overrides; a constructor, a generic class, an anonymous or local class in the body, super, a call
+ * of itself, a method reference to it, and a call from another class without an instance.
  */
 final class MoveMember {
 
@@ -55,8 +54,7 @@ final class MoveMember {
     Precondition.require(
         Precondition.that(
             () -> to != null && !to.isBlank(),
-            () ->
-                "move_member needs to, the top-level type of the same file to move the method to."));
+            () -> "move needs to, the top-level type of the same file to move the method to."));
     Qualified q = Qualified.of(name, "Type.method, the class and the method to move");
     String typeName = q.type();
     String member = q.member();
@@ -70,7 +68,7 @@ final class MoveMember {
         !to.contains(".") && MemberMove.typeNamed(unit, to) != null
             ? file
             : targetFile(project, to, rel);
-    BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move_member");
+    BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move");
     if (declared instanceof FieldDeclaration fd) {
       return field(project, opened, fd, typeName, member, toName, targetFile);
     }
@@ -79,8 +77,7 @@ final class MoveMember {
     Precondition.require(
         Precondition.that(() -> method != null, () -> name + " does not resolve."),
         Precondition.that(
-            () -> !m.isConstructor(),
-            () -> name + " is a constructor, which move_member does not move."),
+            () -> !m.isConstructor(), () -> name + " is a constructor, which move does not move."),
         Precondition.that(
             () -> m.getBody() != null,
             () -> name + " has no body (abstract or native), so there is nothing to move."),
@@ -159,7 +156,7 @@ final class MoveMember {
                     name
                         + " is used as a method reference in "
                         + p.getFileName()
-                        + ". move_member does not rewrite method references; replace the reference"
+                        + ". move does not rewrite method references; replace the reference"
                         + " with a lambda first.");
               }
               return true;
@@ -284,7 +281,7 @@ final class MoveMember {
   }
 
   /**
-   * move_member of a static field: its declaration moves to the end of {@code toName} in {@code
+   * move of a static field: its declaration moves to the end of {@code toName} in {@code
    * targetFile}, widened from private (to public across packages), and every use names the new
    * class: {@code Shop.MAX} and a bare {@code MAX} become {@code Config.MAX}, a static import of it
    * imports it from there. Its initializer must run alone, since it now runs when the new class is
@@ -306,7 +303,7 @@ final class MoveMember {
             () -> Modifier.isStatic(fd.getModifiers()),
             () ->
                 member
-                    + " is an instance field; move_member moves methods and static fields. Move"
+                    + " is an instance field; move moves methods and static fields. Move"
                     + " instance fields into a new class with extract_struct (fields), or to a"
                     + " supertype or subtype with pull_up or push_down."),
         Precondition.that(
@@ -456,7 +453,7 @@ final class MoveMember {
               + rel
               + " or of a file of the project ("
               + simple
-              + ".java). move_member moves a method to a class, or makes it static in its own.");
+              + ".java). move moves a method to a class, or makes it static in its own.");
     }
     if (found.size() > 1) {
       List<String> rels = new ArrayList<>();
@@ -504,12 +501,12 @@ final class MoveMember {
 
               @Override
               public boolean visit(SuperFieldAccess node) {
-                throw new Refusal(name + " uses super. move_member does not move a super use yet.");
+                throw new Refusal(name + " uses super. move does not move a super use yet.");
               }
 
               @Override
               public boolean visit(SuperMethodInvocation node) {
-                throw new Refusal(name + " uses super. move_member does not move a super use yet.");
+                throw new Refusal(name + " uses super. move does not move a super use yet.");
               }
 
               @Override
@@ -526,7 +523,7 @@ final class MoveMember {
                 if (node.getIdentifier().equals("receiver")) {
                   throw new Refusal(
                       name
-                          + " uses the name receiver, which move_member gives the receiver"
+                          + " uses the name receiver, which move gives the receiver"
                           + " parameter. Rename it first.");
                 }
                 return true;
@@ -550,7 +547,7 @@ final class MoveMember {
     return new Refusal(
         name
             + " contains an anonymous class or a local class, whose this is not the receiver, so"
-            + " move_member does not move it yet.");
+            + " move does not move it yet.");
   }
 
   /**

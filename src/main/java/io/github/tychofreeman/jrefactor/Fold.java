@@ -79,7 +79,7 @@ final class Fold {
             () ->
                 name
                     + " is not a static method with a body; fold makes calls of a static method."
-                    + " Make it static first (move_member to its own class)."));
+                    + " Make it static first (move with to its own class)."));
 
     List<String> params = new ArrayList<>();
     for (Object o : m.parameters()) {

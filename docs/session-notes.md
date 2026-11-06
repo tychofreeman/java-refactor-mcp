@@ -103,8 +103,9 @@ Each was chosen from options; the record named beside it has the options it beat
   aliases. Here that renamed extract_method to extract_function (#120, 2026-11-06: aliases in
   `Tools.ALIASES`, accepted by `batch` and the CLI, not published) and extract_supertype stays;
   move_statement and change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
-  One `move` (the user, 2026-11-05) replaces move_type and move_member, the old names as
-  aliases, after Go and TypeScript make theirs; row 109 is built inside it. `rename` of a
+  One `move` (the user, 2026-11-05) replaces move_type, move_member and move_file, the old
+  names as aliases (#121, 2026-11-06: `Tools.move` routes by its arguments, as gorefactor's
+  `Router`); refusals name `move`, since a model calls only what is published. `rename` of a
   file path renames the file. One `inline` likewise replaces inline_function and
   inline_variable, and takes inline class when it is built.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and

@@ -68,10 +68,17 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `replace_text`, `batch` and `undo`, and (roadmap #120, 2026-11-06) `extract_function`, which
 was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI but not
 published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
-`move_member` with `to` the method's own class (taken from `name`, `Type.method`). Where Java
-still differs, the name says so: `change_type` is for fields. `move_type`,
-`pull_up`, `push_down`, `add_supertype` and `encapsulate_field` have no
-gorefactor counterpart (Go has no nested types or inheritance). gorefactor's edit
+`move_member` with `to` the method's own class (taken from `name`, `Type.method`).
+
+One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
+`move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
+file or directory (`to`, `copy`, `delete`). `name` with `package`: the file's top-level type to
+that package. `name` (`Type.member`) with `to`: the method or static field to that class.
+`name` alone (`Outer.Inner`): the nested type to its own file. Refused: `package` without
+`name`, `copy` or `delete` with `name`, `to` and `package` together. Each route's own arguments,
+results and refusals are those of its section below. Where Java still differs, the name says
+so: `change_type` is for fields. `pull_up`, `push_down`, `add_supertype` and `encapsulate_field`
+have no gorefactor counterpart (Go has no nested types or inheritance). gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
 `replace_statements`, `add_case`, `add_element`, roadmap #91).
 

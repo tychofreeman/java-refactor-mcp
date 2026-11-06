@@ -27,7 +27,7 @@ final class MoveFile {
         Precondition.that(() -> Files.exists(from), () -> rel + " does not exist."),
         Precondition.that(
             () -> delete || to != null,
-            () -> "move_file needs to, the new path, or delete=true to remove " + rel + "."),
+            () -> "move needs to, the file's new path, or delete=true to remove " + rel + "."),
         Precondition.that(
             () -> !delete || (to == null && !copy),
             () -> "delete removes " + rel + "; pass to and copy only to move or copy it."));
@@ -44,7 +44,7 @@ final class MoveFile {
         throw new Refusal(
             project.relative(f)
                 + " is Java under a source root, and moving it would break its package. Use"
-                + " move_type (with package) to move a type.");
+                + " move with name and package to move a type.");
       }
     }
     Path dest = to == null ? null : project.file(to);
@@ -97,7 +97,7 @@ final class MoveFile {
     } catch (CharacterCodingException e) {
       throw new Refusal(
           project.relative(f)
-              + " is not UTF-8 text, and move_file moves text files so that undo can put them"
+              + " is not UTF-8 text, and move moves text files so that undo can put them"
               + " back. Move this one with git mv.");
     }
   }

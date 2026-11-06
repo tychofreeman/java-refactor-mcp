@@ -1,0 +1,1 @@
+moved Shop.Line to com/example/Line.java (18 lines), with 3 references in 3 files: com/example/Receipt.java line 4; com/example/Shop.java line 7; com/example/report/Report.java line 3; widened Shop.label(String) and Line.price to package-private

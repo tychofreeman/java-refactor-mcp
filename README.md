@@ -41,14 +41,15 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   `extract_variable` (also as a constant, field or parameter),
   `inline_function`, `inline_variable`; `add_parameter`, `remove_parameter`,
   `move_parameter`, `change_type`, `extract_struct` (a parameter object, or
-  extract class); `move_member`, `move_type` (to a file or a package),
+  extract class); `move` (a nested type to its own file, a type to a package, a method or
+  static field to another class, a file),
   `pull_up`, `push_down`, `add_supertype`, `extract_supertype`;
   `function_to_method`, `encapsulate_field`, `convert_lambda` (lambda,
   method reference, anonymous class), `convert_to_record`; `fold` (replace
   code that does what a method does with a call of it); `move_statement`,
   `invert_if`, `remove_else`.
 - **Edits**, which change behavior on purpose and are still type-checked
-  and undoable: `create_file`, `move_file`, `add_declaration`,
+  and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),
   `replace_statements`, `insert_statements`, `replace_expression`,
   `add_case`, `add_element`, `replace_text`.
