@@ -1,0 +1,11 @@
+#!/bin/sh
+# Starts bin/jrefactor-mcp for gorefactor's A/B harness (cmd/refactor-ab), which
+# passes the project to serve as -C <dir>, with skeleton-only creation on (roadmap
+# #116): a Java file starts from declaration or test_for, and members come after.
+set -eu
+export JREFACTOR_SKELETON_ONLY=1
+here=$(cd "$(dirname "$0")/.." && pwd)
+if [ "${1:-}" = "-C" ]; then
+  shift
+fi
+exec "$here/bin/jrefactor-mcp" "$@"
