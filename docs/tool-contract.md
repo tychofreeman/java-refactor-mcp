@@ -478,7 +478,10 @@ in the same turn only if it is sent after it.
   `new` is shifted by as much: `...; old was 2 spaces deeper than the file, so new was
   shifted 2 spaces shallower` (roadmap #106; the user's choice, 2026-11-06, over
   gorefactor's rule, any run of spaces within lines for any other with `new` as sent, and
-  over a refusal with a hint only). Spacing within a line must match. Not found at all, the
+  over a refusal with a hint only). Spacing within a line must match. An `old` that starts
+  with spaces and occurs only inside a line's indentation (8 spaces inside 10) is not an
+  exact match, since `new`'s later lines would land at its indentation: it is shifted from
+  the line's start, or refused naming the lines when that does not match once (roadmap #119). Not found at all, the
   refusal names where a line of `old` is, spacing ignored (`; its line int b() { is at line
   8`), as gorefactor's does. `append=true` in place of `old`
   adds `new` at the end of the file, after a line break when the file does not end in

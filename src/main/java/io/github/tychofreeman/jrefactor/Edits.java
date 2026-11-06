@@ -144,11 +144,26 @@ final class Edits {
     String put = replacement;
     String shifted = "";
     List<Integer> at = new ArrayList<>();
+    List<Integer> inside = new ArrayList<>();
     for (int i = text.indexOf(old); i >= 0; i = text.indexOf(old, i + old.length())) {
-      at.add(i);
+      // An old that starts with spaces, found inside a line's indentation, is shifted, not exact.
+      if (old.startsWith(" ") && IndentShift.insideIndent(text, i)) {
+        inside.add(Lines.number(text, i));
+      } else {
+        at.add(i);
+      }
     }
     if (at.isEmpty()) {
       IndentShift s = IndentShift.find(text, old);
+      if (s == null && !inside.isEmpty()) {
+        throw new Refusal(
+            "old is in "
+                + rel
+                + " only inside a line's indentation ("
+                + Lines.list(inside)
+                + "), so new would land at the wrong indentation. Start old at the line's start,"
+                + " with all of its indentation.");
+      }
       if (s == null) {
         throw new Refusal(
             "old is not in "
