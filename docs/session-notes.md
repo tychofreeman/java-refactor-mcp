@@ -98,7 +98,8 @@ Each was chosen from options; the record named beside it has the options it beat
   move_statement and change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
   One `move` (the user, 2026-11-05) replaces move_type and move_member, the old names as
   aliases, after Go and TypeScript make theirs; row 109 is built inside it. `rename` of a
-  file path renames the file.
+  file path renames the file. One `inline` likewise replaces inline_function and
+  inline_variable, and takes inline class when it is built.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
