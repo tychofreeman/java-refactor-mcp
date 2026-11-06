@@ -37,7 +37,7 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
 
 - **Read:** `inspect`, a file without method bodies, then the ranges you
   will change.
-- **Refactorings:** `rename` (any kind of name); `extract_method`,
+- **Refactorings:** `rename` (any kind of name); `extract_function`,
   `extract_variable` (also as a constant, field or parameter),
   `inline_function`, `inline_variable`; `add_parameter`, `remove_parameter`,
   `move_parameter`, `change_type`, `extract_struct` (a parameter object, or
