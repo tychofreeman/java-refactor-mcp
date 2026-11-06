@@ -667,8 +667,9 @@ final class Tools {
       new Def(
           "move_member",
           """
-          Move a method of a top-level class to another top-level class of the same file, or, \
-          with to its own class, make it static in place. An \
+          Move a method of a top-level class to another top-level class, in the same file or \
+          another (to=Tax, or com.example.Tax when several files declare one; public when it \
+          crosses packages), or, with to its own class, make it static in place. An \
           instance method becomes static in the target and takes the instance it used as its first \
           parameter, named receiver; every call in the project passes that instance. A private \
           method is widened to package access. The name is Type.method, or Type.method(params) for \
@@ -687,7 +688,10 @@ final class Tools {
                       "Type.method, or Type.method(params) for an overload: the method to "
                           + "move.")
                   .required(),
-              Arg.string("to", "The other top-level class of the file that the method moves to.")
+              Arg.string(
+                      "to",
+                      "The top-level class the method moves to: of this file, or another (with its"
+                          + " package when several share the name).")
                   .required()),
           Kind.REFACTORING,
           Tools::moveMember);

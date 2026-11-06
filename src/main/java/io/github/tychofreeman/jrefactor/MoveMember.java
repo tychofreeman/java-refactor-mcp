@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -60,17 +62,13 @@ final class MoveMember {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     TypeDeclaration source = opened.topLevel(typeName);
-    TypeDeclaration target = MemberMove.typeNamed(unit, to);
+    String toName = to.substring(to.lastIndexOf('.') + 1);
+    Path targetFile =
+        !to.contains(".") && MemberMove.typeNamed(unit, to) != null
+            ? file
+            : targetFile(project, to, rel);
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move_member");
     Precondition.require(
-        Precondition.that(
-            () -> target != null && target.resolveBinding() != null,
-            () ->
-                to
-                    + " is not a top-level type of "
-                    + rel
-                    + " that resolves. move_member moves a method to a type in the same file, or"
-                    + " makes it static in its own."),
         Precondition.that(
             () -> declared instanceof MethodDeclaration,
             () ->
@@ -112,12 +110,18 @@ final class MoveMember {
     List<Path> toParse = new ArrayList<>();
     for (Path p : candidates) {
       String content = p.equals(file) ? text : Files.readString(p);
-      if (p.equals(file) || content.contains(base)) {
+      if (p.equals(file) || p.equals(targetFile) || content.contains(base)) {
         texts.put(p, content);
         toParse.add(p);
       }
     }
     Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
+    TypeDeclaration target = MemberMove.typeNamed(parsed.get(targetFile), toName);
+    Precondition.require(
+        Precondition.that(
+            () -> target != null && target.resolveBinding() != null,
+            () -> to + " is not a class of " + project.relative(targetFile) + " that resolves."));
+    boolean crosses = !Objects.equals(project.packageOf(file), project.packageOf(targetFile));
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     List<String> nullable = new ArrayList<>();
@@ -194,7 +198,7 @@ final class MoveMember {
                 fileText,
                 sourceKey,
                 typeName,
-                to,
+                toName,
                 member,
                 isStatic,
                 name,
@@ -222,7 +226,7 @@ final class MoveMember {
 
     int ms = m.getStartPosition();
     int me = ms + m.getLength();
-    List<TextEdit> inner = movedEdits(text, m, typeName, sourceKey, isStatic);
+    List<TextEdit> inner = movedEdits(text, m, typeName, sourceKey, isStatic, crosses);
     List<TextEdit> shifted = new ArrayList<>();
     for (TextEdit e : inner) {
       shifted.add(new TextEdit(e.start() - ms, e.end() - ms, e.text()));
@@ -239,7 +243,9 @@ final class MoveMember {
     }
     List<TextEdit> own = edits.computeIfAbsent(file, k -> new ArrayList<>());
     own.add(new TextEdit(start, end, ""));
-    own.addAll(MemberMove.appendTo(text, target, moved));
+    edits
+        .computeIfAbsent(targetFile, k -> new ArrayList<>())
+        .addAll(MemberMove.appendTo(texts.get(targetFile), target, moved));
     edits.entrySet().removeIf(e -> e.getValue().isEmpty());
 
     boolean widened = false;
@@ -276,6 +282,47 @@ final class MoveMember {
             + (callFiles == 1 ? "" : "s")
             + (widened ? "; private widened to package access" : ""),
         declared2);
+  }
+
+  /**
+   * The project file that declares the top-level class {@code to} ({@code Tax}, or {@code
+   * com.example.Tax} when several do), or a refusal naming what to pass.
+   */
+  private static Path targetFile(SourceProject project, String to, String rel) throws IOException {
+    String simple = to.substring(to.lastIndexOf('.') + 1);
+    String suffix = "/" + (to.contains(".") ? to.replace('.', '/') : simple) + ".java";
+    List<Path> found = new ArrayList<>();
+    for (Path p : project.javaFiles()) {
+      if (("/" + project.relative(p)).endsWith(suffix)) {
+        found.add(p.toAbsolutePath().normalize());
+      }
+    }
+    if (found.isEmpty()) {
+      throw new Refusal(
+          to
+              + " is not a top-level type of "
+              + rel
+              + " or of a file of the project ("
+              + simple
+              + ".java). move_member moves a method to a class, or makes it static in its own.");
+    }
+    if (found.size() > 1) {
+      List<String> rels = new ArrayList<>();
+      for (Path p : found) {
+        rels.add(project.relative(p));
+      }
+      throw new Refusal(
+          "several files declare "
+              + simple
+              + ": "
+              + String.join(", ", rels)
+              + ". Name one with its package, as to="
+              + project.packageOf(found.get(0))
+              + "."
+              + simple
+              + ".");
+    }
+    return found.get(0);
   }
 
   /** Whether {@code m} is marked {@code @Override}. */
@@ -354,17 +401,51 @@ final class MoveMember {
             + " move_member does not move it yet.");
   }
 
-  /** The edits that make the moved method's text: the receiver parameter, static, widened. */
+  /**
+   * The edits that make the moved method's text: the receiver parameter, static, widened (to public
+   * when it moves to another package, {@code crosses}).
+   */
   private static List<TextEdit> movedEdits(
-      String text, MethodDeclaration m, String typeName, String sourceKey, boolean isStatic) {
+      String text,
+      MethodDeclaration m,
+      String typeName,
+      String sourceKey,
+      boolean isStatic,
+      boolean crosses) {
     List<TextEdit> out = new ArrayList<>();
+    // static goes before the return type; public before the first modifier, or with static when
+    // there is none, as one insertion so the two keep that order.
+    String staticText = isStatic ? "" : "static ";
+    if (crosses && !Modifier.isPublic(m.getModifiers())) {
+      int at =
+          m.typeParameters().isEmpty()
+              ? m.getReturnType2().getStartPosition()
+              : text.lastIndexOf('<', ((ASTNode) m.typeParameters().get(0)).getStartPosition());
+      for (Object o : m.modifiers()) {
+        if (o instanceof org.eclipse.jdt.core.dom.Modifier mod) {
+          at = Math.min(at, mod.getStartPosition());
+          if (mod.isProtected()) {
+            out.add(
+                new TextEdit(
+                    mod.getStartPosition(), mod.getStartPosition() + mod.getLength() + 1, ""));
+          }
+        }
+      }
+      if (at == m.getReturnType2().getStartPosition()) {
+        staticText = "public " + staticText;
+      } else {
+        out.add(new TextEdit(at, at, "public "));
+      }
+    }
+    if (!staticText.isEmpty()) {
+      int returnType = m.getReturnType2().getStartPosition();
+      out.add(new TextEdit(returnType, returnType, staticText));
+    }
     if (!isStatic) {
       int open = text.indexOf('(', m.getName().getStartPosition() + m.getName().getLength());
       out.add(
           new TextEdit(
               open + 1, open + 1, typeName + " receiver" + (m.parameters().isEmpty() ? "" : ", ")));
-      int returnType = m.getReturnType2().getStartPosition();
-      out.add(new TextEdit(returnType, returnType, "static "));
     }
     for (Object o : m.modifiers()) {
       if (o instanceof org.eclipse.jdt.core.dom.Modifier mod && mod.isPrivate()) {
