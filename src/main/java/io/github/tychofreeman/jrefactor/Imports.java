@@ -196,6 +196,11 @@ final class Imports {
     return text.substring(0, at) + (first ? "\n" + line : line) + text.substring(at);
   }
 
+  /** Whether the class {@code qualified} is in the project's sources or on its classpath. */
+  static boolean known(SourceProject project, String qualified) throws IOException {
+    return index(project).candidates(simpleName(qualified)).contains(qualified);
+  }
+
   /**
    * The fully qualified names to import for the simple {@code names}: the one chosen, the one class
    * with that name, or, of several, the one {@link #chosen} on the file's evidence ({@code prior},

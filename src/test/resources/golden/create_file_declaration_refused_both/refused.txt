@@ -1,1 +1,1 @@
-content or declaration, not both
+create_file takes one of content, declaration and test_for

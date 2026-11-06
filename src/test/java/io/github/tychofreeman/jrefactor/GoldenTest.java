@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.modelcontextprotocol.json.McpJsonDefaults;
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -54,7 +56,10 @@ class GoldenTest {
       args.load(reader);
     }
     String tool = args.getProperty("tool", "rename");
-    SourceProject project = SourceProject.of(work);
+    SourceProject project =
+        args.getProperty("classpath", "").equals("junit")
+            ? new SourceProject(work, List.of(work), junitJars(), null, new Session())
+            : SourceProject.of(work);
 
     Path refused = caseDir.resolve("refused.txt");
     Path result = caseDir.resolve("result.txt");
@@ -87,6 +92,19 @@ class GoldenTest {
     }
   }
 
+  /** The JUnit jars of this JVM's classpath, for a case with classpath=junit. */
+  private static List<String> junitJars() {
+    List<String> out = new ArrayList<>();
+    for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
+      if (entry.contains("junit")
+          || entry.contains("opentest4j")
+          || entry.contains("apiguardian")) {
+        out.add(entry);
+      }
+    }
+    return out;
+  }
+
   /**
    * Calls the tool a case names through its definition, as the server does: properties are its
    * arguments (whole numbers and true/false as such), and each {@code <arg>.txt} file of the case
@@ -97,7 +115,7 @@ class GoldenTest {
     Tools.Def def = Tools.named(tool);
     Map<String, Object> values = new LinkedHashMap<>();
     for (String key : props.stringPropertyNames()) {
-      if (!key.equals("tool")) {
+      if (!key.equals("tool") && !key.equals("classpath")) {
         values.put(key, value(props.getProperty(key)));
       }
     }

@@ -414,7 +414,12 @@ The server runs one call at a time: calls sent together in one turn run in the
 order they arrive, so a call that needs an earlier one's result can follow it
 in the same turn only if it is sent after it.
 
-- `create_file`: `file`, `content` or `declaration`, `overwrite`. With `declaration` (a
+- `create_file`: `file`, one of `content`, `declaration` and `test_for`, `overwrite`. With
+  `test_for` (`Cart.total`, `Cart.add(int)`, or `Cart` for an empty test class), the file is
+  a JUnit test class (Jupiter, else JUnit 4, else refused) with a red test of the method:
+  the receiver from its fewest-argument constructor with placeholder arguments, the call,
+  its result in a local, and `fail("write the assertion")`; the result ends `; a red test
+  of Cart.total(): write its assertion in place of fail`. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes
@@ -454,6 +459,9 @@ in the same turn only if it is sent after it.
   one (gorefactor's `append`, 2026-11-05): `appended <n> line(s) to <file>, line(s) ...`;
   refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused.
   gorefactor's `files` and `function` are not built.
+- `add_declaration` with `test_for` (`Cart.total`) in place of `content`: the member is a
+  red test of that method, as `create_file`'s, named after it (`total2` when taken), with
+  the framework's imports added.
 - `add_declaration`: `file`, `content` (members), `type` (`Outer` or
   `Outer.Inner`; default the file's only top-level type), `after` / `before` (a
   member name). Members are re-indented to match. A method with the same name
