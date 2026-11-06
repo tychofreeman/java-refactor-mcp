@@ -952,6 +952,70 @@ final class Tools {
     return target.handler().run(project, routed);
   }
 
+  /**
+   * One tool for the inverses of extract (gorefactor's {@code docs/parity.md}): it routes to
+   * inline_variable or inline_function by its arguments, which stay names batch and the CLI accept.
+   */
+  static final Def INLINE =
+      new Def(
+          "inline",
+          """
+          Inline what name names into where it is used, and delete it:
+          - with line, the local variable name declared or used there: its initializer replaces \
+          every use (int subtotal = price * qty; return subtotal + tax; becomes return (price * \
+          qty) + tax;); column when the line has two of that name.
+          - without line, name Type.method: every call of the static method becomes its body, \
+          the arguments in place of the parameters, and the method is deleted (return a + \
+          tax(a) with static double tax(double x) { return x * 0.2; } becomes return a + (a * \
+          0.2);); an argument whose effects would run in another order is bound to a local first.
+          Type-checks the project; a change that adds compile errors is refused. Refuses, saying \
+          why: a field or parameter, a variable assigned after its declaration, an instance, \
+          varargs, generic or recursive method, a body that is not one return or one statement, \
+          a method used as Type::name.\
+          """,
+          List.of(
+              Arg.FILE.described(
+                  "Java file path relative to the project root: the variable's, or the file that"
+                      + " declares the method."),
+              Arg.string("name", "The variable, or Type.method for a static method.").required(),
+              Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
+              Arg.integer("column", "Optional 1-based column of the name, when the line has two.")),
+          Kind.REFACTORING,
+          Tools::inline);
+
+  private static Outcome inline(SourceProject project, Args args) throws Exception {
+    String name = args.required("name");
+    Map<String, Object> values = new LinkedHashMap<>();
+    values.put("file", args.required("file"));
+    values.put("name", name);
+    Def target;
+    if (args.integer("line") != null) {
+      target = INLINE_VARIABLE;
+      values.put("line", args.integer("line"));
+      if (args.integer("column") != null) {
+        values.put("column", args.integer("column"));
+      }
+    } else if (name.contains(".")) {
+      if (args.integer("column") != null) {
+        throw new Refusal("column is for a variable, with line; a method is named Type.method.");
+      }
+      target = INLINE_FUNCTION;
+    } else {
+      throw new Refusal(
+          "give line for the local variable "
+              + name
+              + " (a line it is declared or used on), or name a static method as Type."
+              + name
+              + " to inline every call of it.");
+    }
+    if (args.flag(Exceptional.FLAG)) {
+      values.put(Exceptional.FLAG, true);
+    }
+    Args routed = new Args(target.name(), values);
+    routed.check(target.args());
+    return target.handler().run(project, routed);
+  }
+
   static final Def REPLACE_TEXT =
       new Def(
           "replace_text",
@@ -1277,8 +1341,7 @@ final class Tools {
           MOVE_PARAMETER,
           EXTRACT_FUNCTION,
           EXTRACT_VARIABLE,
-          INLINE_VARIABLE,
-          INLINE_FUNCTION,
+          INLINE,
           FOLD,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
@@ -1305,7 +1368,7 @@ final class Tools {
           "method_to_function",
           """
           Make an instance method static in its own class, the instance its first parameter: \
-          move_member with to the method's class.\
+          move with to the method's class.\
           """,
           List.of(
               Arg.FILE.described(
@@ -1331,7 +1394,11 @@ final class Tools {
           "move_member",
           MOVE_MEMBER,
           "move_file",
-          MOVE_FILE);
+          MOVE_FILE,
+          "inline_function",
+          INLINE_FUNCTION,
+          "inline_variable",
+          INLINE_VARIABLE);
 
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
@@ -1413,8 +1480,7 @@ final class Tools {
   private static Outcome inlineVariable(SourceProject project, Args args) throws Exception {
     Integer line = args.integer("line");
     if (line == null) {
-      throw new Refusal(
-          "inline_variable needs line, a line on which the variable is declared or used.");
+      throw new Refusal("inline of a variable needs line, a line on which it is declared or used.");
     }
     return InlineVariable.run(
         project, args.required("file"), line, args.required("name"), args.integer("column"));

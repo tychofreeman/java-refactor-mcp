@@ -68,18 +68,20 @@ final class InlineFunction {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     TypeDeclaration type = opened.topLevel(typeName);
-    BodyDeclaration declared = MemberMove.member(type, typeName, member, rel, "inline_function");
+    BodyDeclaration declared = MemberMove.member(type, typeName, member, rel, "inline");
     Precondition.require(
         Precondition.that(
             () -> declared instanceof MethodDeclaration,
-            () -> name + " is a field. inline_function inlines a method."));
+            () ->
+                name
+                    + " is a field. inline takes a method as Type.method, or a local variable with line."));
     MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
     Precondition.require(
         Precondition.that(() -> method != null, () -> name + " does not resolve."),
         Precondition.that(
             () -> !m.isVarargs() && m.typeParameters().isEmpty(),
-            () -> name + " is varargs or generic, which inline_function does not inline yet."),
+            () -> name + " is varargs or generic, which inline does not inline yet."),
         Precondition.that(
             () -> m.getBody() != null,
             () -> name + " has no body (abstract or native), so there is nothing to inline."));
@@ -202,7 +204,7 @@ final class InlineFunction {
             name
                 + " is used as a method reference (Type::name) in "
                 + project.relative(p)
-                + ", which inline_function cannot rewrite. Change it to a call first.");
+                + ", which inline cannot rewrite. Change it to a call first.");
       }
       if (sites.isEmpty()) {
         continue;

@@ -33,13 +33,13 @@ final class InlineVariable {
     if (variable.isField()) {
       throw new Refusal(
           name
-              + " is a field. inline_variable inlines a local variable; a field needs its uses"
+              + " is a field. inline with line inlines a local variable; a field needs its uses"
               + " changed another way.");
     }
     if (variable.isParameter()) {
       throw new Refusal(
           name
-              + " is a parameter. inline_variable inlines a local variable declared with an"
+              + " is a parameter. inline with line inlines a local variable declared with an"
               + " initializer.");
     }
     VariableDeclarationFragment fragment = declarationOf(unit, variable, name);
