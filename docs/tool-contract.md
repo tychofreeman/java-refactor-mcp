@@ -89,6 +89,11 @@ primitives (`replace_expression`, `insert_statements`, `replace_statements`,
 
 Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
 
+- no arguments (roadmap #111, 2026-11-06, as gorefactor's module overview): `Source roots, and
+  in each its packages, ...`, each root (`. (the project root)` when it is the root), under it
+  `  <package> (<n> lines): A.java 9, B.java 5`, then `<p> packages, <f> files, <l> lines`, why
+  the classpath is empty when it is, and a line naming the other ways to read.
+
 - `file`: a header (`<file>  (package <pkg>, <n> lines)`), then every line
   numbered, except that each method, constructor and initializer body with two
   inner lines or more is replaced by `… lines a-b   [n lines]`. Bodies of

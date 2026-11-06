@@ -1,0 +1,7 @@
+Source roots, and in each its packages, one a line, with their files' line counts:
+. (the project root)
+  com.example (14 lines): Cart.java 9, Item.java 5
+
+1 package, 2 files, 14 lines
+
+Read code with inspect: file for an outline (start_line and end_line for lines), pattern to find lines, names for declarations by name.

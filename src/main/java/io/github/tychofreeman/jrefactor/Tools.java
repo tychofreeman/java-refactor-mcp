@@ -91,6 +91,7 @@ final class Tools {
           "inspect",
           """
           Read Java code with line numbers. Use it before a refactoring to get exact lines.
+          - no arguments: the source roots, their packages and files with line counts.
           - file: the file with method, constructor and initializer bodies elided: declarations, \
           fields, signatures and comments in full, and in place of each body of two lines or more \
           the lines it takes.
@@ -1237,6 +1238,9 @@ final class Tools {
                 + " start_line and end_line, or the pattern.");
       }
       return Outcome.of(Inspect.pattern(project, args.string("file"), pattern));
+    }
+    if (args.string("file") == null && start == null && end == null) {
+      return Outcome.of(Inspect.overview(project));
     }
     String file = args.required("file");
     if (start == null && end == null) {
