@@ -675,7 +675,12 @@ arguments.
   expression becomes the name. The expression must be literals and constants
   (static final fields): anything else would be evaluated at another time or
   place ("uses a local, a parameter, a field that is not a constant, or a
-  call"). Refused also: a field of that name already in the type. Result:
+  call"). As a `parameter` (roadmap #125, 2026-11-06, gorefactor's `parameterize`), the
+  expression may also use the method's parameters that it never assigns: each call passes it
+  with its own arguments in their place, parenthesized unless a name or a literal
+  (`total(n + 1, 3)` passes `(n + 1) / 10` for `qty / 10`); a call whose argument for such a
+  parameter has effects is refused ("would run them twice"). Refused also: a field of that name
+  already in the type. Result:
   `introduced constant RATE (private static final double RATE = 0.2) in Price,
   in place of 0.2 at line 5 of <file>`; for a parameter, `add_parameter`'s
   result and `; 0.2 at line 5 is now rate`.
