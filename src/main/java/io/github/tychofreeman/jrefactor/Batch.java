@@ -16,25 +16,92 @@ final class Batch {
   private Batch() {}
 
   static Outcome run(SourceProject project, Args args) throws Exception {
-    List<Map<String, Object>> steps = args.objects("steps");
-    if (steps.isEmpty()) {
+    Session session = project.session();
+    List<Map<String, Object>> given = args.objects("steps");
+    if (given.isEmpty()) {
       throw new Refusal("batch needs steps: a list of {\"tool\": ..., \"args\": {...}}.");
     }
-    String check = args.string("check") == null ? "each" : args.string("check");
-    if (!check.equals("each") && !check.equals("end")) {
-      throw new Refusal("check must be \"each\" or \"end\"; got " + check + ".");
+    List<Map<String, Object>> steps = given;
+    String check = args.string("check");
+    if (args.flag("retry")) {
+      if (session.refusedBatch == null) {
+        throw new Refusal(
+            "retry resends the last refused batch, and there is no refused batch since the last"
+                + " one passed; send the whole batch.");
+      }
+      steps = retried(session.refusedBatch, given);
+      check = check == null ? session.refusedCheck : check;
     }
-    if (check.equals("end")) {
-      Gate.Checked<String> checked =
-          Gate.checkedAtEnd(
-              project,
-              () -> steps(project, steps, true),
-              "the batch",
-              "Add the steps that fix them, or change the steps that cause them.");
-      return new Outcome(
-          checked.result() + "\nchecked at the end: no new compile errors", checked.declared());
+    String mode = check == null ? "each" : check;
+    if (!mode.equals("each") && !mode.equals("end")) {
+      throw new Refusal("check must be \"each\" or \"end\"; got " + mode + ".");
     }
-    return Outcome.of(steps(project, steps, false));
+    List<Map<String, Object>> run = steps;
+    try {
+      Outcome outcome;
+      if (mode.equals("end")) {
+        Gate.Checked<String> checked =
+            Gate.checkedAtEnd(
+                project,
+                () -> steps(project, run, true),
+                "the batch",
+                "Add the steps that fix them, or change the steps that cause them.");
+        outcome =
+            new Outcome(
+                checked.result() + "\nchecked at the end: no new compile errors",
+                checked.declared());
+      } else {
+        outcome = Outcome.of(steps(project, run, false));
+      }
+      session.refusedBatch = null;
+      return outcome;
+    } catch (Refusal refusal) {
+      session.refusedBatch = run;
+      session.refusedCheck = mode;
+      throw new Refusal(
+          refusal.getMessage()
+              + "\nTo fix it without resending the rest, batch with retry: true and only the steps"
+              + " that change, by their number here: {\"step\": 2, \"args\": {...}} replaces step"
+              + " 2, {\"after\": 2, \"tool\": ..., \"args\": {...}} adds one after it.");
+    }
+  }
+
+  /**
+   * The steps of {@code base}, the refused batch, with {@code changes} made: {@code step} N
+   * replaces step N (keeping its tool when the change names none), {@code after} N adds a step
+   * after step N (0 for first). Numbers are those of {@code base}.
+   */
+  static List<Map<String, Object>> retried(
+      List<Map<String, Object>> base, List<Map<String, Object>> changes) {
+    List<Map<String, Object>> out = new ArrayList<>(base);
+    java.util.TreeMap<Integer, List<Map<String, Object>>> added = new java.util.TreeMap<>();
+    for (Map<String, Object> c : changes) {
+      Map<String, Object> step = new LinkedHashMap<>(c);
+      Object replace = step.remove("step");
+      Object after = step.remove("after");
+      if ((replace == null) == (after == null)) {
+        throw new Refusal(
+            "each step of a retry has step (the number of the one it replaces) or after (the"
+                + " number of the one it follows), not both or neither.");
+      }
+      int n = ((Number) (replace != null ? replace : after)).intValue();
+      if (n < (replace != null ? 1 : 0) || n > base.size()) {
+        throw new Refusal(
+            "the refused batch has steps 1 to " + base.size() + "; " + n + " is none of them.");
+      }
+      if (replace != null) {
+        if (!step.containsKey("tool")) {
+          step.put("tool", base.get(n - 1).get("tool"));
+        }
+        out.set(n - 1, step);
+      } else {
+        added.computeIfAbsent(n, k -> new ArrayList<>()).add(step);
+      }
+    }
+    for (Map.Entry<Integer, List<Map<String, Object>>> e : added.descendingMap().entrySet()) {
+      out.addAll(e.getKey(), e.getValue());
+    }
+    return out;
   }
 
   /**

@@ -1324,7 +1324,10 @@ final class Tools {
           an earlier step changed instead: "$prev.start", "$prev.end", "$2.end", "$id.start+1".
           If a step is refused, nothing changes and the result says which step and why. check \
           "end" type-checks once, after the last step, so edits may pass through code that does \
-          not compile yet (a signature, then its callers). One undo reverts the whole batch.\
+          not compile yet (a signature, then its callers). One undo reverts the whole batch.
+          After a refusal, retry: true resends that batch with only the steps that change: \
+          {"step": 3, "args": {...}} replaces step 3 (its tool kept), {"after": 2, "tool": ..., \
+          "args": {...}} adds a step after step 2.\
           """,
           List.of(
               Arg.json(
@@ -1344,11 +1347,14 @@ final class Tools {
                             },
                             "id": {
                               "type": "string"
+                            },
+                            "step": {
+                              "type": "integer"
+                            },
+                            "after": {
+                              "type": "integer"
                             }
-                          },
-                          "required": [
-                            "tool"
-                          ]
+                          }
                         }
                       }\
                       """)
@@ -1357,7 +1363,11 @@ final class Tools {
                   "check",
                   "Type-check after each step (default), or once at the end.",
                   "each",
-                  "end")),
+                  "end"),
+              Arg.bool(
+                  "retry",
+                  "Resend the last refused batch with only these steps changed: step N replaces"
+                      + " step N, after N adds one after it.")),
           Kind.CONTROL,
           (project, args) -> Batch.run(project, args));
 
