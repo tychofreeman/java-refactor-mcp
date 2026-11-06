@@ -205,6 +205,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - Instance to static in place is `move_member` with `to` its own class; static to
   instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).
 
+- `create_file` with `declaration` (#114, 2026-11-05) is `Skeleton`: the header parsed with
+  bindings, then stubs for `Skeleton.unimplemented` (abstract methods of the supertypes that
+  nothing in the hierarchy implements, by `isSubsignature` within one parse).
+
 - The edit primitives (#91, 2026-11-04) are `Primitives`: `replace_expression`,
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.

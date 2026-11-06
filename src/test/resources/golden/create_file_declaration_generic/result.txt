@@ -1,0 +1,1 @@
+created com/example/Money.java (8 lines); stubs for what its supertypes leave abstract: Comparable.compareTo(Money)

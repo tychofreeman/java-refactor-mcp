@@ -790,11 +790,18 @@ final class Tools {
           root, and the project must type-check no worse after. Methods, constructors and \
           classes of the project it uses that nothing declares are declared as stubs (a test \
           written first compiles); other new errors are refused.
-          The file must not exist, unless overwrite is set to replace all of it.\
+          The file must not exist, unless overwrite is set to replace all of it.
+          With declaration in place of content, a .java file starts as its type: the package \
+          line and the declaration (final class Cart implements Priced), with a stub for each \
+          method its supertypes leave abstract; add members after with add_declaration.\
           """,
           List.of(
               Arg.FILE.described("Path relative to the project root."),
-              Arg.string("content", "The whole file.").required(),
+              Arg.string("content", "The whole file (or declaration in its place)."),
+              Arg.string(
+                  "declaration",
+                  "For a .java file, in place of content: its type's header, such as final"
+                      + " class Cart implements Priced or record Line(int qty)."),
               Arg.bool("overwrite", "Replace the file if it exists.")),
           Kind.EDIT,
           (project, args) -> Edits.createFile(project, args));
