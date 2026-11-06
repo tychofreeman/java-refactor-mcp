@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,14 +15,21 @@ import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
+import org.eclipse.jdt.core.dom.RecordPattern;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -250,6 +258,13 @@ final class ExtractStruct {
             () -> holder + " is not a valid name for the field that holds it."),
         Precondition.that(() -> !chosen.isEmpty(), () -> "fields names the fields to move."));
     Opened opened = Opened.of(project, rel);
+    for (Object t : opened.unit().types()) {
+      if (t instanceof RecordDeclaration r
+          && r.getName().getIdentifier().equals(args.required("name"))
+          && r.resolveBinding() != null) {
+        return components(project, args, opened, r);
+      }
+    }
     String text = opened.text();
     TypeDeclaration owner = opened.topLevel(args.required("name"));
     String ownerName = owner.getName().getIdentifier();
@@ -412,6 +427,243 @@ final class ExtractStruct {
             + holder
             + written.fixed().said(),
         written.declared());
+  }
+
+  /**
+   * extract_struct with fields on a record: the named components, next to each other, become one
+   * component of a new record in a file of its own. Every construction passes the new record in
+   * their place, and every accessor call and read of them goes through it ({@code
+   * o.address().street()}).
+   */
+  private static Outcome components(
+      SourceProject project, Args args, Opened opened, RecordDeclaration owner) throws Exception {
+    String struct = args.required("struct");
+    String holder = args.required("field");
+    List<String> chosen = args.list("fields");
+    String text = opened.text();
+    String ownerName = owner.getName().getIdentifier();
+    String key = owner.resolveBinding().getErasure().getKey();
+    Path target = opened.file().resolveSibling(struct + ".java");
+    Precondition.require(
+        Precondition.that(
+            () -> !Files.exists(target),
+            () -> project.relative(target) + " already exists. Choose another name."));
+    List<?> all = owner.recordComponents();
+    List<Integer> at = new ArrayList<>();
+    for (String f : chosen) {
+      int found = -1;
+      for (int k = 0; k < all.size(); k++) {
+        if (((SingleVariableDeclaration) all.get(k)).getName().getIdentifier().equals(f)) {
+          found = k;
+        }
+      }
+      int index = found;
+      Precondition.require(
+          Precondition.that(
+              () -> index >= 0, () -> f + " is not a component of " + ownerName + "."));
+      at.add(index);
+    }
+    Collections.sort(at);
+    int first = at.get(0);
+    int last = at.get(at.size() - 1);
+    MethodDeclaration constructor = null;
+    boolean definesToString = false;
+    Set<String> names = new TreeSet<>();
+    for (Object o : all) {
+      names.add(((SingleVariableDeclaration) o).getName().getIdentifier());
+    }
+    for (Object o : owner.bodyDeclarations()) {
+      if (o instanceof MethodDeclaration m) {
+        names.add(m.getName().getIdentifier());
+        if (m.isConstructor() && constructor == null) {
+          constructor = m;
+        }
+        if (m.getName().getIdentifier().equals("toString") && m.parameters().isEmpty()) {
+          definesToString = true;
+        }
+      }
+    }
+    MethodDeclaration explicit = constructor;
+    boolean printed = definesToString || args.flag("value_semantics");
+    Precondition.require(
+        Precondition.that(
+            () -> last - first == at.size() - 1,
+            () ->
+                Extract.and(chosen)
+                    + " are not next to each other in "
+                    + ownerName
+                    + ", and grouped at one place the arguments of each construction would run"
+                    + " in another order. Group components that are next to each other."),
+        Precondition.that(
+            () -> explicit == null,
+            () ->
+                ownerName
+                    + " declares a constructor (line "
+                    + opened.unit().getLineNumber(explicit.getStartPosition())
+                    + "), whose parameters and assignments extract_struct does not rewrite yet."),
+        Precondition.that(
+            () -> !names.contains(holder) || chosen.contains(holder),
+            () -> ownerName + " already names " + holder + ". Choose another name for the holder."),
+        Precondition.that(
+            () -> printed,
+            () ->
+                ownerName
+                    + "'s generated toString would print "
+                    + holder
+                    + "="
+                    + struct
+                    + "[...] where it printed "
+                    + Extract.and(chosen)
+                    + ". Pass value_semantics=true to accept that, or define toString first."));
+    List<String> components = new ArrayList<>();
+    for (int i = first; i <= last; i++) {
+      SingleVariableDeclaration c = (SingleVariableDeclaration) all.get(i);
+      String unusable = unusable(c.resolveBinding().getType());
+      Precondition.require(
+          Precondition.that(
+              () -> !c.isVarargs(),
+              () -> c.getName() + " is varargs, which stays last. Leave it out."),
+          Precondition.that(
+              () -> unusable == null,
+              () ->
+                  "the type of "
+                      + c.getName()
+                      + " "
+                      + unusable
+                      + ", which the new record in its own file cannot name. Leave it out."));
+      components.add(text.substring(c.getStartPosition(), Nodes.end(c)));
+    }
+
+    Map<Path, String> texts = new LinkedHashMap<>();
+    for (Path f : project.javaFiles()) {
+      String t = Files.readString(f);
+      if (f.equals(opened.file())
+          || t.contains(ownerName)
+          || chosen.stream().anyMatch(t::contains)) {
+        texts.put(f, t);
+      }
+    }
+    Map<Path, CompilationUnit> units = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
+    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+    List<String> refused = new ArrayList<>();
+    for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
+      Path file = e.getKey();
+      CompilationUnit u = e.getValue();
+      String t = texts.get(file);
+      List<TextEdit> here = new ArrayList<>();
+      String where = project.relative(file) + " line ";
+      for (ClassInstanceCreation c : Nodes.all(u, ClassInstanceCreation.class)) {
+        IMethodBinding b = c.resolveConstructorBinding();
+        if (b != null && b.getDeclaringClass().getErasure().getKey().equals(key)) {
+          List<?> arguments = c.arguments();
+          int s = ((ASTNode) arguments.get(first)).getStartPosition();
+          here.add(new TextEdit(s, s, "new " + struct + "("));
+          int end = Nodes.end((ASTNode) arguments.get(last));
+          here.add(new TextEdit(end, end, ")"));
+        }
+      }
+      for (MethodInvocation m : Nodes.all(u, MethodInvocation.class)) {
+        IMethodBinding b = m.resolveMethodBinding();
+        if (b != null
+            && b.getDeclaringClass().getErasure().getKey().equals(key)
+            && m.arguments().isEmpty()
+            && chosen.contains(b.getName())) {
+          int s = m.getName().getStartPosition();
+          here.add(new TextEdit(s, s, holder + "()."));
+        }
+      }
+      for (SimpleName n : Nodes.all(u, SimpleName.class)) {
+        if (!n.isDeclaration()
+            && n.resolveBinding() instanceof IVariableBinding v
+            && v.isField()
+            && v.getDeclaringClass() != null
+            && v.getDeclaringClass().getErasure().getKey().equals(key)
+            && chosen.contains(v.getName())) {
+          here.add(
+              new TextEdit(
+                  n.getStartPosition(), Nodes.end(n), holder + "." + n.getIdentifier() + "()"));
+        }
+      }
+      for (MethodReference r : Nodes.all(u, MethodReference.class)) {
+        IMethodBinding b = r.resolveMethodBinding();
+        if (b != null
+            && b.getDeclaringClass().getErasure().getKey().equals(key)
+            && (b.isConstructor() || chosen.contains(b.getName()))) {
+          refused.add(
+              t.substring(r.getStartPosition(), Nodes.end(r))
+                  + " ("
+                  + where
+                  + u.getLineNumber(r.getStartPosition())
+                  + ")");
+        }
+      }
+      for (RecordPattern p : Nodes.all(u, RecordPattern.class)) {
+        ITypeBinding b = p.getPatternType().resolveBinding();
+        if (b != null && b.getErasure().getKey().equals(key)) {
+          refused.add(
+              "the pattern "
+                  + t.substring(p.getStartPosition(), Nodes.end(p))
+                  + " ("
+                  + where
+                  + u.getLineNumber(p.getStartPosition())
+                  + ")");
+        }
+      }
+      if (file.equals(opened.file())) {
+        int s = ((ASTNode) all.get(first)).getStartPosition();
+        here.add(new TextEdit(s, Nodes.end((ASTNode) all.get(last)), struct + " " + holder));
+      }
+      if (!here.isEmpty()) {
+        edits.put(file, here);
+      }
+    }
+    if (!refused.isEmpty()) {
+      throw new Refusal(
+          String.join(", ", refused)
+              + " would need the components it names apart, which extract_struct does not rewrite"
+              + " yet. Write it as a lambda or with the accessors first.");
+    }
+
+    String pkg =
+        opened.unit().getPackage() == null
+            ? ""
+            : "package " + opened.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    String visibility = Modifier.isPublic(owner.getModifiers()) ? "public " : "";
+    String created =
+        pkg + visibility + "record " + struct + "(" + String.join(", ", components) + ") {}\n";
+    Gate.applyOrRefuse(
+        project,
+        Map.of(target, Imports.fix(project, target, "", created, List.of()).text()),
+        "creating " + struct,
+        "Nothing was changed.");
+    Map<Path, String> changed = new LinkedHashMap<>();
+    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
+      String before = texts.get(e.getKey());
+      String after = TextEdit.apply(before, e.getValue(), 0);
+      changed.put(
+          e.getKey(), Imports.fix(project, e.getKey(), before, after, args.list("imports")).text());
+    }
+    Stubs.Declared declared =
+        Gate.applyOrRefuse(
+            project, changed, "moving components into " + struct, "Nothing was changed.");
+    List<String> files = new ArrayList<>();
+    for (Path f : changed.keySet()) {
+      files.add(project.relative(f));
+    }
+    return new Outcome(
+        "moved "
+            + Extract.and(chosen)
+            + " of "
+            + ownerName
+            + " into "
+            + struct
+            + " ("
+            + project.relative(target)
+            + "), held in "
+            + holder
+            + "; changed "
+            + String.join(", ", files),
+        declared);
   }
 
   /** Whether an initializer can run when the holder is made: constants and new objects of them. */

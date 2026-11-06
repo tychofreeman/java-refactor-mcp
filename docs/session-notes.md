@@ -200,7 +200,10 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
-  (`ExtractStruct.fields`), for fields only their class uses.
+  (`ExtractStruct.fields`), for fields only their class uses. On a record, `fields` is
+  `ExtractStruct.components` (#118, 2026-11-05): constructions, accessor calls and field reads
+  found by the record's binding key in one `parseAll`; `value_semantics=true` accepts the
+  changed `toString` (the user's choice; the options it beat are in the contract).
 
 - Instance to static in place is `move_member` with `to` its own class; static to
   instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).

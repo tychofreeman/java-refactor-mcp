@@ -326,6 +326,19 @@ new record), `parameter` (the new parameter's name), `imports`.
   (new objects of constants are fine), a final field without an initializer, a
   static field, a holder name the class already uses. Result: `moved street and
   city of Person into Address (com/example/Address.java), held in home`.
+- On a record (`name` a top-level record, roadmap #118): the named components, next
+  to each other, become one component `<Struct> <field>` of a new record in a file
+  beside it (public when the record is); every construction passes `new
+  Address("Main St", "Springfield")` in their place, every accessor call becomes
+  `o.address().street()`, and a read of the field in the record's body
+  `address.street()`. The record's generated `toString` changes, so the call takes
+  `value_semantics=true` unless the record defines `toString` (the user's choice,
+  2026-11-05, over doing it and reporting the change, and over writing a `toString`
+  that prints the old text). Refused: components not next to each other, an explicit
+  constructor (canonical, compact or other), a method reference to an accessor or
+  `Order::new`, a record pattern of the record, a type the new file cannot name.
+  Result: `moved street and city of Order into Address (com/example/Address.java),
+  held in address; changed com/example/Order.java, ...`.
 
 ## `function_to_method` (built), and `move_member` in place
 
