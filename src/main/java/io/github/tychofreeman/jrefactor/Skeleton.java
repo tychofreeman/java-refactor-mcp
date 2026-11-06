@@ -111,7 +111,7 @@ final class Skeleton {
   }
 
   /** A "not implemented" method that implements {@code m}, indented one step of two spaces. */
-  private static String stub(IMethodBinding m) {
+  static String stub(IMethodBinding m) {
     int mods = m.getModifiers();
     String visibility =
         Modifier.isPublic(mods) || m.getDeclaringClass().isInterface()
@@ -130,6 +130,26 @@ final class Skeleton {
         + "("
         + String.join(", ", parameters(m))
         + ") {\n    throw new UnsupportedOperationException(\"not implemented\");\n  }\n";
+  }
+
+  /**
+   * An override of the concrete method {@code m} that calls it ({@code super.m(a)}, or {@code
+   * I.super.m(a)} for an interface's default method), so behavior is unchanged until it is edited;
+   * indented one step of two spaces.
+   */
+  static String override(IMethodBinding m) {
+    String stub = stub(m);
+    List<String> names = new ArrayList<>();
+    for (String p : parameters(m)) {
+      names.add(p.substring(p.lastIndexOf(' ') + 1));
+    }
+    String receiver =
+        m.getDeclaringClass().isInterface()
+            ? m.getDeclaringClass().getErasure().getName() + ".super"
+            : "super";
+    String call = receiver + "." + m.getName() + "(" + String.join(", ", names) + ");";
+    String body = m.getReturnType().getName().equals("void") ? call : "return " + call;
+    return stub.replace("throw new UnsupportedOperationException(\"not implemented\");", body);
   }
 
   /** "Type name" for each parameter; a name a binary class lacks comes from its type. */

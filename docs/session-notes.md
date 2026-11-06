@@ -220,6 +220,10 @@ Each was chosen from options; the record named beside it has the options it beat
   bindings, then stubs for `Skeleton.unimplemented` (abstract methods of the supertypes that
   nothing in the hierarchy implements, by `isSubsignature` within one parse).
 
+- `implement` on `add_declaration` (#123, 2026-11-06) is `Implement`: the target type from a
+  binding parse, `Skeleton.unimplemented` for `*`, else the supertypes walked nearest first;
+  `Skeleton.stub` and `Skeleton.override` write the members.
+
 - `test_for` on `create_file` and `add_declaration` (#115, 2026-11-05) is `TestFor`: the
   target through `Holding`, the framework through `Imports.known`; `add_declaration` passes
   the framework's classes as chosen imports, so the import fix places them.

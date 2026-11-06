@@ -511,6 +511,13 @@ in the same turn only if it is sent after it.
   only `throw new UnsupportedOperationException("not implemented")` is replaced, and so is a
   field of the same name with no value whose line ends in `// not implemented`. Result: `added
   <members> to <type> in <file>, lines a-b` or `replaced the stub <m> ...`.
+  `implement` in place of `content` (roadmap #123, 2026-11-06): `*` adds an `@Override` "not
+  implemented" stub for each abstract method the supertypes leave (`Skeleton.unimplemented`);
+  a method's name (`describe`, `Base.describe`, `describe(int)`), from the supertypes nearest
+  first, `Object`'s included, adds that one: a stub if abstract, else an override whose body
+  calls it (`return super.describe(n);`, `I.super.m()` for a default method). Refused: `*` with
+  nothing left, a name no supertype declares (listing what it can take), several overloads.
+  Private, static and final methods are not offered.
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
   `(parameter types)` for an overload), `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old

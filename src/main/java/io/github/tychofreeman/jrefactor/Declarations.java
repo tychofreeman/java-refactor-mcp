@@ -48,11 +48,14 @@ final class Declarations {
     String rel = args.required("file");
     String content = args.string("content");
     String testFor = args.string("test_for");
-    if ((content == null) == (testFor == null)) {
+    String implement = args.string("implement");
+    int given = (content == null ? 0 : 1) + (testFor == null ? 0 : 1) + (implement == null ? 0 : 1);
+    if (given != 1) {
       throw new Refusal(
-          content == null
-              ? "add_declaration needs content, or test_for for a test of a method."
-              : "add_declaration takes content or test_for, not both.");
+          given == 0
+              ? "add_declaration needs content, test_for for a test of a method, or implement for"
+                  + " methods of a supertype."
+              : "add_declaration takes one of content, test_for and implement.");
     }
     String after = args.string("after");
     String before = args.string("before");
@@ -82,6 +85,9 @@ final class Declarations {
         chosen.add(framework.assertions());
       }
       made = TestFor.note(target);
+    }
+    if (implement != null) {
+      content = Implement.members(project, path, text, args.string("type"), implement);
     }
     Planned planned = plan(text, rel, args.string("type"), content, after, before);
 
