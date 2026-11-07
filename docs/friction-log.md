@@ -921,3 +921,6 @@ book may not have been initialized") and the model sent fields and constructor a
 The compile refusal could name the operation, as the skeleton refusal does: "declare them with
 `constructor: [book, member, due]` in the same batch". No tool does it now; the batch is the
 composition, found by the model after a refusal. Record: `docs/sessions/ab-library-skeleton.md`.
+
+Follow-up (2026-11-06, `docs/sessions/final-fields-constructor.md`): the compile refusal now
+names `constructor` with the unset fields, in `Gate.refusal`, so every edit's refusal says it.

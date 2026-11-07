@@ -3,9 +3,12 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Applies an edit under the type-check gate: writes the new texts, type-checks the project, and
@@ -53,7 +56,8 @@ final class Gate {
   /**
    * The refusal for an edit that adds {@code introduced} errors: "{@code what} would add compile
    * errors, so nothing was changed", the errors, a note when Maven gave no classpath, then {@code
-   * fix}.
+   * fix}; blank final fields left unset name the {@code constructor} that sets them instead, or
+   * before {@code fix} when other errors come with them.
    */
   private static Refusal refusal(
       SourceProject project, List<String> introduced, String what, String fix) {
@@ -63,14 +67,34 @@ final class Gate {
             ? "\nMaven gave no classpath, so library types do not resolve: "
                 + project.classpathProblem()
             : "";
+    List<String> unset = new ArrayList<>();
+    for (String error : introduced) {
+      Matcher m = BLANK_FINAL.matcher(error);
+      if (m.find() && !unset.contains(m.group(1))) {
+        unset.add(m.group(1));
+      }
+    }
+    String next = fix;
+    if (!unset.isEmpty()) {
+      String constructor =
+          "A constructor sets final fields: add_declaration with constructor: [\""
+              + String.join("\", \"", unset)
+              + "\"] writes it; send it with the fields, in one batch.";
+      boolean only = introduced.stream().allMatch(e -> BLANK_FINAL.matcher(e).find());
+      next = only ? constructor : constructor + "\n" + fix;
+    }
     return new Refusal(
         what
             + " would add compile errors, so nothing was changed:\n  "
             + String.join("\n  ", introduced)
             + missing
             + "\n"
-            + fix);
+            + next);
   }
+
+  /** A compile error for a final field no constructor sets; its group 1 is the field's name. */
+  private static final Pattern BLANK_FINAL =
+      Pattern.compile("The blank final field (\\w+) may not have been initialized");
 
   /**
    * Writes each file's new text; a null text deletes the file. Returns the compile errors the edit
