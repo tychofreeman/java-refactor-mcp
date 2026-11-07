@@ -120,6 +120,17 @@ suggested first. Options it beat: choosing only a prior import (fewer guesses, b
 `org.eclipse.jdt.core.dom` family case still refused), and never choosing (one refusal for all
 names, but still a resend). The type check stays behind every choice.
 
+**Decided 2026-11-07 (the user): the model should not be concerned with layout.** `add_declaration`
+places each new member by kind: a field or initializer after the type's last field, a constructor
+after its last constructor or field (before its first member when it has none of those), and any
+other member at its end. `after` and `before` left the published schema and are accepted and
+ignored, so no description offers the model a layout choice; a member that replaces a stub keeps
+the stub's place. Options it beat: the same placement with `after`/`before` still published (a
+smaller change, but the description keeps offering the choice, and a run sent `before` it did not
+need), and leaving members at the end. Order does not change what a class does (only field
+initializers and initializer blocks run in the order written, and a field still goes after the
+fields), so placement is a convention for readers, and the tool can keep it alone.
+
 **Decided 2026-11-07 (the user): an edit that leaves final fields unset writes their
 constructor.** When an edit adds a final instance field with no value to a class that has no
 constructor but "not implemented" stubs, the edit adds one taking all such fields in

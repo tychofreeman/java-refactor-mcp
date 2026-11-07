@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -62,11 +63,6 @@ final class Declarations {
                   + " methods of a supertype, or constructor for one from fields."
               : "add_declaration takes one of content, test_for, implement and constructor.");
     }
-    String after = args.string("after");
-    String before = args.string("before");
-    if (after != null && before != null) {
-      throw new Refusal("Give after or before, not both.");
-    }
     Path path = project.javaFile(rel);
     String text = Files.readString(path);
     List<String> chosen = new ArrayList<>(args.list("imports"));
@@ -100,7 +96,7 @@ final class Declarations {
     if (constructor) {
       content = FromFields.constructor(text, rel, args.string("type"), args.list("constructor"));
     }
-    Planned planned = plan(text, rel, args.string("type"), content, after, before);
+    Planned planned = plan(text, rel, args.string("type"), content);
 
     Edits.Written written =
         Edits.gated(
@@ -132,8 +128,7 @@ final class Declarations {
    * {@code text}, the file {@code rel}, with {@code content}'s members added to {@code type}: at
    * its end, or after or before the member named. Stubs among them are replaced instead.
    */
-  static Planned plan(
-      String text, String rel, String type, String content, String after, String before) {
+  static Planned plan(String text, String rel, String type, String content) {
     CompilationUnit unit = Edits.parses(text, rel);
     Owner owner = owner(unit, type, rel);
     List<BodyDeclaration> added = members(content);
@@ -141,8 +136,8 @@ final class Declarations {
 
     String where = owner.label() + " in " + rel;
     List<Change> changes = new ArrayList<>();
-    List<String> pending = new ArrayList<>();
-    List<String> addedLabels = new ArrayList<>();
+    List<BodyDeclaration> pending = new ArrayList<>();
+    Map<BodyDeclaration, String> blocks = new HashMap<>();
     for (BodyDeclaration d : added) {
       String block = reindent(content, d, indent);
       BodyDeclaration stub = stubFor(owner.decl(), d, text);
@@ -155,21 +150,31 @@ final class Declarations {
         changes.add(
             new Change(start, Lines.end(text, end(stub)), block + "\n", 0, block.length(), said));
       } else {
-        pending.add(block);
-        addedLabels.add(label(d));
+        pending.add(d);
+        blocks.put(d, block);
       }
     }
-    if (!pending.isEmpty()) {
-      String blocks = String.join("\n\n", pending);
-      String said = "added " + String.join(", ", addedLabels) + " to " + where;
-      if (after != null) {
-        BodyDeclaration m = member(owner, after, true);
+    // Each member goes where its kind goes: a field after the last field, a constructor after the
+    // last constructor or field, before the first member when there is none; the rest at the end.
+    pending.sort(Comparator.comparingInt(Declarations::rank));
+    Map<Place, List<BodyDeclaration>> byPlace = new LinkedHashMap<>();
+    for (BodyDeclaration d : pending) {
+      byPlace.computeIfAbsent(place(owner.decl(), rank(d)), p -> new ArrayList<>()).add(d);
+    }
+    for (Map.Entry<Place, List<BodyDeclaration>> e : byPlace.entrySet()) {
+      String joined = String.join("\n\n", e.getValue().stream().map(blocks::get).toList());
+      String said =
+          "added "
+              + String.join(", ", e.getValue().stream().map(Declarations::label).toList())
+              + " to "
+              + where;
+      BodyDeclaration m = e.getKey().member();
+      if (m != null && !e.getKey().before()) {
         int at = Lines.end(text, end(m));
-        changes.add(new Change(at, at, "\n" + blocks + "\n", 1, blocks.length(), said));
-      } else if (before != null) {
-        BodyDeclaration m = member(owner, before, false);
+        changes.add(new Change(at, at, "\n" + joined + "\n", 1, joined.length(), said));
+      } else if (m != null) {
         int at = Lines.start(text, m.getStartPosition());
-        changes.add(new Change(at, at, blocks + "\n\n", 0, blocks.length(), said));
+        changes.add(new Change(at, at, joined + "\n\n", 0, joined.length(), said));
       } else {
         int close = end(owner.decl());
         int at = Lines.start(text, close);
@@ -178,9 +183,9 @@ final class Declarations {
           at = close;
         }
         String gap = owner.decl().bodyDeclarations().isEmpty() ? "" : "\n";
-        String insert = lead + gap + blocks + "\n";
+        String insert = lead + gap + joined + "\n";
         changes.add(
-            new Change(at, at, insert, lead.length() + gap.length(), blocks.length(), said));
+            new Change(at, at, insert, lead.length() + gap.length(), joined.length(), said));
       }
     }
 
@@ -466,30 +471,6 @@ final class Declarations {
     }
   }
 
-  /** The member of {@code owner} named {@code name}: the last such if {@code last}, else first. */
-  private static BodyDeclaration member(Owner owner, String name, boolean last) {
-    BodyDeclaration found = null;
-    for (Object o : owner.decl().bodyDeclarations()) {
-      BodyDeclaration d = (BodyDeclaration) o;
-      if (names(d).contains(name) || label(d).replace(" ", "").equals(name.replace(" ", ""))) {
-        found = d;
-        if (!last) {
-          break;
-        }
-      }
-    }
-    if (found == null) {
-      throw new Refusal(
-          owner.label()
-              + " has no member "
-              + name
-              + ". Its members are "
-              + memberLabels(owner.decl())
-              + ".");
-    }
-    return found;
-  }
-
   private static String memberLabels(AbstractTypeDeclaration type) {
     List<String> labels = new ArrayList<>();
     for (Object o : type.bodyDeclarations()) {
@@ -732,5 +713,38 @@ final class Declarations {
   /** The offset of the last character of {@code node}. */
   private static int end(ASTNode node) {
     return node.getStartPosition() + node.getLength() - 1;
+  }
+
+  /** Where new members go: after {@code member}, before it, or (null) at the type's end. */
+  private record Place(BodyDeclaration member, boolean before) {}
+
+  /** 0 for a field or initializer, 1 for a constructor, 2 for any other member. */
+  private static int rank(BodyDeclaration d) {
+    if (d instanceof FieldDeclaration || d instanceof Initializer) {
+      return 0;
+    }
+    return d instanceof MethodDeclaration m && m.isConstructor() ? 1 : 2;
+  }
+
+  /**
+   * Where a member of {@code rank} goes in {@code type}: after its last member of that rank or
+   * lower; for a field or constructor with none, before its first member; otherwise its end.
+   */
+  private static Place place(AbstractTypeDeclaration type, int rank) {
+    if (rank == 2) {
+      return new Place(null, false);
+    }
+    BodyDeclaration last = null;
+    for (Object o : type.bodyDeclarations()) {
+      if (rank((BodyDeclaration) o) <= rank) {
+        last = (BodyDeclaration) o;
+      }
+    }
+    if (last != null) {
+      return new Place(last, false);
+    }
+    return type.bodyDeclarations().isEmpty()
+        ? new Place(null, false)
+        : new Place((BodyDeclaration) type.bodyDeclarations().get(0), true);
   }
 }

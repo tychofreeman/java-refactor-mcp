@@ -1,12 +1,10 @@
 package com.example;
 
 public class A {
+  int e = 5;
+
   int b(int x) {
     return x;
-  }
-
-  int e() {
-    return 5;
   }
 
   int c() {

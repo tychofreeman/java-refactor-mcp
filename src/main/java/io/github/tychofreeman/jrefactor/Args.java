@@ -121,4 +121,11 @@ final class Args {
     }
     return new Args(tool, out);
   }
+
+  /** These arguments without {@code names}: ones a tool still accepts and ignores. */
+  Args without(Set<String> names) {
+    Map<String, Object> out = new java.util.LinkedHashMap<>(values);
+    out.keySet().removeAll(names);
+    return new Args(tool, out);
+  }
 }

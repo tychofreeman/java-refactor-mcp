@@ -554,7 +554,7 @@ final class Stubs {
       }
       for (Map.Entry<String, List<String>> type : byType.entrySet()) {
         String content = String.join("\n\n", type.getValue());
-        text = Declarations.plan(text, rel, type.getKey(), content, null, null).text();
+        text = Declarations.plan(text, rel, type.getKey(), content).text();
       }
       if (before != null) {
         text =

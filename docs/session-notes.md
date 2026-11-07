@@ -118,6 +118,10 @@ Each was chosen from options; the record named beside it has the options it beat
   file path renames the file. One `inline` likewise replaces inline_function and
   inline_variable (#122, 2026-11-06: `Tools.inline`, `line` for a local, `Type.method` for a
   static method), and takes inline class when it is built (#128).
+- Layout is the tool's, not the model's (the user, 2026-11-07, options in `docs/design.md`):
+  `add_declaration` places members by kind (`Declarations.place`); `after` and `before` are retired,
+  accepted and ignored (`Tools.RETIRED_ARGS`, dropped by `Args.without` before the argument check).
+  A new option that would make the model choose a place is against this choice.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 

@@ -116,8 +116,7 @@ final class FromFields {
       done.add(type);
       try {
         String content = constructor(text, rel, type, fields);
-        text =
-            Declarations.plan(text, rel, type, content, fields.get(fields.size() - 1), null).text();
+        text = Declarations.plan(text, rel, type, content).text();
         String simple = type.substring(type.lastIndexOf('.') + 1);
         notes.add(
             "added constructor "

@@ -1,0 +1,5 @@
+boolean empty() {
+  return size == 0;
+}
+
+private int limit;

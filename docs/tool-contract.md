@@ -63,7 +63,9 @@ there. Rename one of them, or qualify it, first."
 
 The server's MCP `instructions` (`Server.INSTRUCTIONS`, 2026-11-06) say once what descriptions
 used to repeat: a change that would add compile errors is refused; a refusal changes nothing
-and says why and what to send instead; edits declare stubs and fix imports; lines are 1-based.
+and says why and what to send instead; edits declare stubs (a constructor stub sets the fields
+its arguments each fit, 2026-11-07), write the constructor of final fields they leave unset in a
+class without one (2026-11-07), and fix imports; lines are 1-based.
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
@@ -634,8 +636,12 @@ in the same turn only if it is sent after it.
   red test of that method, as `create_file`'s, named after it (`total2` when taken), with
   the framework's imports added.
 - `add_declaration`: `file`, `content` (members), `type` (`Outer` or
-  `Outer.Inner`; default the file's only top-level type), `after` / `before` (a
-  member name). Members are re-indented to match. A method with the same name
+  `Outer.Inner`; default the file's only top-level type). Members are re-indented to match and
+  placed by kind (the user, 2026-11-07): a field or initializer after the type's last field, a
+  constructor after its last constructor or field, either before its first member when it has
+  none of those, and any other member at its end; members of one kind keep their order in
+  `content`, and each place is a part of the result. `after` and `before` (a member name, until
+  then) are accepted and ignored (`Tools.RETIRED_ARGS`). A method with the same name
   and parameter types, compared erased (`List` and `List<?>`, roadmap #107), whose body is
   only `throw new UnsupportedOperationException("not implemented")` is replaced, and so is a
   field of the same name with no value whose line ends in `// not implemented`. A constructor

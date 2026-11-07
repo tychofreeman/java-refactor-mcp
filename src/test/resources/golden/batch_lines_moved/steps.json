@@ -3,8 +3,7 @@
     "tool": "add_declaration",
     "args": {
       "file": "com/example/A.java",
-      "before": "c",
-      "content": "int e() {\n  return 5;\n}\n"
+      "content": "int e = 5;\n"
     }
   },
   {

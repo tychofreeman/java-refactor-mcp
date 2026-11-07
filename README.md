@@ -24,7 +24,10 @@ What you get:
   `preserve_exceptions`.
 - **Test first that compiles.** A test that calls code that does not exist
   yet gets "not implemented" stubs, typed from the use, so the project
-  still builds.
+  still builds; a constructor whose arguments each fit one field sets them.
+- **Boilerplate written for you.** Final fields added to a class with no
+  constructor get one that sets them, and new members are placed by kind
+  (fields with fields, constructors after them, the rest at the end).
 - **Undo** for every call and every batch.
 
 What is not proven: that it saves tokens. On the one task set measured so
