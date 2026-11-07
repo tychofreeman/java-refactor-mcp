@@ -100,7 +100,7 @@ server (`/mcp`, jrefactor, Reconnect).
    tool's description says what follows. When a line has two meanings, `name`
    picks one: `Counter.count` or `local count`.
 4. **Write through the edits:** `create_file` for new files (tests, fixtures),
-   `add_declaration` for new members (by `type`, `after`/`before`),
+   `add_declaration` for new members (by `type`; placed by kind),
    `replace_declaration` for a whole method, field or type by name (empty
    content deletes), `replace_text` for a few lines, literals, comments and
    non-Java files (`append` adds at the end of a file: a friction-log entry). Imports are added and removed for you; pass `imports` when a

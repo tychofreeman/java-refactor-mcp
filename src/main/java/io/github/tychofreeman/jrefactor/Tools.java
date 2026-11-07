@@ -962,9 +962,10 @@ final class Tools {
           "add_declaration",
           """
           Add members (methods, fields, constructors, nested types) to a type (the file's only \
-          top-level one unless type names it), at its end or after or before a named member; \
-          content is the members at any indentation. A member with a stub's signature replaces \
-          the stub, and a constructor replaces one of its parameter types that only assigns fields.
+          top-level one unless type names it): fields after its fields, constructors after its \
+          constructors or fields, the rest at its end; content is the members at any \
+          indentation. A member with a stub's signature replaces the stub, and a constructor \
+          replaces one of its parameter types that only assigns fields.
           In place of content: test_for (Cart.total) writes a red test of that method; implement \
           (* for every abstract method left, or a supertype's method such as toString) writes \
           stubs, or overrides that call super; constructor (field names, in order) writes a \
@@ -986,8 +987,6 @@ final class Tools {
                   "In place of content, in a test class: the method to test, as Type.method or"
                       + " Type.method(int)."),
               Arg.string("type", "Optional: the type to add to, as Outer or Outer.Inner."),
-              Arg.string("after", "Optional: put them just after this member (a name)."),
-              Arg.string("before", "Optional: put them just before this member."),
               Arg.IMPORTS),
           Kind.EDIT,
           (project, args) -> Declarations.add(project, args));
@@ -1499,7 +1498,9 @@ final class Tools {
    */
   static Outcome call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
     Args args =
-        new Args(def.name(), values).renamed(ARG_ALIASES.getOrDefault(def.name(), Map.of()));
+        new Args(def.name(), values)
+            .renamed(ARG_ALIASES.getOrDefault(def.name(), Map.of()))
+            .without(RETIRED_ARGS.getOrDefault(def.name(), Set.of()));
     args.check(def.args());
     Journal.begin(project, def.name());
     Session session = project.session();
@@ -1534,4 +1535,11 @@ final class Tools {
       failure.addSuppressed(undo);
     }
   }
+
+  /**
+   * Arguments a tool still accepts and ignores, by tool: add_declaration places members by kind, so
+   * after and before no longer choose where (the user, 2026-11-07).
+   */
+  static final Map<String, Set<String>> RETIRED_ARGS =
+      Map.of("add_declaration", Set.of("after", "before"));
 }

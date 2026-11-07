@@ -414,6 +414,17 @@ constructor and lost ten turns. A step the tool takes for the model has to accep
 own next step for the same thing; so `add_declaration` now replaces a constructor that only
 assigns fields, as it replaces a stub.
 
+A rerun after that fix passed, and showed one more thing: the model had asked for its
+constructor `before` the getters, and a replacement kept its place instead. Asked why that
+mattered, the honest answer was that it did not: Java does not care where a method or constructor
+sits, only a reader does. The user then set the rule: the model should not be concerned with
+layout as much as possible. `add_declaration` stopped taking `after` and `before` (they are
+accepted and ignored) and places members by kind, fields with the fields, constructors after them,
+the rest at the end. The options it beat were the same placement with the arguments still
+published, and no change. It is the same move as the day's others, aimed at attention rather than
+typing: what only one answer fits, or what does not change behavior, the tool decides, and the
+model's choices are kept for what the code means.
+
 ## Descriptions say what a tool does (2026-11-06)
 
 The user asked why the descriptions of `create_file` and its neighbours were so long. The answer
