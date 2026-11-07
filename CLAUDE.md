@@ -119,7 +119,9 @@ same arguments and results: `bin/jrefactor list`, `bin/jrefactor rename
 file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
 `-` for stdin; alone, its `"tool"` key names the tool), and `content_file=path`
 (any `key_file`) for long text, or `content_file=-` to pass it from a heredoc
-(one argument per call), without a script or a scratch file.
+(one argument per call), without a script or a scratch file. Code for a JSON
+object (a `batch`) goes after it, unescaped, in sections: a line `@@name` starts
+one, and the JSON string `"@name"` is its text, its last newline dropped.
 Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
 call, also one from an earlier run. Send several steps as one `batch`. The jar
 is rebuilt when a commit changes `pom.xml` or `src/main`, not for uncommitted

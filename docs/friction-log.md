@@ -981,3 +981,12 @@ the parameter types of one that only assigns fields replaces it, so the fields a
 Follow-up (2026-11-07, `docs/sessions/skeleton-replace-statements.md`): under skeleton-only,
 `replace_statements` in a member's own body is checked on the member it leaves, so a stub
 constructor filled with field assignments is refused, naming `constructor`.
+
+## 2026-11-07: code escaped in the CLI's JSON (batch-sections)
+
+Code sent through `bin/jrefactor` in a JSON object (a batch) had to be escaped
+as JSON strings; gorefactor found escaping cost resends (its #606). Now the code
+goes after the JSON in `@@name` sections, which a string `"@name"` stands for.
+Before it, this branch's own two Java edits went as two calls with
+`content_file=-`, not one batch, and the second was refused for a line number an
+import of the first had moved (`docs/sessions/batch-sections.md`).

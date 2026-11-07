@@ -12,6 +12,10 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -38,7 +42,10 @@ final class Cli {
       current directory); files are relative to it. key_file=path gives the text argument
       key from a file (content_file, new_file, old_file); key_file=- gives it from stdin, so
       a heredoc can pass it (one argument per call). @file reads the JSON arguments from a
-      file, - from stdin. undo reverts the last call, also one made by an earlier run.
+      file, - from stdin. After the JSON object, a line @@name starts a section, its text
+      the lines up to the next such line or the end, the last newline dropped; a JSON
+      string "@name" is that text, so code goes in unescaped. undo reverts the last call,
+      also one made by an earlier run.
       Exit status: 0 done, 2 refused (nothing changed), 1 error.
       """;
 
@@ -174,7 +181,103 @@ final class Cli {
         word.equals("-")
             ? new String(System.in.readAllBytes(), StandardCharsets.UTF_8)
             : word.startsWith("@") ? Files.readString(Path.of(word.substring(1))) : word;
-    return JSON.readValue(text, new TypeReference<Map<String, Object>>() {});
+    return withSections(text);
+  }
+
+  /** A line that starts a code section: {@code @@name} alone on it. */
+  private static final Pattern SECTION_LINE =
+      Pattern.compile("(?m)^@@([A-Za-z_][A-Za-z0-9_-]*)[ \\t]*$");
+
+  /** A section's name, as a string {@code "@name"} gives it. */
+  private static final Pattern SECTION_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_-]*");
+
+  /**
+   * The JSON object {@code text} begins with, each string {@code "@name"} of it replaced by the
+   * text of section {@code name} after the object: {@code @@name} alone on a line and the lines
+   * after it, to the next section or the end, its last newline dropped. A section no string names,
+   * a section given twice, and a name with no section beside sections that are given are refused.
+   */
+  private static Map<String, Object> withSections(String text) {
+    Matcher line = SECTION_LINE.matcher(text);
+    List<MatchResult> starts = new ArrayList<>();
+    while (line.find()) {
+      starts.add(line.toMatchResult());
+    }
+    if (starts.isEmpty()) {
+      return JSON.readValue(text, new TypeReference<Map<String, Object>>() {});
+    }
+    Map<String, String> sections = new LinkedHashMap<>();
+    for (int i = 0; i < starts.size(); i++) {
+      MatchResult start = starts.get(i);
+      int end = i + 1 < starts.size() ? starts.get(i + 1).start() : text.length();
+      String body = text.substring(start.end(), end);
+      body = body.startsWith("\n") ? body.substring(1) : body;
+      body = body.endsWith("\n") ? body.substring(0, body.length() - 1) : body;
+      if (sections.putIfAbsent(start.group(1), body) != null) {
+        throw new Refusal("section @@" + start.group(1) + " is given twice.");
+      }
+    }
+    Map<String, Object> json;
+    try {
+      json =
+          JSON.readValue(
+              text.substring(0, starts.get(0).start()),
+              new TypeReference<Map<String, Object>>() {});
+    } catch (JacksonException e) {
+      throw new Refusal(
+          "the JSON before section @@" + starts.get(0).group(1) + ": " + e.getOriginalMessage());
+    }
+    Map<String, Boolean> used = new LinkedHashMap<>();
+    json.replaceAll((key, value) -> replaceSections(value, sections, used));
+    for (String name : sections.keySet()) {
+      if (!used.containsKey(name)) {
+        throw new Refusal(
+            "section @@" + name + " is not used: no string of the JSON is \"@" + name + "\".");
+      }
+    }
+    for (Map.Entry<String, Boolean> name : used.entrySet()) {
+      if (!name.getValue()) {
+        throw new Refusal(
+            "the JSON names section @@"
+                + name.getKey()
+                + ", which is not given (did a heredoc end before it?).");
+      }
+    }
+    return json;
+  }
+
+  /**
+   * {@code value} with each string {@code "@name"} that names a section replaced by its text,
+   * marking the sections it used true in {@code used} and the names it has no section for false.
+   */
+  private static Object replaceSections(
+      Object value, Map<String, String> sections, Map<String, Boolean> used) {
+    switch (value) {
+      case String s when s.startsWith("@") -> {
+        String name = s.substring(1);
+        if (sections.containsKey(name)) {
+          used.put(name, true);
+          return sections.get(name);
+        }
+        if (SECTION_NAME.matcher(name).matches()) {
+          used.putIfAbsent(name, false);
+        }
+      }
+      case List<?> list -> {
+        List<Object> replaced = new ArrayList<>();
+        for (Object element : list) {
+          replaced.add(replaceSections(element, sections, used));
+        }
+        return replaced;
+      }
+      case Map<?, ?> map -> {
+        Map<Object, Object> replaced = new LinkedHashMap<>();
+        map.forEach((key, element) -> replaced.put(key, replaceSections(element, sections, used)));
+        return replaced;
+      }
+      case null, default -> {}
+    }
+    return value;
   }
 
   /**
