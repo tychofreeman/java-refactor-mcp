@@ -942,3 +942,12 @@ supertypes the file's type lacks.
 
 Follow-up (2026-11-06, `docs/sessions/override-names-add-supertype.md`): the compile refusal for
 `@Override` methods in a type with no such supertype now names `add_supertype` for it.
+
+## 2026-11-07: replace_declaration of a type passes the skeleton rule (A/B, library-reservation)
+
+Under `JREFACTOR_SKELETON_ONLY=1`, reservation run 2 was refused `add_declaration` of a
+constructor that only assigns its fields (the refusal named `constructor`), and then sent the whole
+`Reservation` class, that constructor and its getters typed, as `replace_declaration` of
+`Reservation`, which the rule does not check. The skeleton checks (`Generated` on the members, and
+a type's members typed in place of operations) could run on `replace_declaration` of a type too.
+Record: `docs/sessions/ab-hints.md`.

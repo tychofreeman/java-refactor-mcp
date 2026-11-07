@@ -1,0 +1,16 @@
+[
+  {
+    "name": "library-reservation",
+    "dir": "testdata/library",
+    "tests": "testdata/library-reservation",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add a class lib.loan.Reservation that holds a Book, a Member and a java.time.LocalDate due date, in final fields with getters book(), member() and due(), and a constructor that takes them in that order. Then add Library.reserve(Book book, Member member, LocalDate today), which returns a Reservation due 14 days after today."
+  },
+  {
+    "name": "library-notifiers",
+    "dir": "testdata/library",
+    "tests": "testdata/library-notifiers",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add three notifiers in package lib.notify that implement Notifier, each in its own file: SmsNotifier, whose channel is \"sms\" and whose format(to, text) gives \"SMS to <to>: <text>\"; PushNotifier, channel \"push\", giving \"Push to <to>: <text>\"; and PagerNotifier, channel \"pager\", giving \"PAGE <to>: <text in capitals>\"."
+  }
+]
