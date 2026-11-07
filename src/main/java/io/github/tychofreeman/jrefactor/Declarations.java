@@ -576,7 +576,7 @@ final class Declarations {
     return out;
   }
 
-  private static boolean isStub(MethodDeclaration m) {
+  static boolean isStub(MethodDeclaration m) {
     if (m.getBody() == null || m.getBody().statements().size() != 1) {
       return false;
     }

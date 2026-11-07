@@ -955,3 +955,7 @@ Record: `docs/sessions/ab-hints.md`.
 Follow-up (2026-11-07, `docs/sessions/skeleton-replace-declaration.md`): under skeleton-only,
 `replace_declaration` of a type now runs the member checks on the new type's members, and the
 refusal names the `add_declaration` to send after the replacement, in one batch.
+
+Follow-up (2026-11-07, `docs/sessions/fields-make-constructor.md`): final fields added to a class
+with no real constructor now get one written by the edit itself, so the blank-final refusal is
+left for classes that have constructors.

@@ -120,6 +120,18 @@ suggested first. Options it beat: choosing only a prior import (fewer guesses, b
 `org.eclipse.jdt.core.dom` family case still refused), and never choosing (one refusal for all
 names, but still a resend). The type check stays behind every choice.
 
+**Decided 2026-11-07 (the user): an edit that leaves final fields unset writes their
+constructor.** When an edit adds a final instance field with no value to a class that has no
+constructor but "not implemented" stubs, the edit adds one taking all such fields in
+declaration order, after the last of them (a stub of the same parameter types is replaced in
+its place), and the result names it; a top-level class that then fits `convert_to_record` is
+named so. A class with a real constructor is still refused, naming `constructor`: which
+constructor sets the field is the model's choice. Options it beat: a stub constructor from a
+test's call that assigns fields matching its arguments by type (chosen as well, as a later
+item: a bigger guess, and real behavior where a stub fails), and only a refusal that suggests a
+record (no turn saved). Before, the refusal named `constructor` (#265), and A/B runs showed a
+turn spent on each such steer.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

@@ -400,6 +400,12 @@ through `replace_declaration`, which skeleton-only did not check. The checks now
 (2026-11-07). A rule that steers is only as good as its coverage of the edits that can carry the
 same text.
 
+The user then asked why a model should have to ask for a constructor at all. A refusal that
+names the operation still costs a turn, and where the tool can tell what is meant it can just do
+it: an edit that leaves new final fields unset in a class with no constructor now writes the
+constructor, and says when the class would fit a record (2026-11-07). Steering by refusal is for
+choices the model has to make; when only one result makes sense, the tool should produce it.
+
 ## Descriptions say what a tool does (2026-11-06)
 
 The user asked why the descriptions of `create_file` and its neighbours were so long. The answer

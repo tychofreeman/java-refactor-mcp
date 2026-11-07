@@ -1,0 +1,2 @@
+private final String book;
+private final String member;
