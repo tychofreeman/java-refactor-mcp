@@ -275,7 +275,8 @@ Calls need no change, since `Sub` inherits the method.
 
 ## `extract_supertype` (built)
 
-Roadmap #85, 2026-11-04. Arguments: `file`, `name` (a top-level class, not
+Roadmap #85, 2026-11-04. `extract_interface`, the old name in Go and TypeScript (renamed
+there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `file`, `name` (a top-level class, not
 generic), `supertype` (the new type's simple name), `kind` (`interface` or
 `class`), `members` (names, with parameter types for an overload).
 
