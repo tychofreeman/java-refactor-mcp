@@ -305,6 +305,9 @@ Each was chosen from options; the record named beside it has the options it beat
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went
   unused even where the tasks call for them; manual was cheapest and passed every run.
+- The written constructors (#272, #273) ran on 2026-11-07 (`docs/sessions/ab-constructors.md`,
+  `eval-tasks/library-constructors.json`): #272 replaced the `constructor` call where the model
+  left it out, and collided with it where the model sent both (a duplicate constructor).
 - The refusal hints were rerun on 2026-11-07 (`docs/sessions/ab-hints.md`, `eval-tasks/library-hints.json`):
   each hint that fired was followed in the next call; `replace_declaration` of a type passes the
   skeleton rule.
