@@ -5,7 +5,7 @@ are worth repeating, as gorefactor's `docs/how-this-project-was-built.md`
 does for the Go project. It draws on the git history, `docs/friction-log.md`,
 `docs/session-notes.md`, `docs/design.md` and the records in `docs/sessions/`.
 It was started on 2026-11-04, covering the work from 2026-11-02 (PRs #1-#103), and
-has been extended since; it now runs through PR #204 (2026-11-05).
+has been extended since; it now runs through PR #259 (2026-11-06).
 Judgments are Claude's; figures are from the records named beside them.
 Extend it in the PR that changes a decision, as gorefactor's was: add a line to
 the arc, and a dated section in order when the decision needs its reasons.
@@ -83,6 +83,31 @@ the arc, and a dated section in order when the decision needs its reasons.
     then starts as a declaration, and tests from their target (design note
     "Constructive transformations"; roadmap #114-#116; the conversation that led
     there is "From refactorings to transformations" below).
+14. **2026-11-06: parity with Go and TypeScript.** The user had gorefactor's
+    cross-language list (its `docs/parity.md`) merged into this roadmap as rows
+    #119-#130 (#222), then had them built in order (#223-#242): one name per
+    operation, the more generic one, with the old names kept as unpublished aliases
+    (`extract_function`, one `move`, one `inline`); the member-level operations the
+    transformations thesis asked for (`implement` and `constructor` on
+    `add_declaration`, `surround` on `replace_statements`); `move_member` to another
+    file and for static fields; `add_result`; `type_switch_to_method`; inline class
+    as `inline`'s field route; `add_parameter` on records. Item #130 was left until
+    friction raises it.
+15. **2026-11-06: the evidence a tool chooses on, and a second try.** Ambiguous imports
+    learned to go by the package's other files (#245) and to prefer the project's own
+    class (#244); a refused batch can be resent with only its changed steps (`retry`,
+    #247, #251).
+16. **2026-11-06: `replace_text` takes Go's spacing rule.** Roadmap #106 first got a
+    uniform indent shift (#221, #223); the user then replaced it with gorefactor's rule
+    (#254; below).
+17. **2026-11-06: what the runs said about the new operations.** The merged tool list
+    cost nothing measurable (#243); on tasks built for the constructive operations
+    (#252) no model used them, and only a refusal steered to one (#250, #253). The
+    skeleton refusal was widened to typed bodies a command writes (#255; below).
+18. **2026-11-06: descriptions say what a tool does.** The user asked why the
+    descriptions were so long, and changed the rule: refusals explain themselves,
+    and what every tool shares is said once, in the server's instructions (#256-#259;
+    below).
 
 ## Why `replace_text` carried so much (2026-11-04)
 
@@ -310,10 +335,93 @@ The lesson for this project: when the user names a symptom ("a loophole for writ
 ask what it is a symptom of before measuring it. The session measured the symptom it
 assumed, retyping; the user's concern was the vocabulary.
 
-## Open at the time of writing (2026-11-05)
+## One list for three languages (2026-11-06)
+
+gorefactor's `docs/parity.md` compares the Go, TypeScript and Java servers. The user asked for
+it to be found and folded into this repo's next items; it became roadmap #119-#130, ordered by
+evidence with the friction log's rows (#222). Each row that could go more than one way was put
+to the user as options, and the choices are recorded with the options they beat: one name per
+operation, the more generic (so `extract_function`, with `extract_method` kept as an alias that
+`batch` and the CLI accept but the tool list does not publish); one `move` and one `inline` that
+route by their arguments, as gorefactor's `Router` does; `implement` and `constructor` as options
+on `add_declaration` rather than new tools; a record for `add_result`; `type_switch_to_method` as
+one tool; inline class as a route of `inline`, with `split` deferred; `add_parameter` on records,
+not a new tool; and for extract class on a record, a flag (`value_semantics`) to accept the
+changed `toString` (#220). Aliases let a name change without breaking the goldens, the A/B
+harness's instructions or another session's habits, and refusals name only the published names,
+since a model calls only what it is shown.
+
+The merged list was A/B-checked before more was built on it (#243): 24 runs, every one passing,
+warehouse at $0.098 a run against a latest baseline of $0.095, shop 6% dearer, within the spread
+(`docs/sessions/ab-merged-tools.md`). Its one failure named an argument `move` did not take
+(`imports`) and suggested a test library's class over the project's own; both became #131 and
+were fixed the same day (#244).
+
+## `replace_text`: from a uniform shift to Go's rule (2026-11-06)
+
+The most frequent resend in this project's own work was an `old` copied from `inspect` with its
+indentation off (`inspect` puts two spaces between the number and the code). Roadmap #106 offered
+three rules: a uniform indent shift (every line off by the same amount), any spacing, or a better
+refusal. The user chose the uniform shift, which #221 and #223 built (`IndentShift`). Later in the
+day the user replaced it with gorefactor's rule, any run of spaces or tabs standing for any other
+within a line, so the three servers agree; asked what to do with `new` after a loose match, the
+user chose re-indenting it to the file over writing it as sent or refusing (#254). The shift
+lasted a few hours; the cost of the change was small because the matching was in one class. The
+lesson: a parity question is worth asking before a rule is built, not after.
+
+## The constructive operations, measured (2026-11-06)
+
+The transformations thesis (above) waited on member-level operations; by midday they existed.
+Two measurements followed. The skeleton arm on the shop tasks was rerun (#250): every run passed,
+cost fell from $0.217 to $0.186 and typed lines by 29%, but none of `implement`, `constructor`,
+`surround` or `test_for` was called; the gain came from the day's other work. So a task set was
+written to call for them (#252, `eval-tasks/library.json`: an interface to implement, a class from
+its fields, a try around a call, a test). On it (#253) manual passed 8 of 8 at $0.082 a run, the
+tools' arm 6 of 8 at $0.097, skeleton-only 7 of 8 at $0.117, and again no model used the options;
+the lost runs were heredocs the write guard refused.
+
+The finding is gorefactor's, met again: a description does not change what a model does; a
+refusal that names the alternative does. Skeleton-only was the one mechanism that had moved
+typing, so the user had it widened (#255) to the typed bodies a command writes: a constructor
+that only assigns fields (naming `constructor`), an override that only calls `super` or throws
+(naming `implement`), and statements wrapped unchanged in a try or a loop (naming `surround`).
+Asked whether to refuse any body typed into a `.java` file, the user said no: only the bodies a
+command would write, since the thesis is that typing is left for statements and expressions, not
+that typing is wrong. Whether the widened refusals steer to the operations is not yet measured.
+
+## Descriptions say what a tool does (2026-11-06)
+
+The user asked why the descriptions of `create_file` and its neighbours were so long. The answer
+was that each carried its refusals (CLAUDE.md had asked for that) and repeated what every tool
+shares: that it type-checks, declares stubs, fixes imports, and what a refusal is. All of it
+together was about 58,000 characters, sent to every session. The user changed the rule in
+CLAUDE.md (#256): a description says what the tool does, its arguments' meaning and an example;
+a refusal explains itself when it happens, and `docs/tool-contract.md` keeps the lists. What
+every tool shares went into `Server.INSTRUCTIONS`, about 530 characters sent once as the MCP
+server's instructions. The leftover refusal wording and boilerplate went in #257, and every
+`preserve_exceptions` description was cut to its first clause (#258); the total is now about
+42,400 characters.
+
+The user then asked whether `extract_struct`'s three cases (a parameter object, extract class,
+a record's components) meant anything different to a model. They did not: each grouped some
+members of a thing into a new type. The tool took one shape (#259): `name`, `members`, `struct`
+and `as`, the case following from whether `name` is a class, a record or a method; the old
+argument names are renamed on the way in (`Tools.ARG_ALIASES`), as tool aliases were. This
+continues the parity choice of one name per operation down to the arguments.
+
+The lesson: length in a description is not guidance a model uses (the A/B runs had shown that),
+and it is paid on every turn. When a description grows, ask whether the text belongs in the
+refusal, the shared instructions, or the contract.
+
+## Open at the time of writing (2026-11-06)
 
 - `CLAUDE.md` still lists literals as a `replace_text` use, though
   `replace_expression` exists since the edit primitives (#150).
+- The shorter descriptions (#256-#259) have not been A/B-checked against the baselines.
+- No model has yet used `implement`, `constructor`, `surround` or `test_for` unprompted; whether
+  the widened skeleton refusals (#255) steer to them is not measured.
+- `extract_struct` (1,913 characters) is still above gorefactor's per-tool cap of 1,700, and no
+  test here enforces a cap.
 - `docs/friction-log.md` was never counted for `replace_text` use before the
   ten tools were built; the claim in "Why `replace_text` carried so much"
   rests on reading the composites.
