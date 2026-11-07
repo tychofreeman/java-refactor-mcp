@@ -405,6 +405,9 @@ names the operation still costs a turn, and where the tool can tell what is mean
 it: an edit that leaves new final fields unset in a class with no constructor now writes the
 constructor, and says when the class would fit a record (2026-11-07). Steering by refusal is for
 choices the model has to make; when only one result makes sense, the tool should produce it.
+The user took the same step for stubs: a constructor declared from a test's call, whose
+arguments each fit one field, assigns them. It is the first stub that is real code, a guess
+kept to the cases with one answer.
 
 ## Descriptions say what a tool does (2026-11-06)
 
