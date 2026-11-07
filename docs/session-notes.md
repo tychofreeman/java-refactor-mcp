@@ -106,6 +106,8 @@ Each was chosen from options; the record named beside it has the options it beat
   aliases. Here that renamed extract_method to extract_function (#120, 2026-11-06: aliases in
   `Tools.ALIASES`, accepted by `batch` and the CLI, not published) and extract_supertype stays;
   move_statement and change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
+  Parity is kept where it makes sense (the user, 2026-11-06): `extract_struct` became `extract_type`
+  here first, a name generic enough for the three languages, for Go and TypeScript to follow.
   One `move` (the user, 2026-11-05) replaces move_type, move_member and move_file, the old
   names as aliases (#121, 2026-11-06: `Tools.move` routes by its arguments, as gorefactor's
   `Router`); refusals name `move`, since a model calls only what is published. `rename` of a
@@ -213,12 +215,13 @@ Each was chosen from options; the record named beside it has the options it beat
   `equals`/`hashCode`/`toString` change behavior, so the class must define them or the
   model must pass `value_semantics=true` (this session's decision).
 
-- `extract_struct` takes one shape since 2026-11-06 (`name`, `members`, `struct`, `as`): the case
+- `extract_type` (named `extract_struct` until 2026-11-06, the user: "struct" is Go's word; the old
+  name is an alias in `Tools.ALIASES`) takes one shape since 2026-11-06 (`name`, `members`, `struct`, `as`): the case
   follows from what `name` is; old argument names are renamed in `Tools.call` (`ARG_ALIASES`).
-- `extract_struct` (#89, 2026-11-04) is `ExtractStruct`: a parameter object, through
+- `extract_type` (#89, 2026-11-04) is `ExtractType`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
-  (`ExtractStruct.fields`), for fields only their class uses. On a record, `fields` is
-  `ExtractStruct.components` (#118, 2026-11-05): constructions, accessor calls and field reads
+  (`ExtractType.fields`), for fields only their class uses. On a record, `fields` is
+  `ExtractType.components` (#118, 2026-11-05): constructions, accessor calls and field reads
   found by the record's binding key in one `parseAll`; `value_semantics=true` accepts the
   changed `toString` (the user's choice; the options it beat are in the contract).
 

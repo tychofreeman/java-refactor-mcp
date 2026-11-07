@@ -97,8 +97,8 @@ forms. Each route's arguments, results and refusals are its section's below; Jav
 per-call inline yet. With `field` (roadmap #128, 2026-11-06, gorefactor's `inline_struct`),
 `name` a class and `field` its field holding a project class nothing else uses: that class's
 members take the field's place, `home.x` becomes `x` (`this.x` where a local hides it),
-`home.m()` becomes `m()`, and the class's file is deleted (the inverse of `extract_struct`
-`fields`). Refused: the class used elsewhere, a superclass or interfaces, a constructor with
+`home.m()` becomes `m()`, and the class's file is deleted (the inverse of `extract_type`
+on a class). Refused: the class used elsewhere, a superclass or interfaces, a constructor with
 work, an initializer other than `new Address()`, the field used other than to reach a member, a
 name the holder has. gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
@@ -335,9 +335,11 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
   in <file>; it now has the record's equals, hashCode and toString; made x()
   public`.
 
-## `extract_struct` (built)
+## `extract_type` (built)
 
-Roadmap #89, 2026-11-04, gorefactor's name. Arguments (one shape since 2026-11-06, the user's
+Roadmap #89, 2026-11-04. Named `extract_struct`, gorefactor's name, until 2026-11-06, when the
+user renamed it: "struct" is Go's word, and the new type here is a class or a record; the name
+is meant for all three servers. `extract_struct` stays an unpublished alias. Arguments (one shape since 2026-11-06, the user's
 choice): `file`, `name`, `members`, `struct`, `as`, `value_semantics`, `imports`. What is grouped
 follows from `name`: a top-level class of `file` (its fields: extract class, below), a record
 (its components, below), else a method (its parameters: a parameter object). `members` are
@@ -951,7 +953,7 @@ uses that the target cannot reach is the gate's compile error.
 A static field (roadmap #109, 2026-11-06): `name` `Shop.MAX` moves its declaration (Javadoc
 and all, widened from private, public across packages) to the end of `to`; `Shop.MAX`, a bare
 `MAX` and `this.MAX` become `Config.MAX`, and a static import of it imports it from there (that
-file's bare uses kept). Refused: an instance field (naming `extract_struct` and `pull_up`), a
+file's bare uses kept). Refused: an instance field (naming `extract_type` and `pull_up`), a
 declaration of several fields, an initializer that reads anything but constants (it would run
 when the new class is initialized). Result: `moved Shop.MAX to Config (com/example/Config.java);
 2 uses now name Config`.

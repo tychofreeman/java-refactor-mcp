@@ -313,7 +313,7 @@ final class MoveMember {
             () ->
                 member
                     + " is an instance field; move moves methods and static fields. Move"
-                    + " instance fields into a new class with extract_struct (fields), or to a"
+                    + " instance fields into a new class with extract_type (fields), or to a"
                     + " supertype or subtype with pull_up or push_down."),
         Precondition.that(
             () -> fd.fragments().size() == 1,
@@ -322,7 +322,7 @@ final class MoveMember {
     Expression init = frag.getInitializer();
     Precondition.require(
         Precondition.that(
-            () -> init == null || ExtractStruct.initializedAlone(init),
+            () -> init == null || ExtractType.initializedAlone(init),
             () ->
                 "the initializer of "
                     + member

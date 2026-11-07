@@ -37,17 +37,17 @@ import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
- * extract_struct with parameters (introduce parameter object): consecutive parameters of a method
+ * extract_type with parameters (introduce parameter object): consecutive parameters of a method
  * become one parameter of a new record, in the method and every declaration of its family; each
  * body reads the record's components where it read the parameters, and every call passes {@code new
  * Record(...)} of its arguments.
  */
-final class ExtractStruct {
+final class ExtractType {
 
-  private ExtractStruct() {}
+  private ExtractType() {}
 
   /**
-   * extract_struct: {@code members} of what {@code name} is, grouped into {@code struct} held as
+   * extract_type: {@code members} of what {@code name} is, grouped into {@code struct} held as
    * {@code as}: a top-level class's fields or record's components of {@code file}, else a method's
    * parameters.
    */
@@ -103,7 +103,7 @@ final class ExtractStruct {
             () ->
                 "lambdas implement "
                     + family.label
-                    + ", whose parameters extract_struct does not group yet. Write them as methods"
+                    + ", whose parameters extract_type does not group yet. Write them as methods"
                     + " first."));
 
     List<String> components = new ArrayList<>();
@@ -253,7 +253,7 @@ final class ExtractStruct {
   }
 
   /**
-   * extract_struct with fields (extract class): the named instance fields move into a new
+   * extract_type with fields (extract class): the named instance fields move into a new
    * package-private class in a file of its own, held by one {@code private final} field of the
    * class in the first one's place; every use goes through it ({@code home.street}).
    */
@@ -305,7 +305,7 @@ final class ExtractStruct {
               () -> "the declaration of " + f + " declares several fields. Split it first."),
           Precondition.that(
               () -> !Modifier.isStatic(decl.getModifiers()),
-              () -> f + " is static; extract_struct moves instance fields."));
+              () -> f + " is static; extract_type moves instance fields."));
       VariableDeclarationFragment frag = (VariableDeclarationFragment) decl.fragments().get(0);
       Expression init = frag.getInitializer();
       Precondition.require(
@@ -361,7 +361,7 @@ final class ExtractStruct {
       outside.forEach((where, lines) -> each.add(where + " " + Lines.list(new ArrayList<>(lines))));
       throw new Refusal(
           String.join("; ", each)
-              + ", and extract_struct moves only fields their class alone uses. Encapsulate them"
+              + ", and extract_type moves only fields their class alone uses. Encapsulate them"
               + " first (encapsulate_field), or leave them out.");
     }
     List<TextEdit> edits = new ArrayList<>();
@@ -443,7 +443,7 @@ final class ExtractStruct {
   }
 
   /**
-   * extract_struct with fields on a record: the named components, next to each other, become one
+   * extract_type with fields on a record: the named components, next to each other, become one
    * component of a new record in a file of its own. Every construction passes the new record in
    * their place, and every accessor call and read of them goes through it ({@code
    * o.address().street()}).
@@ -513,7 +513,7 @@ final class ExtractStruct {
                 ownerName
                     + " declares a constructor (line "
                     + opened.unit().getLineNumber(explicit.getStartPosition())
-                    + "), whose parameters and assignments extract_struct does not rewrite yet."),
+                    + "), whose parameters and assignments extract_type does not rewrite yet."),
         Precondition.that(
             () -> !names.contains(holder) || chosen.contains(holder),
             () -> ownerName + " already names " + holder + ". Choose another name for the holder."),
@@ -633,7 +633,7 @@ final class ExtractStruct {
     if (!refused.isEmpty()) {
       throw new Refusal(
           String.join(", ", refused)
-              + " would need the components it names apart, which extract_struct does not rewrite"
+              + " would need the components it names apart, which extract_type does not rewrite"
               + " yet. Write it as a lambda or with the accessors first.");
     }
 
