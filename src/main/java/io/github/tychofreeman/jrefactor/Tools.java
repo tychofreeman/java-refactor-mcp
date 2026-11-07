@@ -964,7 +964,7 @@ final class Tools {
           Add members (methods, fields, constructors, nested types) to a type (the file's only \
           top-level one unless type names it), at its end or after or before a named member; \
           content is the members at any indentation. A member with a stub's signature replaces \
-          the stub.
+          the stub, and a constructor replaces one of its parameter types that only assigns fields.
           In place of content: test_for (Cart.total) writes a red test of that method; implement \
           (* for every abstract method left, or a supertype's method such as toString) writes \
           stubs, or overrides that call super; constructor (field names, in order) writes a \

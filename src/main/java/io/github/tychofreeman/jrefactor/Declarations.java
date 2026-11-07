@@ -148,7 +148,10 @@ final class Declarations {
       BodyDeclaration stub = stubFor(owner.decl(), d, text);
       if (stub != null) {
         int start = Lines.start(text, stub.getStartPosition());
-        String said = "replaced the stub " + label(stub) + " in " + where;
+        String said =
+            stub instanceof MethodDeclaration m && !isStub(m)
+                ? "replaced the constructor " + label(stub) + ", which only set fields, in " + where
+                : "replaced the stub " + label(stub) + " in " + where;
         changes.add(
             new Change(start, Lines.end(text, end(stub)), block + "\n", 0, block.length(), said));
       } else {
@@ -536,7 +539,9 @@ final class Declarations {
   /**
    * The stub in {@code type} that {@code d} replaces: a method of its name whose parameter types
    * erase to the same ({@code List} and {@code List<?>}) and whose body only throws "not
-   * implemented", or a field of its name without a value whose line ends in the stub mark.
+   * implemented" (or, for a constructor, only assigns its parameters to fields of their names, as
+   * an edit or a stub may have written it), or a field of its name without a value whose line ends
+   * in the stub mark.
    */
   private static BodyDeclaration stubFor(
       AbstractTypeDeclaration type, BodyDeclaration d, String text) {
@@ -545,7 +550,7 @@ final class Declarations {
           && o instanceof MethodDeclaration old
           && old.getName().getIdentifier().equals(m.getName().getIdentifier())
           && erased(types(old)).equals(erased(types(m)))
-          && isStub(old)) {
+          && (isStub(old) || old.isConstructor() && Generated.onlyAssignsParameters(old))) {
         return old;
       }
       if (d instanceof FieldDeclaration f

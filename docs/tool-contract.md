@@ -636,8 +636,11 @@ in the same turn only if it is sent after it.
   member name). Members are re-indented to match. A method with the same name
   and parameter types, compared erased (`List` and `List<?>`, roadmap #107), whose body is
   only `throw new UnsupportedOperationException("not implemented")` is replaced, and so is a
-  field of the same name with no value whose line ends in `// not implemented`. Result: `added
-  <members> to <type> in <file>, lines a-b` or `replaced the stub <m> ...`.
+  field of the same name with no value whose line ends in `// not implemented`. A constructor
+  (by `content` or `constructor`) also replaces one of the same parameter types whose body only
+  assigns each parameter to the field of its name, as an edit (#272) or a stub (#273) writes it
+  (2026-11-07): `replaced the constructor Reservation(String, String), which only set fields,
+  ...`. Result: `added <members> to <type> in <file>, lines a-b` or `replaced the stub <m> ...`.
   `implement` in place of `content` (roadmap #123, 2026-11-06): `*` adds an `@Override` "not
   implemented" stub for each abstract method the supertypes leave (`Skeleton.unimplemented`);
   a method's name (`describe`, `Base.describe`, `describe(int)`), from the supertypes nearest
