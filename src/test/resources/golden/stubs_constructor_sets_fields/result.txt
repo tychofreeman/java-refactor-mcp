@@ -1,0 +1,1 @@
+added lends() to LoanTest in com/example/LoanTest.java, lines 4-7; declared stubs Loan(String, int) setting author, days in com/example/Loan.java

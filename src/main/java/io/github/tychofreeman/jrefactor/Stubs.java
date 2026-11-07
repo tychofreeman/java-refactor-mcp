@@ -31,6 +31,7 @@ import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.InfixExpression;
@@ -47,6 +48,7 @@ import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.Type;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -128,6 +130,9 @@ final class Stubs {
    * for a member it does not name.
    */
   private record Stub(String type, String key, String label, String code) {}
+
+  /** A constructor that assigns {@code fields} from its parameters, and its code. */
+  private record Setting(String code, List<String> fields) {}
 
   /** The project's files with errors in {@code introduced}, in order. */
   private static Set<Path> files(SourceProject project, List<String> introduced) {
@@ -394,10 +399,88 @@ final class Stubs {
       List<String> types = new ArrayList<>();
       String params = params(creation.arguments(), types);
       String label = type + "(" + String.join(", ", types) + ")";
+      Setting setting =
+          setting(target, owner, creation.arguments(), visibility(unit, owner) + simple);
+      if (setting != null) {
+        want(
+            target,
+            new Stub(
+                type,
+                label,
+                label + " setting " + String.join(", ", setting.fields()),
+                setting.code()));
+        return;
+      }
       want(
           target,
           new Stub(
               type, label, label, visibility(unit, owner) + simple + "(" + params + ")" + BODY));
+    }
+
+    /**
+     * A constructor of {@code owner}, declared in {@code target}, headed {@code head} (its access
+     * and name), that assigns each of {@code arguments} to the one field it fits: declared in
+     * {@code owner} with the argument's type, not static, not final with a value, and, of several,
+     * the one the argument names. Null when an argument fits none or several, two fit one field, or
+     * there are no arguments.
+     */
+    private Setting setting(Path target, ITypeBinding owner, List<?> arguments, String head)
+        throws IOException {
+      if (arguments.isEmpty()) {
+        return null;
+      }
+      Map<String, String> written = new LinkedHashMap<>();
+      CompilationUnit source = Edits.parses(Files.readString(target), project.relative(target));
+      for (TypeDeclaration t : Nodes.all(source, TypeDeclaration.class)) {
+        if (!t.getName().getIdentifier().equals(owner.getName())) {
+          continue;
+        }
+        for (FieldDeclaration f : t.getFields()) {
+          for (Object o : f.fragments()) {
+            VariableDeclarationFragment v = (VariableDeclarationFragment) o;
+            if (!Modifier.isStatic(f.getModifiers())
+                && !(Modifier.isFinal(f.getModifiers()) && v.getInitializer() != null)) {
+              written.put(
+                  v.getName().getIdentifier(), f.getType() + "[]".repeat(v.getExtraDimensions()));
+            }
+          }
+        }
+      }
+      Map<String, ITypeBinding> bound = new HashMap<>();
+      for (IVariableBinding f : owner.getDeclaredFields()) {
+        if (written.containsKey(f.getName())) {
+          bound.put(f.getName(), f.getType());
+        }
+      }
+      List<String> fields = new ArrayList<>();
+      for (Object a : arguments) {
+        ITypeBinding type = ((Expression) a).resolveTypeBinding();
+        if (type == null) {
+          return null;
+        }
+        List<String> fit = new ArrayList<>();
+        for (String field : written.keySet()) {
+          if (bound.containsKey(field) && bound.get(field).isEqualTo(type)) {
+            fit.add(field);
+          }
+        }
+        if (fit.size() > 1 && a instanceof SimpleName n && fit.contains(n.getIdentifier())) {
+          fit = List.of(n.getIdentifier());
+        }
+        if (fit.size() != 1 || fields.contains(fit.get(0))) {
+          return null;
+        }
+        fields.add(fit.get(0));
+      }
+      List<String> params = new ArrayList<>();
+      List<String> body = new ArrayList<>();
+      for (String field : fields) {
+        params.add(written.get(field) + " " + field);
+        body.add("  this." + field + " = " + field + ";");
+      }
+      return new Setting(
+          head + "(" + String.join(", ", params) + ") {\n" + String.join("\n", body) + "\n}",
+          fields);
     }
 
     /**

@@ -959,3 +959,7 @@ refusal names the `add_declaration` to send after the replacement, in one batch.
 Follow-up (2026-11-07, `docs/sessions/fields-make-constructor.md`): final fields added to a class
 with no real constructor now get one written by the edit itself, so the blank-final refusal is
 left for classes that have constructors.
+
+Follow-up (2026-11-07, `docs/sessions/stub-constructor-assigns.md`): a constructor declared from a
+call whose arguments each fit one field of the class assigns them, so a test written against an
+existing class with fields gets a working constructor.

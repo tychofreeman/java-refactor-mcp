@@ -502,7 +502,13 @@ the gate behind an empty stub class):
   compared or combined with, or passed as (for `assert*`, the other
   argument's); else Object;
 - a constructor of a project class, and `T() {}` beside it when T had only the
-  implicit one;
+  implicit one. When each argument fits exactly one field of T (declared in T, of the
+  argument's exact type, not static, not final with a value; of several, the one a plain-name
+  argument names), and no two fit one field, the constructor assigns them instead of throwing
+  (2026-11-07): `Loan(String author, int days) { this.author = author; ... }`, labeled "Loan(String,
+  int) setting author, days". It is real code, not a stub, so a test of it may pass at once, and
+  `add_declaration` of the same constructor is refused as a duplicate; change it with
+  `replace_declaration`;
 - a static field read as `T.NAME` on a project class (roadmap #107, 2026-11-06): `static
   <type> NAME; // not implemented`, the type from the use as for a method's result, no value;
 - a class nothing declares (a type, the receiver of a static call

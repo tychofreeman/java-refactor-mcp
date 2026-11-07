@@ -1,0 +1,3 @@
+void lends() {
+  Loan loan = new Loan("Le Guin", 3);
+}
