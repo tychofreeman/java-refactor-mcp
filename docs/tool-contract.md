@@ -569,7 +569,9 @@ in the same turn only if it is sent after it.
   (`implement`); `replace_statements` content that is the replaced statements wrapped in one
   `try`, `if`, `for`, `while` or `synchronized` (`surround`); and (2026-11-07) `replace_declaration` of a
   type whose new members include such a constructor or override, naming the `add_declaration` to
-  send after it in the same batch. Bodies with logic are not refused. With `declaration` (a
+  send after it in the same batch; `replace_statements` in a method's or constructor's own body
+  (its top-level block) that leaves it such a member, naming the `add_declaration` to send in its place, which replaces it
+  (2026-11-07). Bodies with logic are not refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes

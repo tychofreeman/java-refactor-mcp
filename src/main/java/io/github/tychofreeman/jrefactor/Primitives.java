@@ -9,6 +9,7 @@ import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
@@ -197,6 +198,17 @@ final class Primitives {
               + " with "
               + count
               + (count == 1 ? " line" : " lines");
+    }
+    if (project.session().skeletonOnly && block.getParent() instanceof MethodDeclaration m) {
+      // The whole body of a member: what it becomes is checked as add_declaration checks a member.
+      for (MethodDeclaration now : Nodes.all(Edits.parses(after, rel), MethodDeclaration.class)) {
+        if (now.getStartPosition() == m.getStartPosition()) {
+          Generated.checkMembers(
+              List.of(now),
+              " in an add_declaration in place of this replace_statements; it replaces the "
+                  + (m.isConstructor() ? "constructor." : "method."));
+        }
+      }
     }
     return gated(project, opened, after, args, said, "replacing statements");
   }

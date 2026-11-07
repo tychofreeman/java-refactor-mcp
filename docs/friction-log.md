@@ -977,3 +977,7 @@ that only assigns parameters to fields could replace it, as a stub is replaced. 
 Follow-up (2026-11-07, `docs/sessions/constructor-replaces-assigning.md`): a constructor added with
 the parameter types of one that only assigns fields replaces it, so the fields and then
 `constructor` in one batch no longer duplicate it.
+
+Follow-up (2026-11-07, `docs/sessions/skeleton-replace-statements.md`): under skeleton-only,
+`replace_statements` in a member's own body is checked on the member it leaves, so a stub
+constructor filled with field assignments is refused, naming `constructor`.
