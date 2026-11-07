@@ -126,6 +126,43 @@ class CliTest {
     }
   }
 
+  /**
+   * Text after the JSON object, in "@@name" sections, stands for each string "@name" of it, so code
+   * needs no escaping; a section not used, or a name with no section, is refused.
+   */
+  @Test
+  void codeComesInSectionsAfterTheJson() throws Exception {
+    InputStream stdin = System.in;
+    try {
+      String call =
+          """
+          {"tool": "create_file", "file": "Notes.txt", "content": "@notes"}
+          @@notes
+          a "quoted" line\\n
+            indented
+          """;
+      System.setIn(new ByteArrayInputStream(call.getBytes(StandardCharsets.UTF_8)));
+      assertEquals(0, run("-"), out());
+      assertEquals("a \"quoted\" line\\n\n  indented", Files.readString(root.resolve("Notes.txt")));
+
+      System.setIn(
+          new ByteArrayInputStream(
+              "{\"tool\": \"create_file\", \"file\": \"B.txt\", \"content\": \"@b\"}\n@@c\nx\n"
+                  .getBytes(StandardCharsets.UTF_8)));
+      assertEquals(2, run("-"), out());
+      assertTrue(out().contains("section @@c is not used"), out());
+
+      System.setIn(
+          new ByteArrayInputStream(
+              "{\"tool\": \"create_file\", \"file\": \"B.txt\", \"content\": \"@b\", \"x\": \"@a\"}\n@@a\nx\n"
+                  .getBytes(StandardCharsets.UTF_8)));
+      assertEquals(2, run("-"), out());
+      assertTrue(out().contains("names section @@b, which is not given"), out());
+    } finally {
+      System.setIn(stdin);
+    }
+  }
+
   @Test
   void aRefusalExitsTwoWithItsReason() throws Exception {
     assertEquals(

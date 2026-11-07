@@ -351,7 +351,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - A heredoc ends at the first line equal to its delimiter, also inside the text: a
   README example containing `EOF`, sent through `<<'EOF'`, ran the rest as shell
   commands (a `bin/jrefactor undo` among them; it refused). Pick a delimiter the text
-  does not contain (`<<'JAVA'`), for `key_file=-` too.
+  does not contain (`<<'JAVA'`), for `key_file=-` too. For a batch, put code in
+  `@@name` sections after the JSON (`"@name"` in it), not escaped in strings
+  (2026-11-07, gorefactor's #606; `docs/sessions/batch-sections.md`). A section
+  cannot hold a line `@@name` itself: send such text with `key_file=-`.
 - Writing Java through a Python script: use raw strings, or a backslash before a
   newline joins the lines. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.

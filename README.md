@@ -196,6 +196,27 @@ bin/jrefactor undo
 A text argument comes from a file with `key_file=path` (`content_file`,
 `new_file`, `old_file`), or from stdin with `key_file=-`, one per call.
 
+Code for a JSON object (a batch, say) goes after it in sections, unescaped: a
+line `@@name` starts one, running to the next such line or the end, its last
+newline dropped, and the JSON string `"@name"` stands for it.
+
+```sh
+bin/jrefactor batch - <<'BATCH'
+{"steps": [
+  {"tool": "add_declaration", "args": {"file": "src/main/java/p/Bed.java", "content": "@size"}},
+  {"tool": "rename", "args": {"file": "src/main/java/p/Bed.java", "line": 7, "name": "t", "new_name": "total"}}
+]}
+@@size
+int size() {
+  return plants.size();
+}
+BATCH
+```
+
+A section no string names, and a name with no section beside others (a heredoc
+that ended early), are refused.
+
+
 Exit status: `0` done, `2` refused, `1` error.
 
 ## Help improve the tools
