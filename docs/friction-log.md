@@ -935,3 +935,7 @@ method"). The compositions the models found: `add_supertype` then `replace_decla
 method (run 1), or `declaration` with `overwrite` (run 2). Either the refusal could name
 `add_supertype`, or `declaration` could replace a file holding only stubs the session declared,
 keeping what nothing else typed. Record: `docs/sessions/repeated-constructions.md`.
+
+Follow-up (2026-11-06, `docs/sessions/declaration-names-add-supertype.md`): `create_file`'s
+existing-file refusal for a `declaration` now names the `add_supertype` calls for the
+supertypes the file's type lacks.

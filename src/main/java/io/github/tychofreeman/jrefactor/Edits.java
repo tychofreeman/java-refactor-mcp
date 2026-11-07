@@ -3,11 +3,14 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /** Edits: changes of behavior on purpose, held to the same type-check gate as refactorings. */
 final class Edits {
@@ -68,10 +71,13 @@ final class Edits {
     boolean exists = Files.exists(path);
     Stubs.Declared stubs = Stubs.Declared.NONE;
     if (exists && !args.flag("overwrite")) {
+      String supertypes =
+          declaration == null ? "" : addSupertypes(content, Files.readString(path), rel);
       throw new Refusal(
           rel
               + " already exists. Set overwrite to replace all of it, or change part of it with"
-              + " replace_text, add_declaration or replace_declaration.");
+              + " replace_text, add_declaration or replace_declaration."
+              + supertypes);
     }
     if (rel.endsWith(".java")) {
       CompilationUnit unit = parses(content, rel);
@@ -116,6 +122,46 @@ final class Edits {
                 : "; stubs for what its supertypes leave abstract: " + String.join(", ", stubbed))
             + made,
         stubs);
+  }
+
+  /**
+   * For a declaration whose file exists: the add_supertype calls that give the file's type the
+   * supertypes {@code declared} names and it lacks, so its members are kept; "" when none are
+   * missing.
+   */
+  private static String addSupertypes(String declared, String existing, String rel) {
+    List<String> calls = new ArrayList<>();
+    for (Object o : parses(declared, rel).types()) {
+      if (!(o instanceof TypeDeclaration t)) {
+        continue;
+      }
+      String name = t.getName().getIdentifier();
+      Set<String> has = new HashSet<>();
+      for (Object e : parses(existing, rel).types()) {
+        if (e instanceof TypeDeclaration h && h.getName().getIdentifier().equals(name)) {
+          if (h.getSuperclassType() != null) {
+            has.add(h.getSuperclassType().toString());
+          }
+          for (Object i : h.superInterfaceTypes()) {
+            has.add(i.toString());
+          }
+        }
+      }
+      String call = "add_supertype with name " + name + ", relation ";
+      if (t.getSuperclassType() != null && !has.contains(t.getSuperclassType().toString())) {
+        calls.add(call + "extends, supertype " + t.getSuperclassType());
+      }
+      for (Object i : t.superInterfaceTypes()) {
+        if (!has.contains(i.toString())) {
+          calls.add(call + (t.isInterface() ? "extends" : "implements") + ", supertype " + i);
+        }
+      }
+    }
+    return calls.isEmpty()
+        ? ""
+        : " To keep its members and give it the declaration's supertypes, send "
+            + String.join(", then ", calls)
+            + ".";
   }
 
   static Outcome replaceText(SourceProject project, Args args) throws Exception {
