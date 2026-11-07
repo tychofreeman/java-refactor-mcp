@@ -411,7 +411,8 @@ kept to the cases with one answer.
 The run that followed (`docs/sessions/ab-constructors.md`) found the cost of doing it silently:
 a model that followed the documented plan, the fields and then `constructor`, got a duplicate
 constructor and lost ten turns. A step the tool takes for the model has to accept the model's
-own next step for the same thing.
+own next step for the same thing; so `add_declaration` now replaces a constructor that only
+assigns fields, as it replaces a stub.
 
 ## Descriptions say what a tool does (2026-11-06)
 

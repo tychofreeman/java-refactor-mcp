@@ -1,0 +1,1 @@
+replaced the constructor Reservation(String, String), which only set fields, in Reservation in com/example/Reservation.java, lines 8-11

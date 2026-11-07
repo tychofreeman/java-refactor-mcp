@@ -1,0 +1,4 @@
+public Reservation(String book, String member) {
+  this.book = book.strip();
+  this.member = member;
+}

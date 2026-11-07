@@ -973,3 +973,7 @@ three batches and 10 turns to it, and got through by typing the assignments into
 constructor stubs with `replace_statements`. A constructor added with the parameter types of one
 that only assigns parameters to fields could replace it, as a stub is replaced. Record:
 `docs/sessions/ab-constructors.md`.
+
+Follow-up (2026-11-07, `docs/sessions/constructor-replaces-assigning.md`): a constructor added with
+the parameter types of one that only assigns fields replaces it, so the fields and then
+`constructor` in one batch no longer duplicate it.

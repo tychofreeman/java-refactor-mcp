@@ -243,7 +243,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - An edit that leaves new final fields unset in a class with no real constructor writes it
   (2026-11-07, the user's choice, options in `docs/design.md`): `FromFields.complete`, called in
   `Edits.gated` on the import-fixed text; its note goes in `Imports.Fixed.notes`, so every edit's
-  result says it with no change to the tool.
+  result says it with no change to the tool. A constructor `add_declaration` adds replaces one of
+  its parameter types that only assigns fields (`Declarations.stubFor`), so fields then
+  `constructor` in one batch still works (`docs/sessions/ab-constructors.md` found the duplicate).
 
 - `test_for` on `create_file` and `add_declaration` (#115, 2026-11-05) is `TestFor`: the
   target through `Holding`, the framework through `Imports.known`; `add_declaration` passes

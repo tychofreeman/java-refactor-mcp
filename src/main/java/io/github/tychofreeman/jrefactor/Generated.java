@@ -132,7 +132,7 @@ final class Generated {
   }
 
   /** Whether each statement of the constructor assigns a parameter to the field of its name. */
-  private static boolean onlyAssignsParameters(MethodDeclaration m) {
+  static boolean onlyAssignsParameters(MethodDeclaration m) {
     List<?> statements = m.getBody().statements();
     if (statements.isEmpty() || statements.size() != m.parameters().size()) {
       return false;
