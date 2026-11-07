@@ -1,0 +1,1 @@
+added book, member to Reservation in com/example/Reservation.java, lines 4-6; added constructor Reservation(String book, String member), since final fields book, member were unset; Reservation now fits a record: convert_to_record makes it one

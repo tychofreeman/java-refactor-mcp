@@ -238,6 +238,11 @@ Each was chosen from options; the record named beside it has the options it beat
   binding parse, `Skeleton.unimplemented` for `*`, else the supertypes walked nearest first;
   `Skeleton.stub` and `Skeleton.override` write the members.
 
+- An edit that leaves new final fields unset in a class with no real constructor writes it
+  (2026-11-07, the user's choice, options in `docs/design.md`): `FromFields.complete`, called in
+  `Edits.gated` on the import-fixed text; its note goes in `Imports.Fixed.notes`, so every edit's
+  result says it with no change to the tool.
+
 - `test_for` on `create_file` and `add_declaration` (#115, 2026-11-05) is `TestFor`: the
   target through `Holding`, the framework through `Imports.known`; `add_declaration` passes
   the framework's classes as chosen imports, so the import fix places them.

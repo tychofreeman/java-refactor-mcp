@@ -67,6 +67,14 @@ and says why and what to send instead; edits declare stubs and fix imports; line
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+An edit (any tool through `Edits.gated`) that adds a final instance field with no value to a
+class with no constructor but "not implemented" stubs also adds the constructor that sets every
+such field, in declaration order, after the last of them; a stub of the same parameter types is
+replaced in its place (2026-11-07, `FromFields.complete`). The result says so ("; added
+constructor Reservation(String book, String member), since final fields book, member were
+unset"), and, for a top-level class with no superclass, its instance fields final and one
+constructor, adds "; Reservation now fits a record: convert_to_record makes it one".
+
 A compile refusal lists the errors, then what to send. When the errors are blank final fields no
 constructor sets ("The blank final field book may not have been initialized"), it names
 `add_declaration` with `constructor: ["book", ...]`, sent with the fields in one batch

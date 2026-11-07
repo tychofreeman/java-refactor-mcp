@@ -352,7 +352,8 @@ final class Edits {
     Imports.Fixed fixed =
         project.packageOf(path) == null
             ? new Imports.Fixed(after, 0, List.of())
-            : Imports.fix(project, path, before, after, chosen);
+            : FromFields.complete(
+                before, Imports.fix(project, path, before, after, chosen), path.toString());
     Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
     return new Written(fixed, declared);
   }
