@@ -1,0 +1,9 @@
+[
+  {
+    "name": "library-value-classes",
+    "dir": "testdata/library",
+    "tests": "testdata/library-value-classes",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add three classes in package lib.loan, each in its own file, with final fields, a getter for each field named as the field (book(), not getBook()), and a constructor that takes the fields in the order given: Reservation (Book book, Member member, java.time.LocalDate due), Renewal (Book book, java.time.LocalDate until) and Hold (Member member, Book book, int position)."
+  }
+]
