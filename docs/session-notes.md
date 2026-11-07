@@ -107,7 +107,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `Tools.ALIASES`, accepted by `batch` and the CLI, not published) and extract_supertype stays;
   move_statement and change_type are already the shared names. Go and TypeScript get `preserve_exceptions`.
   Parity is kept where it makes sense (the user, 2026-11-06): `extract_struct` became `extract_type`
-  here first, a name generic enough for the three languages, for Go and TypeScript to follow.
+  here first, a name generic enough for the three languages, for Go and TypeScript to follow
+  (gorefactor's #597); there, extract_interface became extract_supertype (its #601), and here
+  extract_interface is an alias of extract_supertype.
   One `move` (the user, 2026-11-05) replaces move_type, move_member and move_file, the old
   names as aliases (#121, 2026-11-06: `Tools.move` routes by its arguments, as gorefactor's
   `Router`); refusals name `move`, since a model calls only what is published. `rename` of a

@@ -1294,7 +1294,8 @@ final class Tools {
   /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
    * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
-   * method_to_function for move_member in place, extract_struct for extract_type.
+   * method_to_function for move_member in place, extract_struct for extract_type, Go's and
+   * TypeScript's old extract_interface for extract_supertype.
    */
   static final Map<String, Def> ALIASES =
       Map.of(
@@ -1313,7 +1314,9 @@ final class Tools {
           "inline_variable",
           INLINE_VARIABLE,
           "extract_struct",
-          EXTRACT_TYPE);
+          EXTRACT_TYPE,
+          "extract_interface",
+          EXTRACT_SUPERTYPE);
 
   /**
    * Argument names a tool still accepts under its published ones, by tool: extract_type's
