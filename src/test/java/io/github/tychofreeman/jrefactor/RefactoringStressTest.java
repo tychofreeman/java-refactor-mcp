@@ -74,7 +74,7 @@ class RefactoringStressTest {
           "push_down",
           "convert_lambda",
           "function_to_method",
-          "extract_struct",
+          "extract_type",
           "convert_to_record",
           "extract_supertype",
           "move_type_package",
@@ -432,7 +432,7 @@ class RefactoringStressTest {
         }
         args.put("name", methodName(candidates.get(random.nextInt(candidates.size()))));
       }
-      case "extract_struct" -> {
+      case "extract_type" -> {
         List<MethodDeclaration> candidates = new ArrayList<>();
         for (MethodDeclaration m : methods(unit)) {
           if (m.parameters().size() >= 2) {

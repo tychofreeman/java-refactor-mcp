@@ -372,9 +372,9 @@ final class Tools {
                   args.required("name"),
                   args.flag("value_semantics")));
 
-  static final Def EXTRACT_STRUCT =
+  static final Def EXTRACT_TYPE =
       new Def(
-          "extract_struct",
+          "extract_type",
           """
           Group members of a method, class or record into a new type in its own file, every use \
           following; what is grouped follows from what name is.
@@ -407,7 +407,7 @@ final class Tools {
               Arg.bool("value_semantics", "For a record: accept its changed generated toString."),
               Arg.IMPORTS),
           Kind.REFACTORING,
-          ExtractStruct::run);
+          ExtractType::run);
 
   static final Def FUNCTION_TO_METHOD =
       new Def(
@@ -1261,7 +1261,7 @@ final class Tools {
           EXTRACT_SUPERTYPE,
           CONVERT_LAMBDA,
           CONVERT_TO_RECORD,
-          EXTRACT_STRUCT,
+          EXTRACT_TYPE,
           FUNCTION_TO_METHOD,
           REPLACE_EXPRESSION,
           INSERT_STATEMENTS,
@@ -1294,7 +1294,7 @@ final class Tools {
   /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
    * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
-   * method_to_function for move_member in place.
+   * method_to_function for move_member in place, extract_struct for extract_type.
    */
   static final Map<String, Def> ALIASES =
       Map.of(
@@ -1311,15 +1311,17 @@ final class Tools {
           "inline_function",
           INLINE_FUNCTION,
           "inline_variable",
-          INLINE_VARIABLE);
+          INLINE_VARIABLE,
+          "extract_struct",
+          EXTRACT_TYPE);
 
   /**
-   * Argument names a tool still accepts under its published ones, by tool: extract_struct's
+   * Argument names a tool still accepts under its published ones, by tool: extract_type's
    * parameters and fields became members, parameter and field became as.
    */
   static final Map<String, Map<String, String>> ARG_ALIASES =
       Map.of(
-          "extract_struct",
+          "extract_type",
           Map.of("parameters", "members", "fields", "members", "parameter", "as", "field", "as"));
 
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {

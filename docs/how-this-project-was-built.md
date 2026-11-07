@@ -407,7 +407,10 @@ a record's components) meant anything different to a model. They did not: each g
 members of a thing into a new type. The tool took one shape (#259): `name`, `members`, `struct`
 and `as`, the case following from whether `name` is a class, a record or a method; the old
 argument names are renamed on the way in (`Tools.ARG_ALIASES`), as tool aliases were. This
-continues the parity choice of one name per operation down to the arguments.
+continues the parity choice of one name per operation down to the arguments. Asked next whether
+to rename the tool, the user chose `extract_type` (#262): "struct" is Go's word, the new type
+is a class or a record, and parity is kept where it makes sense, not for its own sake; the new
+name is meant to replace `extract_struct` in gorefactor too.
 
 The lesson: length in a description is not guidance a model uses (the A/B runs had shown that),
 and it is paid on every turn. When a description grows, ask whether the text belongs in the
