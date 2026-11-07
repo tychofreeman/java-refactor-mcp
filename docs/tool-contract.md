@@ -70,7 +70,10 @@ here, not in its description (the user, 2026-11-06).
 A compile refusal lists the errors, then what to send. When the errors are blank final fields no
 constructor sets ("The blank final field book may not have been initialized"), it names
 `add_declaration` with `constructor: ["book", ...]`, sent with the fields in one batch
-(`Gate.refusal`, 2026-11-06); other errors with them keep the edit's own advice after it.
+(`Gate.refusal`, 2026-11-06). When they are methods that must override in a type with no supertype
+declaring them ("The method price() of type Cart must override or implement a supertype method"),
+it names `add_supertype` for that type, before the methods in one batch (2026-11-06). Other errors
+with these keep the edit's own advice after the hints.
 
 ## Names shared with gorefactor
 
