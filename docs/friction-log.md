@@ -924,3 +924,14 @@ composition, found by the model after a refusal. Record: `docs/sessions/ab-libra
 
 Follow-up (2026-11-06, `docs/sessions/final-fields-constructor.md`): the compile refusal now
 names `constructor` with the unset fields, in `Gate.refusal`, so every edit's refusal says it.
+
+## 2026-11-06: a test's stubs block `declaration` (A/B, library-notifiers)
+
+Both runs wrote the test first, so `SmsNotifier`, `PushNotifier` and `PagerNotifier` were declared
+as stubs: classes with no supertype and package-private methods. `create_file` with
+`declaration ... implements Notifier` then refused ("already exists. Set overwrite ...") and
+`add_declaration` of `@Override` methods refused ("must override or implement a supertype
+method"). The compositions the models found: `add_supertype` then `replace_declaration` of each
+method (run 1), or `declaration` with `overwrite` (run 2). Either the refusal could name
+`add_supertype`, or `declaration` could replace a file holding only stubs the session declared,
+keeping what nothing else typed. Record: `docs/sessions/repeated-constructions.md`.
