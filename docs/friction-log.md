@@ -963,3 +963,13 @@ left for classes that have constructors.
 Follow-up (2026-11-07, `docs/sessions/stub-constructor-assigns.md`): a constructor declared from a
 call whose arguments each fit one field of the class assigns them, so a test written against an
 existing class with fields gets a working constructor.
+
+## 2026-11-07: the written constructor and `constructor` collide (A/B, library-value-classes)
+
+After #272, a model that sends final fields and then `add_declaration` with `constructor` in one
+batch, as the option, the blank-final hint and the contract teach, gets "Duplicate method
+Hold(Member, Book, int)": the fields step already wrote the constructor. Value-classes run 2 lost
+three batches and 10 turns to it, and got through by typing the assignments into the test's
+constructor stubs with `replace_statements`. A constructor added with the parameter types of one
+that only assigns parameters to fields could replace it, as a stub is replaced. Record:
+`docs/sessions/ab-constructors.md`.

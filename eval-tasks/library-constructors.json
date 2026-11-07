@@ -1,0 +1,16 @@
+[
+  {
+    "name": "library-reservation",
+    "dir": "testdata/library",
+    "tests": "testdata/library-reservation",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add a class lib.loan.Reservation that holds a Book, a Member and a java.time.LocalDate due date, in final fields with getters book(), member() and due(), and a constructor that takes them in that order. Then add Library.reserve(Book book, Member member, LocalDate today), which returns a Reservation due 14 days after today."
+  },
+  {
+    "name": "library-value-classes",
+    "dir": "testdata/library",
+    "tests": "testdata/library-value-classes",
+    "check": "./mvnw -q -o test",
+    "prompt": "Add three classes in package lib.loan, each in its own file, with final fields, a getter for each field named as the field (book(), not getBook()), and a constructor that takes the fields in the order given: Reservation (Book book, Member member, java.time.LocalDate due), Renewal (Book book, java.time.LocalDate until) and Hold (Member member, Book book, int position)."
+  }
+]
