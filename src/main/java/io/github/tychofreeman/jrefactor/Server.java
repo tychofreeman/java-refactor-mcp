@@ -35,7 +35,7 @@ public final class Server {
       is refused. A refusal changes nothing, and says why and what to send instead. Edits \
       declare "not implemented" stubs for what new code calls and nothing declares, so a test \
       written first compiles, and add or remove the imports the code needs; pass imports when \
-      a refusal says a name is ambiguous. Lines are 1-based, as inspect numbers them. Several \
+      a refusal says a name is ambiguous. Paths are relative to the project root; lines are 1-based, as inspect numbers them. Several \
       steps go in one batch.\
       """;
 

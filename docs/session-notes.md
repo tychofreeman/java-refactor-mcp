@@ -218,7 +218,7 @@ Each was chosen from options; the record named beside it has the options it beat
   model must pass `value_semantics=true` (this session's decision).
 
 - `extract_type` (named `extract_struct` until 2026-11-06, the user: "struct" is Go's word; the old
-  name is an alias in `Tools.ALIASES`) takes one shape since 2026-11-06 (`name`, `members`, `struct`, `as`): the case
+  name is an alias in `Tools.ALIASES`) takes one shape since 2026-11-06 (`name`, `members`, `new_type`, `as`; `new_type` was `struct` until 2026-11-07, still accepted): the case
   follows from what `name` is; old argument names are renamed in `Tools.call` (`ARG_ALIASES`).
 - `extract_type` (#89, 2026-11-04) is `ExtractType`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
@@ -344,7 +344,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
 - Tool descriptions say what a tool does: no refusal lists, nothing every tool shares (that is
-  `Server.INSTRUCTIONS`), per CLAUDE.md (the user, 2026-11-06).
+  `Server.INSTRUCTIONS`), per CLAUDE.md (the user, 2026-11-06). Paths are said once to be relative
+  to the project root, in the instructions; an argument says what file it is (2026-11-07 review,
+  `docs/sessions/descriptions-review.md`).
 - A tool description is a text block: a line added at another indentation than
   its neighbours makes Spotless re-indent the block, and `ServerTest`'s
   runs-of-spaces check then fails. Write new lines at the block's indentation

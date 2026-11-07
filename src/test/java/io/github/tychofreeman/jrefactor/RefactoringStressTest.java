@@ -448,7 +448,7 @@ class RefactoringStressTest {
         args.put(
             "parameters",
             List.of(paramName(m.parameters().get(at)), paramName(m.parameters().get(at + 1))));
-        args.put("struct", "PairZq");
+        args.put("new_type", "PairZq");
         args.put("parameter", "pairZq");
       }
       case "convert_to_record", "extract_supertype", "move_type_package" -> {

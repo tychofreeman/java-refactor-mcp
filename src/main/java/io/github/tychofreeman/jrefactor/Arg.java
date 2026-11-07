@@ -14,7 +14,7 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   /** The Java file a tool works on. */
-  static final Arg FILE = string("file", "Java file path relative to the project root.").required();
+  static final Arg FILE = string("file", "Java file path.").required();
 
   /** The names to import where a simple name is ambiguous. */
   static final Arg IMPORTS =
