@@ -1,0 +1,13 @@
+class Cart {
+  private final String owner;
+  private final int size;
+
+  Cart(String owner, int size) {
+    this.owner = owner;
+    this.size = size;
+  }
+
+  String owner() {
+    return owner;
+  }
+}

@@ -553,7 +553,9 @@ in the same turn only if it is sent after it.
   assigns its parameters to fields of their names (`constructor`), or an `@Override` that only
   throws "not implemented" or only calls the supertype's method with its parameters
   (`implement`); `replace_statements` content that is the replaced statements wrapped in one
-  `try`, `if`, `for`, `while` or `synchronized` (`surround`). Bodies with logic are not refused. With `declaration` (a
+  `try`, `if`, `for`, `while` or `synchronized` (`surround`); and (2026-11-07) `replace_declaration` of a
+  type whose new members include such a constructor or override, naming the `add_declaration` to
+  send after it in the same batch. Bodies with logic are not refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes

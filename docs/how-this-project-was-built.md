@@ -392,6 +392,14 @@ refusal that named an operation was followed by it (`constructor` twice, `surrou
 `declaration` four times), all 8 runs passed, and each steer cost a turn ($0.126 a run against
 $0.117). The member operations carried work for the first time, through refusals alone.
 
+The compile refusals were then made to name the operation too: blank `final` fields name
+`constructor` (#265), and `@Override` methods in a type with no such supertype name `add_supertype`
+(#267, #268). A rerun (#269, `docs/sessions/ab-hints.md`) found each hint followed in the next
+call, and one way around the rule: a model refused a typed constructor sent the whole class
+through `replace_declaration`, which skeleton-only did not check. The checks now run there too
+(2026-11-07). A rule that steers is only as good as its coverage of the edits that can carry the
+same text.
+
 ## Descriptions say what a tool does (2026-11-06)
 
 The user asked why the descriptions of `create_file` and its neighbours were so long. The answer

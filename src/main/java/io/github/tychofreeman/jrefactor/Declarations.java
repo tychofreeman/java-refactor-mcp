@@ -92,7 +92,7 @@ final class Declarations {
       made = TestFor.note(target);
     }
     if (project.session().skeletonOnly && args.string("content") != null) {
-      Generated.checkMembers(members(content));
+      Generated.checkMembers(members(content), " in place of content.");
     }
     if (implement != null) {
       content = Implement.members(project, path, text, args.string("type"), implement);
@@ -255,6 +255,17 @@ final class Declarations {
     }
 
     List<BodyDeclaration> replacement = members(content);
+    if (project.session().skeletonOnly) {
+      for (BodyDeclaration d : replacement) {
+        if (d instanceof AbstractTypeDeclaration t) {
+          Generated.checkMembers(
+              t.bodyDeclarations(),
+              " in an add_declaration after the replace_declaration, in one batch, leaving it out of "
+                  + t.getName().getIdentifier()
+                  + ".");
+        }
+      }
+    }
     boolean keepDoc = decl.getJavadoc() != null && replacement.get(0).getJavadoc() == null;
     int from = decl.getStartPosition();
     if (keepDoc) {

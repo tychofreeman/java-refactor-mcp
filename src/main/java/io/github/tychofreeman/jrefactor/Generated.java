@@ -5,7 +5,6 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
@@ -36,9 +35,10 @@ final class Generated {
    * Refuses, under skeleton-only creation, typed members that a command writes: a constructor that
    * only assigns its parameters to fields of their names ({@code constructor}), and an override
    * that only throws "not implemented" or only calls the supertype's method ({@code implement}).
+   * {@code instead} ends the refusal: where to send the command.
    */
-  static void checkMembers(List<BodyDeclaration> members) {
-    for (BodyDeclaration d : members) {
+  static void checkMembers(List<?> members, String instead) {
+    for (Object d : members) {
       if (!(d instanceof MethodDeclaration m) || m.getBody() == null) {
         continue;
       }
@@ -52,7 +52,8 @@ final class Generated {
                 + "a constructor that only assigns its parameters to fields is what"
                 + " add_declaration with constructor writes. Send constructor: ["
                 + String.join(", ", names)
-                + "] in place of content.");
+                + "]"
+                + instead);
       }
       if (overrides(m) && (throwsNotImplemented(m) || onlyCallsSuper(m))) {
         throw new Refusal(
@@ -60,7 +61,8 @@ final class Generated {
                 + "an override that only calls the supertype's method, or only throws not"
                 + " implemented, is what add_declaration with implement writes. Send implement: \""
                 + m.getName().getIdentifier()
-                + "\" (or \"*\" for every abstract one) in place of content.");
+                + "\" (or \"*\" for every abstract one)"
+                + instead);
       }
     }
   }
