@@ -349,7 +349,7 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
 Roadmap #89, 2026-11-04. Named `extract_struct`, gorefactor's name, until 2026-11-06, when the
 user renamed it: "struct" is Go's word, and the new type here is a class or a record; the name
 is meant for all three servers. `extract_struct` stays an unpublished alias. Arguments (one shape since 2026-11-06, the user's
-choice): `file`, `name`, `members`, `struct`, `as`, `value_semantics`, `imports`. What is grouped
+choice): `file`, `name`, `members`, `new_type` (`struct` until 2026-11-07, gorefactor's argument name; still accepted), `as`, `value_semantics`, `imports`. What is grouped
 follows from `name`: a top-level class of `file` (its fields: extract class, below), a record
 (its components, below), else a method (its parameters: a parameter object). `members` are
 those, `as` the parameter, field or component that holds the new type. The names before

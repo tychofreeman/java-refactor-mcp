@@ -62,7 +62,7 @@ final class ExtractType {
   }
 
   static Outcome parameters(SourceProject project, Args args) throws Exception {
-    String struct = args.required("struct");
+    String struct = args.required("new_type");
     String parameter = args.required("parameter");
     List<String> chosen = args.list("parameters");
     Precondition.require(
@@ -259,7 +259,7 @@ final class ExtractType {
    */
   private static Outcome fields(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    String struct = args.required("struct");
+    String struct = args.required("new_type");
     String holder = args.required("field");
     List<String> chosen = args.list("fields");
     Precondition.require(
@@ -450,7 +450,7 @@ final class ExtractType {
    */
   private static Outcome components(
       SourceProject project, Args args, Opened opened, RecordDeclaration owner) throws Exception {
-    String struct = args.required("struct");
+    String struct = args.required("new_type");
     String holder = args.required("field");
     List<String> chosen = args.list("fields");
     String text = opened.text();

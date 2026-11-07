@@ -99,14 +99,11 @@ final class Tools {
           numbered, file by file over the project's Java files (at most 100): where a name is \
           used, which line to edit. Use it rather than grep.
           - names, alone: declarations by name, wherever they are: ["Fold"] the class with its \
-          bodies elided, ["Fold.leave", "Cart.total"] each method's overloads or field in full.
-          Paths are relative to the project root; lines are 1-based.\
+          bodies elided, ["Fold.leave", "Cart.total"] each method's overloads or field in full.\
           """,
           List.of(
               Arg.string(
-                  "file",
-                  "Java file path relative to the project root; optional with pattern, to search"
-                      + " every Java file."),
+                  "file", "Java file path; optional with pattern, to search" + " every Java file."),
               Arg.integer("start_line", "First line to show (1-based)."),
               Arg.integer("end_line", "Last line to show (inclusive)."),
               Arg.string(
@@ -180,7 +177,7 @@ final class Tools {
                   "Optional: a private static final constant or private final field of "
                       + "the type, or a new parameter of the method (calls pass the "
                       + "expression), instead of a local. The expression must be literals and "
-                      + "constants.",
+                      + "constants (as a parameter, also the method's parameters).",
                   "constant",
                   "field",
                   "parameter")),
@@ -224,9 +221,7 @@ final class Tools {
           body uses (c.total() with return count * 2 becomes c.count * 2).\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file path relative to the project root; the file that declares "
-                      + "the method."),
+              Arg.FILE.described("Java file path; the file that declares " + "the method."),
               Arg.string("name", "Type.method, the static method to inline.").required()),
           Kind.REFACTORING,
           Tools::inlineFunction);
@@ -243,9 +238,7 @@ final class Tools {
           calls are not edited.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file path relative to the project root; the file that declares "
-                      + "the field."),
+              Arg.FILE.described("Java file path; the file that declares " + "the field."),
               Arg.string(
                       "name",
                       "Type.field, the field whose type to change; or Type.method (with "
@@ -272,9 +265,7 @@ final class Tools {
           name, a top-level type of the file.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file path relative to the project root; the file that declares "
-                      + "the type."),
+              Arg.FILE.described("Java file path; the file that declares " + "the type."),
               Arg.string("name", "The top-level class or interface to add the supertype to.")
                   .required(),
               Arg.oneOf(
@@ -300,8 +291,7 @@ final class Tools {
           class's place in its extends and extends the old superclass.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the class, relative to the project root."),
+              Arg.FILE.described("Java file that declares the class."),
               Arg.string("name", "The top-level class to extract from.").required(),
               Arg.string("supertype", "The new type's simple name.").required(),
               Arg.oneOf("kind", "interface or class.", "interface", "class").required(),
@@ -357,8 +347,7 @@ final class Tools {
           not define: pass value_semantics=true to accept that change.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the class, relative to the project root."),
+              Arg.FILE.described("Java file that declares the class."),
               Arg.string("name", "The top-level class.").required(),
               Arg.bool(
                   "value_semantics",
@@ -379,11 +368,11 @@ final class Tools {
           Group members of a method, class or record into a new type in its own file, every use \
           following; what is grouped follows from what name is.
           - A method's parameters: name Shipping.cost, members [width, \
-          height], struct Size, as size: cost(int weight, int width, int height) becomes \
+          height], new_type Size, as size: cost(int weight, int width, int height) becomes \
           cost(int weight, Size size), its body reads size.width(), and calls pass new Size(3, 4).
-          - A class's fields: name Person, members [street, city], struct Address, as home: the \
+          - A class's fields: name Person, members [street, city], new_type Address, as home: the \
           fields move into a class Address that Person holds in home, and uses become home.street.
-          - A record's components: name Order, members [street, city], struct Address, as \
+          - A record's components: name Order, members [street, city], new_type Address, as \
           address: new Order(id, s, c) becomes new Order(id, new Address(s, c)), and o.street() \
           becomes o.address().street(); value_semantics=true accepts the changed toString.\
           """,
@@ -401,7 +390,7 @@ final class Tools {
                       "What to group: the method's parameters or the record's components (next to"
                           + " each other), or the class's fields.")
                   .required(),
-              Arg.string("struct", "The new type's name.").required(),
+              Arg.string("new_type", "The new type's name.").required(),
               Arg.string("as", "The name of the parameter, field or component that holds it.")
                   .required(),
               Arg.bool("value_semantics", "For a record: accept its changed generated toString."),
@@ -422,8 +411,7 @@ final class Tools {
           change to exceptional behavior.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.member, or with (parameter types) for an overload.")
                   .required(),
               Arg.IMPORTS),
@@ -590,9 +578,7 @@ final class Tools {
           an overload; to is the target class.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file path relative to the project root; the file that declares "
-                      + "both classes."),
+              Arg.FILE.described("Java file path; the file that declares " + "both classes."),
               Arg.string(
                       "name",
                       "Type.method, or Type.method(params) for an overload: the method to "
@@ -617,9 +603,7 @@ final class Tools {
           getter only. Identify the field as Type.field, a top-level class of the file.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file path relative to the project root; the file that declares "
-                      + "the field."),
+              Arg.FILE.described("Java file path; the file that declares " + "the field."),
               Arg.string("name", "Type.field, the field to encapsulate.").required(),
               Arg.string(
                   "getter", "The getter's name; default get plus the field's name capitalized."),
@@ -644,7 +628,7 @@ final class Tools {
           and package-private declarations used across the new boundary become public (named).\
           """,
           List.of(
-              Arg.FILE.described("Java file that declares the type, relative to the project root."),
+              Arg.FILE.described("Java file that declares the type."),
               Arg.string(
                       "name",
                       "The nested type, as Outer.Inner; with package, the file's top-level "
@@ -666,8 +650,7 @@ final class Tools {
           since Sub inherits the method. name is Sub.method.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the class, relative to the project root."),
+              Arg.FILE.described("Java file that declares the class."),
               Arg.string("name", "The class and the method, as Sub.method.").required(),
               Arg.string(
                   "to",
@@ -684,8 +667,7 @@ final class Tools {
           Sub and is added to the end of each subclass. name is Sub.method.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the class, relative to the project root."),
+              Arg.FILE.described("Java file that declares the class."),
               Arg.string("name", "The class and the method, as Sub.method.").required()),
           Kind.REFACTORING,
           Tools::pushDown);
@@ -708,7 +690,7 @@ final class Tools {
           only a type's header: start from declaration or test_for, and add members after.\
           """,
           List.of(
-              Arg.FILE.described("Path relative to the project root."),
+              Arg.FILE.described("Path of the file."),
               Arg.string("content", "The whole file (or declaration in its place)."),
               Arg.string(
                   "declaration",
@@ -731,8 +713,8 @@ final class Tools {
           created, and directories a move or delete empties are removed. undo puts every file back.\
           """,
           List.of(
-              Arg.FILE.described("The file or directory, relative to the project root."),
-              Arg.string("to", "Its new path, relative to the project root."),
+              Arg.FILE.described("The file or directory."),
+              Arg.string("to", "Its new path."),
               Arg.bool("copy", "Copy it, keeping the original."),
               Arg.bool("delete", "Delete it instead (no to).")),
           Kind.EDIT,
@@ -768,7 +750,7 @@ final class Tools {
           List.of(
               Arg.FILE.described(
                   "The file that declares what moves, or, without name, the file or directory to"
-                      + " move; relative to the project root."),
+                      + " move."),
               Arg.string(
                   "name",
                   "What moves: Outer.Inner, Type (with package), or Type.member (with to); omit it"
@@ -862,8 +844,7 @@ final class Tools {
           """,
           List.of(
               Arg.FILE.described(
-                  "Java file path relative to the project root: the variable's, or the file that"
-                      + " declares the method."),
+                  "Java file path: the variable's, or the file that" + " declares the method."),
               Arg.string("name", "The variable, or Type.method for a static method.").required(),
               Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
               Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
@@ -885,8 +866,7 @@ final class Tools {
           the type instead, each return giving its zero (0, false, null).\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.method, or with (parameter types) for an overload.")
                   .required(),
               Arg.string("type", "The new value's Java type.").required(),
@@ -959,7 +939,7 @@ final class Tools {
       new Def(
           "replace_text",
           """
-          Replace exact text in a file: an edit, for what the other tools do not cover: string \
+          Replace exact text in a file, for what the other tools do not cover: string \
           literals, comments, a few lines of code, and files that are not Java (pom.xml, \
           fixtures, docs).
           old must be as in the file and occur once, or set all_occurrences; spacing within lines \
@@ -968,7 +948,7 @@ final class Tools {
           old, adds new at the end of the file (a friction-log entry, a CI job).\
           """,
           List.of(
-              Arg.FILE.described("Path relative to the project root."),
+              Arg.FILE.described("Path of the file."),
               Arg.string("old", "Text as it is in the file."),
               Arg.string("new", "The text to put in its place.").required(),
               Arg.bool("all_occurrences", "Replace every occurrence, not only one."),
@@ -1016,7 +996,7 @@ final class Tools {
       new Def(
           "replace_declaration",
           """
-          Replace a whole declaration, found by name, with new source: an edit, for a signature \
+          Replace a whole declaration, found by name, with new source, for a signature \
           and body that change together, a field, or a type. Empty content deletes it, with its \
           Javadoc; a file's only top-level type takes the file with it (undo restores it).
           name is Type, Type.member, or member (of the file's only top-level type); for one of \
@@ -1052,8 +1032,7 @@ final class Tools {
           component, and every new Line(...) passes value.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
                   .required(),
               Arg.string("parameter", "The new parameter's name.").required(),
@@ -1078,8 +1057,7 @@ final class Tools {
           side effects (a name, a literal, this, a field).\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
                   .required(),
               Arg.string("parameter", "The parameter to remove.").required()),
@@ -1099,8 +1077,7 @@ final class Tools {
           it ahead of (default: last).\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
                   .required(),
               Arg.string("parameter", "The parameter to move.").required(),
@@ -1226,8 +1203,7 @@ final class Tools {
           a private method called from another class.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.method: the static method whose body to fold.").required(),
               Arg.integer(
                   "line",
@@ -1284,8 +1260,7 @@ final class Tools {
           move with to the method's class.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, relative to the project root."),
+              Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.method, or Type.method(params) for an overload.")
                   .required()),
           Kind.REFACTORING,
@@ -1325,7 +1300,17 @@ final class Tools {
   static final Map<String, Map<String, String>> ARG_ALIASES =
       Map.of(
           "extract_type",
-          Map.of("parameters", "members", "fields", "members", "parameter", "as", "field", "as"));
+          Map.of(
+              "parameters",
+              "members",
+              "fields",
+              "members",
+              "parameter",
+              "as",
+              "field",
+              "as",
+              "struct",
+              "new_type"));
 
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
