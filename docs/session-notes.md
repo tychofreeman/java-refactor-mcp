@@ -297,6 +297,9 @@ Each was chosen from options; the record named beside it has the options it beat
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went
   unused even where the tasks call for them; manual was cheapest and passed every run.
+- The skeleton arm ran on the library tasks after #255 (2026-11-06, `docs/sessions/ab-library-skeleton.md`):
+  8/8, and each refusal naming `constructor`, `surround` or `declaration` was followed by that
+  operation; a turn dearer per steer ($0.126 a run against $0.117).
 - The skeleton arm was rerun on 2026-11-06 (`docs/sessions/ab-constructive-ops.md`): cheaper
   and less typed, but the constructive options went unused on these tasks.
 - The feature tasks are `eval-tasks/shop.json` (gorefactor's `design-*` shop tasks, ported

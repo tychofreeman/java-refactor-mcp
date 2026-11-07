@@ -387,7 +387,10 @@ that only assigns fields (naming `constructor`), an override that only calls `su
 (naming `implement`), and statements wrapped unchanged in a try or a loop (naming `surround`).
 Asked whether to refuse any body typed into a `.java` file, the user said no: only the bodies a
 command would write, since the thesis is that typing is left for statements and expressions, not
-that typing is wrong. Whether the widened refusals steer to the operations is not yet measured.
+that typing is wrong. The next run (`docs/sessions/ab-library-skeleton.md`) measured it: every
+refusal that named an operation was followed by it (`constructor` twice, `surround` once,
+`declaration` four times), all 8 runs passed, and each steer cost a turn ($0.126 a run against
+$0.117). The member operations carried work for the first time, through refusals alone.
 
 ## Descriptions say what a tool does (2026-11-06)
 
@@ -421,8 +424,9 @@ refusal, the shared instructions, or the contract.
 - `CLAUDE.md` still lists literals as a `replace_text` use, though
   `replace_expression` exists since the edit primitives (#150).
 - The shorter descriptions (#256-#259) have not been A/B-checked against the baselines.
-- No model has yet used `implement`, `constructor`, `surround` or `test_for` unprompted; whether
-  the widened skeleton refusals (#255) steer to them is not measured.
+- The widened skeleton refusals (#255) steer to `constructor` and `surround`, a turn each; whether a
+  model refused once starts with the operation next time is not measured. Only `test_for` has
+  been used unprompted.
 - `extract_struct` (1,913 characters) is still above gorefactor's per-tool cap of 1,700, and no
   test here enforces a cap.
 - `docs/friction-log.md` was never counted for `replace_text` use before the
