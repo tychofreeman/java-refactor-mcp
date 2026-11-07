@@ -555,7 +555,10 @@ in the same turn only if it is sent after it.
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes
   leave abstract: Priced.price()`); a declaration with a body, or naming another type
-  than the file, is refused. A `.java` file must declare the
+  than the file, is refused. An existing file is refused unless `overwrite`; with `declaration`,
+  when the file's type lacks supertypes the declaration names (a stub class a test declared,
+  say), the refusal names the `add_supertype` calls that add them and keep its members
+  ("send add_supertype with name Cart, relation implements, supertype Priced", 2026-11-06). A `.java` file must declare the
   package its directory implies under a source root. Result: `created <file>
   (<n> lines)`.
 - `move_file` (roadmap #81, 2026-11-04, gorefactor's name): `file` (a file or
