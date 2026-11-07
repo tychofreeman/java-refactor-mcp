@@ -951,3 +951,7 @@ constructor that only assigns its fields (the refusal named `constructor`), and 
 `Reservation`, which the rule does not check. The skeleton checks (`Generated` on the members, and
 a type's members typed in place of operations) could run on `replace_declaration` of a type too.
 Record: `docs/sessions/ab-hints.md`.
+
+Follow-up (2026-11-07, `docs/sessions/skeleton-replace-declaration.md`): under skeleton-only,
+`replace_declaration` of a type now runs the member checks on the new type's members, and the
+refusal names the `add_declaration` to send after the replacement, in one batch.

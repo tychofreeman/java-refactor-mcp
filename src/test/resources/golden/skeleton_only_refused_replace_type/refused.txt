@@ -1,0 +1,1 @@
+Send constructor: ["owner", "size"] in an add_declaration after the replace_declaration, in one batch, leaving it out of Cart.
