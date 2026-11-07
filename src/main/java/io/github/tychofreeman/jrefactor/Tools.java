@@ -378,7 +378,7 @@ final class Tools {
           """
           Group members of a method, class or record into a new type in its own file, every use \
           following; what is grouped follows from what name is.
-          - A method's parameters (a parameter object): name Shipping.cost, members [width, \
+          - A method's parameters: name Shipping.cost, members [width, \
           height], struct Size, as size: cost(int weight, int width, int height) becomes \
           cost(int weight, Size size), its body reads size.width(), and calls pass new Size(3, 4).
           - A class's fields: name Person, members [street, city], struct Address, as home: the \
