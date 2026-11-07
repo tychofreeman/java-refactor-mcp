@@ -67,6 +67,11 @@ and says why and what to send instead; edits declare stubs and fix imports; line
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+A compile refusal lists the errors, then what to send. When the errors are blank final fields no
+constructor sets ("The blank final field book may not have been initialized"), it names
+`add_declaration` with `constructor: ["book", ...]`, sent with the fields in one batch
+(`Gate.refusal`, 2026-11-06); other errors with them keep the edit's own advice after it.
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:
