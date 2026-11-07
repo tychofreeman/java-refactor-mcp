@@ -939,3 +939,6 @@ keeping what nothing else typed. Record: `docs/sessions/repeated-constructions.m
 Follow-up (2026-11-06, `docs/sessions/declaration-names-add-supertype.md`): `create_file`'s
 existing-file refusal for a `declaration` now names the `add_supertype` calls for the
 supertypes the file's type lacks.
+
+Follow-up (2026-11-06, `docs/sessions/override-names-add-supertype.md`): the compile refusal for
+`@Override` methods in a type with no such supertype now names `add_supertype` for it.

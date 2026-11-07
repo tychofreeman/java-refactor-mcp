@@ -56,8 +56,9 @@ final class Gate {
   /**
    * The refusal for an edit that adds {@code introduced} errors: "{@code what} would add compile
    * errors, so nothing was changed", the errors, a note when Maven gave no classpath, then {@code
-   * fix}; blank final fields left unset name the {@code constructor} that sets them instead, or
-   * before {@code fix} when other errors come with them.
+   * fix}; blank final fields left unset name the {@code constructor} that sets them, and methods
+   * that must override in a type with no such supertype name {@code add_supertype}, instead of
+   * {@code fix}, or before it when other errors come with them.
    */
   private static Refusal refusal(
       SourceProject project, List<String> introduced, String what, String fix) {
@@ -68,20 +69,39 @@ final class Gate {
                 + project.classpathProblem()
             : "";
     List<String> unset = new ArrayList<>();
+    Map<String, List<String>> overriding = new LinkedHashMap<>();
     for (String error : introduced) {
       Matcher m = BLANK_FINAL.matcher(error);
       if (m.find() && !unset.contains(m.group(1))) {
         unset.add(m.group(1));
       }
+      Matcher o = NO_SUPERTYPE.matcher(error);
+      if (o.find()) {
+        overriding.computeIfAbsent(o.group(2), t -> new ArrayList<>()).add(o.group(1));
+      }
     }
-    String next = fix;
+    List<String> hints = new ArrayList<>();
     if (!unset.isEmpty()) {
-      String constructor =
+      hints.add(
           "A constructor sets final fields: add_declaration with constructor: [\""
               + String.join("\", \"", unset)
-              + "\"] writes it; send it with the fields, in one batch.";
-      boolean only = introduced.stream().allMatch(e -> BLANK_FINAL.matcher(e).find());
-      next = only ? constructor : constructor + "\n" + fix;
+              + "\"] writes it; send it with the fields, in one batch.");
+    }
+    overriding.forEach((type, methods) ->
+        hints.add(
+            type
+                + " has no supertype declaring "
+                + String.join(", ", methods)
+                + ": give it one first, add_supertype with name "
+                + type
+                + " and relation implements (an interface) or extends (a class), then the"
+                + " methods, in one batch."));
+    String next = fix;
+    if (!hints.isEmpty()) {
+      boolean only =
+          introduced.stream()
+              .allMatch(e -> BLANK_FINAL.matcher(e).find() || NO_SUPERTYPE.matcher(e).find());
+      next = String.join("\n", hints) + (only ? "" : "\n" + fix);
     }
     return new Refusal(
         what
@@ -95,6 +115,14 @@ final class Gate {
   /** A compile error for a final field no constructor sets; its group 1 is the field's name. */
   private static final Pattern BLANK_FINAL =
       Pattern.compile("The blank final field (\\w+) may not have been initialized");
+
+  /**
+   * A compile error for a method that must override but its type has no supertype declaring it;
+   * group 1 is the method, group 2 the type.
+   */
+  private static final Pattern NO_SUPERTYPE =
+      Pattern.compile(
+          "The method (\\S+\\(.*?\\)) of type (\\w+) must override or implement a supertype method");
 
   /**
    * Writes each file's new text; a null text deletes the file. Returns the compile errors the edit
