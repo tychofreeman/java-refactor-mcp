@@ -912,3 +912,12 @@ added with `add_declaration`. The tokenizer is a port of gorefactor's
   library's class first over the project's own.
 - Idea: `imports` on `move`, passed to each route; prefer a project class over a library's.
   Done: roadmap #131 (2026-11-06).
+
+## 2026-11-06: blank final fields before their constructor (A/B, library-reservation)
+
+Both skeleton runs of the reservation task added `Reservation`'s `final` fields with
+`add_declaration`, then the constructor; the fields alone did not compile ("The blank final field
+book may not have been initialized") and the model sent fields and constructor again as a batch.
+The compile refusal could name the operation, as the skeleton refusal does: "declare them with
+`constructor: [book, member, due]` in the same batch". No tool does it now; the batch is the
+composition, found by the model after a refusal. Record: `docs/sessions/ab-library-skeleton.md`.
