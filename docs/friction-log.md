@@ -990,3 +990,13 @@ goes after the JSON in `@@name` sections, which a string `"@name"` stands for.
 Before it, this branch's own two Java edits went as two calls with
 `content_file=-`, not one batch, and the second was refused for a line number an
 import of the first had moved (`docs/sessions/batch-sections.md`).
+
+## 2026-11-07: a body that uses a field nothing declares yet (A/B, library-card)
+
+Under the skeleton server, both runs filled two stub bodies (`borrowed()`, `borrow()`) with code
+reading a field `borrowed` before declaring it, in parallel calls, and both were refused
+("borrowed cannot be resolved to a variable"); the field and the bodies were then sent in
+parallel, the bodies at lines the field had moved, and refused again. Four lost calls a run. A
+method a body calls gets a stub; a bare name gets none (only `T.NAME` does, #107). A field stub for
+an unresolved simple name in a member of the class, typed from its use, would have passed the
+first calls. Record: `docs/sessions/ab-constructor-stub.md`.

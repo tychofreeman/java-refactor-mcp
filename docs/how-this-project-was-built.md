@@ -426,7 +426,9 @@ typing: what only one answer fits, or what does not change behavior, the tool de
 model's choices are kept for what the code means. The next item applied the rule to the tools
 that add members elsewhere: `pull_up`, `push_down`, `move` of a static field and
 `extract_variable` with `as` had each picked a place of their own (the end of the target, or its
-first line), and now put a field where `add_declaration` would, through one function.
+first line), and now put a field where `add_declaration` would, through one function. A run on a
+task built for it (a class with fields, a test written first) then showed both halves of the day
+working unseen: the constructor stub set the fields in all four runs, and no run named a place.
 
 ## Descriptions say what a tool does (2026-11-06)
 
