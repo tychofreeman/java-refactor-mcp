@@ -1,0 +1,1 @@
+removed retries from Mailer.send(String, int) in 2 declarations and 2 calls (com/example/App.java, com/example/LoudMailer.java, com/example/Mailer.java)

@@ -127,6 +127,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
   receiver): matches in instance members of its class and subclasses become `m(...)`, refused
   when the project overrides it (`Fold.overrider`, `Fold.thisOf`).
+- The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
+  declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
+  turns it into the declaring file and the name, so the tools themselves read `name` as before.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 

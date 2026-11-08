@@ -687,7 +687,14 @@ failures start `engine error (not a refusal; ...)`.
 `add_parameter`, `remove_parameter`, `move_parameter` (roadmap #22). Each takes
 `file` (the declaring file) and `name` (as `replace_declaration`: `Type.member`,
 `member`, `m(int, String)` for an overload; a constructor by its type's name),
-and `parameter`:
+and `parameter`. In place of `name` (2026-11-08, roadmap #130, the user's choice over the
+declaration's line only), `line` of `file` finds the method from its declaration on that line,
+else from the one project method the line's calls call (`m(...)`, `super.m(...)`, `new T(...)`,
+`this(...)`, `super(...)`), declared in any file; `column` keeps the call starting there. A line
+calling two methods is refused with each one's columns ("line 6 of com/example/Use.java calls 2
+methods: Pricing.price(int) at columns 14 and 27; Use.size(Pricing) at column 38. Pass column, or
+name."), and so is a line with neither. `change_type` with `parameter` or `return_type` takes it
+too (`ByLine.named`).
 - `add_parameter`: `type`, `value` (a Java expression each call passes),
   optional `before` (default last), optional `imports`.
 - `remove_parameter`: also deletes the parameter's `@param` tag.
