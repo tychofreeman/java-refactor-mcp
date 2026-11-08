@@ -21,6 +21,16 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
       strings(
           "imports", "Optional: fully qualified names to import where a simple name is ambiguous.");
 
+  /** A method by line, in place of name, for the signature tools ({@link ByLine}). */
+  static final Arg METHOD_LINE =
+      integer(
+          "line",
+          "Instead of name: a 1-based line of file with the method's declaration or a call of it.");
+
+  /** With {@link #METHOD_LINE}, the call's column. */
+  static final Arg METHOD_COLUMN =
+      integer("column", "Optional 1-based column of the call, when the line calls two methods.");
+
   static Arg string(String name, String description) {
     return of(name, "string", description);
   }

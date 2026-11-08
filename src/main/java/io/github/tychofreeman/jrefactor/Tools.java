@@ -235,15 +235,17 @@ final class Tools {
           class of the file.
           A method's parameter (parameter) or return type (return_type=true) changes in it and \
           every override and implementation, and in lambdas that write the parameter's type; \
-          calls are not edited.\
+          calls are not edited. The method may be found by line in place of name, as \
+          add_parameter finds it.\
           """,
           List.of(
               Arg.FILE.described("Java file path; the file that declares " + "the field."),
               Arg.string(
-                      "name",
-                      "Type.field, the field whose type to change; or Type.method (with "
-                          + "parameter types for an overload) with parameter or return_type.")
-                  .required(),
+                  "name",
+                  "Type.field, the field whose type to change; or Type.method (with "
+                      + "parameter types for an overload) with parameter or return_type."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
               Arg.string("type", "The new type as written, such as long or List<String>.")
                   .required(),
               Arg.string(
@@ -1025,23 +1027,25 @@ final class Tools {
           implements it ((a, b) -> a becomes (a, b, retries) -> a). The body does not use it \
           yet, so behavior is unchanged; add it, then change the body.
           name finds the method as replace_declaration does (Type.member, member, m(int, String) \
-          for an overload; a constructor by its type's name). value is a Java expression every \
-          call can see, with no side effects. before puts the parameter ahead of that one \
+          for an overload; a constructor by its type's name); or, in place of name, line finds it \
+          from its declaration or a call on that line of file, in any file (column picks one of two \
+          calls). value is a Java expression every call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
           With name a record (Line) whose canonical constructor is implicit or compact, it adds a \
           component, and every new Line(...) passes value.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
-                  .required(),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
               Arg.string("parameter", "The new parameter's name.").required(),
               Arg.string("type", "Its Java type.").required(),
               Arg.string("value", "The Java expression each call passes.").required(),
               Arg.string("before", "Optional: the parameter to put it before; default last."),
               Arg.IMPORTS),
           Kind.REFACTORING,
-          (project, args) -> Signatures.addParameter(project, args));
+          (project, args) -> Signatures.addParameter(project, ByLine.named(project, args)));
 
   static final Def REMOVE_PARAMETER =
       new Def(
@@ -1053,16 +1057,17 @@ final class Tools {
           overrides or that overrides it changes too, and every lambda that implements it. Use \
           it last when taking a feature out: \
           first change the bodies so they no longer read it.
-          name finds the method as replace_declaration does. A dropped argument must have no \
-          side effects (a name, a literal, this, a field).\
+          name finds the method as replace_declaration does, or line as add_parameter's does. A \
+          dropped argument must have no side effects (a name, a literal, this, a field).\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
-                  .required(),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
               Arg.string("parameter", "The parameter to remove.").required()),
           Kind.REFACTORING,
-          (project, args) -> Signatures.removeParameter(project, args));
+          (project, args) -> Signatures.removeParameter(project, ByLine.named(project, args)));
 
   static final Def MOVE_PARAMETER =
       new Def(
@@ -1073,17 +1078,18 @@ final class Tools {
           every call's arguments: moving \
           to before from, void copy(Path from, Path to) becomes void copy(Path to, Path from), \
           and copy(a, b) becomes copy(b, a).
-          name finds the method as replace_declaration does; before names the parameter to put \
-          it ahead of (default: last).\
+          name finds the method as replace_declaration does, or line as add_parameter's does; \
+          before names the parameter to put it ahead of (default: last).\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.member, member, or with (parameter types) for an overload.")
-                  .required(),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
               Arg.string("parameter", "The parameter to move.").required(),
               Arg.string("before", "Optional: the parameter to put it before; default last.")),
           Kind.REFACTORING,
-          (project, args) -> Signatures.moveParameter(project, args));
+          (project, args) -> Signatures.moveParameter(project, ByLine.named(project, args)));
 
   static final Def EXTRACT_FUNCTION =
       new Def(
@@ -1406,7 +1412,7 @@ final class Tools {
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
     if (args.has("parameter") || args.flag("return_type")) {
-      return Signatures.changeType(project, args);
+      return Signatures.changeType(project, ByLine.named(project, args));
     }
     return ChangeType.run(
         project, args.required("file"), args.required("name"), args.required("type"));

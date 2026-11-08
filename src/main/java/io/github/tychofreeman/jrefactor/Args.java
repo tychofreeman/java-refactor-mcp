@@ -128,4 +128,11 @@ final class Args {
     out.keySet().removeAll(names);
     return new Args(tool, out);
   }
+
+  /** These arguments with {@code key} set to {@code value}. */
+  Args with(String key, Object value) {
+    Map<String, Object> out = new java.util.LinkedHashMap<>(values);
+    out.put(key, value);
+    return new Args(tool, out);
+  }
 }

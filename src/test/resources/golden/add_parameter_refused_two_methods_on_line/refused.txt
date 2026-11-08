@@ -1,0 +1,1 @@
+line 6 of com/example/Use.java calls 2 methods: Pricing.price(int) at columns 14 and 27; Use.size(Pricing) at column 38. Pass column, or name
