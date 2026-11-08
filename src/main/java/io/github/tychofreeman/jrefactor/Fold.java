@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,8 +15,10 @@ import org.eclipse.jdt.core.dom.ASTMatcher;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IBinding;
@@ -32,11 +35,14 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StringLiteral;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 
 /**
- * fold: code that does what an existing static method does becomes a call of it. The method's body
- * is the pattern: one return's expression matches expressions, and a void method's statements match
+ * fold: code that does what an existing method does becomes a call of it (of an instance method, in
+ * the instance members of its class and subclasses, unless the project overrides it). The body is
+ * the pattern: one return's expression matches expressions, and a void method's statements match
  * runs of statements in any block. Its parameters stand for any expressions of their types, a local
  * it declares for a local the match declares, and every other name must mean what it means in the
  * body. The method stays. A match the call would not reproduce (its arguments run in another order
@@ -75,11 +81,20 @@ final class Fold {
     IMethodBinding mb = m.resolveBinding();
     Precondition.require(
         Precondition.that(
-            () -> m.getBody() != null && Modifier.isStatic(m.getModifiers()) && mb != null,
-            () ->
-                name
-                    + " is not a static method with a body; fold makes calls of a static method."
-                    + " Make it static first (move with to its own class)."));
+            () -> m.getBody() != null && mb != null,
+            () -> name + " has no body; fold makes calls of a method with one."));
+    boolean instance = !Modifier.isStatic(m.getModifiers());
+    if (instance) {
+      String overrider = overrider(project, file, typeName, methodName, name);
+      if (overrider != null) {
+        throw new Refusal(
+            name
+                + " is overridden by "
+                + overrider
+                + ", so a call of it could run that instead. fold makes calls of a method nothing"
+                + " overrides.");
+      }
+    }
 
     List<String> params = new ArrayList<>();
     for (Object o : m.parameters()) {
@@ -210,7 +225,8 @@ final class Fold {
           moved.add(a);
         }
       }
-      String qualifier = sameType(c.root(), mb.getDeclaringClass()) ? "" : typeName + ".";
+      String qualifier =
+          instance || sameType(c.root(), mb.getDeclaringClass()) ? "" : typeName + ".";
       String replacement =
           qualifier + methodName + "(" + String.join(", ", argTexts) + ")" + (returns ? "" : ";");
       edits
@@ -390,6 +406,12 @@ final class Fold {
       String text,
       String call) {
     IMethodBinding mb = m.resolveBinding();
+    if (!Modifier.isStatic(m.getModifiers())) {
+      String why = thisOf(c.root(), mb.getDeclaringClass(), m);
+      if (why != null) {
+        return why;
+      }
+    }
     if (Modifier.isPrivate(m.getModifiers()) && !sameTopLevel(c.root(), mb.getDeclaringClass())) {
       return call + " is private, and this code is in another class";
     }
@@ -407,7 +429,8 @@ final class Fold {
             + " times, and a call would evaluate it once";
       }
     }
-    if (overloaded(mb)) {
+    if (overloaded(
+        mb, Modifier.isStatic(m.getModifiers()) ? mb.getDeclaringClass() : typeAround(c.root()))) {
       // Another method of the name and arity may be more specific for an argument of a subtype
       // (or null); for arguments of the parameters' own types, this method is the one chosen.
       for (int i = 0; i < params.size(); i++) {
@@ -490,12 +513,12 @@ final class Fold {
   }
 
   /**
-   * Whether a method other than {@code m}, of its name and number of parameters, is in its class or
-   * a supertype: a call could resolve to it.
+   * Whether a method other than {@code m}, of its name and number of parameters, is in {@code from}
+   * (its class, or the subclass the call is in) or a supertype: a call could resolve to it.
    */
-  private static boolean overloaded(IMethodBinding m) {
+  private static boolean overloaded(IMethodBinding m, ITypeBinding from) {
     String key = m.getMethodDeclaration().getKey();
-    List<ITypeBinding> todo = new ArrayList<>(List.of(m.getDeclaringClass()));
+    List<ITypeBinding> todo = new ArrayList<>(List.of(from));
     for (int i = 0; i < todo.size(); i++) {
       ITypeBinding t = todo.get(i);
       for (IMethodBinding other : t.getDeclaredMethods()) {
@@ -774,5 +797,82 @@ final class Fold {
       case IVariableBinding v -> v.getVariableDeclaration().getKey();
       default -> b.getKey();
     };
+  }
+
+  /**
+   * The method of the project that overrides {@code type.method} (Sub.method()), or null; read from
+   * one parse of the files that name the method.
+   */
+  private static String overrider(
+      SourceProject project, Path file, String type, String method, String name)
+      throws IOException {
+    Holding named = Holding.of(project, method, file);
+    IMethodBinding mb = method(named.units().get(file), type, method, name).resolveBinding();
+    for (CompilationUnit unit : named.units().values()) {
+      for (MethodDeclaration d : Nodes.all(unit, MethodDeclaration.class)) {
+        IMethodBinding b = d.resolveBinding();
+        if (b != null
+            && mb != null
+            && d.getName().getIdentifier().equals(method)
+            && b.overrides(mb)) {
+          return b.getDeclaringClass().getName() + "." + MemberMove.label(d);
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Why {@code this} at {@code n} is not an object a call of the instance method {@code m} of
+   * {@code type} would run on, or null. The code must be in an instance member directly in {@code
+   * type} or a subclass; in a subclass, {@code m} must not be private, nor its body use super.
+   */
+  private static String thisOf(ASTNode n, ITypeBinding type, MethodDeclaration m) {
+    for (ASTNode p = n; p != null; p = p.getParent()) {
+      if (p instanceof AnonymousClassDeclaration) {
+        return "this code is in an anonymous class, where this is another object";
+      }
+      if (p instanceof AbstractTypeDeclaration t) {
+        ITypeBinding here = t.resolveBinding();
+        String want = type.getErasure().getQualifiedName();
+        if (here == null || here.getErasure().getQualifiedName().equals(want)) {
+          return null;
+        }
+        for (ITypeBinding s = here.getSuperclass(); s != null; s = s.getSuperclass()) {
+          if (s.getErasure().getQualifiedName().equals(want)) {
+            if (Modifier.isPrivate(m.getModifiers())) {
+              return m.getName().getIdentifier() + " is private, and this code is in a subclass";
+            }
+            if (!Nodes.all(m.getBody(), SuperMethodInvocation.class).isEmpty()
+                || !Nodes.all(m.getBody(), SuperFieldAccess.class).isEmpty()) {
+              return "the body uses super, which in " + here.getName() + " is another class";
+            }
+            return null;
+          }
+        }
+        return "this code is in "
+            + here.getName()
+            + ", which is not "
+            + type.getName()
+            + " or a subclass";
+      }
+      if (p instanceof BodyDeclaration b && Modifier.isStatic(b.getModifiers())) {
+        return "this code is static, with no object to call it on";
+      }
+    }
+    return "this code is in no class";
+  }
+
+  /** The type whose body holds {@code n}, or null. */
+  private static ITypeBinding typeAround(ASTNode n) {
+    for (ASTNode p = n; p != null; p = p.getParent()) {
+      if (p instanceof AbstractTypeDeclaration t) {
+        return t.resolveBinding();
+      }
+      if (p instanceof AnonymousClassDeclaration a) {
+        return a.resolveBinding();
+      }
+    }
+    return null;
   }
 }

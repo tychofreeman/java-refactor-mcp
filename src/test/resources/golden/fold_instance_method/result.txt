@@ -1,0 +1,1 @@
+folded 2 matches of Cart.total into calls: com/example/Cart.java lines 12, 27; left 1: com/example/Cart.java line 19 (this code is in an anonymous class, where this is another object)

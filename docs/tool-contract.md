@@ -818,7 +818,7 @@ and `column` (only when the line has two variables of that name).
 
 ## `fold` (built)
 
-Replaces code that does what an existing static method does with calls of it (roadmap
+Replaces code that does what an existing method does with calls of it (roadmap
 #103, gorefactor's `fold`). Arguments: `file` (declares the method), `name`
 (`Type.method`), `line` and `in` (optional: fold only the matches that start on that line
 of `in`, or of `file`). The method stays.
@@ -839,6 +839,15 @@ of `in`, or of `file`). The method stays.
   private method and code in another top-level class; a type that does not fit; an
   argument of a subtype (or `null`) when the method's class or a supertype has another
   method of its name and arity, which the call could resolve to (`fold_left_overload`).
+- An instance method (2026-11-08, roadmap #130, the user's choice of the class and its
+  subclasses over the same class only and over any receiver): refused when a method of the
+  project overrides it ("Cart.total is overridden by BigCart.total(), so a call of it could run
+  that instead"). A match must be in an instance member directly in the method's class or a
+  subclass, where `this` is the same object, and becomes the unqualified `total(...)`; one is left
+  in an anonymous class, a nested or unrelated class, or static code, and in a subclass when the
+  method is private or its body uses `super`. Overloads are looked for from the class the code is
+  in. Goldens `fold_instance_method`, `fold_instance_refused_overridden`; probe
+  `fold_instance_subclass` (an override of a method the body calls still runs).
 - Result: `folded N matches of T.m into calls: <file> lines a, b; left K: <file> line L
   (reason), ...`. The call is unqualified in the method's own class, `T.m(...)` elsewhere,
   with an import when needed.

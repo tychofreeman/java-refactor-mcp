@@ -124,6 +124,9 @@ Each was chosen from options; the record named beside it has the options it beat
   A new option that would make the model choose a place is against this choice. A tool that adds
   a member to a type places it the same way, through `MemberMove.addTo` (by `Declarations.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do.
+- `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
+  receiver): matches in instance members of its class and subclasses become `m(...)`, refused
+  when the project overrides it (`Fold.overrider`, `Fold.thisOf`).
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
