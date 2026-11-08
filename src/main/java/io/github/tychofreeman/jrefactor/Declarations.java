@@ -716,10 +716,10 @@ final class Declarations {
   }
 
   /** Where new members go: after {@code member}, before it, or (null) at the type's end. */
-  private record Place(BodyDeclaration member, boolean before) {}
+  record Place(BodyDeclaration member, boolean before) {}
 
   /** 0 for a field or initializer, 1 for a constructor, 2 for any other member. */
-  private static int rank(BodyDeclaration d) {
+  static int rank(BodyDeclaration d) {
     if (d instanceof FieldDeclaration || d instanceof Initializer) {
       return 0;
     }
@@ -730,7 +730,7 @@ final class Declarations {
    * Where a member of {@code rank} goes in {@code type}: after its last member of that rank or
    * lower; for a field or constructor with none, before its first member; otherwise its end.
    */
-  private static Place place(AbstractTypeDeclaration type, int rank) {
+  static Place place(AbstractTypeDeclaration type, int rank) {
     if (rank == 2) {
       return new Place(null, false);
     }

@@ -284,4 +284,29 @@ final class MemberMove {
     }
     return null;
   }
+
+  /**
+   * The edits that add {@code moved}, a member of {@code rank} ({@link Declarations#rank}), to
+   * {@code type} where {@code add_declaration} puts one: a field after the type's fields, a
+   * constructor after its constructors or fields, either before its first member when it has none
+   * of those, and any other member at its end ({@link #appendTo}).
+   */
+  static List<TextEdit> addTo(String text, AbstractTypeDeclaration type, String moved, int rank) {
+    Declarations.Place place = Declarations.place(type, rank);
+    if (place.member() == null) {
+      return appendTo(text, type, moved);
+    }
+    int start = place.member().getStartPosition();
+    int line = Lines.start(text, start);
+    String indent = text.substring(line, start);
+    if (!indent.isBlank()) {
+      // The member shares its line with the brace: appendTo opens the body up.
+      return appendTo(text, type, moved);
+    }
+    if (place.before()) {
+      return List.of(new TextEdit(line, line, indent + moved + "\n\n"));
+    }
+    int end = Nodes.end(place.member());
+    return List.of(new TextEdit(end, end, "\n\n" + indent + moved));
+  }
 }

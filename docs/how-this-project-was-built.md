@@ -423,7 +423,10 @@ accepted and ignored) and places members by kind, fields with the fields, constr
 the rest at the end. The options it beat were the same placement with the arguments still
 published, and no change. It is the same move as the day's others, aimed at attention rather than
 typing: what only one answer fits, or what does not change behavior, the tool decides, and the
-model's choices are kept for what the code means.
+model's choices are kept for what the code means. The next item applied the rule to the tools
+that add members elsewhere: `pull_up`, `push_down`, `move` of a static field and
+`extract_variable` with `as` had each picked a place of their own (the end of the target, or its
+first line), and now put a field where `add_declaration` would, through one function.
 
 ## Descriptions say what a tool does (2026-11-06)
 

@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -97,16 +98,9 @@ final class Introduce {
             + source
             + ";";
     String text = opened.text();
-    BodyDeclaration first = (BodyDeclaration) owner.bodyDeclarations().get(0);
-    int at = Lines.start(text, first.getStartPosition());
-    String indent = text.substring(at, first.getStartPosition());
-    String after =
-        TextEdit.apply(
-            text,
-            List.of(
-                new TextEdit(at, at, indent + decl + "\n\n"),
-                new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name)),
-            0);
+    List<TextEdit> edits = new ArrayList<>(MemberMove.addTo(text, owner, decl, 0));
+    edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
+    String after = TextEdit.apply(text, edits, 0);
     Edits.Written written =
         Edits.gated(
             project,

@@ -69,7 +69,7 @@ final class PushDown {
         String subText = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
         edits
             .computeIfAbsent(e.getKey(), k -> new ArrayList<>())
-            .addAll(MemberMove.appendTo(subText, t, movedText));
+            .addAll(MemberMove.addTo(subText, t, movedText, Declarations.rank(moved)));
         subclasses++;
       }
     }

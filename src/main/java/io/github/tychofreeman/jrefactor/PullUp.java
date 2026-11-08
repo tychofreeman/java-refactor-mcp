@@ -99,7 +99,7 @@ final class PullUp {
     String targetText = texts.getOrDefault(target, Files.readString(target));
     edits
         .computeIfAbsent(target, k -> new ArrayList<>())
-        .addAll(MemberMove.appendTo(targetText, superDecl, movedText));
+        .addAll(MemberMove.addTo(targetText, superDecl, movedText, Declarations.rank(moved)));
 
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pulling " + name + " up");
