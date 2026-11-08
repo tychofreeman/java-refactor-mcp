@@ -1,0 +1,1 @@
+Cart.total is overridden by BigCart.total(), so a call of it could run that instead

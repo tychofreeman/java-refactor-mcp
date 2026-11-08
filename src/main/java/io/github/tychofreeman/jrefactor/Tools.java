@@ -1184,9 +1184,11 @@ final class Tools {
       new Def(
           "fold",
           """
-          Replace code that does what an existing static method does with calls of it: every \
-          match of the method's body in the project, its parameters standing for any expressions \
-          of their types, becomes a call. The method stays. extract_function makes a method from \
+          Replace code that does what an existing method does with calls of it: every match of \
+          the method's body in the project, its parameters standing for any expressions of their \
+          types, becomes a call. The method stays. An instance method's body matches code in the \
+          instance members of its class and subclasses, where this is the same object, and becomes \
+          total(...) there. extract_function makes a method from \
           one place; fold reuses one, written or extracted, everywhere else. Two methods with \
           the same body merge as a batch: fold the one to keep, then inline the other.
           What a body matches: one return's expression matches expressions (x * 1.2 becomes \
@@ -1204,7 +1206,7 @@ final class Tools {
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.method: the static method whose body to fold.").required(),
+              Arg.string("name", "Type.method: the method whose body to fold.").required(),
               Arg.integer(
                   "line",
                   "Optional: fold only the matches that start on this line (of in, or of file)."),
