@@ -12,24 +12,34 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.BooleanLiteral;
+import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.StringLiteral;
+import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
  * encapsulate_field: a field becomes private, with a getter and a setter (bean style, unless
- * named), and every use in the project goes through them: a read is the getter call, a plain
- * assignment statement is the setter call. A compound write, ++ or --, a write inside an
- * expression, or a statement that also reads the field is refused, since those are not rewritten.
+ * named), and every use in the project goes through them: a read is the getter call, an assignment
+ * statement is the setter call, and a compound write, ++ or -- as a statement is the setter of the
+ * getter's value combined. A write inside an expression, a receiver that would run twice, or a
+ * plain assignment that also reads the field is refused, since those are not rewritten.
  */
 final class EncapsulateField {
 
@@ -224,18 +234,6 @@ final class EncapsulateField {
                 + ". A final field's writes stay in its constructor, which encapsulate_field does"
                 + " not change.");
       }
-      if (a.getOperator() != Assignment.Operator.ASSIGN) {
-        throw new Refusal(
-            field
-                + " is changed with a compound operator at line "
-                + line
-                + " of "
-                + p.getFileName()
-                + ". encapsulate_field rewrites only a plain assignment statement; write it as"
-                + " "
-                + field
-                + " = ... first.");
-      }
       if (!(a.getParent() instanceof ExpressionStatement st)) {
         throw new Refusal(
             field
@@ -245,6 +243,21 @@ final class EncapsulateField {
                 + p.getFileName()
                 + ". encapsulate_field rewrites only a plain assignment statement; move the write"
                 + " into a statement first.");
+      }
+      if (a.getOperator() != Assignment.Operator.ASSIGN) {
+        String op = a.getOperator().toString();
+        return combined(
+            fileText,
+            target,
+            n,
+            st,
+            op.substring(0, op.length() - 1),
+            operand(fileText, a.getRightHandSide()),
+            getter,
+            setter,
+            field,
+            line,
+            p);
       }
       if (refersTo(a.getRightHandSide(), fieldKey)) {
         throw new Refusal(
@@ -262,14 +275,22 @@ final class EncapsulateField {
       return new TextEdit(s, s + st.getLength(), prefix + setter + "(" + rhs + ");");
     }
     if (isIncDec(up, target)) {
-      throw new Refusal(
-          field
-              + " is changed with ++ or -- at line "
-              + line
-              + " of "
-              + p.getFileName()
-              + ", a compound write that encapsulate_field does not rewrite. Write it as a plain"
-              + " assignment first.");
+      if (!(up.getParent() instanceof ExpressionStatement st)) {
+        throw new Refusal(
+            field
+                + " is changed with ++ or -- inside an expression at line "
+                + line
+                + " of "
+                + p.getFileName()
+                + ". encapsulate_field rewrites such a write only as a statement of its own; move"
+                + " it into one first.");
+      }
+      boolean increment =
+          up instanceof PrefixExpression pe
+              ? pe.getOperator() == PrefixExpression.Operator.INCREMENT
+              : ((PostfixExpression) up).getOperator() == PostfixExpression.Operator.INCREMENT;
+      return combined(
+          fileText, target, n, st, increment ? "+" : "-", "1", getter, setter, field, line, p);
     }
     int s = n.getStartPosition();
     return new TextEdit(s, s + n.getLength(), getter + "()");
@@ -304,5 +325,61 @@ final class EncapsulateField {
 
   private static String source(String text, ASTNode node) {
     return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
+  }
+
+  /**
+   * The setter call that replaces {@code statement}, a write of the field through {@code target}
+   * ({@code n} its name): the getter's value combined with {@code operand} by {@code op}, as {@code
+   * setX(getX() + 1);}. Refused when the receiver before the name is not a name or {@code this}: it
+   * would run twice.
+   */
+  private static TextEdit combined(
+      String fileText,
+      ASTNode target,
+      SimpleName n,
+      Statement statement,
+      String op,
+      String operand,
+      String getter,
+      String setter,
+      String field,
+      int line,
+      Path p) {
+    if (target instanceof FieldAccess fa
+        && !(fa.getExpression() instanceof ThisExpression || fa.getExpression() instanceof Name)) {
+      String receiver = source(fileText, fa.getExpression());
+      throw new Refusal(
+          field
+              + " is changed through "
+              + receiver
+              + " at line "
+              + line
+              + " of "
+              + p.getFileName()
+              + ", and as a setter call "
+              + receiver
+              + " would run twice. Put it in a variable first, and change the field through that.");
+    }
+    String prefix = fileText.substring(target.getStartPosition(), n.getStartPosition());
+    int s = statement.getStartPosition();
+    return new TextEdit(
+        s,
+        s + statement.getLength(),
+        prefix + setter + "(" + prefix + getter + "() " + op + " " + operand + ");");
+  }
+
+  /** {@code e}'s source, in parentheses unless it is a name, a literal, a call or already so. */
+  private static String operand(String fileText, Expression e) {
+    String text = source(fileText, e);
+    boolean bare =
+        e instanceof Name
+            || e instanceof NumberLiteral
+            || e instanceof StringLiteral
+            || e instanceof CharacterLiteral
+            || e instanceof BooleanLiteral
+            || e instanceof ParenthesizedExpression
+            || e instanceof MethodInvocation
+            || e instanceof FieldAccess;
+    return bare ? text : "(" + text + ")";
   }
 }

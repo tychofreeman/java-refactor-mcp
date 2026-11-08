@@ -599,8 +599,8 @@ final class Tools {
           """
           Encapsulate a field: it becomes private, with a getter and a setter (getX and setX, or the \
           names given), and every use in the project goes through them. A read becomes the getter \
-          call; a plain assignment statement x = value becomes setX(value). A final field gets a \
-          getter only. Identify the field as Type.field, a top-level class of the file.\
+          call; an assignment statement x = value becomes setX(value), and x += value; or x++; becomes \
+          setX(getX() + value). A final field gets a getter only. Identify the field as Type.field, a top-level class of the file.\
           """,
           List.of(
               Arg.FILE.described("Java file path; the file that declares " + "the field."),
