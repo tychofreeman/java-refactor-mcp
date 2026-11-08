@@ -156,10 +156,12 @@ final class Declarations {
     }
     // Each member goes where its kind goes: a field after the last field, a constructor after the
     // last constructor or field, before the first member when there is none; the rest at the end.
-    pending.sort(Comparator.comparingInt(Declarations::rank));
+    pending.sort(Comparator.comparingInt(Placement::rank));
     Map<Place, List<BodyDeclaration>> byPlace = new LinkedHashMap<>();
     for (BodyDeclaration d : pending) {
-      byPlace.computeIfAbsent(place(owner.decl(), rank(d)), p -> new ArrayList<>()).add(d);
+      byPlace
+          .computeIfAbsent(Placement.place(owner.decl(), Placement.rank(d)), p -> new ArrayList<>())
+          .add(d);
     }
     for (Map.Entry<Place, List<BodyDeclaration>> e : byPlace.entrySet()) {
       String joined = String.join("\n\n", e.getValue().stream().map(blocks::get).toList());
@@ -713,38 +715,5 @@ final class Declarations {
   /** The offset of the last character of {@code node}. */
   private static int end(ASTNode node) {
     return node.getStartPosition() + node.getLength() - 1;
-  }
-
-  /** Where new members go: after {@code member}, before it, or (null) at the type's end. */
-  record Place(BodyDeclaration member, boolean before) {}
-
-  /** 0 for a field or initializer, 1 for a constructor, 2 for any other member. */
-  static int rank(BodyDeclaration d) {
-    if (d instanceof FieldDeclaration || d instanceof Initializer) {
-      return 0;
-    }
-    return d instanceof MethodDeclaration m && m.isConstructor() ? 1 : 2;
-  }
-
-  /**
-   * Where a member of {@code rank} goes in {@code type}: after its last member of that rank or
-   * lower; for a field or constructor with none, before its first member; otherwise its end.
-   */
-  static Place place(AbstractTypeDeclaration type, int rank) {
-    if (rank == 2) {
-      return new Place(null, false);
-    }
-    BodyDeclaration last = null;
-    for (Object o : type.bodyDeclarations()) {
-      if (rank((BodyDeclaration) o) <= rank) {
-        last = (BodyDeclaration) o;
-      }
-    }
-    if (last != null) {
-      return new Place(last, false);
-    }
-    return type.bodyDeclarations().isEmpty()
-        ? new Place(null, false)
-        : new Place((BodyDeclaration) type.bodyDeclarations().get(0), true);
   }
 }

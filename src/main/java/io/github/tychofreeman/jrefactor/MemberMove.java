@@ -292,7 +292,7 @@ final class MemberMove {
    * of those, and any other member at its end ({@link #appendTo}).
    */
   static List<TextEdit> addTo(String text, AbstractTypeDeclaration type, String moved, int rank) {
-    Declarations.Place place = Declarations.place(type, rank);
+    Place place = Placement.place(type, rank);
     if (place.member() == null) {
       return appendTo(text, type, moved);
     }

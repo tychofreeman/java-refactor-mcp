@@ -119,10 +119,10 @@ Each was chosen from options; the record named beside it has the options it beat
   inline_variable (#122, 2026-11-06: `Tools.inline`, `line` for a local, `Type.method` for a
   static method), and takes inline class when it is built (#128).
 - Layout is the tool's, not the model's (the user, 2026-11-07, options in `docs/design.md`):
-  `add_declaration` places members by kind (`Declarations.place`); `after` and `before` are retired,
+  `add_declaration` places members by kind (`Placement.place`); `after` and `before` are retired,
   accepted and ignored (`Tools.RETIRED_ARGS`, dropped by `Args.without` before the argument check).
   A new option that would make the model choose a place is against this choice. A tool that adds
-  a member to a type places it the same way, through `MemberMove.addTo` (by `Declarations.rank`):
+  a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do.
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
   receiver): matches in instance members of its class and subclasses become `m(...)`, refused

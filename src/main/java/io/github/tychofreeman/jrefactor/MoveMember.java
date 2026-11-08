@@ -417,7 +417,7 @@ final class MoveMember {
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, fd));
     edits
         .computeIfAbsent(targetFile, k -> new ArrayList<>())
-        .addAll(MemberMove.addTo(texts.get(targetFile), target, moved, Declarations.rank(fd)));
+        .addAll(MemberMove.addTo(texts.get(targetFile), target, moved, Placement.rank(fd)));
     Stubs.Declared declared =
         MemberMove.gate(
             project,
