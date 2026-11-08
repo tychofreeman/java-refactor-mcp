@@ -378,6 +378,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- JDT's `SimpleName.isDeclaration()` is false for a record's name (and a constructor's): test
+  `t.getName() == n` on the `AbstractTypeDeclaration` too (2026-11-08, `Rename.checkMeanings`).
 - Tool descriptions say what a tool does: no refusal lists, nothing every tool shares (that is
   `Server.INSTRUCTIONS`), per CLAUDE.md (the user, 2026-11-06). Paths are said once to be relative
   to the project root, in the instructions; an argument says what file it is (2026-11-07 review,
