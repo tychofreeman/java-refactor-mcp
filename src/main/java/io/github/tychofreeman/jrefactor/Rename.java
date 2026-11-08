@@ -15,6 +15,7 @@ import java.util.TreeSet;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -580,9 +581,12 @@ public final class Rename {
     for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
       List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
-        // A constructor's name declares it too, though JDT's isDeclaration says not.
+        // A constructor's and a record's name declare them too, though JDT's isDeclaration says
+        // not.
         boolean declares =
-            n.isDeclaration() || (n.getParent() instanceof MethodDeclaration d && d.getName() == n);
+            n.isDeclaration()
+                || (n.getParent() instanceof MethodDeclaration d && d.getName() == n)
+                || (n.getParent() instanceof AbstractTypeDeclaration t && t.getName() == n);
         if (declares
             && n.getIdentifier().equals(newName)
             && at.contains(before(at, n.getStartPosition(), delta))) {

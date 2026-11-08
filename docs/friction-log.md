@@ -1000,3 +1000,12 @@ parallel, the bodies at lines the field had moved, and refused again. Four lost 
 method a body calls gets a stub; a bare name gets none (only `T.NAME` does, #107). A field stub for
 an unresolved simple name in a member of the class, typed from its use, would have passed the
 first calls. Record: `docs/sessions/ab-constructor-stub.md`.
+
+## 2026-11-08: rename of a record refused at every use (split-placement)
+
+Splitting `Declarations` (#32), `rename` of the record `Place` (moved to its own file) to
+`Placement`, and then to `Spot`, was refused: "would change what Spot at line 160 ... means: it would
+mean the type Spot, not the renamed one". JDT's `SimpleName.isDeclaration()` is false for a record's
+name, so `Rename.checkMeanings` found no renamed declaration. Fixed in its own PR
+(`docs/sessions/rename-type-argument.md`); the split went on after it. Twelve other
+`isDeclaration()` calls may miss a record the same way.
