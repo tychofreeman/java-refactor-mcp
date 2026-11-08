@@ -278,8 +278,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - A golden case with `skeleton_only=true` runs with `Session.skeletonOnly` on (roadmap #116).
   Under the flag, `Generated` also refuses typed bodies a command writes (2026-11-06): a
   field-assigning constructor, an override that only calls `super` or throws, a statement wrap;
-  also in a type sent whole through `replace_declaration`, and in `replace_statements` in a member's
-  own body, checked on the member it leaves (2026-11-07).
+  also in a type sent whole through `replace_declaration`, and in each method that
+  `replace_statements`, `replace_expression`, `insert_statements` or `replace_text` adds or changes
+  into that shape (`Generated.checkChanged`, 2026-11-07); a member already in it is left alone.
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
