@@ -1,0 +1,9 @@
+[
+  {
+    "name": "library-card",
+    "dir": "testdata/library-card",
+    "tests": "testdata/library-card-tests",
+    "check": "./mvnw -q -o test",
+    "prompt": "Test first: in a new test class lib.loan.CardTest, write a test that builds a Card for a member with a limit of 5 books and checks holder() and limit(); then make it pass. Card needs a constructor Card(Member holder, int limit). Then give Card a count of the books borrowed: borrowed() returns it (0 for a new card), and borrow() counts one more book and returns true while the count is under the limit, and returns false, counting nothing, once it is reached."
+  }
+]
