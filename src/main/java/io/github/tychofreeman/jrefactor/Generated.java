@@ -1,7 +1,11 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
@@ -192,5 +196,52 @@ final class Generated {
       }
     }
     return true;
+  }
+
+  /**
+   * Refuses, under skeleton-only creation, what {@link #checkMembers} refuses in each method that
+   * {@code after} adds or changes from {@code before}, unless it had that shape already: the
+   * members an edit's own text wrote. {@code tool} names the edit in the refusal.
+   */
+  static void checkChanged(String before, String after, String rel, String tool) {
+    Map<String, MethodDeclaration> old = new HashMap<>();
+    for (MethodDeclaration m : Nodes.all(Edits.parses(before, rel), MethodDeclaration.class)) {
+      old.put(key(m), m);
+    }
+    for (MethodDeclaration m : Nodes.all(Edits.parses(after, rel), MethodDeclaration.class)) {
+      MethodDeclaration was = old.get(key(m));
+      if (was != null
+          && (MemberMove.textOf(before, was).equals(MemberMove.textOf(after, m)) || refused(was))) {
+        continue;
+      }
+      checkMembers(
+          List.of(m),
+          " in an add_declaration in place of this "
+              + tool
+              + (was == null
+                  ? "."
+                  : "; it replaces the " + (m.isConstructor() ? "constructor." : "method.")));
+    }
+  }
+
+  /** Whether {@link #checkMembers} refuses {@code m}. */
+  private static boolean refused(MethodDeclaration m) {
+    try {
+      checkMembers(List.of(m), "");
+      return false;
+    } catch (Refusal r) {
+      return true;
+    }
+  }
+
+  /** {@code m} by its types and signature: Outer.Inner.m(int). */
+  private static String key(MethodDeclaration m) {
+    StringBuilder key = new StringBuilder(MemberMove.label(m));
+    for (ASTNode n = m.getParent(); n != null; n = n.getParent()) {
+      if (n instanceof AbstractTypeDeclaration t) {
+        key.insert(0, t.getName().getIdentifier() + ".");
+      }
+    }
+    return key.toString();
   }
 }

@@ -263,6 +263,9 @@ final class Edits {
       from = i + match.length();
     }
     out.append(text, from, text.length());
+    if (project.session().skeletonOnly && rel.endsWith(".java")) {
+      Generated.checkChanged(text, out.toString(), rel, "replace_text");
+    }
 
     Written written =
         write(
