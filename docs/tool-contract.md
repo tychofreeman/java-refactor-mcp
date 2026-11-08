@@ -276,7 +276,8 @@ and an optional `to` (the simple name of a direct supertype).
 
 Moves a method or a field from `Sub` to its direct superclass, or to the direct
 supertype named by `to`: the declaration, with its Javadoc, is removed from `Sub`
-and added at the end of the supertype's body; imports are fixed in both files.
+and added to the supertype where `add_declaration` would put it (a field after its fields,
+a method at its end; 2026-11-07); imports are fixed in both files.
 A name that is both a field and a method is refused; a field with other variables
 in its declaration is refused (move one variable per declaration).
 Calls need no change, since `Sub` inherits the method.
@@ -472,8 +473,9 @@ Arguments: `file` (the Java file that declares the class) and `name`
 (`Sub.method`, both as written in that file; the class is top-level).
 
 Moves a method or a field from `Sub` to each direct subclass of `Sub` in the
-project: the declaration, with its Javadoc, is removed from `Sub` and added at the
-end of each subclass's body; imports are fixed in every file touched.
+project: the declaration, with its Javadoc, is removed from `Sub` and added to each
+subclass where `add_declaration` would put it (a field after its fields, a method at its end;
+2026-11-07); imports are fixed in every file touched.
 
 - Refused: no direct subclass in the project; a subclass that already declares
   the member; a method that overrides a method of a supertype (`@Override`, or a
@@ -776,7 +778,8 @@ arguments.
   enclosing class or its superclasses already has, which the local would hide.
   `all_occurrences` and `pointer` are not built yet.
 - `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
-  expr;` as the type's first member, `field` adds `private final T name = expr;`
+  expr;` after the type's fields (its first member when it has none, 2026-11-07), `field`
+  adds `private final T name = expr;` there too
   (refused in a static member), and `parameter` adds a parameter to the method
   around it, as `add_parameter` does, every call passing the expression; the
   expression becomes the name. The expression must be literals and constants
@@ -990,7 +993,8 @@ Imports follow in every file; a method moved to another package becomes public, 
 uses that the target cannot reach is the gate's compile error.
 
 A static field (roadmap #109, 2026-11-06): `name` `Shop.MAX` moves its declaration (Javadoc
-and all, widened from private, public across packages) to the end of `to`; `Shop.MAX`, a bare
+and all, widened from private, public across packages) to `to`, after its fields (before its
+first member when it has none, 2026-11-07); `Shop.MAX`, a bare
 `MAX` and `this.MAX` become `Config.MAX`, and a static import of it imports it from there (that
 file's bare uses kept). Refused: an instance field (naming `extract_type` and `pull_up`), a
 declaration of several fields, an initializer that reads anything but constants (it would run

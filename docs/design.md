@@ -129,7 +129,10 @@ the stub's place. Options it beat: the same placement with `after`/`before` stil
 smaller change, but the description keeps offering the choice, and a run sent `before` it did not
 need), and leaving members at the end. Order does not change what a class does (only field
 initializers and initializer blocks run in the order written, and a field still goes after the
-fields), so placement is a convention for readers, and the tool can keep it alone.
+fields), so placement is a convention for readers, and the tool can keep it alone. The tools that
+add a member elsewhere follow the same rule (2026-11-07, `MemberMove.addTo`): `pull_up`,
+`push_down`, `move` of a static field and `extract_variable` with `as` put a field after the
+target's fields; a method still goes at the end.
 
 **Decided 2026-11-07 (the user): an edit that leaves final fields unset writes their
 constructor.** When an edit adds a final instance field with no value to a class that has no

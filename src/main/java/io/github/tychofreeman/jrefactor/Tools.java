@@ -646,8 +646,8 @@ final class Tools {
           "pull_up",
           """
           Move a method or field from its class to its direct superclass, or to a direct supertype named by \
-          to: the member leaves Sub and is added to the end of Base. Every call still compiles, \
-          since Sub inherits the method. name is Sub.method.\
+          to: the member leaves Sub and is added to Base, a field after its fields and a method at its \
+          end. Every call still compiles, since Sub inherits the method. name is Sub.method.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
@@ -664,7 +664,8 @@ final class Tools {
           "push_down",
           """
           Move a method or field from its class to each direct subclass in the project: the member leaves \
-          Sub and is added to the end of each subclass. name is Sub.method.\
+          Sub and is added to each subclass, a field after its fields and a method at its end. name is \
+          Sub.method.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
