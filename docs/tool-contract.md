@@ -1020,11 +1020,16 @@ Makes a field private, with a getter and a setter, and rewrites the project's us
 `file`, `name` (`Type.field`), `getter` and `setter` (optional; default `getX` and `setX`).
 
 A read becomes the getter call (`x` to `getX()`, `p.x` to `p.getX()`); a plain assignment statement
-`x = v;` becomes `setX(v);`. A final field gets a getter only. Result: `encapsulated Type.field in file
+`x = v;` becomes `setX(v);`, and (2026-11-07, roadmap #130, as Go and TypeScript) a compound write
+or `++`/`--` that is a statement of its own becomes the setter of the getter combined: `x += k + 1;`
+to `setX(getX() + (k + 1));`, `p.x++;` to `p.setX(p.getX() + 1);`. The getter runs before the
+right-hand side, as the field's value is saved before it in Java (probe
+`encapsulate_field_compound_order`). A final field gets a getter only. Result: `encapsulated Type.field in file
 with getX and setX; N uses rewritten in K files`.
 
 Refusals: a name that is not a field, a declaration of several fields, a final field that is written, a
-compound write (`+=`), `++` or `--`, a write inside an expression, a statement that also reads the
+write inside an expression (`int was = x++;`), a compound write through a receiver that is not a
+name or `this` (`next().x += 1`, which would run twice), a plain assignment that also reads the
 field, and the gate's "would add compile errors".
 
 ## `batch` (built)
