@@ -175,10 +175,10 @@ final class Stubs {
     }
 
     /**
-     * Whether {@code type} in {@code file} had a method, constructor or field {@code name} before
-     * the edit: one the edit removed, which is not declared again.
+     * Whether {@code type} in {@code file} had a method or constructor {@code name} (a field, with
+     * {@code field}) before the edit: one the edit removed, which is not declared again.
      */
-    private boolean removed(Path file, String type, String name) {
+    private boolean removed(Path file, String type, String name, boolean field) {
       String before = old.get(file);
       if (before == null) {
         return false;
@@ -198,10 +198,12 @@ final class Stubs {
         members = found.bodyDeclarations();
       }
       for (Object o : members) {
-        if (o instanceof MethodDeclaration m && m.getName().getIdentifier().equals(name)) {
+        if (!field
+            && o instanceof MethodDeclaration m
+            && m.getName().getIdentifier().equals(name)) {
           return true;
         }
-        if (o instanceof FieldDeclaration f) {
+        if (field && o instanceof FieldDeclaration f) {
           for (Object v : f.fragments()) {
             if (((VariableDeclarationFragment) v).getName().getIdentifier().equals(name)) {
               return true;
@@ -218,7 +220,8 @@ final class Stubs {
      */
     private boolean removedAround(
         MethodInvocation call, ITypeBinding owner, Path target, String name) {
-      if (removed(target, Names.typeLabel(owner), name) || removedInSupertypes(owner, name)) {
+      if (removed(target, Names.typeLabel(owner), name, false)
+          || removedInSupertypes(owner, name)) {
         return true;
       }
       if (call.getExpression() != null) {
@@ -227,7 +230,7 @@ final class Stubs {
       for (ASTNode a = call.getParent(); a != null; a = a.getParent()) {
         if (a instanceof AbstractTypeDeclaration t
             && t.resolveBinding() != null
-            && (removed(target, Names.typeLabel(t.resolveBinding()), name)
+            && (removed(target, Names.typeLabel(t.resolveBinding()), name, false)
                 || removedInSupertypes(t.resolveBinding(), name))) {
           return true;
         }
@@ -247,7 +250,7 @@ final class Stubs {
       supertypes.addAll(List.of(type.getInterfaces()));
       for (ITypeBinding s : supertypes) {
         Path file = sourceOf(s);
-        if (file != null && removed(file, Names.typeLabel(s.getErasure()), name)) {
+        if (file != null && removed(file, Names.typeLabel(s.getErasure()), name, false)) {
           return true;
         }
         if (removedInSupertypes(s, name)) {
@@ -398,7 +401,7 @@ final class Stubs {
       owner = owner.getErasure();
       String simple = owner.getName();
       String type = Names.typeLabel(owner);
-      if (removed(target, type, simple)) {
+      if (removed(target, type, simple, false)) {
         return;
       }
       boolean needsDefault = !created.contains(owner.getQualifiedName());
@@ -807,7 +810,9 @@ final class Stubs {
       ITypeBinding owner = enclosing == null ? null : enclosing.resolveBinding();
       Path target = sourceOf(owner);
       String name = use.getIdentifier();
-      if (target == null || owner.isInterface() || removed(target, Names.typeLabel(owner), name)) {
+      if (target == null
+          || owner.isInterface()
+          || removed(target, Names.typeLabel(owner), name, true)) {
         return;
       }
       inScope = inStaticContext(use) ? Set.of() : typeVariablesOf(owner);

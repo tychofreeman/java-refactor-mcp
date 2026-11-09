@@ -331,7 +331,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The constructor stub that sets fields (#273) ran on 2026-11-07 (`docs/sessions/ab-constructor-stub.md`,
   `eval-tasks/library-card.json`, a fixture class with fields and no constructor): it fired in all four
   runs, no run wrote the constructor, and no run named a place for a member; the skeleton arm lost four
-  calls a run to a body using a field not yet declared.
+  calls a run to a body using a field not yet declared. After #288 (2026-11-09,
+  `docs/sessions/ab-card-bare-field.md`): 14.5 turns a run against 19.5; one run still lost two calls,
+  as the stub missed a field named as its getter, since fixed.
 - The refusal hints were rerun on 2026-11-07 (`docs/sessions/ab-hints.md`, `eval-tasks/library-hints.json`):
   each hint that fired was followed in the next call; `replace_declaration` of a type passes the
   skeleton rule.
