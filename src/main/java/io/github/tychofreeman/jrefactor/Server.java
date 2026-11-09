@@ -33,7 +33,7 @@ public final class Server {
       """
       Tools that change Java keep the project compiling: a change that would add compile errors \
       is refused. A refusal changes nothing, and says why and what to send instead. Edits \
-      declare "not implemented" stubs for what new code calls and nothing declares, so a test \
+      declare "not implemented" stubs for what new code calls or reads and nothing declares, so a test \
       written first compiles (a constructor whose arguments each fit one field sets them), \
       write the constructor of final fields left unset in a class without one, and add or \
       remove the imports the code needs; pass imports when a refusal says a name is ambiguous. \

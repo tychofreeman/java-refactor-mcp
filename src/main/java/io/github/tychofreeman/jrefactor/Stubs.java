@@ -42,6 +42,7 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
+import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
@@ -174,8 +175,8 @@ final class Stubs {
     }
 
     /**
-     * Whether {@code type} in {@code file} had a method or constructor {@code name} before the
-     * edit: one the edit removed, which is not declared again.
+     * Whether {@code type} in {@code file} had a method, constructor or field {@code name} before
+     * the edit: one the edit removed, which is not declared again.
      */
     private boolean removed(Path file, String type, String name) {
       String before = old.get(file);
@@ -199,6 +200,13 @@ final class Stubs {
       for (Object o : members) {
         if (o instanceof MethodDeclaration m && m.getName().getIdentifier().equals(name)) {
           return true;
+        }
+        if (o instanceof FieldDeclaration f) {
+          for (Object v : f.fragments()) {
+            if (((VariableDeclarationFragment) v).getName().getIdentifier().equals(name)) {
+              return true;
+            }
+          }
         }
       }
       return false;
@@ -288,6 +296,13 @@ final class Stubs {
                 && q.getQualifier() == n
                 && Character.isUpperCase(n.getIdentifier().charAt(0))) {
               type(file, n.getIdentifier());
+            }
+            // A field that does not exist yet, read or written by its bare name: return borrowed.
+            if (node instanceof SimpleName n
+                && Character.isLowerCase(n.getIdentifier().charAt(0))
+                && !(n.getParent() instanceof MethodInvocation call && call.getExpression() == n)
+                && !(n.getParent() instanceof QualifiedName)) {
+              bareField(unit, n);
             }
           }
           // A static field of a project class that nothing declares: Limits.MAX.
@@ -669,6 +684,15 @@ final class Stubs {
       if (parent instanceof Assignment a && a.getRightHandSide() == child) {
         return typeName(a.getLeftHandSide().resolveTypeBinding());
       }
+      if (parent instanceof Assignment a && a.getLeftHandSide() == child) {
+        return typeName(a.getRightHandSide().resolveTypeBinding());
+      }
+      if (parent instanceof PostfixExpression
+          || (parent instanceof PrefixExpression p
+              && (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                  || p.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+        return "int";
+      }
       if (parent instanceof ReturnStatement) {
         ASTNode in = parent;
         while (in != null
@@ -770,6 +794,33 @@ final class Stubs {
         arguments.add(typeName(argument));
       }
       return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
+    }
+
+    /**
+     * A field {@code use} names bare in the named type around it, typed from the use, static in
+     * static code: a stub that {@code add_declaration} of the real field replaces, as {@link
+     * #field}'s.
+     */
+    private void bareField(CompilationUnit unit, SimpleName use) throws IOException {
+      uses.clear();
+      AbstractTypeDeclaration enclosing = ancestorOrSelf(use, AbstractTypeDeclaration.class);
+      ITypeBinding owner = enclosing == null ? null : enclosing.resolveBinding();
+      Path target = sourceOf(owner);
+      String name = use.getIdentifier();
+      if (target == null || owner.isInterface() || removed(target, Names.typeLabel(owner), name)) {
+        return;
+      }
+      inScope = inStaticContext(use) ? Set.of() : typeVariablesOf(owner);
+      owner = owner.getErasure();
+      String code =
+          (inStaticContext(use) ? "static " : "")
+              + resultType(use)
+              + " "
+              + name
+              + "; "
+              + FIELD_MARK;
+      String label = Names.typeLabel(owner) + "." + name;
+      want(target, new Stub(Names.typeLabel(owner), label, label, code));
     }
   }
 

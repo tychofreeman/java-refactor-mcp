@@ -1001,6 +1001,9 @@ method a body calls gets a stub; a bare name gets none (only `T.NAME` does, #107
 an unresolved simple name in a member of the class, typed from its use, would have passed the
 first calls. Record: `docs/sessions/ab-constructor-stub.md`.
 
+Follow-up (2026-11-08, `docs/sessions/field-stub-bare-name.md`): a bare name nothing declares gets
+a field stub in the type around it, typed from its use, so those bodies now pass before the field.
+
 ## 2026-11-08: rename of a record refused at every use (split-placement)
 
 Splitting `Declarations` (#32), `rename` of the record `Place` (moved to its own file) to
