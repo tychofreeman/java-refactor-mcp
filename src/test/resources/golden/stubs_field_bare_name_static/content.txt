@@ -1,0 +1,3 @@
+static boolean high(double r) {
+  return r > ceiling;
+}

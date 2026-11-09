@@ -67,7 +67,10 @@ Each was chosen from options; the record named beside it has the options it beat
   arguments each fit one field of the class assigns them, not throws (the user, 2026-11-07:
   `Stubs.Round.setting`; the options are in `docs/design.md`). A static field read
   `T.NAME` gets `static <type> NAME; // not implemented` (#107, 2026-11-06): a field cannot
-  throw, so the comment is what `add_declaration` knows it by (`Stubs.FIELD_MARK`). A class
+  throw, so the comment is what `add_declaration` knows it by (`Stubs.FIELD_MARK`). A bare
+  name nothing declares gets the same, in the type around it (`Stubs.Round.bareField`; the user,
+  2026-11-08, any lowercase name over instance code only and over only names typed by their use:
+  a typo of a local becomes a field stub, which the result names). A class
   the same call created gets no default-constructor stub. A lambda argument to
   an undefined method gets a functional interface by its arity (`Supplier`,
   `Function`, `BiFunction`), a guess. Stub type variables are written by name

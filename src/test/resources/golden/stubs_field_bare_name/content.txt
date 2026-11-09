@@ -1,0 +1,3 @@
+int borrowed() {
+  return borrowed;
+}

@@ -515,6 +515,10 @@ the gate behind an empty stub class):
   `replace_declaration`;
 - a static field read as `T.NAME` on a project class (roadmap #107, 2026-11-06): `static
   <type> NAME; // not implemented`, the type from the use as for a method's result, no value;
+- a field read or written by a bare lowercase name nothing declares (2026-11-08): `<type> name; //
+  not implemented` in the named type around the use, `static` in static code, typed as above, and
+  as the other side of an assignment, or `int` for `++` and `--`; not for a call's receiver or a
+  qualified name, nor for a field the edit removed. `add_declaration` of the real field replaces it;
 - a class nothing declares (a type, the receiver of a static call
   `Tasks.run()`, or a capitalized qualifier `Limits.MAX`), in the using file's package under
   the first (main) source root, as `public class T {}`; a name that reads as a test double or
