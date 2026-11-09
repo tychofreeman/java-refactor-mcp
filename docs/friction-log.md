@@ -1012,3 +1012,11 @@ mean the type Spot, not the renamed one". JDT's `SimpleName.isDeclaration()` is 
 name, so `Rename.checkMeanings` found no renamed declaration. Fixed in its own PR
 (`docs/sessions/rename-type-argument.md`); the split went on after it. Twelve other
 `isDeclaration()` calls may miss a record the same way.
+
+## 2026-11-09: the bare-name stub missed a field named as its getter (A/B, library-card)
+
+Rerunning the skeleton arm after #288, run 2 filled `borrowed()` and `borrow()` before declaring
+the field `borrowed`, and was refused as before: `Stubs.Round.removed` took the method stub
+`borrowed()` for a field of that name the edit had removed, so no field stub was declared. Two
+lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
+`docs/sessions/ab-card-bare-field.md`.
