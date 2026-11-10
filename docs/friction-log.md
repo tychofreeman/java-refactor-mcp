@@ -1027,5 +1027,13 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   was a section starting with two blank lines and `### The 2026-11-04 list`, and whose `new`
   was three table rows, a blank line and that heading. The rows for #134 and #135 landed, but
   the first one, #133, did not, with no refusal; it was added back by a second `replace_text`.
-- Not looked into yet: whether the `@@name` sections drop leading blank lines (so `old` matched
-  only the heading) and what then happened to the first line of `new`.
+- Found while merging: the row was not lost but joined to the end of row #132's line (`... either || 126 | 133 ...`),
+  then put back as its own line, so `main` had it twice until this merge. The section `old`
+  probably lost its leading newlines, so `new`'s first line went where the newline after #132 was.
+## 2026-11-10: a raw List from JDT in loop_to_stream, by hand
+
+- `UnionType.types()` is a raw `List`, and `List<Type> types = ... ? u.types() : List.of(t)` was
+  an unchecked warning (`-Werror`). `replace_statements` of the declaration with `List<Object>` was
+  refused, since the `for (Type c : types)` after it no longer compiled; the loop was changed by
+  `sed`, then the declaration with `replace_text`. A batch of the two steps with check "end" would
+  have done it through the tools.

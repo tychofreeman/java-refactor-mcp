@@ -50,7 +50,8 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   `function_to_method`, `encapsulate_field`, `convert_lambda` (lambda,
   method reference, anonymous class), `convert_to_record`; `fold` (replace
   code that does what a method does with a call of it); `move_statement`,
-  `invert_if`, `remove_else`, `type_switch_to_method`.
+  `invert_if`, `remove_else`, `type_switch_to_method`; `loop_to_stream`
+  (an enhanced for as a stream).
 - **Edits**, which change behavior on purpose and are still type-checked
   and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),

@@ -988,6 +988,27 @@ bump();`), and the gate's "would add compile errors". Checked by the behavior ga
 beyond the shared-name and two-effect rules, which stay the tool's own. A statement that may throw
 swapped with one that changes state is reported.
 
+## `loop_to_stream` (built)
+
+Arguments: `file`, `line` (the line the loop starts on), `preserve_exceptions`. An enhanced for
+over an `Iterable` (`for (T x : source)`) becomes a stream running the same code for each element
+in the same order. The body is read from the outside in: an if with no else that holds the rest
+is `filter`; a first local computed from the element (its declared type the initializer's, not
+primitive), when nothing after it reads the element, is `map`; the rest is `forEach`
+(`source.forEach(...)` with no stage). A body that is one `out.add(e)` or `out.addAll(c)` of a
+collection, to a `List` or `Collection` declared `= new ArrayList<>()` just before the loop and
+used nowhere else in it, is collected instead (`addAll` is `flatMap`): `toList()` when every later
+use only reads the list and the stream's type is its element type, else
+`collect(Collectors.toList())` (the user, 2026-11-10). Stages go on lines of their own past 100
+columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
+toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
+not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a
+loop variable of another type than the elements (`int` over `Integer`); a break, continue or
+return that leaves the body; a local declared outside the body and assigned in it ("Sums, counts
+and other results are not built yet"); a checked exception the body does not catch; a call that
+changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
+catches a local read in the body that is not effectively final.
+
 ## `invert_if` (built)
 
 Inverts an if that has an else: the branches swap and the condition is negated. Arguments: `file`,
