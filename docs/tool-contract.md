@@ -1009,7 +1009,10 @@ Boolean::logicalOr) ? set : initial` (no `? :` for `false` to `true`, a `!` for 
 sets the flag maps to its condition. An `int` or `long` local the loop only adds to (one `v += e`
 after the stages) is `mapToInt(x -> e).sum()` or `mapToLong`, and one `v++` or `v += 1` is
 `count()`, cast to `int` for an `int`; a starting value other than 0 goes in front (`crate +
-...`). A `float` or `double` sum is refused (roadmap #135). Comment lines between that declaration and the loop stay above
+...`). A `float` or `double` sum is refused (roadmap #135). A flag set
+then followed by `break;` under the last filter is a search: `anyMatch(x -> cond)`, or
+`allMatch(x -> !cond)` for one that starts `true` and is set `false`; a break with no condition
+above it is refused. Comment lines between that declaration and the loop stay above
 it. Stages go on lines of their own past 100 columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
 toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
 not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a

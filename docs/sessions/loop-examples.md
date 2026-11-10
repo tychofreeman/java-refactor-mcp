@@ -170,7 +170,7 @@ int open = (int) orders.stream().filter(order -> order.open()).count();
 
 `count()` is a `long`: the cast keeps the local's type; a `long` local needs none.
 
-### 10. Search with break (planned; refused today)
+### 10. Search with break (done: `loop_to_stream_any_match`, `loop_to_stream_all_match`)
 
 ```java
 boolean late = false;
@@ -184,8 +184,10 @@ for (Order order : orders) {
 boolean late = orders.stream().anyMatch(order -> order.late());
 ```
 
-The `break` is what makes `anyMatch`'s short-circuit right here, unlike example 7. Also
-`allMatch`, `noneMatch`, and `findFirst` for a loop that keeps the first match.
+The `break` is what makes `anyMatch`'s short-circuit right here, unlike example 7. A flag that
+starts `true` and is set `false` is `allMatch` of the negated condition (`if (!o.paid())` gives
+`allMatch(o -> o.paid())`). Not built: `findFirst` for a loop that keeps the first match, since
+`findFirst` throws on a null element where the loop would not.
 
 ### 11. A map's entries (planned)
 

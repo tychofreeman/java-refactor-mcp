@@ -8,6 +8,7 @@ import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BooleanLiteral;
+import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
@@ -172,10 +173,10 @@ final class LoopToStream {
     }
     Statement body = loop.getBody();
     VariableDeclarationStatement result = resultBefore(loop);
-    checkBody(
-        opened, text, loop, body, from, result == null ? null : fragment(result).resolveBinding());
-
+    IBinding computes = result == null ? null : fragment(result).resolveBinding();
     Read read = stages(text, variable, element, body);
+    checkBody(
+        opened, text, loop, body, from, computes, computes != null && searches(read, computes));
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
     VariableDeclarationStatement list = collected(text, loop, read.rest());
@@ -220,9 +221,10 @@ final class LoopToStream {
       EnhancedForStatement loop,
       Statement body,
       String from,
-      IBinding result) {
+      IBinding result,
+      boolean search) {
     int line = Lines.number(text, loop.getStartPosition());
-    if (Effects.leaves(body)) {
+    if (!search && Effects.leaves(body)) {
       throw new Refusal(
           "the body of the loop at line "
               + line
@@ -863,6 +865,9 @@ final class LoopToStream {
               + " takes a flag (a local set to one constant from another), an int or long sum"
               + " (+=) or a count (++); not this.");
     }
+    if (searches(read, binding)) {
+      return search(text, loop, result, read, set, indent, step);
+    }
     List<Stage> stages = new ArrayList<>(read.stages());
     List<Statement> rest = read.rest();
     String cont = indent + " ".repeat(2 * step);
@@ -1070,5 +1075,78 @@ final class LoopToStream {
         result.getStartPosition(),
         List.of(),
         (count ? "counted " : "summed ") + v.getName() + " by " + summary(read.stages(), terminal));
+  }
+
+  /**
+   * Whether what is left of the body after its stages sets {@code result} and breaks out of the
+   * loop: a search, which stops at the first element that passes the filters, as anyMatch does.
+   */
+  private static boolean searches(Read read, IBinding result) {
+    List<Statement> rest = read.rest();
+    return rest.size() == 2
+        && rest.get(0) instanceof ExpressionStatement e
+        && e.getExpression() instanceof Assignment a
+        && a.getLeftHandSide() instanceof SimpleName n
+        && same(n.resolveBinding(), result)
+        && rest.get(1) instanceof BreakStatement b
+        && b.getLabel() == null;
+  }
+
+  /**
+   * The pipeline for a search: the last filter's condition becomes anyMatch, or, for a flag that
+   * starts true and is set false, its negation becomes allMatch. Both stop at the first match, as
+   * the loop's break did, so they run each stage as often as the loop ran it.
+   */
+  private static Rewrite search(
+      String text,
+      EnhancedForStatement loop,
+      VariableDeclarationStatement result,
+      Read read,
+      String set,
+      String indent,
+      int step) {
+    VariableDeclarationFragment v = fragment(result);
+    String initial = source(text, v.getInitializer());
+    List<Stage> stages = new ArrayList<>(read.stages());
+    if (stages.isEmpty() || !stages.getLast().method().equals("filter")) {
+      throw new Refusal(
+          "the loop at line "
+              + Lines.number(text, loop.getStartPosition())
+              + " sets "
+              + v.getName()
+              + " and breaks on its first pass; loop_to_stream takes a break only under a"
+              + " condition, as a search.");
+    }
+    Stage last = stages.removeLast();
+    Expression condition = ((IfStatement) read.holder().getParent()).getExpression();
+    boolean all = initial.equals("true") && set.equals("false");
+    String test;
+    if (all) {
+      test =
+          condition instanceof PrefixExpression p
+                  && p.getOperator() == PrefixExpression.Operator.NOT
+              ? source(text, p.getOperand())
+              : "!(" + source(text, condition) + ")";
+    } else {
+      test = last.body();
+    }
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    stages.forEach(s -> segments.add(s.text()));
+    String tail =
+        all || (initial.equals("false") && set.equals("true")) ? "" : " ? " + set + " : " + initial;
+    String terminal = all ? ".allMatch(" : ".anyMatch(";
+    segments.add(terminal + last.param() + " -> " + test + ")" + tail);
+    String prefix =
+        source(text, result)
+            .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
+    return new Rewrite(
+        lead(text, result, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
+        result.getStartPosition(),
+        List.of(),
+        "found "
+            + v.getName()
+            + " by "
+            + summary(stages, terminal.substring(0, terminal.length() - 1)));
   }
 }
