@@ -67,7 +67,7 @@ for (Shelf shelf : shelves) {
 List<String> all = shelves.stream().flatMap(shelf -> shelf.titles().stream()).toList();
 ```
 
-### 6. Each branch of an if adds (darktable, partly)
+### 6. Each branch of an if adds (darktable, done: `loop_to_stream_branches_flat_map`)
 
 ```java
 List<File> files = new ArrayList<>();
@@ -88,9 +88,11 @@ List<File> files = paths.stream()
     .toList();
 ```
 
-Today loop_to_stream writes the `map`, then a `forEach` whose body still adds to `files`. Wanted:
-an `if`/`else` whose branches each end in one `add` or `addAll` to the list is a `flatMap` of a
-conditional, `Stream.of(x)` for an `add`. `convert_lambda` then gives the method references.
+loop_to_stream writes this in one call (2026-11-10), with `collect(Collectors.toList())` since
+`files` is passed to `RenamePlan.of` afterwards, which may change it. An `if`/`else` whose
+branches each end in one `add` or `addAll` to the list, or add nothing, is a `flatMap` of a
+conditional (`Stream.of(x)` for an `add`, `Stream.empty()` for nothing; `else if` nests).
+`convert_lambda` then gives the method references.
 
 ### 7. A flag that any failure clears (darktable, planned; refused today)
 
