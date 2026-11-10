@@ -246,7 +246,9 @@ Each was chosen from options; the record named beside it has the options it beat
   incremented is a sum or count, `LoopToStream.total`). `run` reads the body (`stages`, a `Read`)
   and picks one `Rewrite`: `computed` (a flag, `total`, or `search` when the flag is set then
   `break`s, the only break `checkBody` lets through), `collect` or `forEach` (`entries` for a
-  map's `entrySet()` used only through `getKey()`/`getValue()`, as `map.forEach`). Its rules
+  map's `entrySet()` used only through `getKey()`/`getValue()`, as `map.forEach`), or `grouped`
+  (a `HashMap` of `ArrayList`s filled by `computeIfAbsent(...).add(...)`, as `groupingBy`; the null
+  key it now throws on goes through `Exceptional.change`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
 

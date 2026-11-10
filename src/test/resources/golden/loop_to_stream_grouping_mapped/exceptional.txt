@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- a null key from order.customer() now throws a NullPointerException in groupingBy, where computeIfAbsent grouped it
