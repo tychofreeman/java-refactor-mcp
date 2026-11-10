@@ -1020,3 +1020,12 @@ the field `borrowed`, and was refused as before: `Stubs.Round.removed` took the 
 `borrowed()` for a field of that name the edit had removed, so no field stub was declared. Two
 lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
 `docs/sessions/ab-card-bare-field.md`.
+
+## 2026-11-10: replace_text with batch sections around blank lines lost a table row
+
+- Recording roadmap rows #133-#135 in `docs/design.md`, a `batch` of `replace_text` whose `old`
+  was a section starting with two blank lines and `### The 2026-11-04 list`, and whose `new`
+  was three table rows, a blank line and that heading. The rows for #134 and #135 landed, but
+  the first one, #133, did not, with no refusal; it was added back by a second `replace_text`.
+- Not looked into yet: whether the `@@name` sections drop leading blank lines (so `old` matched
+  only the heading) and what then happened to the first line of `new`.

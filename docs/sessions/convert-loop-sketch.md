@@ -1,6 +1,7 @@
 # convert_loop: a sketch
 
-Status: an idea, not built (the user, 2026-11-10: "start building ideas around a tool to convert
+Status: the user answered the questions on 2026-11-10 ("Decisions" at the end); `loop_to_stream`
+is built first. Asked first (the user, 2026-11-10: "start building ideas around a tool to convert
 different types of loops", including `while`, `for`, `do`-`while` and the functional forms). It
 widens roadmap row #132 (a loop to a stream, roadmap only). The evidence so far is one friction
 entry, issue #294; CLAUDE.md asks for evidence before a tool, so this note is for choosing the
@@ -124,3 +125,16 @@ and `for_each` (`range`) apply, and no functional forms. TypeScript has all of J
 4. **A floating-point sum to a stream:** refuse, report the possible change, or write
    `reduce(0.0, Double::sum)`, which adds in the loop's order.
 5. **Increment order:** start with 1 (index to element, common), or with 4 (the case #294 hit).
+
+## Decisions (the user, 2026-11-10)
+
+1. **Two tools**, since that is easier to use: `convert_loop` for the statement forms (`for`,
+   `for_each`, `while`, `do_while`, `iterator`) and `loop_to_stream` for the functional ones
+   (`forEach`, the stream pipeline), over one tool with every `to`. The way back, a stream to a
+   loop, is a later increment.
+2. **`continue` in a `for` going to a `while`:** refuse for now; copying the update before each
+   `continue` is roadmap #133.
+3. **`do_while` to `while`:** refuse for now; a rewrite is roadmap #134.
+4. **A floating-point sum to a stream:** refuse for now; the options (report the change, or
+   `reduce(0.0, Double::sum)` in the loop's order) are roadmap #135.
+5. **Order:** `loop_to_stream` first (the case #294 hit), then the statement forms.
