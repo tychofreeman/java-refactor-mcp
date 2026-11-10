@@ -138,6 +138,10 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Where code goes
 
+- A Maven project's source roots are `src/main/java` and `src/test/java` whenever either exists
+  (`MavenBuild.sourceRoots`, #293): a root that does not exist yet is skipped when walking and
+  parsing, so a test created before `src/test/java` is type-checked and gets its stubs. It had
+  been outside every root, so `create_file` wrote it unchecked.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,

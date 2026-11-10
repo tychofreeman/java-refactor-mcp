@@ -123,6 +123,9 @@ public record SourceProject(
   public List<Path> javaFiles() throws IOException {
     List<Path> all = new ArrayList<>();
     for (Path sourceRoot : sourceRoots) {
+      if (!Files.isDirectory(sourceRoot)) {
+        continue;
+      }
       try (Stream<Path> files = Files.walk(sourceRoot)) {
         files
             .filter(Files::isRegularFile)
