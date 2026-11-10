@@ -119,11 +119,20 @@ final class Batch {
 
   /**
    * The lines one step changed in one file: old lines a-b became new lines c-d (an empty range has
-   * its end before its start). refStart-refEnd is the new range without blank lines at its ends,
-   * which a reference names.
+   * its end before its start), between the lines it left alone at both ends. refStart-refEnd is the
+   * new range without blank lines at its ends, which a reference names. {@code hunks} are the runs
+   * of changed lines within it, in order, so a line between two of them (shifted by an import and a
+   * method at the end) still has a number.
    */
   private record Region(
-      String file, int oldStart, int oldEnd, int newStart, int newEnd, int refStart, int refEnd) {}
+      String file,
+      int oldStart,
+      int oldEnd,
+      int newStart,
+      int newEnd,
+      int refStart,
+      int refEnd,
+      List<Hunk> hunks) {}
 
   /** A step that ran: its number, its id, and the region it changed, if any. */
   private record Done(int number, String id, Region region) {}
@@ -132,6 +141,9 @@ final class Batch {
 
   private static final Pattern REFERENCE =
       Pattern.compile("\\$(prev|\\w+)\\.(start|end)([+-]\\d+)?");
+
+  /** Above this many line pairs, a region's middle is one hunk rather than diffed. */
+  private static final long DIFF_LIMIT = 4_000_000L;
 
   private static String steps(SourceProject project, List<Map<String, Object>> steps, boolean atEnd)
       throws Exception {
@@ -250,28 +262,41 @@ final class Batch {
     int at = line;
     for (int j = from; j < done.size(); j++) {
       Region r = done.get(j).region();
-      if (r == null || !r.file().equals(rel) || at < r.oldStart()) {
+      if (r == null || !r.file().equals(rel)) {
         continue;
       }
-      int oldLen = r.oldEnd() - r.oldStart() + 1;
-      int newLen = r.newEnd() - r.newStart() + 1;
-      if (at > r.oldEnd()) {
-        at += newLen - oldLen;
-      } else if (oldLen == newLen) {
-        at = at - r.oldStart() + r.newStart();
-      } else {
-        throw new Refusal(
-            "line "
-                + line
-                + " of "
-                + rel
-                + " was rewritten by step "
-                + done.get(j).number()
-                + ", so its number no longer says which line step "
-                + number
-                + " means. Name a line that step changed (\"$"
-                + done.get(j).number()
-                + ".start\"), or put this step before it.");
+      int shift = 0;
+      boolean within = false;
+      for (Hunk h : r.hunks()) {
+        if (at < h.oldStart()) {
+          break;
+        }
+        int oldLen = h.oldEnd() - h.oldStart() + 1;
+        int newLen = h.newEnd() - h.newStart() + 1;
+        if (at > h.oldEnd()) {
+          shift += newLen - oldLen;
+          continue;
+        }
+        if (oldLen != newLen) {
+          throw new Refusal(
+              "line "
+                  + line
+                  + " of "
+                  + rel
+                  + " was rewritten by step "
+                  + done.get(j).number()
+                  + ", so its number no longer says which line step "
+                  + number
+                  + " means. Name a line that step changed (\"$"
+                  + done.get(j).number()
+                  + ".start\"), or put this step before it.");
+        }
+        at = at - h.oldStart() + h.newStart();
+        within = true;
+        break;
+      }
+      if (!within) {
+        at += shift;
       }
     }
     return at;
@@ -304,6 +329,71 @@ final class Batch {
     while (refEnd >= refStart && now[refEnd - 1].isBlank()) {
       refEnd--;
     }
-    return new Region(rel, prefix + 1, old.length - suffix, newStart, newEnd, refStart, refEnd);
+    return new Region(
+        rel,
+        prefix + 1,
+        old.length - suffix,
+        newStart,
+        newEnd,
+        refStart,
+        refEnd,
+        hunks(old, now, prefix, old.length - suffix, now.length - suffix));
+  }
+
+  /**
+   * A run of changed lines: old lines a-b became new lines c-d; an empty range ends before it
+   * starts.
+   */
+  private record Hunk(int oldStart, int oldEnd, int newStart, int newEnd) {}
+
+  /**
+   * The runs of lines that differ between {@code old[from..oldTo)} and {@code now[from..nowTo)}, as
+   * 1-based lines, by a longest common subsequence of lines.
+   */
+  private static List<Hunk> hunks(String[] old, String[] now, int from, int oldTo, int nowTo) {
+    int m = oldTo - from;
+    int n = nowTo - from;
+    if ((long) m * n > DIFF_LIMIT) {
+      return List.of(new Hunk(from + 1, oldTo, from + 1, nowTo));
+    }
+    int[][] common = new int[m + 1][n + 1];
+    for (int i = m - 1; i >= 0; i--) {
+      for (int j = n - 1; j >= 0; j--) {
+        common[i][j] =
+            old[from + i].equals(now[from + j])
+                ? common[i + 1][j + 1] + 1
+                : Math.max(common[i + 1][j], common[i][j + 1]);
+      }
+    }
+    List<Hunk> out = new ArrayList<>();
+    int i = 0;
+    int j = 0;
+    int openI = -1;
+    int openJ = -1;
+    while (i < m || j < n) {
+      boolean same = i < m && j < n && old[from + i].equals(now[from + j]);
+      if (same) {
+        if (openI >= 0) {
+          out.add(new Hunk(from + openI + 1, from + i, from + openJ + 1, from + j));
+          openI = -1;
+        }
+        i++;
+        j++;
+        continue;
+      }
+      if (openI < 0) {
+        openI = i;
+        openJ = j;
+      }
+      if (j >= n || (i < m && common[i + 1][j] >= common[i][j + 1])) {
+        i++;
+      } else {
+        j++;
+      }
+    }
+    if (openI >= 0) {
+      out.add(new Hunk(from + openI + 1, from + m, from + openJ + 1, from + n));
+    }
+    return out;
   }
 }

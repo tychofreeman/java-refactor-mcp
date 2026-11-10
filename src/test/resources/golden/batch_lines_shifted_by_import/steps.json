@@ -1,0 +1,5 @@
+[
+  {"tool": "add_declaration", "args": {"file": "com/example/Main.java", "content": "static Stream<Integer> evens(List<Integer> xs) {\n  return xs.stream().filter(x -> x % 2 == 0);\n}\n"}},
+  {"tool": "replace_statements", "args": {"file": "com/example/Main.java", "start_line": 7, "end_line": 10, "content": "int sum = xs.stream().mapToInt(Integer::intValue).sum();"}},
+  {"tool": "replace_statements", "args": {"file": "com/example/Main.java", "start_line": 15, "end_line": 18, "content": "int n = xs.size();"}}
+]
