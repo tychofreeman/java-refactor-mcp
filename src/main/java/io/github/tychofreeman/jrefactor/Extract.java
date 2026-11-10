@@ -340,4 +340,32 @@ final class Extract {
     int b = unit.getLineNumber(Nodes.end(n) - 1);
     return Lines.range(a, b);
   }
+
+  /**
+   * The type a local holding a lambda or method reference whose target is {@code b} is declared
+   * with: the functional interface with each wildcard argument replaced by its bound, or by the
+   * type parameter's bound for {@code ?} (JLS 9.9, the non-wildcard parameterization). {@code
+   * Function<? super T, ? extends R>} is {@code Function<T, R>}.
+   */
+  static String groundTypeName(ITypeBinding b) {
+    if (b == null || !b.isParameterizedType()) {
+      return typeName(b);
+    }
+    ITypeBinding[] parameters = b.getErasure().getTypeParameters();
+    ITypeBinding[] arguments = b.getTypeArguments();
+    List<String> names = new ArrayList<>();
+    for (int i = 0; i < arguments.length; i++) {
+      ITypeBinding a = arguments[i];
+      if (a.isWildcardType()) {
+        ITypeBinding bound = a.getBound();
+        if (bound == null && i < parameters.length && parameters[i].getTypeBounds().length > 0) {
+          bound = parameters[i].getTypeBounds()[0];
+        }
+        names.add(bound == null ? "Object" : typeName(bound));
+      } else {
+        names.add(typeName(a));
+      }
+    }
+    return typeName(b.getErasure()) + "<" + String.join(", ", names) + ">";
+  }
 }

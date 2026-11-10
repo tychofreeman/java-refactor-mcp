@@ -13,6 +13,8 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
@@ -60,7 +62,10 @@ final class ExtractVariable {
       return Introduce.run(project, opened, e, name, as, type, expression.strip(), line);
     }
     checkFieldName(e, name);
-    String typeName = Extract.typeName(type);
+    String typeName =
+        e instanceof LambdaExpression || e instanceof MethodReference
+            ? Extract.groundTypeName(type)
+            : Extract.typeName(type);
     String source = expression.strip();
     String decl = typeName + " " + name + " = " + source + ";";
 
