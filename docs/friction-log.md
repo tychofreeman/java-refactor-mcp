@@ -1021,6 +1021,15 @@ the field `borrowed`, and was refused as before: `Stubs.Round.removed` took the 
 lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
 `docs/sessions/ab-card-bare-field.md`.
 
+## 2026-11-10: replace_text with batch sections around blank lines lost a table row
+
+- Recording roadmap rows #133-#135 in `docs/design.md`, a `batch` of `replace_text` whose `old`
+  was a section starting with two blank lines and `### The 2026-11-04 list`, and whose `new`
+  was three table rows, a blank line and that heading. The rows for #134 and #135 landed, but
+  the first one, #133, did not, with no refusal; it was added back by a second `replace_text`.
+- Found while merging: the row was not lost but joined to the end of row #132's line (`... either || 126 | 133 ...`),
+  then put back as its own line, so `main` had it twice until this merge. The section `old`
+  probably lost its leading newlines, so `new`'s first line went where the newline after #132 was.
 ## 2026-11-10: a raw List from JDT in loop_to_stream, by hand
 
 - `UnionType.types()` is a raw `List`, and `List<Type> types = ... ? u.types() : List.of(t)` was
