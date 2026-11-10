@@ -78,7 +78,7 @@ final class Behavior {
     Effects code = Effects.of(m.code());
     List<ASTNode> throwing = code.mayThrow();
     if (m.landings().isEmpty()) {
-      if (code.changes()) {
+      if (code.changesNow()) {
         throw new Refusal(
             m.label()
                 + " calls, assigns or changes a variable, and "
@@ -93,7 +93,7 @@ final class Behavior {
       }
       return;
     }
-    if (m.landings().size() > 1 && code.changes()) {
+    if (m.landings().size() > 1 && code.changesNow()) {
       throw new Refusal(
           m.label()
               + " calls, assigns or changes a variable, and "
@@ -156,7 +156,7 @@ final class Behavior {
       }
       String where = line(e.node());
       if (e.changes()) {
-        if (code.changes() && !m.commute()) {
+        if (code.changesNow() && !m.commute()) {
           throw new Refusal(
               m.label()
                   + " calls, assigns or changes a variable, and "
@@ -208,7 +208,7 @@ final class Behavior {
                   + " that change",
               "leave it where it is");
         }
-      } else if (e.kind() == Effects.Kind.MAY_THROW && code.changes()) {
+      } else if (e.kind() == Effects.Kind.MAY_THROW && code.changesNow()) {
         if (!reported) {
           reported = true;
           Exceptional.change(
@@ -293,7 +293,7 @@ final class Behavior {
       }
       String exit = "the statement at " + line(s);
       if (Effects.leaves(s)) {
-        if (code.changes()) {
+        if (code.changesNow()) {
           throw new Refusal(
               exit
                   + " may leave the block early, and "
@@ -353,7 +353,7 @@ final class Behavior {
     String was = outside(m) ? null : place(m.code(), m.root());
     String now = place(landing, m.root());
     if (!Objects.equals(was, now)) {
-      if (code.changes()) {
+      if (code.changesNow()) {
         throw new Refusal(
             m.label()
                 + " calls, assigns or changes a variable, and "

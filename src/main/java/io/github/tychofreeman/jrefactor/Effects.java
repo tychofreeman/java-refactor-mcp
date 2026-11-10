@@ -496,4 +496,12 @@ final class Effects {
     }
     return false;
   }
+
+  /**
+   * Whether the code changes state, or may, when it runs: outside lambdas and anonymous class
+   * bodies, which run only when called.
+   */
+  boolean changesNow() {
+    return !normalFlowChanges().isEmpty();
+  }
 }
