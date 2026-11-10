@@ -189,14 +189,14 @@ starts `true` and is set `false` is `allMatch` of the negated condition (`if (!o
 `allMatch(o -> o.paid())`). Not built: `findFirst` for a loop that keeps the first match, since
 `findFirst` throws on a null element where the loop would not.
 
-### 11. A map's entries (planned)
+### 11. A map's entries (done: `loop_to_stream_map_entries`, `loop_to_stream_map_entries_block`)
 
 ```java
 for (Map.Entry<String, Integer> e : stock.entrySet()) {
   System.out.println(e.getKey() + "=" + e.getValue());
 }
 // wanted:
-stock.forEach((name, count) -> System.out.println(name + "=" + count));
+stock.forEach((key, value) -> System.out.println(key + "=" + value));
 ```
 
 ### 12. Group into a map (planned, later)

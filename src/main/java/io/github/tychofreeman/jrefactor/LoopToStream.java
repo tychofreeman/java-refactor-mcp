@@ -69,7 +69,10 @@ final class LoopToStream {
   /** The longest line the pipeline is written on before each stage goes on a line of its own. */
   private static final int WIDTH = 100;
 
-  /** Methods that change a collection: called in the loop on its source, they are refused. */
+  /**
+   * Methods that change a collection or a map: called in the loop on its source, or on the map
+   * whose entries, keys or values it walks, they are refused.
+   */
   private static final Set<String> CHANGES =
       Set.of(
           "add",
@@ -85,7 +88,14 @@ final class LoopToStream {
           "addFirst",
           "addLast",
           "removeFirst",
-          "removeLast");
+          "removeLast",
+          "put",
+          "putAll",
+          "putIfAbsent",
+          "compute",
+          "computeIfAbsent",
+          "computeIfPresent",
+          "merge");
 
   /** Methods of a list that only read it: the uses after the loop that keep toList() possible. */
   private static final Set<String> READS =
@@ -255,15 +265,18 @@ final class LoopToStream {
               + ", a checked exception, which a lambda passed to forEach, filter or map cannot"
               + " throw.");
     }
+    String owner = owner(text, loop.getExpression());
     for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
-      if (m.getExpression() != null
-          && CHANGES.contains(m.getName().getIdentifier())
-          && source(text, m.getExpression()).equals(from)) {
+      if (m.getExpression() == null || !CHANGES.contains(m.getName().getIdentifier())) {
+        continue;
+      }
+      String receiver = source(text, m.getExpression());
+      if (receiver.equals(from) || receiver.equals(owner)) {
         throw new Refusal(
             "the loop at line "
                 + line
                 + " changes "
-                + from
+                + receiver
                 + ", which it walks ("
                 + source(text, m)
                 + "); a stream of it would fail at another point, or not at all.");
@@ -752,6 +765,12 @@ final class LoopToStream {
   /** The pipeline whose last stage runs what is left of the body in a forEach. */
   private static Rewrite forEach(
       String text, EnhancedForStatement loop, Read read, String indent, int step) {
+    if (read.stages().isEmpty()) {
+      Rewrite entries = entries(text, loop, read, indent, step);
+      if (entries != null) {
+        return entries;
+      }
+    }
     List<String> segments = new ArrayList<>();
     String receiver = primary(text, loop.getExpression());
     if (read.stages().isEmpty()) {
@@ -1148,5 +1167,88 @@ final class LoopToStream {
             + v.getName()
             + " by "
             + summary(stages, terminal.substring(0, terminal.length() - 1)));
+  }
+
+  /**
+   * The map whose {@code entrySet()}, {@code keySet()} or {@code values()} {@code source} is, as
+   * written; else null.
+   */
+  private static String owner(String text, Expression source) {
+    return source instanceof MethodInvocation m
+            && m.getExpression() != null
+            && m.arguments().isEmpty()
+            && Set.of("entrySet", "keySet", "values").contains(m.getName().getIdentifier())
+        ? source(text, m.getExpression())
+        : null;
+  }
+
+  /**
+   * {@code map.forEach((key, value) -> ...)} for a loop over {@code map.entrySet()} that uses its
+   * entry only as {@code e.getKey()} and {@code e.getValue()}; else null. A map's forEach visits
+   * its entries in the order its entry set iterates them.
+   */
+  private static Rewrite entries(
+      String text, EnhancedForStatement loop, Read read, String indent, int step) {
+    if (!(loop.getExpression() instanceof MethodInvocation set)
+        || !set.getName().getIdentifier().equals("entrySet")
+        || set.getExpression() == null
+        || !set.arguments().isEmpty()
+        || !map(set.getExpression().resolveTypeBinding())) {
+      return null;
+    }
+    IBinding entry = loop.getParameter().resolveBinding();
+    String key = unused("key", loop);
+    String value = unused("value", loop);
+    List<TextEdit> edits = new ArrayList<>();
+    for (SimpleName n : Nodes.all(loop.getBody(), SimpleName.class)) {
+      if (!same(n.resolveBinding(), entry)) {
+        continue;
+      }
+      if (!(n.getParent() instanceof MethodInvocation m)
+          || m.getExpression() != n
+          || !m.arguments().isEmpty()
+          || !Set.of("getKey", "getValue").contains(m.getName().getIdentifier())) {
+        return null;
+      }
+      edits.add(
+          new TextEdit(
+              m.getStartPosition(),
+              Nodes.end(m),
+              m.getName().getIdentifier().equals("getKey") ? key : value));
+    }
+    List<Statement> rest = read.rest();
+    String head = primary(text, set.getExpression()) + ".forEach((" + key + ", " + value + ") -> ";
+    String lambda;
+    if (rest.size() == 1 && rest.get(0) instanceof ExpressionStatement e) {
+      Expression x = e.getExpression();
+      lambda = TextEdit.apply(source(text, x), edits, x.getStartPosition());
+    } else {
+      int[] range = statementsRange(text, read.holder(), rest);
+      lambda =
+          "{\n"
+              + reindent(
+                  TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]),
+                  indent + " ".repeat(step))
+              + indent
+              + "}";
+    }
+    return new Rewrite(
+        head + lambda + ");", loop.getStartPosition(), List.of(), "forEach of the map's entries");
+  }
+
+  /** Whether {@code t} is a {@code java.util.Map}. */
+  private static boolean map(ITypeBinding t) {
+    if (t == null) {
+      return false;
+    }
+    if (t.getErasure().getQualifiedName().equals("java.util.Map")) {
+      return true;
+    }
+    for (ITypeBinding i : t.getInterfaces()) {
+      if (map(i)) {
+        return true;
+      }
+    }
+    return map(t.getSuperclass());
   }
 }
