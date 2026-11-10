@@ -1012,7 +1012,10 @@ after the stages) is `mapToInt(x -> e).sum()` or `mapToLong`, and one `v++` or `
 ...`). A `float` or `double` sum is refused (roadmap #135). A flag set
 then followed by `break;` under the last filter is a search: `anyMatch(x -> cond)`, or
 `allMatch(x -> !cond)` for one that starts `true` and is set `false`; a break with no condition
-above it is refused. Comment lines between that declaration and the loop stay above
+above it is refused. A loop over `map.entrySet()` with no stages, whose entry is used only as
+`e.getKey()` and `e.getValue()`, is `map.forEach((key, value) -> ...)`. A call that changes the
+map a loop walks the entries, keys or values of (`put`, `remove`, `merge`, ...) is refused, as a
+change to the source is. Comment lines between that declaration and the loop stay above
 it. Stages go on lines of their own past 100 columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
 toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
 not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a

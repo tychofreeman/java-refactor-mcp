@@ -245,7 +245,8 @@ Each was chosen from options; the record named beside it has the options it beat
   before and set to one constant is a flag, a `reduce` of per-element booleans, and one added to or
   incremented is a sum or count, `LoopToStream.total`). `run` reads the body (`stages`, a `Read`)
   and picks one `Rewrite`: `computed` (a flag, `total`, or `search` when the flag is set then
-  `break`s, the only break `checkBody` lets through), `collect` or `forEach`. Its rules
+  `break`s, the only break `checkBody` lets through), `collect` or `forEach` (`entries` for a
+  map's `entrySet()` used only through `getKey()`/`getValue()`, as `map.forEach`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
 
