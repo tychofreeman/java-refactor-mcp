@@ -27,6 +27,7 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
+import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -180,7 +181,7 @@ final class LoopToStream {
     VariableDeclarationStatement list = collected(text, loop, read.rest());
     Rewrite rewrite =
         result != null
-            ? flag(text, loop, result, read, indent, step)
+            ? computed(text, loop, result, read, indent, step)
             : list != null
                 ? collect(text, loop, list, read, indent, step)
                 : forEach(text, loop, read, indent, step);
@@ -811,12 +812,13 @@ final class LoopToStream {
   }
 
   /**
-   * The pipeline for a flag: {@code result} starts as a constant, and the loop only sets it to one
-   * other constant. Each element maps to whether its pass set it, and the passes are or-ed by
-   * {@code reduce}, which runs every element, as the loop did ({@code anyMatch} would stop at the
-   * first). A last filter whose then-branch only sets the flag maps to its condition.
+   * The pipeline that computes {@code result}: a sum or a count ({@link #total}), or a flag, which
+   * starts as a constant, and which the loop only sets to one other constant. Each element maps to
+   * whether its pass set it, and the passes are or-ed by {@code reduce}, which runs every element,
+   * as the loop did ({@code anyMatch} would stop at the first). A last filter whose then-branch
+   * only sets the flag maps to its condition.
    */
-  private static Rewrite flag(
+  private static Rewrite computed(
       String text,
       EnhancedForStatement loop,
       VariableDeclarationStatement result,
@@ -849,13 +851,17 @@ final class LoopToStream {
                         && source(text, a.getRightHandSide()).equals(set))
             && !set.equals(initial);
     if (!flag) {
+      Rewrite total = total(text, loop, result, read, indent, step);
+      if (total != null) {
+        return total;
+      }
       throw new Refusal(
           v.getName()
               + " is assigned in the loop at line "
               + line
               + ", and a lambda cannot assign a local of the method around it. loop_to_stream"
-              + " takes a flag (a local set to one constant from another); sums, counts and"
-              + " other results are not built yet.");
+              + " takes a flag (a local set to one constant from another), an int or long sum"
+              + " (+=) or a count (++); not this.");
     }
     List<Stage> stages = new ArrayList<>(read.stages());
     List<Statement> rest = read.rest();
@@ -955,5 +961,114 @@ final class LoopToStream {
       out = name + i;
     }
     return out;
+  }
+
+  /**
+   * The pipeline for a sum or a count: {@code result}, an int or a long, takes one {@code +=} of a
+   * value per element, or one {@code ++} (a count), and nothing else in the loop reads it. {@code
+   * mapToInt(...).sum()} wraps on overflow as {@code +=} does, and a count's long cast to an int
+   * keeps the same low bits. Null for anything else; a float or double sum is refused, since a
+   * stream may add in another order and round differently (roadmap #135).
+   */
+  private static Rewrite total(
+      String text,
+      EnhancedForStatement loop,
+      VariableDeclarationStatement result,
+      Read read,
+      String indent,
+      int step) {
+    VariableDeclarationFragment v = fragment(result);
+    IBinding binding = v.resolveBinding();
+    List<Statement> rest = read.rest();
+    long uses =
+        Nodes.all(loop.getBody(), SimpleName.class).stream()
+            .filter(n -> same(n.resolveBinding(), binding))
+            .count();
+    if (rest.size() != 1 || !(rest.get(0) instanceof ExpressionStatement e) || uses != 1) {
+      return null;
+    }
+    Expression update = e.getExpression();
+    Expression added = null;
+    if (update instanceof Assignment a
+        && a.getOperator() == Assignment.Operator.PLUS_ASSIGN
+        && a.getLeftHandSide() instanceof SimpleName n
+        && same(n.resolveBinding(), binding)) {
+      added = a.getRightHandSide();
+    } else if (!(update instanceof PostfixExpression p
+            && p.getOperator() == PostfixExpression.Operator.INCREMENT
+            && p.getOperand() instanceof SimpleName n2
+            && same(n2.resolveBinding(), binding))
+        && !(update instanceof PrefixExpression q
+            && q.getOperator() == PrefixExpression.Operator.INCREMENT
+            && q.getOperand() instanceof SimpleName n3
+            && same(n3.resolveBinding(), binding))) {
+      return null;
+    }
+    boolean count = added == null || source(text, added).equals("1");
+    ITypeBinding type = result.getType().resolveBinding();
+    String kind = type == null ? "" : type.getName();
+    if (kind.equals("double") || kind.equals("float")) {
+      throw new Refusal(
+          v.getName()
+              + " is a floating-point sum, which a stream may add in another order and round"
+              + " differently; loop_to_stream refuses it for now (roadmap #135).");
+    }
+    if (!kind.equals("int") && !kind.equals("long")) {
+      return null;
+    }
+    if (!count) {
+      ITypeBinding addedType = added.resolveTypeBinding();
+      Set<String> fits =
+          kind.equals("int")
+              ? Set.of("int", "short", "byte", "char", "Integer", "Short", "Byte", "Character")
+              : Set.of(
+                  "int",
+                  "short",
+                  "byte",
+                  "char",
+                  "long",
+                  "Integer",
+                  "Short",
+                  "Byte",
+                  "Character",
+                  "Long");
+      if (addedType == null || !fits.contains(addedType.getName())) {
+        return null;
+      }
+    }
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    read.stages().forEach(s -> segments.add(s.text()));
+    String terminal;
+    if (count) {
+      terminal = ".count()";
+    } else {
+      segments.add(
+          (kind.equals("int") ? ".mapToInt(" : ".mapToLong(")
+              + read.param()
+              + " -> "
+              + source(text, added)
+              + ")");
+      terminal = ".sum()";
+    }
+    segments.add(terminal);
+    Expression initial = v.getInitializer();
+    String from = source(text, initial);
+    String plus =
+        from.equals("0") || from.equalsIgnoreCase("0L")
+            ? ""
+            : (initial instanceof Name || initial instanceof MethodInvocation || constant(initial)
+                    ? from
+                    : "(" + from + ")")
+                + " + ";
+    String cast = count && kind.equals("int") ? "(int) " : "";
+    String prefix =
+        source(text, result).substring(0, initial.getStartPosition() - result.getStartPosition());
+    String before = prefix + plus + cast;
+    return new Rewrite(
+        lead(text, result, loop, indent) + before + layout(indent, before, segments, step) + ";",
+        result.getStartPosition(),
+        List.of(),
+        (count ? "counted " : "summed ") + v.getName() + " by " + summary(read.stages(), terminal));
   }
 }

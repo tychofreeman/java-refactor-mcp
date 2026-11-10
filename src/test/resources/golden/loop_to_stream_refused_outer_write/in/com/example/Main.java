@@ -3,11 +3,11 @@ package com.example;
 import java.util.List;
 
 public class Main {
-  int sum(List<Integer> xs) {
-    int total = 0;
-    for (Integer x : xs) {
-      total += x;
+  String last(List<String> xs) {
+    String last = null;
+    for (String x : xs) {
+      last = x;
     }
-    return total;
+    return last;
   }
 }

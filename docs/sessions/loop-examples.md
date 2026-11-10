@@ -141,7 +141,7 @@ int status = plan.renames().stream()
 `extract_function` of the lambda's body then gives the hand version's `carryOut`. A body that is
 `if (p) flag = c;` maps to the condition: `map(x -> p).reduce(false, Boolean::logicalOr)`.
 
-### 8. A sum (planned)
+### 8. A sum (done: `loop_to_stream_sum`, `loop_to_stream_sum_long_from`)
 
 ```java
 int total = 0;
@@ -153,8 +153,9 @@ int total = items.stream().mapToInt(item -> item.price()).sum();
 ```
 
 `int` and `long` only: a `double` sum is refused (roadmap #135). Overflow wraps the same way in both.
+A starting value other than 0 is added in front: `long weight = crate + items.stream()...sum();`.
 
-### 9. A count (planned)
+### 9. A count (done: `loop_to_stream_count`)
 
 ```java
 int open = 0;

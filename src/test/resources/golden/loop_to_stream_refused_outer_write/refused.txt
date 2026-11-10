@@ -1,1 +1,1 @@
-total is assigned in the loop
+last is assigned in the loop
