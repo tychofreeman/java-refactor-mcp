@@ -242,8 +242,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `Iterable` read into stages from the outside in (an if with no else is `filter`, a first local
   `map`, the rest `forEach`, or `toList()`/`collect` into a list declared just before; an if/else
   whose paths each add is a `flatMap` of a conditional, `LoopToStream.branch`; a local declared just
-  before and set to one constant is a flag, `LoopToStream.flag`, a `reduce` of per-element booleans).
-  `run` reads the body (`stages`, a `Read`) and picks one `Rewrite`: `flag`, `collect` or `forEach`. Its rules
+  before and set to one constant is a flag, a `reduce` of per-element booleans, and one added to or
+  incremented is a sum or count, `LoopToStream.total`). `run` reads the body (`stages`, a `Read`)
+  and picks one `Rewrite`: `computed` (a flag, or `total`), `collect` or `forEach`. Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
 
