@@ -230,6 +230,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `pull_up` or `push_down` removes now takes one blank line beside it with it
   (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
 
+- `extract_variable` of a lambda or method reference declares the local with its target type's
+  wildcards replaced by their bounds (`Extract.groundTypeName`, JLS 9.9; #298): `Function<? super T,
+  ? extends R>` is `Function<T, R>`, the type the lambda had.
+
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
 

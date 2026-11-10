@@ -11,7 +11,7 @@ class Main {
   }
 
   static void run(List<Rename> renames, boolean rename) {
-    Consumer<? super Main.Rename> carry = r -> carryOut(r, rename);
+    Consumer<Main.Rename> carry = r -> carryOut(r, rename);
     renames.stream().filter(r -> !r.from().equals(r.to())).forEach(carry);
   }
 }
