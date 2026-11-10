@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,11 @@ final class Jdt {
     parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);
     parser.setCompilerOptions(options());
-    String[] sourcepath = project.sourceRoots().stream().map(Path::toString).toArray(String[]::new);
+    String[] sourcepath =
+        project.sourceRoots().stream()
+            .filter(Files::isDirectory)
+            .map(Path::toString)
+            .toArray(String[]::new);
     String[] encodings = new String[sourcepath.length];
     java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws
     parser.setEnvironment(project.classpath().toArray(String[]::new), sourcepath, encodings, true);

@@ -31,15 +31,14 @@ final class MavenBuild {
     return Files.isRegularFile(root.resolve("pom.xml"));
   }
 
-  /** {@code src/main/java} and {@code src/test/java}, those that exist. */
+  /**
+   * {@code src/main/java} and {@code src/test/java} when either exists, both of them: a test
+   * written before {@code src/test/java} exists is in a source root, so the gate checks it and its
+   * stubs are declared. None when neither exists.
+   */
   static List<Path> sourceRoots(Path root) {
-    List<Path> roots = new ArrayList<>();
-    for (String dir : List.of("src/main/java", "src/test/java")) {
-      if (Files.isDirectory(root.resolve(dir))) {
-        roots.add(root.resolve(dir));
-      }
-    }
-    return roots;
+    List<Path> roots = List.of(root.resolve("src/main/java"), root.resolve("src/test/java"));
+    return roots.stream().anyMatch(Files::isDirectory) ? roots : List.of();
   }
 
   /**

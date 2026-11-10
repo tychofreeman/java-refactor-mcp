@@ -83,4 +83,33 @@ class SourceProjectTest {
         <version>1</version>
       </project>
       """;
+
+  /**
+   * A test written first, before {@code src/test/java} exists, is in a source root: the gate checks
+   * it and declares the stubs it needs (#293).
+   */
+  @Test
+  void theTestRootIsARootBeforeItExists() throws Exception {
+    write("pom.xml", POM);
+    write("src/main/java/a/A.java", "package a; class A {}");
+
+    SourceProject project = SourceProject.load(dir);
+    assertEquals(
+        List.of(dir.resolve("src/main/java"), dir.resolve("src/test/java")), project.sourceRoots());
+    assertEquals(
+        List.of("src/main/java/a/A.java"),
+        project.javaFiles().stream().map(project::relative).toList());
+
+    String result =
+        Tools.call(
+                Tools.named("create_file"),
+                project,
+                Map.of(
+                    "file",
+                    "src/test/java/a/BTest.java",
+                    "content",
+                    "package a;\n\nclass BTest {\n  void decodes() {\n    B b = B.decode(\"x\");\n  }\n}\n"))
+            .render();
+    assertTrue(Files.isRegularFile(dir.resolve("src/main/java/a/B.java")), result);
+  }
 }
