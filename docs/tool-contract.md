@@ -1068,7 +1068,9 @@ field, and the gate's "would add compile errors".
   name; roadmap #100).
 - Line arguments (`line`, `start_line`, `end_line`) are as read before the
   batch; the batch moves them past earlier steps' edits. A line an earlier step
-  rewrote with a different line count is refused, naming the step.
+  rewrote with a different line count is refused, naming the step; a line between
+  the runs a step changed (below an import it added, above a method it added at
+  the end) is only moved (#295).
 - `"$prev.start"`, `"$prev.end"`, `"$2.end"`, `"$id.start+1"` name the first or
   last non-blank line an earlier step changed in that step's file.
 - A refused step leaves nothing changed; the refusal says `step k of n (tool)
