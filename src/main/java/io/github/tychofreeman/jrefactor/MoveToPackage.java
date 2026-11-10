@@ -66,12 +66,6 @@ final class MoveToPackage {
                     + " top-level types. move with package moves a file's only top-level"
                     + " type: move the others to files of their own first."),
         Precondition.that(
-            () -> !old.isEmpty(),
-            () ->
-                name
-                    + " is in the default package, which no other package can import. Give it a"
-                    + " package first."),
-        Precondition.that(
             () -> !old.equals(pkg), () -> name + " is in package " + pkg + " already."));
     Path root = rootOf(project, opened.file());
     Path target = root.resolve(pkg.replace('.', '/')).resolve(name + ".java");
@@ -84,7 +78,7 @@ final class MoveToPackage {
 
     ITypeBinding moved = type.resolveBinding();
     String key = moved.getTypeDeclaration().getKey();
-    String oldName = old + "." + name;
+    String oldName = old.isEmpty() ? name : old + "." + name;
     String newName = pkg + "." + name;
 
     Holding holding = Holding.of(project, name, opened.file());
@@ -152,7 +146,11 @@ final class MoveToPackage {
                 // Used from outside the new package: the moved type's own declarations.
                 // Used from inside the moved type: the old package's declarations.
                 if ((!self && ofMoved && !filePkg.equals(pkg))
-                    || (self && !ofMoved && top != null && packageOf(top).equals(old))) {
+                    || (self
+                        && !ofMoved
+                        && top != null
+                        && !old.isEmpty()
+                        && packageOf(top).equals(old))) {
                   crossing.add(b);
                 }
               }
@@ -175,11 +173,22 @@ final class MoveToPackage {
       CompilationUnit u = units.get(f);
       List<TextEdit> list = new ArrayList<>(e.getValue());
       if (f.equals(opened.file())) {
-        ASTNode p = u.getPackage().getName();
-        list.add(new TextEdit(p.getStartPosition(), p.getStartPosition() + p.getLength(), pkg));
+        if (u.getPackage() != null) {
+          ASTNode p = u.getPackage().getName();
+          list.add(new TextEdit(p.getStartPosition(), p.getStartPosition() + p.getLength(), pkg));
+        } else {
+          // The default package: the package line goes before the imports and the type.
+          int at =
+              !u.imports().isEmpty()
+                  ? ((ASTNode) u.imports().get(0)).getStartPosition()
+                  : type.getStartPosition();
+          list.add(new TextEdit(at, at, "package " + pkg + ";\n\n"));
+        }
         String after = TextEdit.apply(text, list, 0);
         changed.put(f, null);
-        changed.put(target, Imports.fix(project, target, text, after, List.of()).text());
+        changed.put(
+            target,
+            withoutOwnPackage(Imports.fix(project, target, text, after, List.of()).text(), pkg));
         continue;
       }
       String filePkg =
@@ -198,7 +207,10 @@ final class MoveToPackage {
             project,
             changed,
             "moving " + name + " to package " + pkg,
-            "Widen or move what the errors name first, then move " + name + " again.");
+            old.isEmpty()
+                ? "A package cannot import a type of the default package: move the default-package"
+                    + " types that this one uses or that use it in the same batch, check \"end\"."
+                : "Widen or move what the errors name first, then move " + name + " again.");
     String result = "moved " + name + " to package " + pkg + " (" + project.relative(target) + ")";
     if (references > 0) {
       List<String> each = new ArrayList<>();
@@ -344,5 +356,38 @@ final class MoveToPackage {
       }
     }
     throw new Refusal(project.relative(file) + " is not under a source root.");
+  }
+
+  /**
+   * {@code text} without its imports of single types of package {@code pkg}, its own, and of a type
+   * named by a simple name (a type of the default package, which cannot be imported); a blank line
+   * left doubled where one stood is dropped.
+   */
+  private static String withoutOwnPackage(String text, String pkg) {
+    CompilationUnit unit = Jdt.parseSyntax(text);
+    List<TextEdit> drops = new ArrayList<>();
+    for (Object o : unit.imports()) {
+      ImportDeclaration i = (ImportDeclaration) o;
+      if (i.isStatic() || i.isOnDemand()) {
+        continue;
+      }
+      boolean own =
+          i.getName() instanceof QualifiedName q
+              ? q.getQualifier().getFullyQualifiedName().equals(pkg)
+              : true;
+      if (own) {
+        int start = Lines.start(text, i.getStartPosition());
+        int end = Lines.end(text, Nodes.end(i));
+        if (start > 1
+            && text.charAt(start - 1) == '\n'
+            && text.charAt(start - 2) == '\n'
+            && end < text.length()
+            && text.charAt(end) == '\n') {
+          end++;
+        }
+        drops.add(new TextEdit(start, end, ""));
+      }
+    }
+    return drops.isEmpty() ? text : TextEdit.apply(text, drops, 0);
   }
 }

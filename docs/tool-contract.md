@@ -263,10 +263,14 @@ package-private declaration that a use crosses the new boundary with becomes
 public: the type and its members used from another package, and what of
 package `a` the type uses. Result: `moved Shop to package b (b/Shop.java),
 with N references in M files: <file> <lines>; ...; widened Helper, Helper.TAX
-and Shop.price() to public`. Refusals: a name that is not a package name; a
+and Shop.price() to public`. A type of the default package gets a package line
+and its file moves (#292); a file of the default package that names it gains
+the import, and what it uses of the default package, which a package cannot
+import, is refused by the type check, whose fix says to move those types in the
+same batch with check `"end"`. Its imports of the new package are dropped.
+Refusals: a name that is not a package name; a
 file with several top-level types ("move the others to files of their own
-first"); the default package ("no other package can import" it); the package
-it is in; a target file that exists ("Rename one of the two types first").
+first"); the package it is in; a target file that exists ("Rename one of the two types first").
 
 ## `pull_up` (built)
 

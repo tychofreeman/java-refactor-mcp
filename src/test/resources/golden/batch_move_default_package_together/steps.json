@@ -1,0 +1,4 @@
+[
+  {"tool": "move", "args": {"file": "Main.java", "name": "Main", "package": "com.example"}},
+  {"tool": "move", "args": {"file": "Tool.java", "name": "Tool", "package": "com.example"}}
+]
