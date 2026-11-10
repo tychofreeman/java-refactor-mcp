@@ -94,7 +94,7 @@ branches each end in one `add` or `addAll` to the list, or add nothing, is a `fl
 conditional (`Stream.of(x)` for an `add`, `Stream.empty()` for nothing; `else if` nests).
 `convert_lambda` then gives the method references.
 
-### 7. A flag that any failure clears (darktable, planned; refused today)
+### 7. A flag that any failure clears (darktable, done: `loop_to_stream_flag`)
 
 ```java
 int status = 0;
@@ -118,9 +118,28 @@ return allDone ? 0 : 1;
 ```
 
 Not `allMatch`: it stops at the first false, and the loop renames every file. The shape: a local
-set to one constant on some passes and never read in the loop. The way there composes from
-`extract_function` (the body, returning the flag) and a `reduce`; whether loop_to_stream does the
-extraction itself is open.
+set to one constant on some passes and never read in the loop. loop_to_stream writes (2026-11-10):
+
+```java
+int status = plan.renames().stream()
+        .map(r -> {
+            boolean statusChanged = false;
+            out.println(r.from() + " -> " + r.to().getName());
+            if (rename) {
+                try {
+                    Files.move(r.from().toPath(), r.to().toPath());
+                } catch (IOException e) {
+                    err.println("could not rename " + r.from() + ": " + e);
+                    statusChanged = true;
+                }
+            }
+            return statusChanged;
+        })
+        .reduce(false, Boolean::logicalOr) ? 1 : 0;
+```
+
+`extract_function` of the lambda's body then gives the hand version's `carryOut`. A body that is
+`if (p) flag = c;` maps to the condition: `map(x -> p).reduce(false, Boolean::logicalOr)`.
 
 ### 8. A sum (planned)
 

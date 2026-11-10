@@ -1001,8 +1001,13 @@ collection, or an if with an else whose every path ends in one of them or adds n
 under an if is refused, as `Stream.of` would spread it), to a `List` or `Collection` declared `= new ArrayList<>()` just before the loop and
 used nowhere else in it, is collected instead (`addAll` is `flatMap`): `toList()` when every later
 use only reads the list and the stream's type is its element type, else
-`collect(Collectors.toList())` (the user, 2026-11-10). Stages go on lines of their own past 100
-columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
+`collect(Collectors.toList())` (the user, 2026-11-10). A local declared with a literal just
+before the loop that the loop only sets to one other literal (a flag) becomes
+`v = source.stream().map(x -> { boolean vChanged = false; ...; return vChanged; }).reduce(false,
+Boolean::logicalOr) ? set : initial` (no `? :` for `false` to `true`, a `!` for `true` to
+`false`), `reduce` and not `anyMatch` since the loop runs every pass; a last filter whose body only
+sets the flag maps to its condition. Comment lines between that declaration and the loop stay above
+it. Stages go on lines of their own past 100 columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
 toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
 not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a
 loop variable of another type than the elements (`int` over `Integer`); a break, continue or
