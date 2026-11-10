@@ -690,12 +690,16 @@ final class Declarations {
     return n;
   }
 
-  /** The smallest nonzero indentation in {@code text}, or 0 when nothing is indented. */
+  /**
+   * The smallest nonzero indentation of a code line in {@code text}, or 0 when nothing is indented.
+   * A comment's continuation line ({@code " * text"}) is aligned to its star, not to a step.
+   */
   static int step(String text) {
     int step = Integer.MAX_VALUE;
     for (String line : text.split("\n")) {
-      int n = line.length() - line.stripLeading().length();
-      if (n > 0 && !line.isBlank()) {
+      String code = line.stripLeading();
+      int n = line.length() - code.length();
+      if (n > 0 && !code.isEmpty() && !code.startsWith("*")) {
         step = Math.min(step, n);
       }
     }
