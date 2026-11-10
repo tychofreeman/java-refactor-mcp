@@ -996,7 +996,9 @@ in the same order. The body is read from the outside in: an if with no else that
 is `filter`; a first local computed from the element (its declared type the initializer's, not
 primitive), when nothing after it reads the element, is `map`; the rest is `forEach`
 (`source.forEach(...)` with no stage). A body that is one `out.add(e)` or `out.addAll(c)` of a
-collection, to a `List` or `Collection` declared `= new ArrayList<>()` just before the loop and
+collection, or an if with an else whose every path ends in one of them or adds nothing (a
+`flatMap` of `cond ? c.stream() : Stream.of(e)`, `Stream.empty()` for nothing; an array added
+under an if is refused, as `Stream.of` would spread it), to a `List` or `Collection` declared `= new ArrayList<>()` just before the loop and
 used nowhere else in it, is collected instead (`addAll` is `flatMap`): `toList()` when every later
 use only reads the list and the stream's type is its element type, else
 `collect(Collectors.toList())` (the user, 2026-11-10). Stages go on lines of their own past 100

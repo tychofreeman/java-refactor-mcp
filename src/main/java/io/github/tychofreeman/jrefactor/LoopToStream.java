@@ -209,24 +209,31 @@ final class LoopToStream {
 
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
-    VariableDeclarationStatement list = collected(loop, rest, paramBinding);
+    VariableDeclarationStatement list = collected(text, loop, rest);
     String replacement;
     int start;
     List<String> chosen = List.of();
     String said;
     if (list != null) {
       VariableDeclarationFragment out = (VariableDeclarationFragment) list.fragments().get(0);
-      MethodInvocation add = (MethodInvocation) ((ExpressionStatement) rest.get(0)).getExpression();
-      Expression argument = (Expression) add.arguments().get(0);
       ITypeBinding last;
-      if (add.getName().getIdentifier().equals("addAll")) {
-        stages.add(new Stage("flatMap", param, primary(text, argument) + ".stream()"));
-        last = elementOf(argument.resolveTypeBinding());
-      } else if (argument instanceof SimpleName n && same(n.resolveBinding(), paramBinding)) {
-        last = current;
+      if (rest.get(0) instanceof IfStatement ifs) {
+        Branch b = branch(text, ifs, out.resolveBinding(), true);
+        stages.add(new Stage("flatMap", param, b.stream()));
+        last = b.element();
       } else {
-        stages.add(new Stage("map", param, source(text, argument)));
-        last = argument.resolveTypeBinding();
+        MethodInvocation add =
+            (MethodInvocation) ((ExpressionStatement) rest.get(0)).getExpression();
+        Expression argument = (Expression) add.arguments().get(0);
+        if (add.getName().getIdentifier().equals("addAll")) {
+          stages.add(new Stage("flatMap", param, primary(text, argument) + ".stream()"));
+          last = elementOf(argument.resolveTypeBinding());
+        } else if (argument instanceof SimpleName n && same(n.resolveBinding(), paramBinding)) {
+          last = current;
+        } else {
+          stages.add(new Stage("map", param, source(text, argument)));
+          last = argument.resolveTypeBinding();
+        }
       }
       ITypeBinding[] held = list.getType().resolveBinding().getTypeArguments();
       boolean toList =
@@ -235,9 +242,14 @@ final class LoopToStream {
               && last.isEqualTo(held[0])
               && onlyRead(out.resolveBinding(), list.getParent(), Nodes.end(loop));
       String terminal = toList ? ".toList()" : ".collect(Collectors.toList())";
+      List<String> imports = new ArrayList<>();
       if (!toList) {
-        chosen = List.of("java.util.stream.Collectors");
+        imports.add("java.util.stream.Collectors");
       }
+      if (stages.stream().anyMatch(s -> s.body().contains("Stream."))) {
+        imports.add("java.util.stream.Stream");
+      }
+      chosen = imports;
       String prefix =
           source(text, list)
               .substring(0, out.getInitializer().getStartPosition() - list.getStartPosition());
@@ -364,11 +376,12 @@ final class LoopToStream {
 
   /**
    * The statement just before {@code loop} when the loop only collects into it: {@code List<R> out
-   * = new ArrayList<>()}, typed List or Collection, and {@code rest} is one {@code out.add(...)} or
-   * {@code out.addAll(...)} of a collection, the loop's only use of {@code out}; else null.
+   * = new ArrayList<>()}, typed List or Collection, and {@code rest} is one statement whose every
+   * path ends in one {@code out.add(...)} or {@code out.addAll(...)} of a collection, or adds
+   * nothing ({@link #branch}), and those are the loop's only uses of {@code out}; else null.
    */
   private static VariableDeclarationStatement collected(
-      EnhancedForStatement loop, List<Statement> rest, IBinding param) {
+      String text, EnhancedForStatement loop, List<Statement> rest) {
     if (!(loop.getParent() instanceof Block block)) {
       return null;
     }
@@ -387,24 +400,18 @@ final class LoopToStream {
             .contains(list.getType().resolveBinding().getErasure().getQualifiedName())) {
       return null;
     }
-    if (rest.size() != 1
-        || !(rest.get(0) instanceof ExpressionStatement e)
-        || !(e.getExpression() instanceof MethodInvocation add)
-        || !(add.getExpression() instanceof SimpleName receiver)
-        || !same(receiver.resolveBinding(), out.resolveBinding())
-        || add.arguments().size() != 1
-        || !Set.of("add", "addAll").contains(add.getName().getIdentifier())) {
+    if (rest.size() != 1) {
       return null;
     }
-    if (add.getName().getIdentifier().equals("addAll")
-        && !collection(((Expression) add.arguments().get(0)).resolveTypeBinding())) {
+    Branch b = branch(text, rest.get(0), out.resolveBinding(), rest.get(0) instanceof IfStatement);
+    if (b == null || b.adds() == 0) {
       return null;
     }
     long uses =
         Nodes.all(loop, SimpleName.class).stream()
             .filter(n -> same(n.resolveBinding(), out.resolveBinding()))
             .count();
-    return uses == 1 ? list : null;
+    return uses == b.adds() ? list : null;
   }
 
   /**
@@ -630,5 +637,82 @@ final class LoopToStream {
 
   private static String source(String text, ASTNode node) {
     return text.substring(node.getStartPosition(), Nodes.end(node));
+  }
+
+  /**
+   * What one path of a collecting body adds, as a stream: {@code Stream.of(e)} for {@code
+   * out.add(e)}, {@code c.stream()} for {@code out.addAll(c)}, {@code Stream.empty()} for an empty
+   * block, {@code cond ? a : b} for an if with an else. {@code element} is the type every path
+   * adds, null when none does or they differ ({@code mixed}); {@code adds} counts the calls.
+   */
+  private record Branch(String stream, ITypeBinding element, boolean mixed, int adds) {}
+
+  /**
+   * {@code s} as a {@link Branch} of adds to {@code out}, or null when some path does anything
+   * else. {@code nested} is false for the body's one statement, which may add an array (a map
+   * writes it); under an if, {@code Stream.of} would spread one, so it is refused.
+   */
+  private static Branch branch(String text, Statement s, IBinding out, boolean nested) {
+    if (s instanceof Block b) {
+      if (b.statements().isEmpty()) {
+        return new Branch("Stream.empty()", null, false, 0);
+      }
+      return b.statements().size() == 1
+          ? branch(text, (Statement) b.statements().get(0), out, nested)
+          : null;
+    }
+    if (s instanceof IfStatement ifs) {
+      if (ifs.getElseStatement() == null) {
+        return null;
+      }
+      Branch then = branch(text, ifs.getThenStatement(), out, true);
+      Branch other = branch(text, ifs.getElseStatement(), out, true);
+      if (then == null || other == null) {
+        return null;
+      }
+      boolean mixed =
+          then.mixed()
+              || other.mixed()
+              || (then.element() != null
+                  && other.element() != null
+                  && !then.element().isEqualTo(other.element()));
+      boolean thenIsIf =
+          ifs.getThenStatement() instanceof IfStatement
+              || (ifs.getThenStatement() instanceof Block tb
+                  && tb.statements().size() == 1
+                  && tb.statements().get(0) instanceof IfStatement);
+      return new Branch(
+          source(text, ifs.getExpression())
+              + " ? "
+              + (thenIsIf ? "(" + then.stream() + ")" : then.stream())
+              + " : "
+              + other.stream(),
+          mixed ? null : then.element() != null ? then.element() : other.element(),
+          mixed,
+          then.adds() + other.adds());
+    }
+    if (!(s instanceof ExpressionStatement e)
+        || !(e.getExpression() instanceof MethodInvocation add)
+        || !(add.getExpression() instanceof SimpleName receiver)
+        || !same(receiver.resolveBinding(), out)
+        || add.arguments().size() != 1) {
+      return null;
+    }
+    Expression argument = (Expression) add.arguments().get(0);
+    ITypeBinding type = argument.resolveTypeBinding();
+    if (type == null) {
+      return null;
+    }
+    return switch (add.getName().getIdentifier()) {
+      case "add" ->
+          nested && type.isArray()
+              ? null
+              : new Branch("Stream.of(" + source(text, argument) + ")", type, false, 1);
+      case "addAll" ->
+          collection(type)
+              ? new Branch(primary(text, argument) + ".stream()", elementOf(type), false, 1)
+              : null;
+      default -> null;
+    };
   }
 }

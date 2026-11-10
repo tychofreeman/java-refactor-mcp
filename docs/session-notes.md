@@ -240,7 +240,8 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `loop_to_stream` (roadmap #132, 2026-11-10) is `LoopToStream`: an enhanced for over an
   `Iterable` read into stages from the outside in (an if with no else is `filter`, a first local
-  `map`, the rest `forEach`, or `toList()`/`collect` into a list declared just before). Its rules
+  `map`, the rest `forEach`, or `toList()`/`collect` into a list declared just before; an if/else
+  whose paths each add is a `flatMap` of a conditional, `LoopToStream.branch`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
 
