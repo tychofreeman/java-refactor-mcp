@@ -1020,3 +1020,11 @@ the field `borrowed`, and was refused as before: `Stubs.Round.removed` took the 
 `borrowed()` for a field of that name the edit had removed, so no field stub was declared. Two
 lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
 `docs/sessions/ab-card-bare-field.md`.
+
+## 2026-11-10: a raw List from JDT in loop_to_stream, by hand
+
+- `UnionType.types()` is a raw `List`, and `List<Type> types = ... ? u.types() : List.of(t)` was
+  an unchecked warning (`-Werror`). `replace_statements` of the declaration with `List<Object>` was
+  refused, since the `for (Type c : types)` after it no longer compiled; the loop was changed by
+  `sed`, then the declaration with `replace_text`. A batch of the two steps with check "end" would
+  have done it through the tools.

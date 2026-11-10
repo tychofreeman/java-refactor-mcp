@@ -553,6 +553,23 @@ final class Tools {
           Kind.REFACTORING,
           Tools::invertIf);
 
+  static final Def LOOP_TO_STREAM =
+      new Def(
+          "loop_to_stream",
+          """
+          Rewrite an enhanced for over a collection as a stream that runs the same code for each \
+          element in the same order. An if with no else holding the rest of the body becomes \
+          filter, a first local computed from the element map, and the rest forEach: for (Order o \
+          : orders) { if (o.open()) ship(o); } becomes orders.stream().filter(o -> \
+          o.open()).forEach(o -> ship(o)). A body that only adds to a list declared empty just \
+          before the loop collects into it instead, addAll as flatMap: List<String> names = \
+          items.stream().map(i -> i.name()).toList(), or collect(Collectors.toList()) when the \
+          list is changed afterwards. Identify the loop by the line it starts on.\
+          """,
+          List.of(Arg.FILE, Arg.integer("line", "The 1-based line the loop starts on.").required()),
+          Kind.REFACTORING,
+          Tools::loopToStream);
+
   static final Def REMOVE_ELSE =
       new Def(
           "remove_else",
@@ -1254,6 +1271,7 @@ final class Tools {
           ADD_ELEMENT,
           MOVE_STATEMENT,
           INVERT_IF,
+          LOOP_TO_STREAM,
           REMOVE_ELSE,
           ENCAPSULATE_FIELD,
           BATCH,
@@ -1551,4 +1569,8 @@ final class Tools {
    */
   static final Map<String, Set<String>> RETIRED_ARGS =
       Map.of("add_declaration", Set.of("after", "before"));
+
+  private static Outcome loopToStream(SourceProject project, Args args) throws Exception {
+    return LoopToStream.run(project, args.required("file"), args.integer("line"));
+  }
 }
