@@ -1015,7 +1015,12 @@ then followed by `break;` under the last filter is a search: `anyMatch(x -> cond
 above it is refused. A loop over `map.entrySet()` with no stages, whose entry is used only as
 `e.getKey()` and `e.getValue()`, is `map.forEach((key, value) -> ...)`. A call that changes the
 map a loop walks the entries, keys or values of (`put`, `remove`, `merge`, ...) is refused, as a
-change to the source is. Comment lines between that declaration and the loop stay above
+change to the source is. A `Map<K, List<V>> m = new HashMap<>()` declared just before a loop
+whose body is one `m.computeIfAbsent(key, k -> new ArrayList<>()).add(value)` is
+`collect(Collectors.groupingBy(x -> key))`, with `mapping` for a value other than the element,
+when the map is only read afterwards; else `groupingBy(x -> key, HashMap::new,
+Collectors.toCollection(ArrayList::new))`. A null key now throws in `groupingBy`: reported in the
+exceptional part of the result, refused under `preserve_exceptions`. Comment lines between that declaration and the loop stay above
 it. Stages go on lines of their own past 100 columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
 toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
 not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a

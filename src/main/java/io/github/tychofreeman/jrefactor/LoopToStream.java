@@ -24,6 +24,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.LabeledStatement;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NumberLiteral;
@@ -41,6 +42,7 @@ import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.UnionType;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
@@ -113,7 +115,10 @@ final class LoopToStream {
           "equals",
           "hashCode",
           "toString",
-          "toArray");
+          "toArray",
+          "containsKey",
+          "containsValue",
+          "getOrDefault");
 
   static Outcome run(SourceProject project, String rel, Integer line) throws Exception {
     Precondition.require(
@@ -190,12 +195,15 @@ final class LoopToStream {
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
     VariableDeclarationStatement list = collected(text, loop, read.rest());
+    VariableDeclarationStatement groups = grouping(loop, read.rest());
     Rewrite rewrite =
         result != null
             ? computed(text, loop, result, read, indent, step)
-            : list != null
-                ? collect(text, loop, list, read, indent, step)
-                : forEach(text, loop, read, indent, step);
+            : groups != null
+                ? grouped(project, text, loop, groups, read, indent, step)
+                : list != null
+                    ? collect(text, loop, list, read, indent, step)
+                    : forEach(text, loop, read, indent, step);
     String updated =
         text.substring(0, rewrite.start()) + rewrite.text() + text.substring(Nodes.end(loop));
     Edits.Written written =
@@ -1250,5 +1258,158 @@ final class LoopToStream {
       }
     }
     return map(t.getSuperclass());
+  }
+
+  /**
+   * The statement just before {@code loop} when the loop only groups into it: {@code Map<K,
+   * List<V>> m = new HashMap<>()}, and what is left of the body is one {@code
+   * m.computeIfAbsent(key, k -> new ArrayList<>()).add(value)} whose lambda ignores its parameter,
+   * the loop's only use of {@code m}; else null.
+   */
+  private static VariableDeclarationStatement grouping(
+      EnhancedForStatement loop, List<Statement> rest) {
+    if (!(loop.getParent() instanceof Block block)) {
+      return null;
+    }
+    int at = block.statements().indexOf(loop);
+    if (at < 1
+        || !(block.statements().get(at - 1) instanceof VariableDeclarationStatement d)
+        || d.fragments().size() != 1
+        || !(fragment(d).getInitializer() instanceof ClassInstanceCreation made)
+        || made.getAnonymousClassDeclaration() != null
+        || !made.arguments().isEmpty()
+        || made.resolveTypeBinding() == null
+        || !made.resolveTypeBinding().getErasure().getQualifiedName().equals("java.util.HashMap")
+        || d.getType().resolveBinding() == null
+        || !d.getType().resolveBinding().getErasure().getQualifiedName().equals("java.util.Map")) {
+      return null;
+    }
+    IBinding m = fragment(d).resolveBinding();
+    MethodInvocation add = groupAdd(rest, m);
+    long uses =
+        Nodes.all(loop, SimpleName.class).stream().filter(n -> same(n.resolveBinding(), m)).count();
+    return add != null && uses == 1 ? d : null;
+  }
+
+  /**
+   * {@code rest}'s one {@code m.computeIfAbsent(key, k -> new ArrayList<>()).add(value)}, or null.
+   */
+  private static MethodInvocation groupAdd(List<Statement> rest, IBinding m) {
+    if (rest.size() != 1
+        || !(rest.get(0) instanceof ExpressionStatement e)
+        || !(e.getExpression() instanceof MethodInvocation add)
+        || !add.getName().getIdentifier().equals("add")
+        || add.arguments().size() != 1
+        || !(add.getExpression() instanceof MethodInvocation compute)
+        || !compute.getName().getIdentifier().equals("computeIfAbsent")
+        || !(compute.getExpression() instanceof SimpleName map)
+        || !same(map.resolveBinding(), m)
+        || compute.arguments().size() != 2
+        || !(compute.arguments().get(1) instanceof LambdaExpression make)
+        || make.parameters().size() != 1
+        || !(make.getBody() instanceof ClassInstanceCreation list)
+        || !list.arguments().isEmpty()
+        || list.getAnonymousClassDeclaration() != null
+        || list.resolveTypeBinding() == null
+        || !list.resolveTypeBinding()
+            .getErasure()
+            .getQualifiedName()
+            .equals("java.util.ArrayList")) {
+      return null;
+    }
+    IBinding ignored = ((VariableDeclaration) make.parameters().get(0)).resolveBinding();
+    boolean used =
+        Nodes.all(make.getBody(), SimpleName.class).stream()
+            .anyMatch(n -> same(n.resolveBinding(), ignored));
+    return used ? null : add;
+  }
+
+  /**
+   * The pipeline that groups into {@code groups}: {@code groupingBy} of the key, with {@code
+   * mapping} when the value is not the element. Plain when the map is only read afterwards and its
+   * types are the stream's; else with {@code HashMap::new} and {@code
+   * toCollection(ArrayList::new)}, the types the loop made, since groupingBy's are not specified.
+   * groupingBy throws on a null key, which computeIfAbsent grouped: that change is reported.
+   */
+  private static Rewrite grouped(
+      SourceProject project,
+      String text,
+      EnhancedForStatement loop,
+      VariableDeclarationStatement groups,
+      Read read,
+      String indent,
+      int step) {
+    VariableDeclarationFragment m = fragment(groups);
+    MethodInvocation add = groupAdd(read.rest(), m.resolveBinding());
+    MethodInvocation compute = (MethodInvocation) add.getExpression();
+    Expression key = (Expression) compute.arguments().get(0);
+    Expression value = (Expression) add.arguments().get(0);
+    String param = read.param();
+    boolean element = value instanceof SimpleName n && same(n.resolveBinding(), read.binding());
+    ITypeBinding[] held = groups.getType().resolveBinding().getTypeArguments();
+    ITypeBinding valueType = element ? read.type() : value.resolveTypeBinding();
+    boolean plain =
+        held.length == 2
+            && key.resolveTypeBinding() != null
+            && key.resolveTypeBinding().isEqualTo(held[0])
+            && held[1].getTypeArguments().length == 1
+            && valueType != null
+            && valueType.isEqualTo(held[1].getTypeArguments()[0])
+            && onlyRead(m.resolveBinding(), groups.getParent(), Nodes.end(loop));
+    String classifier = param + " -> " + source(text, key);
+    String downstream =
+        element
+            ? "Collectors.toCollection(ArrayList::new)"
+            : "Collectors.mapping("
+                + param
+                + " -> "
+                + source(text, value)
+                + ", Collectors.toCollection(ArrayList::new))";
+    if (plain && !element) {
+      downstream =
+          "Collectors.mapping(" + param + " -> " + source(text, value) + ", Collectors.toList())";
+    }
+    List<String> arguments =
+        plain
+            ? (element ? List.of(classifier) : List.of(classifier, downstream))
+            : List.of(classifier, "HashMap::new", downstream);
+    String cont = indent + " ".repeat(2 * step);
+    String one = ".collect(Collectors.groupingBy(" + String.join(", ", arguments) + "))";
+    String collect =
+        cont.length() + one.length() + 1 <= WIDTH
+            ? one
+            : ".collect(Collectors.groupingBy(\n"
+                + cont
+                + " ".repeat(2 * step)
+                + String.join(",\n" + cont + " ".repeat(2 * step), arguments)
+                + "))";
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    read.stages().forEach(s -> segments.add(s.text()));
+    segments.add(collect);
+    String prefix =
+        source(text, groups)
+            .substring(0, m.getInitializer().getStartPosition() - groups.getStartPosition());
+    String joined = String.join("", segments);
+    String pipeline =
+        !joined.contains("\n") && indent.length() + prefix.length() + joined.length() + 1 <= WIDTH
+            ? joined
+            : String.join("\n" + cont, segments);
+    Exceptional.change(
+        project,
+        "a null key from "
+            + source(text, key)
+            + " now throws a NullPointerException in groupingBy, where computeIfAbsent grouped it",
+        "make sure no key is null, or keep the loop");
+    List<String> imports = new ArrayList<>(List.of("java.util.stream.Collectors"));
+    if (!plain) {
+      imports.add("java.util.HashMap");
+      imports.add("java.util.ArrayList");
+    }
+    return new Rewrite(
+        lead(text, groups, loop, indent) + prefix + pipeline + ";",
+        groups.getStartPosition(),
+        imports,
+        "grouped into " + m.getName() + " by " + summary(read.stages(), ".collect(groupingBy)"));
   }
 }

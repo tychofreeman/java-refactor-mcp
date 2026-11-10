@@ -199,7 +199,7 @@ for (Map.Entry<String, Integer> e : stock.entrySet()) {
 stock.forEach((key, value) -> System.out.println(key + "=" + value));
 ```
 
-### 12. Group into a map (planned, later)
+### 12. Group into a map (done: `loop_to_stream_grouping`, `loop_to_stream_grouping_mapped`)
 
 ```java
 Map<String, List<Order>> byCustomer = new HashMap<>();
@@ -211,8 +211,11 @@ Map<String, List<Order>> byCustomer =
     orders.stream().collect(Collectors.groupingBy(order -> order.customer()));
 ```
 
-`groupingBy` makes a `HashMap` of `ArrayList`s too, but that is not in its contract; refuse when
-the map's type is anything else.
+`groupingBy` makes a `HashMap` of `ArrayList`s too, but that is not in its contract, so as for
+lists: plain `groupingBy` when the map is only read afterwards, else
+`groupingBy(key, HashMap::new, Collectors.toCollection(ArrayList::new))` (with `mapping` for a
+value other than the element). `groupingBy` throws on a null key, which `computeIfAbsent` grouped:
+the result reports it as a change to exceptional behavior, refused under `preserve_exceptions`.
 
 ## convert_loop
 
