@@ -216,7 +216,11 @@ final class Imports {
     int packageEnd = packageEnd(text, unit);
     String line = "import " + name + ";\n";
     boolean first = kept.isEmpty() && at == packageEnd && packageEnd > 0;
-    return text.substring(0, at) + (first ? "\n" + line : line) + text.substring(at);
+    // In the default package the first import goes above the type, a blank line between.
+    boolean noPackage = kept.isEmpty() && packageEnd == 0;
+    return text.substring(0, at)
+        + (first ? "\n" + line : noPackage ? line + "\n" : line)
+        + text.substring(at);
   }
 
   /** Whether the class {@code qualified} is in the project's sources or on its classpath. */
