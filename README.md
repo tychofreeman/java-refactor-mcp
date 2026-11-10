@@ -123,13 +123,16 @@ tools to extract the validation in OrderService into its own method"*. Run
 
 ## Using the tools well
 
-`examples/CLAUDE.md` asks for three things:
+`examples/CLAUDE.md` asks for four things:
 
-- **Make the change easy, then make the easy change.** Refactor first
-  (rename to what a thing will mean, extract what you will change, add the
-  parameter the change needs) until the change is small and local; then
-  make it with the edit tools. Models extend the code that is there unless
-  told to reshape it first.
+- **Make the change easy, then make the easy change, test first.** Refactor
+  first, while the tests pass (rename to what a thing will mean, extract
+  what you will change, add the parameter the change needs), until the
+  change is small and local; then write the failing test and make it pass
+  with the edit tools. Models extend the code that is there unless told to
+  reshape it first. A test written with `create_file` (`test_for`) or
+  `add_declaration` gets stubs for what it calls, so it fails on its
+  assertion, not on compiling.
 - **Read through `inspect`, not Read or `cat`.** Every result stays in the
   conversation and is sent again on each later turn: inspect a file first,
   then only the methods or line ranges you will change.
@@ -139,6 +142,9 @@ tools to extract the validation in OrderService into its own method"*. Run
   one copy), then `fold` the copies onto it. One parameter: `add_parameter`,
   `remove_parameter`, `move_parameter` or `change_type`, every call and
   override included.
+- **Look for a sequence before editing by hand.** When no tool seems to
+  make a change, look for two or three that compose to it; make it by
+  hand only then, and log it in `docs/friction-log.md`.
 
 **Guards (optional hooks).** Sessions read and write Java by shell out of
 habit even when asked to use the tools. Two PreToolUse hooks turn the habit

@@ -39,7 +39,12 @@ fact here becomes wrong, fix or remove it in the same PR.
   using the tools well, troubleshooting, the CLI; contributor links at the end.
   `examples/CLAUDE.md` is `eval-tasks/claude-md/mcp.md`, the instructions the
   A/B runs measured, with a general test command: when a run finds better
-  instructions, update both. Keep the README's evidence sentence and tool list
+  instructions, update both. Both changed on 2026-11-10 without a run, from a
+  session in a project that used the tools: refactor before the test and
+  never while red, `test_for` named, load every schema with one ToolSearch
+  (the follow-ups of `ab-shop-tasks` and `ab-warehouse-2`), `inspect` with
+  `names` and `pattern` in place of grep, and a tool sequence tried before a
+  hand edit, logged in `docs/friction-log.md`. The next A/B run measures them. Keep the README's evidence sentence and tool list
   current with `docs/design.md` and `Tools.ALL`.
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log
