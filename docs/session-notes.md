@@ -165,7 +165,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw";
   `Effects.later(node, root)` and `Effects.sometimes(node, root)` say where code
   runs later, or only sometimes or more than once, than the code that holds it
-  (#76; the branches of statements too). A new tool that moves code into or out of
+  (#76; the branches of statements too). `Behavior` asks `changesNow()` of moved code: a lambda
+  or anonymous class body runs when it is called, not where it is written (#297). A new tool that moves code into or out of
   a construct asks them, not its own parent walk.
 - A refactoring that moves code declares it to `Behavior.check` (a `Move`: the code,
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
