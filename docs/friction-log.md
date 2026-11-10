@@ -1037,3 +1037,18 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   refused, since the `for (Type c : types)` after it no longer compiled; the loop was changed by
   `sed`, then the declaration with `replace_text`. A batch of the two steps with check "end" would
   have done it through the tools.
+
+## 2026-11-10: extract_function and inline around locals declared without a value (LoopToStream)
+
+- Splitting `LoopToStream.run`: `extract_function` of the forEach branch (lines 264-292) was
+  refused, "The local variable replacement may not have been initialized": `replacement`,
+  `start` and `said` were declared before the range without a value and only assigned in it, and
+  the extraction passed them in instead of returning them. Wanted: a local declared without a value
+  outside the range, assigned on every path in it and read only after it, is a result.
+- Then `inline` of `String replacement = rewrite.text();` (and `start`, `imports`, `said`) was
+  refused: "the initializer of replacement calls, assigns or changes a variable, and inlining
+  replacement moves it past rewrite.start()". A record's accessor changes nothing; `Effects`
+  counts every call. Wanted: a record component accessor (`IMethodBinding` of a record's
+  generated accessor) is a read.
+- Both were done with edits instead: `add_declaration` of a `Read` and a `Rewrite` record and the
+  methods, `replace_statements` of the branch, and `replace_text` for the uses.

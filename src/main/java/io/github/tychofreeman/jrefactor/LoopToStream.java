@@ -5,8 +5,11 @@ import java.util.List;
 import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ArrayAccess;
+import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BooleanLiteral;
 import org.eclipse.jdt.core.dom.CatchClause;
+import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
@@ -22,10 +25,13 @@ import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
@@ -164,141 +170,29 @@ final class LoopToStream {
               + " first.");
     }
     Statement body = loop.getBody();
-    checkBody(opened, text, loop, body, from);
+    VariableDeclarationStatement result = resultBefore(loop);
+    checkBody(
+        opened, text, loop, body, from, result == null ? null : fragment(result).resolveBinding());
 
-    // Read the stages, from the outside in.
-    List<Stage> stages = new ArrayList<>();
-    String param = variable.getName().getIdentifier();
-    IBinding paramBinding = variable.resolveBinding();
-    ITypeBinding current = element;
-    Statement holder = body;
-    List<Statement> rest = statementsOf(body);
-    while (true) {
-      if (rest.size() == 1
-          && rest.get(0) instanceof IfStatement ifs
-          && ifs.getElseStatement() == null) {
-        stages.add(new Stage("filter", param, source(text, ifs.getExpression())));
-        holder = ifs.getThenStatement();
-        rest = statementsOf(holder);
-        continue;
-      }
-      if (rest.size() >= 2
-          && rest.get(0) instanceof VariableDeclarationStatement d
-          && d.fragments().size() == 1
-          && d.fragments().get(0) instanceof VariableDeclarationFragment f
-          && f.getInitializer() != null
-          && f.getExtraDimensions() == 0) {
-        ITypeBinding type = d.getType().resolveBinding();
-        ITypeBinding initial = f.getInitializer().resolveTypeBinding();
-        List<Statement> after = rest.subList(1, rest.size());
-        if (type != null
-            && !type.isPrimitive()
-            && initial != null
-            && type.isEqualTo(initial)
-            && !reads(after, paramBinding)) {
-          stages.add(new Stage("map", param, source(text, f.getInitializer())));
-          param = f.getName().getIdentifier();
-          paramBinding = f.resolveBinding();
-          current = type;
-          rest = after;
-          continue;
-        }
-      }
-      break;
-    }
-
+    Read read = stages(text, variable, element, body);
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
-    VariableDeclarationStatement list = collected(text, loop, rest);
-    String replacement;
-    int start;
-    List<String> chosen = List.of();
-    String said;
-    if (list != null) {
-      VariableDeclarationFragment out = (VariableDeclarationFragment) list.fragments().get(0);
-      ITypeBinding last;
-      if (rest.get(0) instanceof IfStatement ifs) {
-        Branch b = branch(text, ifs, out.resolveBinding(), true);
-        stages.add(new Stage("flatMap", param, b.stream()));
-        last = b.element();
-      } else {
-        MethodInvocation add =
-            (MethodInvocation) ((ExpressionStatement) rest.get(0)).getExpression();
-        Expression argument = (Expression) add.arguments().get(0);
-        if (add.getName().getIdentifier().equals("addAll")) {
-          stages.add(new Stage("flatMap", param, primary(text, argument) + ".stream()"));
-          last = elementOf(argument.resolveTypeBinding());
-        } else if (argument instanceof SimpleName n && same(n.resolveBinding(), paramBinding)) {
-          last = current;
-        } else {
-          stages.add(new Stage("map", param, source(text, argument)));
-          last = argument.resolveTypeBinding();
-        }
-      }
-      ITypeBinding[] held = list.getType().resolveBinding().getTypeArguments();
-      boolean toList =
-          held.length == 1
-              && last != null
-              && last.isEqualTo(held[0])
-              && onlyRead(out.resolveBinding(), list.getParent(), Nodes.end(loop));
-      String terminal = toList ? ".toList()" : ".collect(Collectors.toList())";
-      List<String> imports = new ArrayList<>();
-      if (!toList) {
-        imports.add("java.util.stream.Collectors");
-      }
-      if (stages.stream().anyMatch(s -> s.body().contains("Stream."))) {
-        imports.add("java.util.stream.Stream");
-      }
-      chosen = imports;
-      String prefix =
-          source(text, list)
-              .substring(0, out.getInitializer().getStartPosition() - list.getStartPosition());
-      List<String> segments = new ArrayList<>();
-      segments.add(primary(text, source) + ".stream()");
-      stages.forEach(s -> segments.add(s.text()));
-      segments.add(terminal);
-      replacement = prefix + layout(indent, prefix, segments, step) + ";";
-      start = list.getStartPosition();
-      said = "collected into " + out.getName() + " by " + summary(stages, terminal);
-    } else {
-      List<String> segments = new ArrayList<>();
-      String receiver = primary(text, source);
-      if (stages.isEmpty()) {
-        segments.add(receiver);
-      } else {
-        segments.add(receiver + ".stream()");
-        stages.forEach(s -> segments.add(s.text()));
-      }
-      String lambda = param + " -> ";
-      String head = String.join("", segments) + ".forEach(" + lambda;
-      boolean wrap = indent.length() + head.length() + 2 > WIDTH;
-      String callIndent = wrap ? indent + " ".repeat(2 * step) : indent;
-      String forEach;
-      if (rest.size() == 1 && rest.get(0) instanceof ExpressionStatement e) {
-        forEach = ".forEach(" + lambda + source(text, e.getExpression()) + ")";
-      } else {
-        forEach =
-            ".forEach("
-                + lambda
-                + "{\n"
-                + reindent(statementsText(text, holder, rest), callIndent + " ".repeat(step))
-                + callIndent
-                + "})";
-      }
-      segments.add(forEach);
-      replacement =
-          (wrap ? String.join("\n" + callIndent, segments) : String.join("", segments)) + ";";
-      start = loop.getStartPosition();
-      said = stages.isEmpty() ? "forEach" : summary(stages, ".forEach");
-    }
-    String updated = text.substring(0, start) + replacement + text.substring(Nodes.end(loop));
+    VariableDeclarationStatement list = collected(text, loop, read.rest());
+    Rewrite rewrite =
+        result != null
+            ? flag(text, loop, result, read, indent, step)
+            : list != null
+                ? collect(text, loop, list, read, indent, step)
+                : forEach(text, loop, read, indent, step);
+    String updated =
+        text.substring(0, rewrite.start()) + rewrite.text() + text.substring(Nodes.end(loop));
     Edits.Written written =
         Edits.gated(
             project,
             opened.file(),
             text,
             updated,
-            chosen,
+            rewrite.imports(),
             "replacing the loop at line " + line + " with a stream",
             "A local the body reads must be effectively final for a lambda to read it.");
     return new Outcome(
@@ -309,7 +203,7 @@ final class LoopToStream {
             + " with a stream of "
             + from
             + ": "
-            + said
+            + rewrite.said()
             + written.fixed().said(),
         written.declared());
   }
@@ -320,7 +214,12 @@ final class LoopToStream {
    * walks, a text block (which the reindentation would change).
    */
   private static void checkBody(
-      Opened opened, String text, EnhancedForStatement loop, Statement body, String from) {
+      Opened opened,
+      String text,
+      EnhancedForStatement loop,
+      Statement body,
+      String from,
+      IBinding result) {
     int line = Lines.number(text, loop.getStartPosition());
     if (Effects.leaves(body)) {
       throw new Refusal(
@@ -333,7 +232,8 @@ final class LoopToStream {
           && e.variable() != null
           && !e.variable().isField()
           && !declaredIn(opened, e.variable(), body)
-          && !same(e.variable(), loop.getParameter().resolveBinding())) {
+          && !same(e.variable(), loop.getParameter().resolveBinding())
+          && !same(e.variable(), result)) {
         throw new Refusal(
             e.variable().getName()
                 + " is assigned in the loop at line "
@@ -576,13 +476,19 @@ final class LoopToStream {
    * comments too), else from the first's line to the last's.
    */
   private static String statementsText(String text, Statement holder, List<Statement> rest) {
+    int[] range = statementsRange(text, holder, rest);
+    return text.substring(range[0], range[1]);
+  }
+
+  /** Where {@link #statementsText} starts and ends in {@code text}. */
+  private static int[] statementsRange(String text, Statement holder, List<Statement> rest) {
     if (holder instanceof Block b && b.statements().equals(rest)) {
-      return text.substring(
-          Lines.end(text, b.getStartPosition()), Lines.start(text, Nodes.end(b) - 1));
+      return new int[] {Lines.end(text, b.getStartPosition()), Lines.start(text, Nodes.end(b) - 1)};
     }
-    return text.substring(
-        Lines.start(text, rest.get(0).getStartPosition()),
-        Lines.end(text, Nodes.end(rest.get(rest.size() - 1))));
+    return new int[] {
+      Lines.start(text, rest.get(0).getStartPosition()),
+      Lines.end(text, Nodes.end(rest.get(rest.size() - 1)))
+    };
   }
 
   /** {@code lines} with their common indentation replaced by {@code to}. */
@@ -714,5 +620,340 @@ final class LoopToStream {
               : null;
       default -> null;
     };
+  }
+
+  /**
+   * The body read into stages: the stages, the element's name, binding and type after the last of
+   * them, and the statements left, with the statement that holds them.
+   */
+  private record Read(
+      List<Stage> stages,
+      String param,
+      IBinding binding,
+      ITypeBinding type,
+      Statement holder,
+      List<Statement> rest) {}
+
+  /**
+   * What replaces the code from {@code start} to the loop's end, the imports it needs, and what it
+   * is.
+   */
+  private record Rewrite(String text, int start, List<String> imports, String said) {}
+
+  /**
+   * Reads {@code body} into stages, from the outside in: an if with no else that holds the rest is
+   * a filter; a first local computed from the element, when nothing after it reads the element, a
+   * map.
+   */
+  private static Read stages(
+      String text, SingleVariableDeclaration variable, ITypeBinding element, Statement body) {
+    List<Stage> stages = new ArrayList<>();
+    String param = variable.getName().getIdentifier();
+    IBinding paramBinding = variable.resolveBinding();
+    ITypeBinding current = element;
+    Statement holder = body;
+    List<Statement> rest = statementsOf(body);
+    while (true) {
+      if (rest.size() == 1
+          && rest.get(0) instanceof IfStatement ifs
+          && ifs.getElseStatement() == null) {
+        stages.add(new Stage("filter", param, source(text, ifs.getExpression())));
+        holder = ifs.getThenStatement();
+        rest = statementsOf(holder);
+        continue;
+      }
+      if (rest.size() >= 2
+          && rest.get(0) instanceof VariableDeclarationStatement d
+          && d.fragments().size() == 1
+          && d.fragments().get(0) instanceof VariableDeclarationFragment f
+          && f.getInitializer() != null
+          && f.getExtraDimensions() == 0) {
+        ITypeBinding type = d.getType().resolveBinding();
+        ITypeBinding initial = f.getInitializer().resolveTypeBinding();
+        List<Statement> after = rest.subList(1, rest.size());
+        if (type != null
+            && !type.isPrimitive()
+            && initial != null
+            && type.isEqualTo(initial)
+            && !reads(after, paramBinding)) {
+          stages.add(new Stage("map", param, source(text, f.getInitializer())));
+          param = f.getName().getIdentifier();
+          paramBinding = f.resolveBinding();
+          current = type;
+          rest = after;
+          continue;
+        }
+      }
+      return new Read(stages, param, paramBinding, current, holder, rest);
+    }
+  }
+
+  /** The pipeline that collects into {@code list}, declared just before the loop. */
+  private static Rewrite collect(
+      String text,
+      EnhancedForStatement loop,
+      VariableDeclarationStatement list,
+      Read read,
+      String indent,
+      int step) {
+    List<Stage> stages = new ArrayList<>(read.stages());
+    String param = read.param();
+    List<Statement> rest = read.rest();
+    VariableDeclarationFragment out = (VariableDeclarationFragment) list.fragments().get(0);
+    ITypeBinding last;
+    if (rest.get(0) instanceof IfStatement ifs) {
+      Branch b = branch(text, ifs, out.resolveBinding(), true);
+      stages.add(new Stage("flatMap", param, b.stream()));
+      last = b.element();
+    } else {
+      MethodInvocation add = (MethodInvocation) ((ExpressionStatement) rest.get(0)).getExpression();
+      Expression argument = (Expression) add.arguments().get(0);
+      if (add.getName().getIdentifier().equals("addAll")) {
+        stages.add(new Stage("flatMap", param, primary(text, argument) + ".stream()"));
+        last = elementOf(argument.resolveTypeBinding());
+      } else if (argument instanceof SimpleName n && same(n.resolveBinding(), read.binding())) {
+        last = read.type();
+      } else {
+        stages.add(new Stage("map", param, source(text, argument)));
+        last = argument.resolveTypeBinding();
+      }
+    }
+    ITypeBinding[] held = list.getType().resolveBinding().getTypeArguments();
+    boolean toList =
+        held.length == 1
+            && last != null
+            && last.isEqualTo(held[0])
+            && onlyRead(out.resolveBinding(), list.getParent(), Nodes.end(loop));
+    String terminal = toList ? ".toList()" : ".collect(Collectors.toList())";
+    List<String> imports = new ArrayList<>();
+    if (!toList) {
+      imports.add("java.util.stream.Collectors");
+    }
+    if (stages.stream().anyMatch(s -> s.body().contains("Stream."))) {
+      imports.add("java.util.stream.Stream");
+    }
+    String prefix =
+        source(text, list)
+            .substring(0, out.getInitializer().getStartPosition() - list.getStartPosition());
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    stages.forEach(s -> segments.add(s.text()));
+    segments.add(terminal);
+    return new Rewrite(
+        lead(text, list, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
+        list.getStartPosition(),
+        imports,
+        "collected into " + out.getName() + " by " + summary(stages, terminal));
+  }
+
+  /** The pipeline whose last stage runs what is left of the body in a forEach. */
+  private static Rewrite forEach(
+      String text, EnhancedForStatement loop, Read read, String indent, int step) {
+    List<String> segments = new ArrayList<>();
+    String receiver = primary(text, loop.getExpression());
+    if (read.stages().isEmpty()) {
+      segments.add(receiver);
+    } else {
+      segments.add(receiver + ".stream()");
+      read.stages().forEach(s -> segments.add(s.text()));
+    }
+    List<Statement> rest = read.rest();
+    String lambda = read.param() + " -> ";
+    String head = String.join("", segments) + ".forEach(" + lambda;
+    boolean wrap = indent.length() + head.length() + 2 > WIDTH;
+    String callIndent = wrap ? indent + " ".repeat(2 * step) : indent;
+    String forEach;
+    if (rest.size() == 1 && rest.get(0) instanceof ExpressionStatement e) {
+      forEach = ".forEach(" + lambda + source(text, e.getExpression()) + ")";
+    } else {
+      forEach =
+          ".forEach("
+              + lambda
+              + "{\n"
+              + reindent(statementsText(text, read.holder(), rest), callIndent + " ".repeat(step))
+              + callIndent
+              + "})";
+    }
+    segments.add(forEach);
+    return new Rewrite(
+        (wrap ? String.join("\n" + callIndent, segments) : String.join("", segments)) + ";",
+        loop.getStartPosition(),
+        List.of(),
+        read.stages().isEmpty() ? "forEach" : summary(read.stages(), ".forEach"));
+  }
+
+  /**
+   * The local declared just before {@code loop}, with an initializer, that the loop assigns: what a
+   * loop computes, such as a flag; else null.
+   */
+  private static VariableDeclarationStatement resultBefore(EnhancedForStatement loop) {
+    if (!(loop.getParent() instanceof Block block)) {
+      return null;
+    }
+    int at = block.statements().indexOf(loop);
+    if (at < 1
+        || !(block.statements().get(at - 1) instanceof VariableDeclarationStatement d)
+        || d.fragments().size() != 1
+        || fragment(d).getInitializer() == null) {
+      return null;
+    }
+    IBinding v = fragment(d).resolveBinding();
+    for (Effects.Effect e : Effects.of(loop.getBody()).all()) {
+      if (e.kind() == Effects.Kind.WRITE && same(e.variable(), v)) {
+        return d;
+      }
+    }
+    return null;
+  }
+
+  private static VariableDeclarationFragment fragment(VariableDeclarationStatement d) {
+    return (VariableDeclarationFragment) d.fragments().get(0);
+  }
+
+  /**
+   * The pipeline for a flag: {@code result} starts as a constant, and the loop only sets it to one
+   * other constant. Each element maps to whether its pass set it, and the passes are or-ed by
+   * {@code reduce}, which runs every element, as the loop did ({@code anyMatch} would stop at the
+   * first). A last filter whose then-branch only sets the flag maps to its condition.
+   */
+  private static Rewrite flag(
+      String text,
+      EnhancedForStatement loop,
+      VariableDeclarationStatement result,
+      Read read,
+      String indent,
+      int step) {
+    VariableDeclarationFragment v = fragment(result);
+    IBinding binding = v.resolveBinding();
+    String initial = source(text, v.getInitializer());
+    int line = Lines.number(text, loop.getStartPosition());
+    List<Assignment> sets = new ArrayList<>();
+    for (Assignment a : Nodes.all(loop.getBody(), Assignment.class)) {
+      if (a.getLeftHandSide() instanceof SimpleName n && same(n.resolveBinding(), binding)) {
+        sets.add(a);
+      }
+    }
+    long uses =
+        Nodes.all(loop.getBody(), SimpleName.class).stream()
+            .filter(n -> same(n.resolveBinding(), binding))
+            .count();
+    String set = sets.isEmpty() ? null : source(text, sets.get(0).getRightHandSide());
+    boolean flag =
+        constant(v.getInitializer())
+            && !sets.isEmpty()
+            && uses == sets.size()
+            && sets.stream()
+                .allMatch(a ->
+                    a.getOperator() == Assignment.Operator.ASSIGN
+                        && constant(a.getRightHandSide())
+                        && source(text, a.getRightHandSide()).equals(set))
+            && !set.equals(initial);
+    if (!flag) {
+      throw new Refusal(
+          v.getName()
+              + " is assigned in the loop at line "
+              + line
+              + ", and a lambda cannot assign a local of the method around it. loop_to_stream"
+              + " takes a flag (a local set to one constant from another); sums, counts and"
+              + " other results are not built yet.");
+    }
+    List<Stage> stages = new ArrayList<>(read.stages());
+    List<Statement> rest = read.rest();
+    String cont = indent + " ".repeat(2 * step);
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    if (rest.size() == 1
+        && rest.get(0) instanceof ExpressionStatement e
+        && sets.contains(e.getExpression())
+        && !stages.isEmpty()
+        && stages.getLast().method().equals("filter")) {
+      Stage last = stages.removeLast();
+      stages.add(new Stage("map", last.param(), last.body()));
+      stages.forEach(s -> segments.add(s.text()));
+    } else {
+      String name = unused(v.getName() + "Changed", loop);
+      int[] range = statementsRange(text, read.holder(), rest);
+      List<TextEdit> edits = new ArrayList<>();
+      for (Assignment a : sets) {
+        edits.add(new TextEdit(a.getStartPosition(), Nodes.end(a), name + " = true"));
+      }
+      String inner = cont + " ".repeat(step);
+      String lines =
+          reindent(TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]), inner);
+      stages.forEach(s -> segments.add(s.text()));
+      segments.add(
+          ".map("
+              + read.param()
+              + " -> {\n"
+              + inner
+              + "boolean "
+              + name
+              + " = false;\n"
+              + lines
+              + inner
+              + "return "
+              + name
+              + ";\n"
+              + cont
+              + "})");
+    }
+    String tail;
+    String head = "";
+    if (initial.equals("false") && set.equals("true")) {
+      tail = "";
+    } else if (initial.equals("true") && set.equals("false")) {
+      head = "!";
+      tail = "";
+    } else {
+      tail = " ? " + set + " : " + initial;
+    }
+    segments.add(".reduce(false, Boolean::logicalOr)" + tail);
+    String prefix =
+        source(text, result)
+            .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
+    String one = String.join("", segments);
+    boolean wrap =
+        one.contains("\n")
+            || indent.length() + prefix.length() + head.length() + one.length() + 1 > WIDTH;
+    String pipeline = wrap ? String.join("\n" + cont, segments) : one;
+    return new Rewrite(
+        lead(text, result, loop, indent) + prefix + head + pipeline + ";",
+        result.getStartPosition(),
+        List.of(),
+        "set " + v.getName() + " by " + summary(stages, ".reduce"));
+  }
+
+  /**
+   * The comment lines between {@code before} and {@code loop}, which a rewrite that replaces both
+   * keeps above them, then the indentation the replacement's first line needs; empty when there are
+   * none.
+   */
+  private static String lead(String text, Statement before, Statement loop, String indent) {
+    String between =
+        text.substring(
+            Lines.end(text, Nodes.end(before)), Lines.start(text, loop.getStartPosition()));
+    return between.isBlank() ? "" : between.stripLeading() + indent;
+  }
+
+  /** Whether {@code e} is a literal: a number, a boolean, a character or a string. */
+  private static boolean constant(Expression e) {
+    return e instanceof NumberLiteral
+        || e instanceof BooleanLiteral
+        || e instanceof CharacterLiteral
+        || e instanceof StringLiteral
+        || (e instanceof PrefixExpression p
+            && p.getOperator() == PrefixExpression.Operator.MINUS
+            && p.getOperand() instanceof NumberLiteral);
+  }
+
+  /** {@code name}, or it with a number after it, that no name in {@code loop}'s file is. */
+  private static String unused(String name, ASTNode loop) {
+    Set<String> taken = new java.util.HashSet<>();
+    Nodes.all(loop.getRoot(), SimpleName.class).forEach(n -> taken.add(n.getIdentifier()));
+    String out = name;
+    for (int i = 2; taken.contains(out); i++) {
+      out = name + i;
+    }
+    return out;
   }
 }
