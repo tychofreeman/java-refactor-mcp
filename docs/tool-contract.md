@@ -751,7 +751,8 @@ gorefactor's `extract_function` (roadmap #23; the shared name since #120, 2026-1
 `extract_method` an alias).
 
 - Arguments: `file`, `start_line`, `end_line` (inclusive), `name`, optional
-  `doc` (Javadoc text without `/** */`). Blank lines at either end of the range
+  `doc` (Javadoc text without `/** */`), optional `visibility` (`private`, the default,
+  `package`, `protected`, `public`). Blank lines at either end of the range
   are dropped.
 - The lines cover whole statements of one statement list (a body, a `{}`
   block, a `case`, a lambda's block); comments and blank lines may be in the
@@ -769,6 +770,15 @@ gorefactor's `extract_function` (roadmap #23; the shared name since #120, 2026-1
   Refused then: a record name the type already has, a holder name the code
   around already uses. It declares the checked exceptions the statements throw and do
   not catch, and the enclosing method's type parameters.
+- With `visibility` other than private (#321, 2026-11-10, the user): the method may
+  override a supertype's method of its name and erased parameter types (not private, static
+  or final), marked `@Override`, a template method's step. Refused then: a subclass that
+  declares a method of that name ("FileRenamer already declares move, which would override
+  the new method ..."), a supertype's method of that name the new one would not override, and
+  a call of the overridden one that could then run the new one ("... the call at line 6 of
+  com/example/Renamer.java would then run the new one for a FileRenamer: it is in
+  Renamer.twice, which FileRenamer does not override"): every call must be on `this`, in a
+  method of a supertype that the class overrides, not also called through `super`.
 - `return`: in a method with a result, the call is `return m(...)` and the
   statements must return on every path; in a void method, only statements
   that end the body.

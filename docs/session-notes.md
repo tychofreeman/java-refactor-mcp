@@ -83,6 +83,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".
+- `extract_function` with `visibility` (#321, 2026-11-10; the user said yes to an option for
+  visibility and for overriding): one option, the override following from the signature, over
+  a separate `override` flag; `Extraction.checkOverride` decides when calls of the overridden
+  method could reach the new one.
 - `extract_method` returns several results in a record named after the method
   (`BothResult`), declared after it (the user, 2026-11-04, reversing the 2026-11-03
   choice to refuse them, over an out-parameter holder); the new method is static
@@ -287,6 +291,9 @@ Each was chosen from options; the record named beside it has the options it beat
   "if it doesn't break anything"): `MoveMember.along` orders them callees first, and
   `withAlong` moves each by its own `run` in the same call, so one undo reverts all. Over a list
   of members to move together (the issue's other idea). Not fields: those stay refused.
+- `move` keeps the `receiver` parameter even when the moved body does not use it (the user,
+  2026-11-10, #330): over dropping it, which would also stop a null instance from failing at the
+  call. `remove_parameter` drops it after, when the model wants that.
 - Instance to static in place is `move_member` with `to` its own class; static to
   instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).
 
