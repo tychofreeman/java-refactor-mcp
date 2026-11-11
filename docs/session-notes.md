@@ -131,7 +131,9 @@ Each was chosen from options; the record named beside it has the options it beat
   accepted and ignored (`Tools.RETIRED_ARGS`, dropped by `Args.without` before the argument check).
   A new option that would make the model choose a place is against this choice. A tool that adds
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
-  `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do.
+  `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
+  the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
+  file's step (`MemberMove.reindented`, #316); it had written two spaces.
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
   receiver): matches in instance members of its class and subclasses become `m(...)`, refused
   when the project overrides it (`Fold.overrider`, `Fold.thisOf`).
