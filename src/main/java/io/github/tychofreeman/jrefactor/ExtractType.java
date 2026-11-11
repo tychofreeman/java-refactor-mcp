@@ -15,14 +15,20 @@ import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
@@ -33,6 +39,8 @@ import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.RecordPattern;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
@@ -310,12 +318,6 @@ final class ExtractType {
       Expression init = frag.getInitializer();
       Precondition.require(
           Precondition.that(
-              () -> !(Modifier.isFinal(decl.getModifiers()) && init == null),
-              () ->
-                  f
-                      + " is final and set by a constructor, which could not set it through the"
-                      + " holder. Give it an initializer, or leave it out."),
-          Precondition.that(
               () -> init == null || initializedAlone(init),
               () ->
                   "the initializer of "
@@ -364,7 +366,20 @@ final class ExtractType {
               + ", and extract_type moves only fields their class alone uses. Encapsulate them"
               + " first (encapsulate_field), or leave them out.");
     }
+    List<String> setByConstructor = new ArrayList<>();
+    for (FieldDeclaration fd : moved) {
+      if (Modifier.isFinal(fd.getModifiers())
+          && ((VariableDeclarationFragment) fd.fragments().get(0)).getInitializer() == null) {
+        setByConstructor.add(
+            ((VariableDeclarationFragment) fd.fragments().get(0)).getName().getIdentifier());
+      }
+    }
     List<TextEdit> edits = new ArrayList<>();
+    List<int[]> rewritten =
+        setByConstructor.isEmpty()
+            ? List.of()
+            : buildInConstructors(
+                owner, text, keys, chosen, setByConstructor, struct, holder, edits);
     owner.accept(
         new ASTVisitor() {
           @Override
@@ -375,13 +390,17 @@ final class ExtractType {
             }
             if (!n.isDeclaration()
                 && n.resolveBinding() instanceof IVariableBinding v
-                && keys.contains(v.getVariableDeclaration().getKey())) {
+                && keys.contains(v.getVariableDeclaration().getKey())
+                && rewritten.stream()
+                    .noneMatch(r -> n.getStartPosition() >= r[0] && n.getStartPosition() < r[1])) {
               edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), holder + "."));
             }
             return true;
           }
         });
     StringBuilder body = new StringBuilder();
+    List<String> params = new ArrayList<>();
+    List<String> sets = new ArrayList<>();
     for (int i = 0; i < moved.size(); i++) {
       FieldDeclaration fd = moved.get(i);
       int start = Lines.start(text, fd.getStartPosition());
@@ -397,13 +416,28 @@ final class ExtractType {
         }
       }
       body.append("  ").append(fieldText).append("\n");
+      String fieldName =
+          ((VariableDeclarationFragment) fd.fragments().get(0)).getName().getIdentifier();
+      if (setByConstructor.contains(fieldName)) {
+        params.add(
+            text.substring(fd.getType().getStartPosition(), Nodes.end(fd.getType()))
+                + " "
+                + fieldName);
+        sets.add("    this." + fieldName + " = " + fieldName + ";\n");
+      }
       if (i == 0) {
         String indent = text.substring(start, fd.getStartPosition());
         edits.add(
             new TextEdit(
                 start,
                 Lines.end(text, Nodes.end(fd) - 1),
-                indent + "private final " + struct + " " + holder + " = new " + struct + "();\n"));
+                indent
+                    + "private final "
+                    + struct
+                    + " "
+                    + holder
+                    + (setByConstructor.isEmpty() ? " = new " + struct + "()" : "")
+                    + ";\n"));
       } else {
         edits.add(MemberMove.removal(text, fd));
       }
@@ -412,6 +446,15 @@ final class ExtractType {
         opened.unit().getPackage() == null
             ? ""
             : "package " + opened.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    if (!params.isEmpty()) {
+      body.append("\n  ")
+          .append(struct)
+          .append("(")
+          .append(String.join(", ", params))
+          .append(") {\n")
+          .append(String.join("", sets))
+          .append("  }\n");
+    }
     String created = pkg + "class " + struct + " {\n" + body + "}\n";
     Gate.applyOrRefuse(
         project,
@@ -698,5 +741,190 @@ final class ExtractType {
       }
     }
     return true;
+  }
+
+  /**
+   * For final fields that each constructor sets, in one statement of its own body, from its
+   * parameters and constants: adds to {@code edits} the holder built in the first of those
+   * statements, {@code this.holder = new Struct(...)}, with the others removed, and returns the
+   * ranges of the statements it rewrites. A constructor that calls {@code this(...)} sets nothing.
+   */
+  private static List<int[]> buildInConstructors(
+      TypeDeclaration owner,
+      String text,
+      List<String> keys,
+      List<String> chosen,
+      List<String> fields,
+      String struct,
+      String holder,
+      List<TextEdit> edits) {
+    List<int[]> ranges = new ArrayList<>();
+    CompilationUnit unit = (CompilationUnit) owner.getRoot();
+    for (MethodDeclaration c : owner.getMethods()) {
+      if (!c.isConstructor() || c.getBody() == null) {
+        continue;
+      }
+      List<?> statements = c.getBody().statements();
+      if (!statements.isEmpty() && statements.get(0) instanceof ConstructorInvocation) {
+        continue;
+      }
+      int line = unit.getLineNumber(c.getStartPosition());
+      Map<String, ExpressionStatement> sets = new LinkedHashMap<>();
+      for (Object o : statements) {
+        if (o instanceof ExpressionStatement es
+            && es.getExpression() instanceof Assignment a
+            && a.getOperator() == Assignment.Operator.ASSIGN
+            && fieldOf(a.getLeftHandSide()) instanceof IVariableBinding v
+            && keys.contains(v.getVariableDeclaration().getKey())
+            && fields.contains(v.getName())) {
+          if (sets.put(v.getName(), es) != null) {
+            throw new Refusal(
+                "the constructor at line "
+                    + line
+                    + " sets "
+                    + v.getName()
+                    + " twice. Leave it out of fields.");
+          }
+        }
+      }
+      List<String> args = new ArrayList<>();
+      int first = Integer.MAX_VALUE;
+      int last = -1;
+      for (String f : fields) {
+        ExpressionStatement es = sets.get(f);
+        if (es == null) {
+          throw new Refusal(
+              "the constructor at line "
+                  + line
+                  + " does not set "
+                  + f
+                  + " in a statement of its own body (this."
+                  + f
+                  + " = ...;), so the holder cannot be built there. Leave "
+                  + f
+                  + " out, or set it so.");
+        }
+        Expression value = ((Assignment) es.getExpression()).getRightHandSide();
+        if (!fromParameters(value, c)) {
+          throw new Refusal(
+              "the constructor at line "
+                  + line
+                  + " sets "
+                  + f
+                  + " to "
+                  + value
+                  + ", which reads more than its parameters and constants; built into the holder"
+                  + " it would run at another point. Assign it to a local first, or leave "
+                  + f
+                  + " out.");
+        }
+        args.add(text.substring(value.getStartPosition(), Nodes.end(value)));
+        int at = statements.indexOf(es);
+        first = Math.min(first, at);
+        last = Math.max(last, at);
+      }
+      for (int i = first + 1; i < last; i++) {
+        ASTNode between = (ASTNode) statements.get(i);
+        if (!sets.containsValue(between)
+            && Nodes.all(between, SimpleName.class).stream()
+                .anyMatch(n ->
+                    n.resolveBinding() instanceof IVariableBinding v
+                        && keys.contains(v.getVariableDeclaration().getKey()))) {
+          throw new Refusal(
+              "the constructor at line "
+                  + line
+                  + " reads one of "
+                  + Extract.and(chosen)
+                  + " between setting them (line "
+                  + unit.getLineNumber(between.getStartPosition())
+                  + "), and the holder sets them all at once. Move that statement first.");
+        }
+      }
+      for (ExpressionStatement es : sets.values()) {
+        int start = Lines.start(text, es.getStartPosition());
+        int end = Lines.end(text, Nodes.end(es) - 1);
+        ranges.add(new int[] {start, end});
+        if (es == statements.get(first)) {
+          edits.add(
+              new TextEdit(
+                  es.getStartPosition(),
+                  Nodes.end(es),
+                  "this." + holder + " = new " + struct + "(" + String.join(", ", args) + ");"));
+        } else {
+          edits.add(new TextEdit(start, end, ""));
+        }
+      }
+    }
+    return ranges;
+  }
+
+  /** The field {@code e} names, unqualified or through {@code this}, or null. */
+  private static IVariableBinding fieldOf(Expression e) {
+    IBinding b =
+        switch (e) {
+          case SimpleName n -> n.resolveBinding();
+          case FieldAccess f
+              when f.getExpression() instanceof ThisExpression t && t.getQualifier() == null ->
+              f.resolveFieldBinding();
+          default -> null;
+        };
+    return b instanceof IVariableBinding v && v.isField() ? v : null;
+  }
+
+  /**
+   * Whether {@code value} reads only parameters of {@code c} that it never assigns, constants
+   * (static final fields) and literals, and calls and creates nothing.
+   */
+  private static boolean fromParameters(Expression value, MethodDeclaration c) {
+    boolean[] ok = {true};
+    value.accept(
+        new ASTVisitor() {
+          @Override
+          public void preVisit(ASTNode n) {
+            ok[0] &=
+                !(n instanceof MethodInvocation
+                    || n instanceof SuperMethodInvocation
+                    || n instanceof ClassInstanceCreation
+                    || n instanceof ArrayCreation
+                    || n instanceof Assignment
+                    || n instanceof LambdaExpression
+                    || n instanceof MethodReference
+                    || n instanceof PostfixExpression
+                    || n instanceof PrefixExpression p
+                        && (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                            || p.getOperator() == PrefixExpression.Operator.DECREMENT));
+          }
+
+          @Override
+          public boolean visit(SimpleName n) {
+            if (n.resolveBinding() instanceof IVariableBinding v) {
+              boolean constant =
+                  v.isField()
+                      && Modifier.isStatic(v.getModifiers())
+                      && Modifier.isFinal(v.getModifiers());
+              boolean parameter =
+                  v.isParameter()
+                      && c.parameters().stream()
+                          .anyMatch(p ->
+                              ((SingleVariableDeclaration) p).resolveBinding() != null
+                                  && ((SingleVariableDeclaration) p).resolveBinding().isEqualTo(v))
+                      && Nodes.all(c.getBody(), SimpleName.class).stream()
+                          .noneMatch(w ->
+                              v.isEqualTo(w.resolveBinding())
+                                  && (w.getParent() instanceof Assignment a
+                                          && a.getLeftHandSide() == w
+                                      || w.getParent() instanceof PostfixExpression
+                                      || w.getParent() instanceof PrefixExpression p
+                                          && p.getOperator() != PrefixExpression.Operator.MINUS
+                                          && p.getOperator() != PrefixExpression.Operator.NOT
+                                          && p.getOperator() != PrefixExpression.Operator.PLUS
+                                          && p.getOperator()
+                                              != PrefixExpression.Operator.COMPLEMENT));
+              ok[0] &= constant || parameter;
+            }
+            return true;
+          }
+        });
+    return ok[0];
   }
 }

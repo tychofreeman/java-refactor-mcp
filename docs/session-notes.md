@@ -280,6 +280,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - `extract_type` (named `extract_struct` until 2026-11-06, the user: "struct" is Go's word; the old
   name is an alias in `Tools.ALIASES`) takes one shape since 2026-11-06 (`name`, `members`, `new_type`, `as`; `new_type` was `struct` until 2026-11-07, still accepted): the case
   follows from what `name` is; old argument names are renamed in `Tools.call` (`ARG_ALIASES`).
+- `extract_type` with `fields` builds the holder in each constructor for final fields set there
+  (#345, 2026-11-11, `ExtractType.buildInConstructors`); the new class gets the constructor.
 - `extract_type` (#89, 2026-11-04) is `ExtractType`: a parameter object, through
   `MethodFamily` and `SignatureChange.replaceRange`; with `fields`, extract class
   (`ExtractType.fields`), for fields only their class uses. On a record, `fields` is
