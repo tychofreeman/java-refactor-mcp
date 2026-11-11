@@ -1075,14 +1075,21 @@ final class Tools {
           it last when taking a feature out: \
           first change the bodies so they no longer read it.
           name finds the method as replace_declaration does, or line as add_parameter's does. A \
-          dropped argument must have no side effects (a name, a literal, this, a field).\
+          dropped argument must have no side effects (a name, a literal, this, a field). With \
+          value, a parameter every call passes the same field or literal for is removed though \
+          the body reads it: void report(PrintStream out, String r) called as report(out, r) \
+          becomes void report(String r), its body reading the field out.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
-              Arg.string("parameter", "The parameter to remove.").required()),
+              Arg.string("parameter", "The parameter to remove.").required(),
+              Arg.string(
+                  "value",
+                  "Optional: what every call passes for it, a field (out, this.out, Config.OUT)"
+                      + " or a literal; the body then reads that.")),
           Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, ByLine.named(project, args)));
 

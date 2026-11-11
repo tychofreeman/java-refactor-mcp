@@ -718,7 +718,14 @@ name."), and so is a line with neither. `change_type` with `parameter` or `retur
 too (`ByLine.named`).
 - `add_parameter`: `type`, `value` (a Java expression each call passes),
   optional `before` (default last), optional `imports`.
-- `remove_parameter`: also deletes the parameter's `@param` tag.
+- `remove_parameter`: also deletes the parameter's `@param` tag. Optional `value` (#315,
+  2026-11-11, the user's choice over a `parameter_to_field` tool): a field (`out`, `this.out`,
+  `Config.OUT`) or a literal that every call passes; the body may then read the parameter, and
+  each read becomes the field (by its name, or `this.out` / `Config.OUT` when the body declares
+  that name) or the literal. An instance field must be passed unqualified or through `this`, on
+  a call on `this`. Refused: a method something overrides or implements, a call passing
+  anything else ("the call at ... passes System.err, not this.out ..."), a parameter the body
+  assigns, an instance field for a static method.
 - `move_parameter`: optional `before` (default last).
 
 The change covers the method's family: every project declaration that overrides

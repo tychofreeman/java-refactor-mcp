@@ -27,6 +27,7 @@ import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -34,7 +35,9 @@ import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.NumberLiteral;
@@ -103,6 +106,10 @@ final class Signatures {
   static Outcome removeParameter(SourceProject project, Args args) throws Exception {
     MethodFamily family = MethodFamily.of(project, args);
     int at = family.index(args.required("parameter"), "parameter", false);
+    String value = args.string("value");
+    if (value != null) {
+      return removeWithValue(project, family, at, args.required("parameter"), value.strip());
+    }
     family.refuseReading(at);
     for (Lambda l : family.lambdas) {
       VariableDeclaration p = (VariableDeclaration) l.node().parameters().get(at);
@@ -697,5 +704,162 @@ final class Signatures {
   /** The offset just after the first "(" at or after {@code from}. */
   static int after(String text, int from) {
     return text.indexOf('(', from) + 1;
+  }
+
+  /**
+   * Removes the parameter at {@code at} of a method nothing overrides, which every call passes
+   * {@code value} for: a field of the method's object or a static one, or a literal. Each read of
+   * the parameter in the body becomes a read of that.
+   */
+  private static Outcome removeWithValue(
+      SourceProject project, MethodFamily family, int at, String parameter, String value)
+      throws Exception {
+    if (family.decls.size() != 1 || !family.lambdas.isEmpty()) {
+      throw new Refusal(
+          "value applies to a method that nothing overrides or implements, as each declaration"
+              + " could need another value. Remove the parameter from the others first, or"
+              + " without value.");
+    }
+    Decl d = family.decls.get(0);
+    MethodDeclaration m = d.m();
+    IVariableBinding param = ((SingleVariableDeclaration) m.parameters().get(at)).resolveBinding();
+    boolean literal =
+        value.matches("-?[0-9][0-9_.xXa-fA-FlLdDfF]*|\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)+'")
+            || List.of("true", "false", "null").contains(value);
+    IVariableBinding field = literal ? null : fieldNamed(family, d, at, value);
+    if (field != null
+        && !Modifier.isStatic(field.getModifiers())
+        && Modifier.isStatic(m.getModifiers())) {
+      throw new Refusal(
+          value
+              + " is a field of an instance, which the static method "
+              + m.getName()
+              + " has none of. Pass a static field or a literal.");
+    }
+    for (Call c : family.calls) {
+      Expression argument = (Expression) c.arguments().get(at);
+      if (!(literal ? argument.toString().equals(value) : sameField(argument, c.node(), field))) {
+        throw new Refusal(
+            "the call at "
+                + c.where(argument)
+                + " passes "
+                + argument
+                + ", not "
+                + value
+                + ", so the parameter cannot become "
+                + value
+                + ". Remove it without value after changing that call, or keep it.");
+      }
+    }
+    SignatureChange change = new SignatureChange(family);
+    String read = literal ? value : readOf(m, field, value);
+    for (SimpleName n : Nodes.all(m.getBody(), SimpleName.class)) {
+      if (param != null && n.resolveBinding() instanceof IVariableBinding v && v.isEqualTo(param)) {
+        if (Nodes.written(n)) {
+          throw new Refusal(
+              parameter
+                  + " is assigned in the body (line "
+                  + d.file().line(n)
+                  + "), so its reads are not all "
+                  + value
+                  + ". Assign a local instead first.");
+        }
+        if (!n.getIdentifier().equals(read)) {
+          change.replace(d.file(), n, read);
+        }
+      }
+    }
+    change.remove(d.file(), m.parameters(), at);
+    change.removeParamTag(d, at);
+    for (Call c : family.calls) {
+      change.remove(c.file(), c.arguments(), at);
+    }
+    return change.apply(
+        project,
+        "removed " + parameter + " from " + family.label + "; its body reads " + read,
+        List.of());
+  }
+
+  /**
+   * The field {@code value} names: {@code f} or {@code this.f}, of the method's class or one above
+   * it, or {@code T.F}, a static field one of the calls passes.
+   */
+  private static IVariableBinding fieldNamed(MethodFamily family, Decl d, int at, String value) {
+    String name = value.startsWith("this.") ? value.substring(5) : value;
+    if (!name.contains(".")) {
+      for (ITypeBinding t = d.binding().getDeclaringClass(); t != null; t = t.getSuperclass()) {
+        for (IVariableBinding f : t.getDeclaredFields()) {
+          if (f.getName().equals(name)) {
+            return f;
+          }
+        }
+      }
+    } else {
+      String simple = name.substring(name.lastIndexOf('.') + 1);
+      String type = name.substring(0, name.lastIndexOf('.'));
+      for (Call c : family.calls) {
+        if (c.arguments().get(at) instanceof Name n
+            && n.resolveBinding() instanceof IVariableBinding f
+            && f.isField()
+            && Modifier.isStatic(f.getModifiers())
+            && f.getName().equals(simple)
+            && f.getDeclaringClass() != null
+            && (f.getDeclaringClass().getName().equals(type)
+                || f.getDeclaringClass().getQualifiedName().equals(type))) {
+          return f;
+        }
+      }
+    }
+    throw new Refusal(
+        value
+            + " is not a field of "
+            + d.binding().getDeclaringClass().getName()
+            + " or a literal. Pass a field (out, this.out, Config.OUT) or a literal, as the calls"
+            + " write it.");
+  }
+
+  /**
+   * Whether {@code argument} reads {@code field}, of the same object as the method the call {@code
+   * call} makes when the field is an instance's: unqualified or through this, with the call on
+   * this.
+   */
+  private static boolean sameField(Expression argument, ASTNode call, IVariableBinding field) {
+    IBinding b =
+        switch (argument) {
+          case Name n -> n.resolveBinding();
+          case FieldAccess f -> f.resolveFieldBinding();
+          default -> null;
+        };
+    if (!(b instanceof IVariableBinding v) || !v.getKey().equals(field.getKey())) {
+      return false;
+    }
+    if (Modifier.isStatic(field.getModifiers())) {
+      return true;
+    }
+    boolean ownArgument =
+        argument instanceof SimpleName
+            || argument instanceof FieldAccess f
+                && f.getExpression() instanceof ThisExpression t
+                && t.getQualifier() == null;
+    boolean ownCall =
+        call instanceof MethodInvocation mi
+            && (mi.getExpression() == null
+                || mi.getExpression() instanceof ThisExpression t && t.getQualifier() == null);
+    return ownArgument && ownCall;
+  }
+
+  /**
+   * How the body of {@code m} reads {@code field}: by its name unless the body declares that name.
+   */
+  private static String readOf(MethodDeclaration m, IVariableBinding field, String value) {
+    boolean hidden =
+        Nodes.all(m.getBody(), VariableDeclaration.class).stream()
+            .anyMatch(v -> v.getName().getIdentifier().equals(field.getName()));
+    if (!hidden) {
+      return field.getName();
+    }
+    return Modifier.isStatic(field.getModifiers())
+        ? field.getDeclaringClass().getName() + "." + field.getName()
+        : "this." + field.getName();
   }
 }

@@ -16,7 +16,6 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -28,8 +27,6 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -333,7 +330,7 @@ final class Fold {
           public boolean preVisit2(ASTNode n) {
             if (returns && n instanceof Expression x && n.getClass() == pattern.get(0).getClass()) {
               Holes h = new Holes(params, bodyLocals);
-              if (pattern.get(0).subtreeMatch(h, x) && !written(x)) {
+              if (pattern.get(0).subtreeMatch(h, x) && !Nodes.written(x)) {
                 found.add(
                     new Candidate(
                         file,
@@ -704,16 +701,6 @@ final class Fold {
           && Modifier.isStatic(b.getModifiers())
           && b.getDeclaringClass().getQualifiedName().equals("java.lang.String");
     }
-  }
-
-  /** Whether {@code x} is written: an assignment's target, or what ++ or -- changes. */
-  private static boolean written(Expression x) {
-    ASTNode p = x.getParent();
-    return (p instanceof Assignment a && a.getLeftHandSide() == x)
-        || (p instanceof PostfixExpression)
-        || (p instanceof PrefixExpression pre
-            && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
   }
 
   /** Whether {@code x}'s type is {@code param}, or for a reference, a subtype of it, by name. */
