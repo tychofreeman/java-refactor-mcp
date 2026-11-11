@@ -2,7 +2,7 @@ package com.example;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println(renameAll("a"));
+        System.out.println(renameAll("a") + carryOut("b"));
     }
 
     static String renameAll(String r) {

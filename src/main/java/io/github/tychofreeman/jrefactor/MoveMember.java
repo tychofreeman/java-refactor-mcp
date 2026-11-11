@@ -123,6 +123,10 @@ final class MoveMember {
             () -> target != null && target.resolveBinding() != null,
             () -> to + " is not a class of " + project.relative(targetFile) + " that resolves."));
     if (!sameTopLevel(method.getDeclaringClass(), target.resolveBinding())) {
+      List<MethodDeclaration> along = along(source, m);
+      if (!along.isEmpty()) {
+        return withAlong(project, rel, typeName, along, name, to, imports);
+      }
       checkPrivateUses(m, method, typeName, to, name);
     }
     boolean crosses = !Objects.equals(project.packageOf(file), project.packageOf(targetFile));
@@ -203,7 +207,7 @@ final class MoveMember {
                 sourceKey,
                 typeName,
                 toName,
-                member,
+                base,
                 isStatic,
                 name,
                 key,
@@ -854,5 +858,132 @@ final class MoveMember {
       }
     }
     return false;
+  }
+
+  /**
+   * The private methods of {@code source} that {@code m} calls, directly or through each other, in
+   * the order to move them, each before those that call it: empty unless {@code m} and they are the
+   * only callers of each, and they call each other in no cycle.
+   */
+  private static List<MethodDeclaration> along(TypeDeclaration source, MethodDeclaration m) {
+    String sourceKey = source.resolveBinding().getKey();
+    Map<String, MethodDeclaration> reached = new LinkedHashMap<>();
+    List<MethodDeclaration> work = new ArrayList<>(List.of(m));
+    for (int i = 0; i < work.size(); i++) {
+      for (MethodDeclaration c : privateCallees(work.get(i), sourceKey)) {
+        if (c != m && reached.putIfAbsent(c.resolveBinding().getKey(), c) == null) {
+          work.add(c);
+        }
+      }
+    }
+    java.util.Set<String> callers = new java.util.HashSet<>(reached.keySet());
+    callers.add(m.resolveBinding().getKey());
+    for (MethodDeclaration c : reached.values()) {
+      if (calledElsewhere(source, c, callers)) {
+        return List.of();
+      }
+    }
+    List<MethodDeclaration> ordered = new ArrayList<>();
+    java.util.Set<MethodDeclaration> left = new java.util.LinkedHashSet<>(reached.values());
+    while (!left.isEmpty()) {
+      MethodDeclaration next = null;
+      for (MethodDeclaration c : left) {
+        if (privateCallees(c, sourceKey).stream().noneMatch(left::contains)) {
+          next = c;
+          break;
+        }
+      }
+      if (next == null) {
+        return List.of();
+      }
+      left.remove(next);
+      ordered.add(next);
+    }
+    return ordered;
+  }
+
+  /** The private methods of the type keyed {@code sourceKey} that {@code d} calls, but itself. */
+  private static List<MethodDeclaration> privateCallees(MethodDeclaration d, String sourceKey) {
+    List<MethodDeclaration> out = new ArrayList<>();
+    if (d.getBody() == null) {
+      return out;
+    }
+    for (MethodInvocation call : Nodes.all(d.getBody(), MethodInvocation.class)) {
+      IMethodBinding b = call.resolveMethodBinding();
+      if (b != null
+          && Modifier.isPrivate(b.getModifiers())
+          && b.getDeclaringClass() != null
+          && b.getDeclaringClass().getKey().equals(sourceKey)
+          && d.getRoot() instanceof CompilationUnit u
+          && u.findDeclaringNode(b.getMethodDeclaration().getKey()) instanceof MethodDeclaration c
+          && c != d
+          && !out.contains(c)) {
+        out.add(c);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Whether code of {@code source}'s file outside the methods keyed {@code callers} uses {@code c}.
+   */
+  private static boolean calledElsewhere(
+      TypeDeclaration source, MethodDeclaration c, java.util.Set<String> callers) {
+    String key = c.resolveBinding().getKey();
+    for (SimpleName n : Nodes.all(source.getRoot(), SimpleName.class)) {
+      if (n.resolveBinding() instanceof IMethodBinding b
+          && b.getMethodDeclaration().getKey().equals(key)
+          && n != c.getName()) {
+        MethodDeclaration around = Extract.ancestorAbove(n, MethodDeclaration.class);
+        if (around == null
+            || around.resolveBinding() == null
+            || !callers.contains(around.resolveBinding().getKey())) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * {@code name} moved to {@code to} after {@code along}, the private methods only it calls, each
+   * moved first by its own move: one change, undone as one.
+   */
+  private static Outcome withAlong(
+      SourceProject project,
+      String rel,
+      String typeName,
+      List<MethodDeclaration> along,
+      String name,
+      String to,
+      List<String> imports)
+      throws Exception {
+    List<String> moved = new ArrayList<>();
+    for (MethodDeclaration c : along) {
+      // By its name alone unless it is overloaded: move reads the name as written in calls.
+      boolean overloaded =
+          Nodes.all(c.getRoot(), MethodDeclaration.class).stream()
+                  .filter(d -> d.getParent() == c.getParent())
+                  .filter(d -> d.getName().getIdentifier().equals(c.getName().getIdentifier()))
+                  .count()
+              > 1;
+      String label =
+          typeName + "." + (overloaded ? MemberMove.label(c) : c.getName().getIdentifier());
+      try {
+        run(project, rel, label, to, imports);
+      } catch (Refusal r) {
+        throw new Refusal(
+            "moving " + label + " along with " + name + ", which only it calls: " + r.getMessage());
+      }
+      moved.add(label);
+    }
+    Outcome o = run(project, rel, name, to, imports);
+    return new Outcome(
+        o.text()
+            + "; first moved "
+            + String.join(", ", moved)
+            + ", private and called only from it",
+        o.declared(),
+        o.exceptional());
   }
 }

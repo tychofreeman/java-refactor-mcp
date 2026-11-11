@@ -283,6 +283,10 @@ Each was chosen from options; the record named beside it has the options it beat
   found by the record's binding key in one `parseAll`; `value_semantics=true` accepts the
   changed `toString` (the user's choice; the options it beat are in the contract).
 
+- `move` of a method takes the private methods only it calls along (#317, 2026-11-10, the user:
+  "if it doesn't break anything"): `MoveMember.along` orders them callees first, and
+  `withAlong` moves each by its own `run` in the same call, so one undo reverts all. Over a list
+  of members to move together (the issue's other idea). Not fields: those stay refused.
 - Instance to static in place is `move_member` with `to` its own class; static to
   instance is `function_to_method` (`FunctionToMethod`, #90, 2026-11-04).
 
