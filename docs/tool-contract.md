@@ -697,7 +697,9 @@ failures start `engine error (not a refusal; ...)`.
 
 `add_parameter`, `remove_parameter`, `move_parameter` (roadmap #22). Each takes
 `file` (the declaring file) and `name` (as `replace_declaration`: `Type.member`,
-`member`, `m(int, String)` for an overload; a constructor by its type's name),
+`member`, `m(int, String)` for an overload; a constructor by its type's name, `Renamer`,
+also for a class (#331, 2026-11-10: it found the class, "Renamer is not a method or
+constructor"; a class with several constructors lists them, one with none is refused),
 and `parameter`. In place of `name` (2026-11-08, roadmap #130, the user's choice over the
 declaration's line only), `line` of `file` finds the method from its declaration on that line,
 else from the one project method the line's calls call (`m(...)`, `super.m(...)`, `new T(...)`,
