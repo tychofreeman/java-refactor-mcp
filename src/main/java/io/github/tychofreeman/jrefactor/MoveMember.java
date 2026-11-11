@@ -15,7 +15,6 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -29,13 +28,11 @@ import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
-import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
@@ -192,7 +189,7 @@ final class MoveMember {
         if (site.getExpression() != null) {
           fragments.add(site.getExpression());
         }
-        if (!isStatic && site.getExpression() != null && mayBeNull(site.getExpression())) {
+        if (!isStatic && site.getExpression() != null && NonNull.mayBeNull(site.getExpression())) {
           nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
         list.add(
@@ -691,7 +688,7 @@ final class MoveMember {
       if (expr != null) {
         // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
         parts.add(
-            keep && mayBeNull(expr)
+            keep && NonNull.mayBeNull(expr)
                 ? "java.util.Objects.requireNonNull(" + source(fileText, expr) + ")"
                 : source(fileText, expr));
       } else {
@@ -740,14 +737,6 @@ final class MoveMember {
     int s = site.getStartPosition();
     return new TextEdit(
         s, s + site.getLength(), to + "." + member + "(" + String.join(", ", parts) + ")");
-  }
-
-  /** Whether {@code receiver} may be null: anything but this, a new object or a literal. */
-  private static boolean mayBeNull(Expression receiver) {
-    return !(receiver instanceof ThisExpression
-        || receiver instanceof ClassInstanceCreation
-        || receiver instanceof StringLiteral
-        || receiver instanceof TypeLiteral);
   }
 
   private static boolean callsMember(Expression arg, String key) {

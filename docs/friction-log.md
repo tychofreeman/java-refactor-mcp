@@ -1052,3 +1052,10 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   generated accessor) is a read.
 - Both were done with edits instead: `add_declaration` of a `Read` and a `Rewrite` record and the
   methods, `replace_statements` of the branch, and `replace_text` for the uses.
+
+## 2026-11-10: move of a static method refused for a parameter named receiver
+
+- Moving `MoveMember.mayBeNull(Expression receiver)`, a static method, to a new `NonNull` was
+  refused: "MoveMember.mayBeNull uses the name receiver, which move gives the receiver parameter.
+  Rename it first." A static method gets no receiver parameter, so the name is free. Done with
+  `rename` of the parameter in the same batch, then `move`.
