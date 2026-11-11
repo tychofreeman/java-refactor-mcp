@@ -91,6 +91,9 @@ Each was chosen from options; the record named beside it has the options it beat
   (`BothResult`), declared after it (the user, 2026-11-04, reversing the 2026-11-03
   choice to refuse them, over an out-parameter holder); the new method is static
   exactly when the enclosing member is.
+- `remove_parameter` with `value` (#315, 2026-11-11, the user, after a before/after example):
+  an option, over a `parameter_to_field` tool; `Signatures.removeWithValue` compares each call's
+  argument with the field by binding key and the call's receiver.
 - `move_type` is its own tool, and widens private members used across the
   boundary rather than refusing.
 - A failed Maven classpath keeps the server serving and names the cause in

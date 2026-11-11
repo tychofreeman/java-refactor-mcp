@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 
 /** Where syntax nodes are in their source text. */
 final class Nodes {
@@ -51,5 +55,15 @@ final class Nodes {
           }
         });
     return out;
+  }
+
+  /** Whether {@code x} is written: an assignment's target, or what ++ or -- changes. */
+  static boolean written(Expression x) {
+    ASTNode p = x.getParent();
+    return (p instanceof Assignment a && a.getLeftHandSide() == x)
+        || (p instanceof PostfixExpression)
+        || (p instanceof PrefixExpression pre
+            && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
+                || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
   }
 }
