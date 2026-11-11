@@ -243,7 +243,7 @@ final class Extraction {
   private record Call(String resultType, String returnLine, String call) {}
 
   /** The call line for {@code invocation} (the new method's call), by what the method returns. */
-  private static Call callOf(Plan p, String invocation, String record) {
+  private Call callOf(Plan p, String invocation, String record) {
     if (p.results().size() > 1) {
       // Several results: a record holds them, and each is taken out of it after the call.
       String holder = Character.toLowerCase(record.charAt(0)) + record.substring(1);
@@ -252,7 +252,7 @@ final class Extraction {
         call.append("\n");
         if (p.declaredInside().contains(r)) {
           call.append(Modifier.isFinal(r.getModifiers()) ? "final " : "")
-              .append(Extract.typeName(r.getType()))
+              .append(typeName(r.getType()))
               .append(" ");
         }
         call.append(r.getName()).append(" = ").append(holder).append(".").append(r.getName());
@@ -265,7 +265,7 @@ final class Extraction {
     }
     if (!p.results().isEmpty()) {
       IVariableBinding r = p.results().get(0);
-      String resultType = Extract.typeName(r.getType());
+      String resultType = typeName(r.getType());
       String call =
           p.declaredInside().contains(r)
               ? (Modifier.isFinal(r.getModifiers()) ? "final " : "")
@@ -279,7 +279,7 @@ final class Extraction {
       return new Call(resultType, "return " + r.getName() + ";", call);
     }
     if (!p.returns().isEmpty() && !p.voidResult()) {
-      return new Call(Extract.typeName(p.enclosingResult()), null, "return " + invocation + ";");
+      return new Call(typeName(p.enclosingResult()), null, "return " + invocation + ";");
     }
     return new Call("void", null, invocation + ";");
   }
@@ -288,7 +288,7 @@ final class Extraction {
   private String signature(Plan p) {
     List<String> declared = new ArrayList<>();
     for (IVariableBinding v : p.params()) {
-      declared.add(Extract.typeName(v.getType()) + " " + v.getName());
+      declared.add(typeName(v.getType()) + " " + v.getName());
     }
     return name + "(" + String.join(", ", declared) + ")";
   }
@@ -329,7 +329,7 @@ final class Extraction {
     if (p.results().size() > 1) {
       List<String> components = new ArrayList<>();
       for (IVariableBinding r : p.results()) {
-        components.add(Extract.typeName(r.getType()) + " " + r.getName());
+        components.add(typeName(r.getType()) + " " + r.getName());
       }
       method
           .append("\n")
@@ -750,7 +750,7 @@ final class Extraction {
     }
     List<String> out = new ArrayList<>();
     for (ITypeBinding t : types) {
-      out.add(Extract.typeName(t));
+      out.add(typeName(t));
     }
     return out;
   }
@@ -877,5 +877,18 @@ final class Extraction {
       out.add(v.getName());
     }
     return out;
+  }
+
+  /** {@code b} as code in the type around {@link #member} names it ({@link Extract#typeName}). */
+  private String typeName(ITypeBinding b) {
+    ITypeBinding at = null;
+    for (ASTNode p = member.getParent(); p != null && at == null; p = p.getParent()) {
+      if (p instanceof AbstractTypeDeclaration t) {
+        at = t.resolveBinding();
+      } else if (p instanceof AnonymousClassDeclaration a) {
+        at = a.resolveBinding();
+      }
+    }
+    return Extract.typeName(b, at);
   }
 }
