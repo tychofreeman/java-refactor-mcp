@@ -38,6 +38,12 @@ final class Extract {
     if (!SourceVersion.isName(name)) {
       throw new Refusal("name " + name + " is not a valid Java name.");
     }
+    String visibility = args.string("visibility");
+    if (visibility != null
+        && !List.of("private", "package", "protected", "public").contains(visibility)) {
+      throw new Refusal(
+          "visibility is private, package, protected or public; got " + visibility + ".");
+    }
     Path path = project.javaFile(rel);
     String text = Files.readString(path);
     String[] lines = text.split("\n", -1);
@@ -56,7 +62,17 @@ final class Extract {
     }
     CompilationUnit unit = Jdt.parse(project, path, text);
     Selection sel = Selection.of(unit, text, start, end);
-    return new Extraction(project, path, rel, text, unit, sel, name, args.string("doc")).apply();
+    return new Extraction(
+            project,
+            path,
+            rel,
+            text,
+            unit,
+            sel,
+            name,
+            args.string("doc"),
+            args.string("visibility"))
+        .apply();
   }
 
   /** The statements chosen: the list they are in, and the first and last of them in it. */

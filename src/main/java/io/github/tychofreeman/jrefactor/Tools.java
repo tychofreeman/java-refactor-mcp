@@ -1112,7 +1112,7 @@ final class Tools {
       new Def(
           "extract_function",
           """
-          Move whole statements into a new private method, declared after the one they are in, \
+          Move whole statements into a new method, private by default, declared after the one they are in, \
           and call it in their place: lines 9-12 of print, which sum values into total, become \
           int total = sum(values); and a method int sum(List<Integer> values). Behavior is \
           unchanged.
@@ -1122,14 +1122,18 @@ final class Tools {
           and several are returned in a record named after the method (sum and count as \
           TotalsResult, taken out after the call: int sum = totalsResult.sum();). \
           The method is static when the enclosing one is, and declares the checked exceptions \
-          the statements throw. doc becomes its Javadoc.\
+          the statements throw. doc becomes its Javadoc. visibility makes it package, protected \
+          or public; then it may override a supertype's method of its name and parameter types, \
+          as a template method's step, and is marked @Override.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("start_line", "First line of the statements (1-based).").required(),
               Arg.integer("end_line", "Last line of the statements (inclusive).").required(),
               Arg.string("name", "The new method's name.").required(),
-              Arg.string("doc", "Optional: its Javadoc text, without /** */.")),
+              Arg.string("doc", "Optional: its Javadoc text, without /** */."),
+              Arg.string(
+                  "visibility", "Optional: private (the default), package, protected or public.")),
           Kind.REFACTORING,
           (project, args) -> Extract.method(project, args));
 
