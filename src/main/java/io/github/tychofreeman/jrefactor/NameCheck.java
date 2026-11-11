@@ -46,7 +46,7 @@ final class NameCheck {
               IBinding b = n.resolveBinding();
               String key = key(b);
               if (key != null) {
-                out.computeIfAbsent(n.getIdentifier(), k -> new HashSet<>()).add(key);
+                out.computeIfAbsent(spaced(n, b), k -> new HashSet<>()).add(key);
               }
               // Keys of what an anonymous or local class declares hold source positions, which an
               // edit earlier in the file shifts; where the declaration stands does not change.
@@ -55,7 +55,7 @@ final class NameCheck {
                       ? u.findDeclaringNode(b)
                       : null;
               if (declared != null) {
-                out.computeIfAbsent(n.getIdentifier(), k -> new HashSet<>())
+                out.computeIfAbsent(spaced(n, b), k -> new HashSet<>())
                     .add(
                         at(Jdt.fileOf((CompilationUnit) n.getRoot()), declared.getStartPosition()));
               }
@@ -112,7 +112,7 @@ final class NameCheck {
               }
               IBinding b = n.resolveBinding();
               String key = key(b);
-              Set<String> was = before.get(n.getIdentifier());
+              Set<String> was = before.get(spaced(n, b));
               // A recovered binding is a name the edit's file has not imported yet (the import fix
               // runs after), and a type variable belongs to its class: the gate judges both.
               if (key == null
@@ -217,5 +217,13 @@ final class NameCheck {
       case ITypeBinding t -> "the type " + Names.typeLabel(t);
       default -> b.getName();
     };
+  }
+
+  /**
+   * {@code n}'s identifier in the namespace of what it names: a method's apart from a variable's or
+   * a type's, as Java looks them up apart, so {@code skipped(skipped)} captures nothing.
+   */
+  private static String spaced(SimpleName n, IBinding b) {
+    return b instanceof IMethodBinding ? n.getIdentifier() + "()" : n.getIdentifier();
   }
 }

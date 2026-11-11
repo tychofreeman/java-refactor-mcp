@@ -333,11 +333,13 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
   (a field, a call) is refused, since the reference evaluates it once.
 - Anonymous class to lambda: a functional interface's anonymous class with its
   one method; its body re-indented. Lambda to anonymous class: `new T() {
-  @Override public R m(P p) { ... } }`, from the lambda's resolved types.
+  @Override public R m(P p) { ... } }`, from the lambda's resolved types; a wildcard in the
+  target type takes its bound (`Consumer<? super Skipped>` gives `new Consumer<Skipped>()`,
+  #344, 2026-11-11; it had been refused).
 - Refused: `this`, or a bare call of a method of the interface, of its supertypes (an
   inherited default, roadmap #94) or of `Object`, in
   the code that moves (it would mean another object); an anonymous class with
-  fields or other methods; a type with a wildcard; a form that does not compile
+  fields or other methods; a form that does not compile
   there (the gate). Result: `converted the lambda at line 7 of <file> to
   String::length`.
 
@@ -869,7 +871,9 @@ Replaces code that does what an existing method does with calls of it (roadmap
 of `in`, or of `file`). The method stays.
 
 - The body is the pattern: one `return e;` matches expressions; a void method's
-  statements match the same run of statements in any block. Parameters stand for any
+  statements match the same run of statements in any block, and a void method of one
+  expression statement also matches a lambda's expression body (`s -> err.println(s)` becomes
+  `s -> skipped(s)`, #344, 2026-11-11). Parameters stand for any
   expression of their type (a reference type takes a subtype); a local the body declares
   stands for a local the code declares, which must not be used after the run; every other
   name must resolve to the same declaration, by binding key, so overloads match exactly.
