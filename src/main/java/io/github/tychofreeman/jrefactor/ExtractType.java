@@ -384,7 +384,9 @@ final class ExtractType {
         new ASTVisitor() {
           @Override
           public boolean visit(SimpleName n) {
-            if (n.getIdentifier().equals(holder)) {
+            // A method of that name is no clash: Java looks up methods apart.
+            if (n.getIdentifier().equals(holder)
+                && !(n.resolveBinding() instanceof IMethodBinding)) {
               throw new Refusal(
                   ownerName + " already names " + holder + ". Choose another name for the holder.");
             }
@@ -904,10 +906,13 @@ final class ExtractType {
                       && Modifier.isFinal(v.getModifiers());
               boolean parameter =
                   v.isParameter()
-                      && c.parameters().stream()
-                          .anyMatch(p ->
-                              ((SingleVariableDeclaration) p).resolveBinding() != null
-                                  && ((SingleVariableDeclaration) p).resolveBinding().isEqualTo(v))
+                      && ((List<?>) c.parameters())
+                          .stream()
+                              .anyMatch(p ->
+                                  ((SingleVariableDeclaration) p).resolveBinding() != null
+                                      && ((SingleVariableDeclaration) p)
+                                          .resolveBinding()
+                                          .isEqualTo(v))
                       && Nodes.all(c.getBody(), SimpleName.class).stream()
                           .noneMatch(w ->
                               v.isEqualTo(w.resolveBinding())
