@@ -463,6 +463,7 @@ sections 3 and 4.
 | 127 | 134 | `convert_loop` from `do_while` to `while`: `while (true) { body; if (!cond) break; }` or the body copied before the loop | Open (the user, 2026-11-10: refuse until then) | `docs/sessions/convert-loop-sketch.md`, question 3 |
 | 128 | 135 | `loop_to_stream` of a floating-point sum: report the rounding change, or write `reduce(0.0, Double::sum)` in the loop's order | Open (the user, 2026-11-10: refuse until then) | `docs/sessions/convert-loop-sketch.md`, question 4 |
 | 129 | 136 | `subclass_to_strategy`: a subclass that differs only by overriding one method becomes a function the base class holds; the override's body a static method, a field set in each constructor, `new Sub(...)` `new Base(..., Sub's function)`, the base's own body the default | Open: not built until the user chooses it (a new tool) | Issue #332 (2026-11-10, a downstream project): tools did the scaffolding (`extract_function`, `move`, `add_parameter`, `replace_expression`); four edits were by hand, each right only because of which function each instance held, one of them the override's delete (#322) |
+| 130 | 137 | A functional interface's contract (what its method throws, its return type) changed across its lambdas and method-referenced methods, the calls left to an edit in the same batch; first step: carry a new `throws` to every implementation | Open: not built until the friction log shows it again (the user, 2026-11-11) | Issue #342: done with four `replace_declaration`s in one batch |
 
 ### The 2026-11-04 list
 
