@@ -1019,6 +1019,15 @@ declares or writes and the other uses, and at most one has a side effect (a call
 `++`/`--`, a `new`). With `names_only=true`, only the shared-name rule applies, so two calls may swap
 order.
 
+With `past_try=true` (#343, 2026-11-11, the user's option (a) over keeping the refusal or only
+rewording it): when one of the two is a `try` and the other is not, the swap is made whatever
+their side effects, without the behavior gate; the shared-name rule still holds. This changes
+behavior on purpose, and the result says how: `...past the try at line 17 in <file>; it now
+runs after everything the try does, and only when the try completes normally: not when it
+returns, throws, breaks or continues (line 21 returns)`, or, moved above it, `it now runs
+before everything the try does, and also when the try does not complete normally`. Refused
+when neither is a try, or both are.
+
 Result: `moved the statement at line L up|down, past the statement at line M in file`, with
 `; imported ...` when an import is added. Refusals: no statement starts on the line, several do, a
 return, break, continue, throw or yield (on either side), no neighbour in that direction, a shared

@@ -1,0 +1,1 @@
+moved the statement at line 16 down, past the try at line 17 in com/example/Renamer.java; it now runs after everything the try does, and only when the try completes normally: not when it returns, throws, breaks or continues (line 21 returns)
