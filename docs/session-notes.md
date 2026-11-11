@@ -283,7 +283,9 @@ Each was chosen from options; the record named beside it has the options it beat
   It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. A for and a
   while (`forToWhile`, `whileToFor`) go through `continues` (the continues of this loop, by label
   or innermost loop), `before` (statements put before one) and `last` (statements put last in a
-  body). `do_while` is the next increment of `docs/sessions/convert-loop-sketch.md`.
+  body). A do-while to a while is `while (true) { body; if (!cond) break; }` (`doToWhile`, the
+  user's choice of 2026-11-11 over copying the body; a `continue` is refused), and a while to a
+  do-while is guarded by `if (cond)`, refused unless the condition only reads locals.
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.

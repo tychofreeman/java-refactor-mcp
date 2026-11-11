@@ -8,7 +8,9 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BooleanLiteral;
 import org.eclipse.jdt.core.dom.BreakStatement;
+import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
@@ -25,7 +27,9 @@ import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
@@ -33,6 +37,7 @@ import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.ThrowStatement;
@@ -62,9 +67,9 @@ final class ConvertLoop {
             () -> line != null,
             () -> "convert_loop needs line, the 1-based line the loop starts on."),
         Precondition.that(
-            () -> List.of("for_each", "iterator", "for", "while").contains(to),
+            () -> List.of("for_each", "iterator", "for", "while", "do_while").contains(to),
             () ->
-                "convert_loop takes to=for_each, iterator, for or while; to="
+                "convert_loop takes to=for_each, iterator, for, while or do_while; to="
                     + to
                     + " is not built yet."));
     Opened opened = Opened.of(project, rel);
@@ -101,20 +106,32 @@ final class ConvertLoop {
       said = forToWhile(text, f, edits);
     } else if (loop instanceof WhileStatement w && to.equals("for")) {
       said = whileToFor(text, w, edits);
-    } else if (loop instanceof DoStatement) {
-      throw new Refusal(
-          "the loop at line " + line + " is a do-while, which convert_loop does not take yet.");
+    } else if (loop instanceof WhileStatement w && to.equals("do_while")) {
+      said = whileToDo(text, w, edits);
+    } else if (loop instanceof DoStatement d && to.equals("while")) {
+      said = doToWhile(text, d, edits);
     } else {
-      String form = loop instanceof ForStatement ? "for" : "while";
+      String form =
+          loop instanceof ForStatement
+              ? "for"
+              : loop instanceof WhileStatement ? "while" : "do_while";
+      String takes =
+          switch (form) {
+            case "for" -> "for_each or while";
+            case "while" -> "for or do_while";
+            default -> "while";
+          };
       throw new Refusal(
           form.equals(to)
               ? "the loop at line " + line + " is already a " + to + "."
               : "convert_loop takes a "
                   + form
                   + " to "
-                  + (form.equals("for") ? "for_each or while" : "for")
+                  + takes
                   + ". Convert it in two steps, through "
-                  + (form.equals("for") ? "for_each" : "for")
+                  + (form.equals("for")
+                      ? "for_each or while"
+                      : form.equals("while") ? "for" : "while")
                   + ".");
     }
     edits.sort(Comparator.comparingInt(Edit::start).reversed());
@@ -661,17 +678,22 @@ final class ConvertLoop {
       written = inits.get(k) + "\n" + indent + written;
     }
     if (wrap) {
-      String pad = " ".repeat(step);
-      StringBuilder b = new StringBuilder("{\n").append(indent).append(pad);
-      String[] lines = written.split("\n", -1);
-      b.append(lines[0]);
-      for (int k = 1; k < lines.length; k++) {
-        b.append('\n').append(lines[k].isBlank() ? "" : pad + lines[k]);
-      }
-      written = b.append('\n').append(indent).append('}').toString();
+      written = braced(step, indent, written);
     }
     edits.add(new Edit(whole.getStartPosition(), Nodes.end(whole), written));
     return "a while (" + cond + ")" + (wrap ? ", in a block." : ".");
+  }
+
+  private static String braced(int step, String indent, String written) {
+    String pad = " ".repeat(step);
+    StringBuilder b = new StringBuilder("{\n").append(indent).append(pad);
+    String[] lines = written.split("\n", -1);
+    b.append(lines[0]);
+    for (int k = 1; k < lines.length; k++) {
+      b.append('\n').append(lines[k].isBlank() ? "" : pad + lines[k]);
+    }
+    written = b.append('\n').append(indent).append('}').toString();
+    return written;
   }
 
   /**
@@ -879,5 +901,103 @@ final class ConvertLoop {
 
   private static int step(String text) {
     return Declarations.step(text) > 0 ? Declarations.step(text) : 4;
+  }
+
+  /**
+   * A do-while to {@code while (true) { body; if (!cond) break; }} (roadmap #134, the user's choice
+   * of 2026-11-11 over copying the body before a while). A {@code continue} goes to a do-while's
+   * condition and would skip it in the while, so it is refused.
+   */
+  private static String doToWhile(String text, DoStatement loop, List<Edit> edits) {
+    Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
+    int line = Lines.number(text, loop.getStartPosition());
+    Statement body = loop.getBody();
+    List<ContinueStatement> skips = continues(body, loop);
+    if (!skips.isEmpty()) {
+      throw new Refusal(
+          "the do-while at line "
+              + line
+              + " has a continue (line "
+              + Lines.number(text, skips.get(0).getStartPosition())
+              + "), which goes to its condition; in a while (true) it would skip the condition."
+              + " Rewrite the body without it first (invert_if, remove_else).");
+    }
+    String negated;
+    try {
+      negated = InvertIf.negate(text, loop.getExpression(), line);
+    } catch (Refusal nan) {
+      negated = "!(" + source(text, loop.getExpression()) + ")";
+    }
+    String exit = "if (" + negated + ") break;";
+    String bodyText =
+        ends(body)
+            ? within(text, body, List.of())
+            : last(text, whole, body, List.of(exit), step(text), List.of());
+    edits.add(new Edit(loop.getStartPosition(), Nodes.end(loop), "while (true) " + bodyText));
+    return "a while (true) that ends in " + exit;
+  }
+
+  /**
+   * A while to {@code if (cond) { do body while (cond); }}: the condition is read twice on the
+   * first pass, so it may only read locals, with literals and operators.
+   */
+  private static String whileToDo(String text, WhileStatement loop, List<Edit> edits) {
+    Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
+    int line = Lines.number(text, loop.getStartPosition());
+    String cond = source(text, loop.getExpression());
+    ASTNode other = notALocalRead(loop.getExpression());
+    if (other != null) {
+      throw new Refusal(
+          "the condition of the while at line "
+              + line
+              + " would be read twice on the first pass, by an if and by the do-while, and "
+              + source(text, other)
+              + " does more than read a local. Put the condition in a local first.");
+    }
+    if (!Nodes.all(loop.getBody(), TextBlock.class).isEmpty()) {
+      throw new Refusal(
+          "the loop at line "
+              + line
+              + " must go in an if, and it holds a text block, which indenting would change.");
+    }
+    String indent = Lines.indentOf(text, whole.getStartPosition());
+    String label =
+        whole instanceof LabeledStatement l
+            ? text.substring(l.getStartPosition(), loop.getStartPosition())
+            : "";
+    String bodyText = last(text, whole, loop.getBody(), List.of(), step(text), List.of());
+    String written =
+        "if ("
+            + cond
+            + ") "
+            + braced(step(text), indent, label + "do " + bodyText + " while (" + cond + ");");
+    edits.add(new Edit(whole.getStartPosition(), Nodes.end(whole), written));
+    return "a do-while under if (" + cond + ").";
+  }
+
+  /**
+   * The first part of {@code e} that is not a read of a local, a literal or an operator on them, or
+   * null.
+   */
+  private static ASTNode notALocalRead(Expression e) {
+    for (ASTNode n : Nodes.all(e, ASTNode.class)) {
+      boolean read =
+          n instanceof SimpleName s
+              ? s.resolveBinding() instanceof IVariableBinding v && !v.isField()
+              : n instanceof NumberLiteral
+                  || n instanceof BooleanLiteral
+                  || n instanceof CharacterLiteral
+                  || n instanceof StringLiteral
+                  || n instanceof NullLiteral
+                  || n instanceof InfixExpression
+                  || n instanceof ParenthesizedExpression
+                  || (n instanceof PrefixExpression p
+                      && p.getOperator() != PrefixExpression.Operator.INCREMENT
+                      && p.getOperator() != PrefixExpression.Operator.DECREMENT);
+      if (!read) {
+        return n;
+      }
+    }
+    return null;
   }
 }

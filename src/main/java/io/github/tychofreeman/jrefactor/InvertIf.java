@@ -79,7 +79,7 @@ final class InvertIf {
         written.declared());
   }
 
-  private static String negate(String text, Expression cond, int line) {
+  static String negate(String text, Expression cond, int line) {
     if (cond instanceof PrefixExpression p && p.getOperator() == PrefixExpression.Operator.NOT) {
       return source(text, p.getOperand());
     }

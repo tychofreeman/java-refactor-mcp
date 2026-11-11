@@ -1081,7 +1081,7 @@ and other results are not built yet"); a checked exception the body does not cat
 changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
 catches a local read in the body that is not effectively final.
 
-## `convert_loop` (in progress: `for_each`, `iterator`, `for`, `while`)
+## `convert_loop` (built)
 
 Arguments: `file`, `line` (the line the loop starts on), `to`, `preserve_exceptions`. A loop
 becomes another statement form running the same code in the same order (the user, 2026-11-10:
@@ -1107,9 +1107,17 @@ statement forms here, the functional ones in `loop_to_stream`). Built so far:
 
 A label stays on the loop; `break` and `continue` keep their meaning in every pair. Result:
 `rewrote the loop at line N of <file> as a for (String name : names).` Refusals: no loop on the
-line; a `to` not yet built; a `do`-`while` (not yet: increment 6 of
-`docs/sessions/convert-loop-sketch.md`, roadmap #134); a for that is neither shape; a pair not
-built ("Convert it in two steps, through for_each" or "through for"); a loop already in the form.
+line; a `to` not built; a for that is neither shape; a pair not built ("Convert it in two steps,
+through for_each or while", "through for", "through while"); a loop already in the form.
+
+- `to=while` from a do-while (roadmap #134, the user's choice of 2026-11-11): `do body while
+  (c);` becomes `while (true) { body if (!c) break; }`, `c` negated as `invert_if` does (`!(c)`
+  where that would compare a float or double), the `if` left out when the body ends in a return,
+  throw, break or continue. A `continue` of the loop goes to the condition in a do-while and would
+  skip it in the while: refused. A label stays on the while.
+- `to=do_while` from a while: `if (c) { do body while (c); }`. The condition is then read twice on
+  the first pass, so it may only read locals, with literals and operators; a call, a field or an
+  increment in it is refused ("Put the condition in a local first").
 
 - `to=while` from a for: `for (init; cond; update) body` becomes `init; while (cond) { body
   update; }`, each init and update a statement of its own, `while (true)` for a for with no

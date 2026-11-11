@@ -266,7 +266,7 @@ while (i < 3) {
 `i` now lives after the loop: wrap the two in a block, or not when nothing after uses the name.
 A `continue` in the body is refused for now (roadmap #133).
 
-### 16. A do-while (planned)
+### 16. A do-while (done: `convert_loop_do_while_to_while*`, `convert_loop_while_to_do_while`; to while as `while (true)` and `break`, the user's choice of 2026-11-11)
 
 ```java
 do {

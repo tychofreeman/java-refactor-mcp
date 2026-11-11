@@ -5,6 +5,10 @@ public class Count {
     int i = 0;
     do {
       i++;
-    } while (i < 3);
+      if (i % 2 == 0) {
+        continue;
+      }
+      System.out.println(i);
+    } while (i < 9);
   }
 }
