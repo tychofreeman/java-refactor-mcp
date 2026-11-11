@@ -249,7 +249,7 @@ for (String name : names) {
 
 Refused when the body calls `it.remove()`; back the other way, to make room for one.
 
-### 15. A for and a while (planned: both ways)
+### 15. A for and a while (done: `convert_loop_for_to_while*`, `convert_loop_while_to_for*`)
 
 ```java
 for (int i = 0; i < 3; i++) {

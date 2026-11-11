@@ -274,14 +274,16 @@ Each was chosen from options; the record named beside it has the options it beat
   (a `HashMap` of `ArrayList`s filled by `computeIfAbsent(...).add(...)`, as `groupingBy`; the null
   key it now throws on goes through `Exceptional.change`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
-  (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
+  (three from the user's darktable project); `convert_loop` is the statement forms.
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
   directly (`indexToEach`, `iteratorToEach`, `toIterator`, `toIndex`), sharing `stable` (the
   walked list or array cannot change between passes) and `unchanged` (no call changes the list).
-  It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. `while` and
-  `do_while` are the next increments of `docs/sessions/convert-loop-sketch.md`.
+  It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. A for and a
+  while (`forToWhile`, `whileToFor`) go through `continues` (the continues of this loop, by label
+  or innermost loop), `before` (statements put before one) and `last` (statements put last in a
+  body). `do_while` is the next increment of `docs/sessions/convert-loop-sketch.md`.
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.

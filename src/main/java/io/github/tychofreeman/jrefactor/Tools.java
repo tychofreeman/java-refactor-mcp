@@ -587,12 +587,15 @@ final class Tools {
           print(name); }, and a for over an iterator whose body starts with T e = it.next() \
           into for (T e : source); to=iterator and to=for turn an enhanced for into a for over \
           its iterator, or over the index of a list or an array, the element read first in the \
-          body. Identify the loop by the line it starts on.\
+          body. to=while writes a for's init before a while and its update last in the body and \
+          before each continue; to=for turns a while back into a for, the local declared just \
+          before it and the body's last assignment taking their places. Identify the loop by the \
+          line it starts on.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("line", "The 1-based line the loop starts on.").required(),
-              Arg.string("to", "The form to write: for_each, iterator or for.").required()),
+              Arg.string("to", "The form to write: for_each, iterator, for or while.").required()),
           Kind.REFACTORING,
           Tools::convertLoop);
 
