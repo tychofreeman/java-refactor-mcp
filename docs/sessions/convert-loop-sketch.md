@@ -105,7 +105,7 @@ The type check catches little here; most hazards compile. Each needs a rule and 
 4. `for_each` to `stream` for #294's shapes: `forEach`, `map` + `toList` or `collect`, `filter`,
    `flatMap`, then the sums, `count` and the matches.
 5. `stream` back to `for_each`.
-6. `do_while`.
+6. `do_while`. Done 2026-11-11 (`doToWhile`, `whileToDo`).
 
 ## Parity
 
@@ -135,7 +135,9 @@ and `for_each` (`range`) apply, and no functional forms. TypeScript has all of J
    loop, is a later increment.
 2. **`continue` in a `for` going to a `while`:** refuse for now; copying the update before each
    `continue` is roadmap #133.
-3. **`do_while` to `while`:** refuse for now; a rewrite is roadmap #134.
+3. **`do_while` to `while`:** refuse for now; a rewrite is roadmap #134. Then (2026-11-11):
+   `while (true) { body; if (!cond) break; }`, a `continue` refused, over copying the body and
+   over both behind an option.
 4. **A floating-point sum to a stream:** refuse for now; the options (report the change, or
    `reduce(0.0, Double::sum)` in the loop's order) are roadmap #135.
 5. **Order:** `loop_to_stream` first (the case #294 hit), then the statement forms.

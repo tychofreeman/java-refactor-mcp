@@ -589,13 +589,15 @@ final class Tools {
           its iterator, or over the index of a list or an array, the element read first in the \
           body. to=while writes a for's init before a while and its update last in the body and \
           before each continue; to=for turns a while back into a for, the local declared just \
-          before it and the body's last assignment taking their places. Identify the loop by the \
-          line it starts on.\
+          before it and the body's last assignment taking their places. to=while turns do { body \
+          } while (c); into while (true) { body if (!c) break; }, and to=do_while a while into \
+          if (c) { do { body } while (c); }. Identify the loop by the line it starts on.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("line", "The 1-based line the loop starts on.").required(),
-              Arg.string("to", "The form to write: for_each, iterator, for or while.").required()),
+              Arg.string("to", "The form to write: for_each, iterator, for, while or do_while.")
+                  .required()),
           Kind.REFACTORING,
           Tools::convertLoop);
 
