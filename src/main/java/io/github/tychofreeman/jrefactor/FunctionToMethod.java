@@ -6,7 +6,6 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -129,7 +128,7 @@ final class FunctionToMethod {
         on = "(" + on + ")";
       }
       boolean onThis = receiver instanceof ThisExpression t && t.getQualifier() == null;
-      if (!onThis && !(receiver instanceof ClassInstanceCreation)) {
+      if (!onThis && NonNull.mayBeNull(receiver)) {
         nullable.add(on + " in " + c.file().rel());
       }
       change.replaceRange(
