@@ -1,0 +1,1 @@
+FileRenamer already declares move

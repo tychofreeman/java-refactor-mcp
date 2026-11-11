@@ -83,6 +83,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".
+- `extract_function` with `visibility` (#321, 2026-11-10; the user said yes to an option for
+  visibility and for overriding): one option, the override following from the signature, over
+  a separate `override` flag; `Extraction.checkOverride` decides when calls of the overridden
+  method could reach the new one.
 - `extract_method` returns several results in a record named after the method
   (`BothResult`), declared after it (the user, 2026-11-04, reversing the 2026-11-03
   choice to refuse them, over an out-parameter holder); the new method is static
