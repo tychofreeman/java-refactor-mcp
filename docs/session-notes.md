@@ -140,6 +140,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+- `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
+  the result says when nothing else in it is (the issue's "or offers to"), over making it
+  concrete there: a class made concrete can then be instantiated, which the model did not ask for.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 

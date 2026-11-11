@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -19,7 +21,8 @@ import org.eclipse.jdt.core.dom.TypeDeclaration;
  * pull_up: a method or a field moves from its class to a direct supertype in the project. The
  * supertype is the superclass unless {@code to} names another direct supertype. The gate refuses a
  * move that leaves a name unresolved, so a member that uses what only the subclass has is not
- * moved.
+ * moved. A method the supertype declares abstract takes the place of that declaration; the
+ * supertype's other subclasses keep their own.
  */
 final class PullUp {
 
@@ -59,7 +62,8 @@ final class PullUp {
               + member
               + " cannot be pulled into it.");
     }
-    if (MemberMove.declares(superDecl, moved)) {
+    MethodDeclaration twin = abstractTwin(superDecl, moved);
+    if (twin == null && MemberMove.declares(superDecl, moved)) {
       throw new Refusal(
           superName
               + " already declares "
@@ -97,9 +101,15 @@ final class PullUp {
     String movedText = MemberMove.textOf(text, moved);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
     String targetText = texts.getOrDefault(target, Files.readString(target));
-    edits
-        .computeIfAbsent(target, k -> new ArrayList<>())
-        .addAll(MemberMove.addTo(targetText, superDecl, movedText, Placement.rank(moved)));
+    if (twin != null) {
+      edits
+          .computeIfAbsent(target, k -> new ArrayList<>())
+          .add(implement(targetText, twin, text, (MethodDeclaration) moved));
+    } else {
+      edits
+          .computeIfAbsent(target, k -> new ArrayList<>())
+          .addAll(MemberMove.addTo(targetText, superDecl, movedText, Placement.rank(moved)));
+    }
 
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pulling " + name + " up");
@@ -119,7 +129,10 @@ final class PullUp {
             + superName
             + " ("
             + project.relative(target)
-            + ")",
+            + ")"
+            + (twin == null
+                ? ""
+                : ", in place of its abstract declaration" + stillAbstract(superDecl)),
         declared);
   }
 
@@ -193,5 +206,89 @@ final class PullUp {
       names.add(i.getErasure().getName());
     }
     return names.isEmpty() ? "none" : String.join(", ", names);
+  }
+
+  /**
+   * The abstract method of {@code type} that {@code moved} implements (same name and parameter
+   * types), or null.
+   */
+  private static MethodDeclaration abstractTwin(TypeDeclaration type, BodyDeclaration moved) {
+    if (!(moved instanceof MethodDeclaration m) || m.resolveBinding() == null) {
+      return null;
+    }
+    for (MethodDeclaration d : type.getMethods()) {
+      if (Modifier.isAbstract(d.getModifiers())
+          && d.resolveBinding() != null
+          && d.getName().getIdentifier().equals(m.getName().getIdentifier())
+          && MemberMove.erasedParams(d.resolveBinding())
+              .equals(MemberMove.erasedParams(m.resolveBinding()))) {
+        return d;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The edit that replaces {@code twin}, abstract in {@code targetText}, with {@code moved} from
+   * {@code text}: twin's Javadoc stays in place of moved's, and moved's {@code @Override} goes
+   * unless twin has one too.
+   */
+  private static TextEdit implement(
+      String targetText, MethodDeclaration twin, String text, MethodDeclaration moved) {
+    int at =
+        moved.getJavadoc() != null && twin.getJavadoc() != null
+            ? after(text, moved.getJavadoc())
+            : moved.getStartPosition();
+    StringBuilder written = new StringBuilder();
+    if (twin.getJavadoc() != null) {
+      // From the declaration's start, so that the method declared is written by this edit.
+      written.append(targetText, twin.getStartPosition(), after(targetText, twin.getJavadoc()));
+    }
+    if (override(twin) == null && override(moved) instanceof Annotation a) {
+      written.append(text, at, a.getStartPosition());
+      at = after(text, a);
+    }
+    written.append(text, at, Nodes.end(moved));
+    return new TextEdit(twin.getStartPosition(), Nodes.end(twin), written.toString());
+  }
+
+  /** {@code m}'s {@code @Override}, or null. */
+  private static Annotation override(MethodDeclaration m) {
+    for (Object o : m.modifiers()) {
+      if (o instanceof Annotation a
+          && a.getTypeName().getFullyQualifiedName().endsWith("Override")) {
+        return a;
+      }
+    }
+    return null;
+  }
+
+  /** The offset of the first character after {@code node} that is not white space. */
+  private static int after(String text, ASTNode node) {
+    int i = Nodes.end(node);
+    while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+      i++;
+    }
+    return i;
+  }
+
+  /**
+   * "; Renamer is still abstract, and nothing else in it is: it could be made a concrete class"
+   * when that is so, for the result; otherwise empty.
+   */
+  private static String stillAbstract(TypeDeclaration type) {
+    if (!Modifier.isAbstract(type.getModifiers()) || type.isInterface()) {
+      return "";
+    }
+    long others =
+        List.of(type.getMethods()).stream()
+            .filter(d -> Modifier.isAbstract(d.getModifiers()))
+            .count();
+    String name = type.getName().getIdentifier();
+    return others > 1
+        ? ""
+        : "; "
+            + name
+            + " is still abstract, and nothing else in it is: it could be made a concrete class";
   }
 }

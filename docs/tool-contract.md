@@ -285,10 +285,13 @@ a method at its end; 2026-11-07); imports are fixed in both files.
 A name that is both a field and a method is refused; a field with other variables
 in its declaration is refused (move one variable per declaration).
 Calls need no change, since `Sub` inherits the method.
-
+A method the supertype declares abstract with the same signature takes that declaration's
+place (#320, 2026-11-10): its Javadoc stays, and `@Override` goes unless the abstract one had
+it; the supertype's other subclasses keep their overrides. The supertype stays abstract; when
+nothing else in it is, the result says it could be made a concrete class.
 - Refused: no superclass and no `to`; `to` that is not a direct supertype; a
   supertype outside the project's sources; a method the supertype already
-  declares (the same signature); a method that overrides a concrete method the
+  declares (the same signature) other than abstractly; a method that overrides a concrete method the
   supertype inherits (`Root.name()` for `Base extends Root`: `Base` and its other
   subclasses would run the pulled body); a bare name that matches several overloads,
   which are listed (name one with its parameter types, `Sub.hello(int)`); a
