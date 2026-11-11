@@ -1,0 +1,596 @@
+package io.github.tychofreeman.jrefactor;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.ArrayAccess;
+import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
+import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.PrimitiveType;
+import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import org.eclipse.jdt.core.dom.WhileStatement;
+
+/**
+ * convert_loop: a loop rewritten as another statement form that runs the same code in the same
+ * order. So far: an index for over a list or an array, and a for over an iterator, to an enhanced
+ * for; an enhanced for to an iterator for, or to an index for over a list or an array.
+ */
+final class ConvertLoop {
+
+  private ConvertLoop() {}
+
+  /** A text edit: {@code [start, end)} of the file becomes {@code text}. */
+  private record Edit(int start, int end, String text) {}
+
+  /** An index for: its index, what it walks, and whether that is an array. */
+  private record Indexed(ForStatement loop, IVariableBinding index, Expression of, boolean array) {}
+
+  static Outcome run(SourceProject project, String rel, Integer line, String to) throws Exception {
+    Precondition.require(
+        Precondition.that(
+            () -> line != null,
+            () -> "convert_loop needs line, the 1-based line the loop starts on."),
+        Precondition.that(
+            () -> List.of("for_each", "iterator", "for").contains(to),
+            () ->
+                "convert_loop takes to=for_each, iterator or for; to="
+                    + to
+                    + " is not built yet."));
+    Opened opened = Opened.of(project, rel);
+    String text = opened.text();
+    Statement loop =
+        opened.startingOn(
+            line,
+            Statement.class,
+            s ->
+                s instanceof EnhancedForStatement
+                    || s instanceof ForStatement
+                    || s instanceof WhileStatement
+                    || s instanceof DoStatement,
+            "loop",
+            "",
+            "the loop");
+    List<Edit> edits = new ArrayList<>();
+    List<String> imports = new ArrayList<>();
+    String said;
+    if (loop instanceof EnhancedForStatement each) {
+      said =
+          switch (to) {
+            case "iterator" -> toIterator(text, each, edits, imports);
+            case "for" -> toIndex(text, each, edits);
+            default -> throw new Refusal("the loop at line " + line + " is already a for_each.");
+          };
+    } else if (loop instanceof ForStatement f && to.equals("for_each")) {
+      Indexed indexed = indexed(f);
+      said =
+          indexed != null
+              ? indexToEach(text, indexed, edits)
+              : iteratorToEach(text, f, line, edits);
+    } else if (loop instanceof ForStatement) {
+      throw new Refusal(
+          "convert_loop takes a for to for_each only, for now. Convert it to for_each first, then"
+              + " to "
+              + to
+              + ".");
+    } else {
+      throw new Refusal(
+          "the loop at line "
+              + line
+              + " is a "
+              + (loop instanceof WhileStatement ? "while" : "do-while")
+              + ", which convert_loop does not take yet.");
+    }
+    edits.sort(Comparator.comparingInt(Edit::start).reversed());
+    StringBuilder updated = new StringBuilder(text);
+    for (Edit e : edits) {
+      updated.replace(e.start(), e.end(), e.text());
+    }
+    Edits.Written written =
+        Edits.gated(
+            project,
+            opened.file(),
+            text,
+            updated.toString(),
+            imports,
+            "rewriting the loop at line " + line,
+            "Undo, and check the loop's types.");
+    return new Outcome(
+        "rewrote the loop at line " + line + " of " + rel + " as " + said + written.fixed().said(),
+        written.declared());
+  }
+
+  /**
+   * {@code f} as an index for, {@code for (int i = 0; i < x.size(); i++)} over a list or {@code i <
+   * x.length} over an array ({@code ++i} and {@code i += 1} too); else null.
+   */
+  private static Indexed indexed(ForStatement f) {
+    if (f.initializers().size() != 1
+        || !(f.initializers().get(0) instanceof VariableDeclarationExpression init)
+        || init.fragments().size() != 1
+        || !(init.getType() instanceof PrimitiveType p)
+        || p.getPrimitiveTypeCode() != PrimitiveType.INT) {
+      return null;
+    }
+    VariableDeclarationFragment fragment = (VariableDeclarationFragment) init.fragments().get(0);
+    IVariableBinding index = fragment.resolveBinding();
+    if (index == null
+        || !(fragment.getInitializer() instanceof NumberLiteral zero)
+        || !zero.getToken().equals("0")
+        || !(f.getExpression() instanceof InfixExpression cond)
+        || cond.getOperator() != InfixExpression.Operator.LESS
+        || cond.hasExtendedOperands()
+        || !is(cond.getLeftOperand(), index)
+        || f.updaters().size() != 1
+        || !increments((Expression) f.updaters().get(0), index)) {
+      return null;
+    }
+    Expression bound = cond.getRightOperand();
+    if (bound instanceof MethodInvocation size
+        && size.getName().getIdentifier().equals("size")
+        && size.arguments().isEmpty()
+        && size.getExpression() != null
+        && isA(size.getExpression().resolveTypeBinding(), "java.util.List")) {
+      return new Indexed(f, index, size.getExpression(), false);
+    }
+    if (bound instanceof QualifiedName q
+        && q.getName().getIdentifier().equals("length")
+        && arrayType(q.getQualifier())) {
+      return new Indexed(f, index, q.getQualifier(), true);
+    }
+    if (bound instanceof FieldAccess a
+        && a.getName().getIdentifier().equals("length")
+        && arrayType(a.getExpression())) {
+      return new Indexed(f, index, a.getExpression(), true);
+    }
+    return null;
+  }
+
+  private static boolean arrayType(Expression e) {
+    ITypeBinding t = e.resolveTypeBinding();
+    return t != null && t.isArray();
+  }
+
+  /** Whether {@code e} is {@code i++}, {@code ++i} or {@code i += 1}. */
+  private static boolean increments(Expression e, IVariableBinding i) {
+    return (e instanceof PostfixExpression post
+            && post.getOperator() == PostfixExpression.Operator.INCREMENT
+            && is(post.getOperand(), i))
+        || (e instanceof PrefixExpression pre
+            && pre.getOperator() == PrefixExpression.Operator.INCREMENT
+            && is(pre.getOperand(), i))
+        || (e instanceof Assignment a
+            && a.getOperator() == Assignment.Operator.PLUS_ASSIGN
+            && is(a.getLeftHandSide(), i)
+            && a.getRightHandSide() instanceof NumberLiteral one
+            && one.getToken().equals("1"));
+  }
+
+  private static boolean is(Expression e, IBinding v) {
+    return e instanceof SimpleName n && same(n.resolveBinding(), v);
+  }
+
+  private static boolean same(IBinding a, IBinding b) {
+    return a != null && b != null && a.getKey().equals(b.getKey());
+  }
+
+  /** Whether {@code t} is, extends or implements the type named {@code name}. */
+  private static boolean isA(ITypeBinding t, String name) {
+    if (t == null) {
+      return false;
+    }
+    if (t.getErasure().getQualifiedName().equals(name)) {
+      return true;
+    }
+    for (ITypeBinding i : t.getInterfaces()) {
+      if (isA(i, name)) {
+        return true;
+      }
+    }
+    return isA(t.getSuperclass(), name);
+  }
+
+  /** An index for to an enhanced for: each {@code x.get(i)} or {@code x[i]} becomes the element. */
+  private static String indexToEach(String text, Indexed indexed, List<Edit> edits) {
+    ForStatement loop = indexed.loop();
+    int line = Lines.number(text, loop.getStartPosition());
+    String of = source(text, indexed.of());
+    Statement body = loop.getBody();
+    stable(text, indexed.of(), body, line);
+    if (!indexed.array()) {
+      unchanged(text, of, body, line);
+    }
+    List<Expression> reads = new ArrayList<>();
+    for (SimpleName n : Nodes.all(body, SimpleName.class)) {
+      if (!same(n.resolveBinding(), indexed.index())) {
+        continue;
+      }
+      Expression read = elementRead(text, n, of, indexed.array());
+      if (read == null) {
+        throw new Refusal(
+            "the loop at line "
+                + line
+                + " reads "
+                + n.getIdentifier()
+                + " other than as "
+                + (indexed.array() ? of + "[" + n + "]" : of + ".get(" + n + ")")
+                + " ("
+                + source(text, n.getParent())
+                + "), and an enhanced for has no index.");
+      }
+      reads.add(read);
+    }
+    ITypeBinding element =
+        indexed.array()
+            ? indexed.of().resolveTypeBinding().getComponentType()
+            : LoopToStream.elementOf(indexed.of().resolveTypeBinding());
+    if (element == null) {
+      throw new Refusal(of + " has no type argument, so its elements' type is not known.");
+    }
+    String type = Extract.typeName(element);
+    String name = null;
+    if (body instanceof Block block
+        && !block.statements().isEmpty()
+        && block.statements().get(0) instanceof VariableDeclarationStatement first
+        && first.fragments().size() == 1) {
+      VariableDeclarationFragment f = (VariableDeclarationFragment) first.fragments().get(0);
+      if (f.getExtraDimensions() == 0
+          && reads.contains(f.getInitializer())
+          && !written(body, f.resolveBinding())) {
+        name = f.getName().getIdentifier();
+        type = text.substring(first.getStartPosition(), f.getStartPosition()).strip();
+        reads.remove(f.getInitializer());
+        edits.add(
+            new Edit(
+                Lines.start(text, first.getStartPosition()),
+                Lines.end(text, Nodes.end(first) - 1),
+                ""));
+      }
+    }
+    if (name == null) {
+      name = LoopToStream.unused(elementName(indexed.of()), loop);
+    }
+    for (Expression read : reads) {
+      edits.add(new Edit(read.getStartPosition(), Nodes.end(read), name));
+    }
+    edits.add(
+        new Edit(
+            loop.getStartPosition(),
+            body.getStartPosition(),
+            "for (" + type + " " + name + " : " + of + ") "));
+    return "a for (" + type + " " + name + " : " + of + ").";
+  }
+
+  /** The {@code x.get(i)} or {@code x[i]} that {@code i} is the index of, or null. */
+  private static Expression elementRead(String text, SimpleName i, String of, boolean array) {
+    ASTNode parent = i.getParent();
+    if (array) {
+      if (parent instanceof ArrayAccess a
+          && a.getIndex() == i
+          && source(text, a.getArray()).equals(of)
+          && !writes(a)) {
+        return a;
+      }
+      return null;
+    }
+    if (parent instanceof MethodInvocation m
+        && m.getName().getIdentifier().equals("get")
+        && m.arguments().size() == 1
+        && m.arguments().get(0) == i
+        && m.getExpression() != null
+        && source(text, m.getExpression()).equals(of)) {
+      return m;
+    }
+    return null;
+  }
+
+  /** Whether {@code a} is assigned or incremented. */
+  private static boolean writes(ArrayAccess a) {
+    ASTNode p = a.getParent();
+    return (p instanceof Assignment s && s.getLeftHandSide() == a)
+        || p instanceof PostfixExpression
+        || (p instanceof PrefixExpression pre
+            && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
+                || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
+  }
+
+  /**
+   * A name for the element of {@code of}: a plural's singular ({@code names} to {@code name},
+   * {@code entries} to {@code entry}), a {@code List} suffix dropped, else {@code item}.
+   */
+  private static String elementName(Expression of) {
+    String n =
+        of instanceof SimpleName s
+            ? s.getIdentifier()
+            : of instanceof FieldAccess f
+                ? f.getName().getIdentifier()
+                : of instanceof QualifiedName q ? q.getName().getIdentifier() : "";
+    String singular =
+        n.endsWith("List") && n.length() > 4
+            ? n.substring(0, n.length() - 4)
+            : n.endsWith("ies") && n.length() > 3
+                ? n.substring(0, n.length() - 3) + "y"
+                : n.endsWith("s") && !n.endsWith("ss") && n.length() > 1
+                    ? n.substring(0, n.length() - 1)
+                    : "";
+    return singular.isEmpty() || !Character.isJavaIdentifierStart(singular.charAt(0))
+        ? "item"
+        : singular;
+  }
+
+  /**
+   * Refuses when {@code of} can be another list or array on a later pass: an index loop reads it on
+   * each, an enhanced for once. A local or parameter the body does not assign, a final field, or a
+   * field neither the body nor a method of the project it calls assigns.
+   */
+  private static void stable(String text, Expression of, Statement body, int line) {
+    IBinding b =
+        of instanceof SimpleName s
+            ? s.resolveBinding()
+            : of instanceof FieldAccess f && f.getExpression() instanceof ThisExpression
+                ? f.resolveFieldBinding()
+                : null;
+    String hint =
+        " Put it in a local before the loop first (extract_variable), so each pass reads the same"
+            + " one.";
+    if (!(b instanceof IVariableBinding v)) {
+      throw new Refusal(
+          "the loop at line "
+              + line
+              + " reads "
+              + source(text, of)
+              + " on each pass, and an enhanced for once."
+              + hint);
+    }
+    if (written(body, v)) {
+      throw new Refusal(source(text, of) + " is assigned in the loop at line " + line + "." + hint);
+    }
+    if (v.isField() && !Modifier.isFinal(v.getModifiers())) {
+      for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
+        IMethodBinding called = m.resolveMethodBinding();
+        if (called == null || called.getDeclaringClass().isFromSource()) {
+          throw new Refusal(
+              "the loop at line "
+                  + line
+                  + " calls "
+                  + m.getName()
+                  + ", which may assign the field "
+                  + v.getName()
+                  + "."
+                  + hint);
+        }
+      }
+    }
+  }
+
+  /**
+   * Refuses a body that adds to or removes from the list {@code of}, which an iterator fails on.
+   */
+  private static void unchanged(String text, String of, Statement body, int line) {
+    for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
+      if (m.getExpression() != null
+          && LoopToStream.CHANGES.contains(m.getName().getIdentifier())
+          && source(text, m.getExpression()).equals(of)) {
+        throw new Refusal(
+            "the loop at line "
+                + line
+                + " changes "
+                + of
+                + " ("
+                + source(text, m)
+                + "), which an enhanced for over it would fail on.");
+      }
+    }
+  }
+
+  private static boolean written(Statement body, IBinding v) {
+    for (Effects.Effect e : Effects.of(body).all()) {
+      if (e.kind() == Effects.Kind.WRITE && same(e.variable(), v)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * A for over an iterator, {@code for (Iterator<T> it = x.iterator(); it.hasNext(); ) { T e =
+   * it.next(); ... }}, to {@code for (T e : x)}.
+   */
+  private static String iteratorToEach(String text, ForStatement loop, int line, List<Edit> edits) {
+    String shape =
+        " is not an index for (for (int i = 0; i < x.size(); i++)) or a for over an iterator (for"
+            + " (Iterator<T> it = x.iterator(); it.hasNext(); ) { T e = it.next(); ... }).";
+    if (loop.initializers().size() != 1
+        || !(loop.initializers().get(0) instanceof VariableDeclarationExpression init)
+        || init.fragments().size() != 1
+        || !isA(init.getType().resolveBinding(), "java.util.Iterator")
+        || !loop.updaters().isEmpty()) {
+      throw new Refusal("the loop at line " + line + shape);
+    }
+    VariableDeclarationFragment it = (VariableDeclarationFragment) init.fragments().get(0);
+    IVariableBinding iterator = it.resolveBinding();
+    if (!(it.getInitializer() instanceof MethodInvocation start)
+        || !start.getName().getIdentifier().equals("iterator")
+        || !start.arguments().isEmpty()
+        || start.getExpression() == null
+        || !(loop.getExpression() instanceof MethodInvocation hasNext)
+        || !hasNext.getName().getIdentifier().equals("hasNext")
+        || !is(hasNext.getExpression(), iterator)
+        || !(loop.getBody() instanceof Block body)
+        || body.statements().isEmpty()
+        || !(body.statements().get(0) instanceof VariableDeclarationStatement first)
+        || first.fragments().size() != 1
+        || !(((VariableDeclarationFragment) first.fragments().get(0)).getInitializer()
+            instanceof MethodInvocation next)
+        || !next.getName().getIdentifier().equals("next")
+        || !is(next.getExpression(), iterator)) {
+      throw new Refusal("the loop at line " + line + shape);
+    }
+    for (SimpleName n : Nodes.all(body, SimpleName.class)) {
+      if (same(n.resolveBinding(), iterator) && n != next.getExpression()) {
+        throw new Refusal(
+            "the loop at line "
+                + line
+                + " uses "
+                + n
+                + " other than in its first next() ("
+                + source(text, n.getParent())
+                + "), and an enhanced for has no iterator to call.");
+      }
+    }
+    VariableDeclarationFragment element = (VariableDeclarationFragment) first.fragments().get(0);
+    String type = text.substring(first.getStartPosition(), element.getStartPosition()).strip();
+    String of = source(text, start.getExpression());
+    String header = "for (" + type + " " + element.getName() + " : " + of + ")";
+    edits.add(
+        new Edit(
+            Lines.start(text, first.getStartPosition()),
+            Lines.end(text, Nodes.end(first) - 1),
+            ""));
+    edits.add(new Edit(loop.getStartPosition(), body.getStartPosition(), header + " "));
+    return "a " + header + ".";
+  }
+
+  /** An enhanced for to {@code for (Iterator<T> it = x.iterator(); it.hasNext(); )}. */
+  private static String toIterator(
+      String text, EnhancedForStatement loop, List<Edit> edits, List<String> imports) {
+    int line = Lines.number(text, loop.getStartPosition());
+    ITypeBinding sourceType = loop.getExpression().resolveTypeBinding();
+    if (sourceType == null || sourceType.isArray()) {
+      throw new Refusal(
+          "the loop at line "
+              + line
+              + " walks "
+              + (sourceType == null ? "a type that does not resolve" : "an array")
+              + ", which has no iterator.");
+    }
+    ITypeBinding element = LoopToStream.elementOf(sourceType);
+    if (element == null) {
+      throw new Refusal(
+          source(text, loop.getExpression())
+              + " is not an Iterable with a type argument, so the iterator's type is not known.");
+    }
+    String it = LoopToStream.unused("it", loop);
+    String header =
+        "for (Iterator<"
+            + Extract.typeName(element)
+            + "> "
+            + it
+            + " = "
+            + LoopToStream.primary(text, loop.getExpression())
+            + ".iterator(); "
+            + it
+            + ".hasNext(); )";
+    imports.add("java.util.Iterator");
+    first(
+        text,
+        loop,
+        loop.getBody(),
+        source(text, loop.getParameter()) + " = " + it + ".next();",
+        edits);
+    edits.add(new Edit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
+    return "a " + header + ".";
+  }
+
+  /** An enhanced for over a list or an array to {@code for (int i = 0; i < x.size(); i++)}. */
+  private static String toIndex(String text, EnhancedForStatement loop, List<Edit> edits) {
+    int line = Lines.number(text, loop.getStartPosition());
+    Expression of = loop.getExpression();
+    ITypeBinding t = of.resolveTypeBinding();
+    boolean array = t != null && t.isArray();
+    if (!array && !isA(t, "java.util.List")) {
+      throw new Refusal(
+          "the loop at line "
+              + line
+              + " walks "
+              + source(text, of)
+              + ", which is not a List or an array, so it has no index; to=iterator takes it.");
+    }
+    Statement body = loop.getBody();
+    stable(text, of, body, line);
+    String from = source(text, of);
+    if (!array) {
+      unchanged(text, from, body, line);
+    }
+    String i = LoopToStream.unused("i", loop);
+    String primary = LoopToStream.primary(text, of);
+    String header =
+        "for (int "
+            + i
+            + " = 0; "
+            + i
+            + " < "
+            + primary
+            + (array ? ".length" : ".size()")
+            + "; "
+            + i
+            + "++)";
+    String read = array ? primary + "[" + i + "]" : primary + ".get(" + i + ")";
+    first(text, loop, body, source(text, loop.getParameter()) + " = " + read + ";", edits);
+    edits.add(new Edit(loop.getStartPosition(), body.getStartPosition(), header + " "));
+    String note =
+        !array && !isA(t, "java.util.RandomAccess")
+            ? " " + from + " is not a RandomAccess list, so get(i) may walk it (a LinkedList)."
+            : "";
+    return "a " + header + "." + note;
+  }
+
+  /**
+   * Edits that put {@code statement} first in {@code body}: on a line of its own after the brace of
+   * a block, or with a one-statement body in a new block.
+   */
+  private static void first(
+      String text, Statement loop, Statement body, String statement, List<Edit> edits) {
+    String indent = Lines.indentOf(text, loop.getStartPosition());
+    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
+    String inner = indent + " ".repeat(step);
+    if (body instanceof Block block
+        && Lines.number(text, block.getStartPosition()) != Lines.number(text, Nodes.end(block) - 1)
+        && (block.statements().isEmpty()
+            || Lines.number(text, ((Statement) block.statements().get(0)).getStartPosition())
+                != Lines.number(text, block.getStartPosition()))) {
+      String at =
+          block.statements().isEmpty()
+              ? inner
+              : Lines.indentOf(text, ((Statement) block.statements().get(0)).getStartPosition());
+      int after = Lines.end(text, block.getStartPosition());
+      edits.add(new Edit(after, after, at + statement + "\n"));
+      return;
+    }
+    List<String> lines = new ArrayList<>();
+    for (Object s : body instanceof Block block ? block.statements() : List.of(body)) {
+      lines.add(LoopToStream.reindent(source(text, (ASTNode) s), inner));
+    }
+    String rest = String.join("\n", lines);
+    edits.add(
+        new Edit(
+            body.getStartPosition(),
+            Nodes.end(body),
+            "{\n" + inner + statement + (rest.isEmpty() ? "" : "\n" + rest) + "\n" + indent + "}"));
+  }
+
+  private static String source(String text, ASTNode node) {
+    return text.substring(node.getStartPosition(), Nodes.end(node));
+  }
+}

@@ -577,6 +577,25 @@ final class Tools {
           Kind.REFACTORING,
           Tools::loopToStream);
 
+  static final Def CONVERT_LOOP =
+      new Def(
+          "convert_loop",
+          """
+          Rewrite a loop as another statement form that runs the same code in the same order: \
+          to=for_each turns an index for over a list or an array, for (int i = 0; i < \
+          names.size(); i++) { print(names.get(i)); }, into for (String name : names) { \
+          print(name); }, and a for over an iterator whose body starts with T e = it.next() \
+          into for (T e : source); to=iterator and to=for turn an enhanced for into a for over \
+          its iterator, or over the index of a list or an array, the element read first in the \
+          body. Identify the loop by the line it starts on.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "The 1-based line the loop starts on.").required(),
+              Arg.string("to", "The form to write: for_each, iterator or for.").required()),
+          Kind.REFACTORING,
+          Tools::convertLoop);
+
   static final Def REMOVE_ELSE =
       new Def(
           "remove_else",
@@ -1294,6 +1313,7 @@ final class Tools {
           MOVE_STATEMENT,
           INVERT_IF,
           LOOP_TO_STREAM,
+          CONVERT_LOOP,
           REMOVE_ELSE,
           ENCAPSULATE_FIELD,
           BATCH,
@@ -1595,5 +1615,10 @@ final class Tools {
 
   private static Outcome loopToStream(SourceProject project, Args args) throws Exception {
     return LoopToStream.run(project, args.required("file"), args.integer("line"));
+  }
+
+  private static Outcome convertLoop(SourceProject project, Args args) throws Exception {
+    return ConvertLoop.run(
+        project, args.required("file"), args.integer("line"), args.required("to"));
   }
 }
