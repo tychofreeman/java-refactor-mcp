@@ -21,6 +21,7 @@ import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
@@ -159,7 +160,11 @@ final class Effects {
 
           @Override
           public boolean visit(MethodInvocation n) {
-            add(Kind.CALL, n, null);
+            // A record's own accessor reads a final field, and changes nothing.
+            if (!(n.resolveMethodBinding() instanceof IMethodBinding m
+                && m.isSyntheticRecordMethod())) {
+              add(Kind.CALL, n, null);
+            }
             Expression on = n.getExpression();
             if (on != null
                 && !(on instanceof ThisExpression)
