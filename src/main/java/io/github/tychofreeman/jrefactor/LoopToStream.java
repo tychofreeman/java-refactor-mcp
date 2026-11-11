@@ -75,7 +75,7 @@ final class LoopToStream {
    * Methods that change a collection or a map: called in the loop on its source, or on the map
    * whose entries, keys or values it walks, they are refused.
    */
-  private static final Set<String> CHANGES =
+  static final Set<String> CHANGES =
       Set.of(
           "add",
           "addAll",
@@ -144,7 +144,8 @@ final class LoopToStream {
           "the loop at line "
               + line
               + " is not a for (T x : source) over a collection, which loop_to_stream takes."
-              + " Rewrite it as one first (convert_loop, which would, is not built yet).");
+              + " Rewrite it as one first: convert_loop with to=for_each takes an index for or a"
+              + " for over an iterator.");
     }
     Precondition.require(
         Precondition.that(
@@ -420,7 +421,7 @@ final class LoopToStream {
    * The type argument of the {@code Iterable} that {@code t} is, a wildcard as its bound; else
    * null.
    */
-  private static ITypeBinding elementOf(ITypeBinding t) {
+  static ITypeBinding elementOf(ITypeBinding t) {
     if (t == null) {
       return null;
     }
@@ -448,7 +449,7 @@ final class LoopToStream {
   }
 
   /** Whether {@code t} is a {@code java.util.Collection}, which has {@code stream()}. */
-  private static boolean collection(ITypeBinding t) {
+  static boolean collection(ITypeBinding t) {
     if (t == null) {
       return false;
     }
@@ -516,7 +517,7 @@ final class LoopToStream {
   }
 
   /** {@code lines} with their common indentation replaced by {@code to}. */
-  private static String reindent(String lines, String to) {
+  static String reindent(String lines, String to) {
     String[] each = lines.split("\n", -1);
     int common = Integer.MAX_VALUE;
     for (String l : each) {
@@ -552,7 +553,7 @@ final class LoopToStream {
   }
 
   /** {@code e}'s source, in parentheses unless a method can be called on it as it is. */
-  private static String primary(String text, Expression e) {
+  static String primary(String text, Expression e) {
     String s = source(text, e);
     return e instanceof Name
             || e instanceof MethodInvocation
@@ -985,7 +986,7 @@ final class LoopToStream {
   }
 
   /** {@code name}, or it with a number after it, that no name in {@code loop}'s file is. */
-  private static String unused(String name, ASTNode loop) {
+  static String unused(String name, ASTNode loop) {
     Set<String> taken = new java.util.HashSet<>();
     Nodes.all(loop.getRoot(), SimpleName.class).forEach(n -> taken.add(n.getIdentifier()));
     String out = name;

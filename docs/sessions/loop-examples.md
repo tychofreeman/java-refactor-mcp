@@ -219,7 +219,7 @@ the result reports it as a change to exceptional behavior, refused under `preser
 
 ## convert_loop
 
-### 13. An index loop that only reads the element (planned: `for` to `for_each`)
+### 13. An index loop that only reads the element (done: `convert_loop_index_to_for_each`, `convert_loop_for_each_to_index`)
 
 ```java
 for (int i = 0; i < names.size(); i++) {
@@ -234,7 +234,7 @@ for (String name : names) {
 Refused when `i` is used other than in `names.get(i)`, or the body changes `names`. The element's
 name comes from the list's (`names` to `name`), or `item`.
 
-### 14. An iterator loop (planned: `iterator` to `for_each`, and back)
+### 14. An iterator loop (done: `convert_loop_iterator_to_for_each`, `convert_loop_for_each_to_iterator`)
 
 ```java
 for (Iterator<String> it = names.iterator(); it.hasNext(); ) {

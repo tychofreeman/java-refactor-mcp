@@ -276,6 +276,13 @@ Each was chosen from options; the record named beside it has the options it beat
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop`, the statement forms, is not built.
 
+- `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
+  iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
+  directly (`indexToEach`, `iteratorToEach`, `toIterator`, `toIndex`), sharing `stable` (the
+  walked list or array cannot change between passes) and `unchanged` (no call changes the list).
+  It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. `while` and
+  `do_while` are the next increments of `docs/sessions/convert-loop-sketch.md`.
+
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
 
@@ -440,7 +447,8 @@ Each was chosen from options; the record named beside it has the options it beat
   (2026-11-07, gorefactor's #606; `docs/sessions/batch-sections.md`). A section
   cannot hold a line `@@name` itself: send such text with `key_file=-`.
 - Writing Java through a Python script: use raw strings, or a backslash before a
-  newline joins the lines. The Edit tool avoids it.
+  newline joins the lines; so does an unquoted heredoc (`<<J`, to expand a variable), which
+  joined a tool description's text-block lines on 2026-11-11. Quote the delimiter. The Edit tool avoids it.
 - Check SDK and library APIs with `javap` against the jars, not from memory.
 - JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).

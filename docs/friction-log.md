@@ -1074,3 +1074,20 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   every later call failed ("build failed"), and the two fixes (the cast, and the holder-name check
   that took a method `report` for a clash) were made with `sed`. No tool sequence applies: the
   tools themselves could not start. Lesson for sessions: chain verify and commit with `&&`.
+
+## 2026-11-11: move of a recursive static method refused (convert_loop)
+
+- `move` of `LoopToStream.elementOf`, a static method that calls itself, to a new `Loops` class
+  was refused: "LoopToStream.elementOf calls itself. A recursive call would go through the
+  receiver; move it by hand." A static method has no receiver; its recursive call would name the
+  new class. As the 2026-11-10 entry on a parameter named receiver, `move` treats a static method
+  as an instance one. Done instead by widening the helpers in place (`replace_text` of
+  `private`), which `ConvertLoop` calls as `LoopToStream.elementOf`.
+
+## 2026-11-11: add_declaration put a Def after the list that names it (convert_loop)
+
+- `add_declaration` of `static final Def CONVERT_LOOP` to `Tools` placed it after `ALL`, whose
+  initializer names it, and the gate refused: "Cannot reference a field before it is defined".
+  Placement by kind puts a new field after the last field; a static field another static field's
+  initializer reads must come before it. Done with `replace_text` before `REMOVE_ELSE`. Wanted:
+  `Placement.place` puts a static field before the first static field whose initializer reads it.

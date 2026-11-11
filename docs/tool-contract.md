@@ -1073,16 +1073,45 @@ when the map is only read afterwards; else `groupingBy(x -> key, HashMap::new,
 Collectors.toCollection(ArrayList::new))`. A null key now throws in `groupingBy`: reported in the
 exceptional part of the result, refused under `preserve_exceptions`. Comment lines between that declaration and the loop stay above
 it. Stages go on lines of their own past 100 columns. Result: `replaced the loop at line N of <file> with a stream of <source>: filter, map,
-toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop ... is
-not built yet"); a label; an array; a source that is not an `Iterable` with a type argument; a
+toList()`. Refusals: no loop on the line; a loop that is not an enhanced for ("convert_loop with
+to=for_each takes an index for or a for over an iterator"); a label; an array; a source that is not an `Iterable` with a type argument; a
 loop variable of another type than the elements (`int` over `Integer`); a break, continue or
 return that leaves the body; a local declared outside the body and assigned in it ("Sums, counts
 and other results are not built yet"); a checked exception the body does not catch; a call that
 changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
 catches a local read in the body that is not effectively final.
 
-## `invert_if` (built)
+## `convert_loop` (in progress: `for_each`, `iterator`, `for`)
 
+Arguments: `file`, `line` (the line the loop starts on), `to`, `preserve_exceptions`. A loop
+becomes another statement form running the same code in the same order (the user, 2026-11-10:
+statement forms here, the functional ones in `loop_to_stream`). Built so far:
+
+- `to=for_each` from an index for, `for (int i = 0; i < x.size(); i++)` over a `List` or `i <
+  x.length` over an array (`++i` and `i += 1` too): each `x.get(i)` or `x[i]` becomes the element.
+  A first local `T e = x.get(i);` the body does not assign names it and is dropped; else the name
+  is the singular of `x` (`names` to `name`, `entries` to `entry`, a `List` suffix dropped) or
+  `item`, numbered when taken. Refused when the body reads `i` otherwise, writes `x[i]`, calls a
+  method that changes the list (`add`, `remove`, ...), or when `x` can be another list on a later
+  pass: it must be a local or parameter the body does not assign, a final field, or a field the
+  body does not assign and calls no method of the project ("Put it in a local before the loop
+  first (extract_variable)").
+- `to=for_each` from a for over an iterator, `for (Iterator<T> it = x.iterator(); it.hasNext(); )
+  { T e = it.next(); ... }`: refused when the body uses `it` again (`it.remove()`).
+- `to=iterator` from an enhanced for over an `Iterable` with a type argument: `for (Iterator<T> it
+  = x.iterator(); it.hasNext(); ) { <the loop variable> = it.next(); ... }`, `Iterator` imported.
+- `to=for` from an enhanced for over a `List` or an array: `for (int i = 0; i < x.size(); i++) {
+  <the loop variable> = x.get(i); ... }`, under the same rules for `x` as above; the result notes
+  a list that is not `RandomAccess`, whose `get` may walk it. A one-statement body goes in a new
+  block.
+
+A label stays on the loop; `break` and `continue` keep their meaning in every pair. Result:
+`rewrote the loop at line N of <file> as a for (String name : names).` Refusals: no loop on the
+line; a `to` not yet built; `while` and `do`-`while` (not yet: increments 2 and 6 of
+`docs/sessions/convert-loop-sketch.md`, roadmap #133 and #134); a for that is neither shape; a
+for to anything but `for_each` ("Convert it to for_each first"); an enhanced for to `for_each`.
+
+## `invert_if` (built)
 Inverts an if that has an else: the branches swap and the condition is negated. Arguments: `file`,
 `line` (the line the if starts on). A comparison takes its opposite operator (`==` and `!=`, `<` and
 `>=`, `<=` and `>`); a `!x` loses its `!`; any other condition is wrapped as `!(...)` (or `!x` for a
