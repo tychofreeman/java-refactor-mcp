@@ -1,1 +1,1 @@
-overrides Base.name()
+replace its body with return super.name();

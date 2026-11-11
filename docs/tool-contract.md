@@ -685,7 +685,12 @@ in the same turn only if it is sent after it.
   is used in com/example/Shop.java line 5. Remove or change those uses first,
   then delete it." (constructors by their calls too), and for a method that
   overrides a concrete one ("Sub.name() overrides Base.name(): deleted, its
-  callers would run Base's instead ..."). The old Javadoc stays unless content has its own. Refused: several
+  callers would run Base's instead ... replace its body with return super.name(); and
+  delete it again."), unless its body only calls that method through `super` with its
+  parameters in order, or is the same as that method's (#322, 2026-11-10: names compared by
+  binding in one parse, a parameter by position, a method called on this by override; not when
+  only the override is synchronized). Then its calls are not checked: they run the inherited
+  method, which does the same. The old Javadoc stays unless content has its own. Refused: several
   members of that name (with their signatures), no such member (with the
   members there), a field declared with others in one statement. gorefactor's
   `line`/`column` addressing and `imports` are not built.
