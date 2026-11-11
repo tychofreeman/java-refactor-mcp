@@ -109,4 +109,23 @@ class BatchRetryTest {
 
     assertTrue(Files.readString(root.resolve("com/example/A.java")).contains("return 3;"));
   }
+
+  @Test
+  void aRetryMovesAStepAndChangesAStepsTool() {
+    List<Map<String, Object>> base =
+        List.of(
+            Map.of("tool", "inline", "args", Map.of("n", 1)),
+            Map.of("tool", "rename", "args", Map.of("n", 2)),
+            Map.of("tool", "fold", "args", Map.of("n", 3)));
+    List<Map<String, Object>> out =
+        Batch.retried(
+            base,
+            List.of(
+                Map.of("remove", 2),
+                Map.of("after", 0, "tool", "rename", "args", Map.of("n", 2)),
+                Map.of("step", 3, "tool", "extract_function", "args", Map.of("n", 4))));
+    assertEquals(
+        List.of("rename", "inline", "extract_function"),
+        out.stream().map(s -> s.get("tool")).toList());
+  }
 }

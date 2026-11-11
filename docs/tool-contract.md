@@ -1102,12 +1102,14 @@ field, and the gate's "would add compile errors".
 
 - `retry` (2026-11-06, the user's choice over keeping the passed steps and over a refusal
   only): after a refused batch, `retry: true` with `steps` of `{"step": N, ...}` (replaces
-  step N; its `tool` kept when left out) and `{"after": N, ...}` (adds a step after step N, 0
-  for first) runs the refused batch with those changes, its check kept unless given; numbers are
+  step N; its `tool` kept when left out, changed when given), `{"after": N, ...}` (adds a step
+  after step N, 0 for first) and `{"remove": N}` (drops step N; with an `after`, moves it, #318)
+  runs the refused batch with those changes, its check kept unless given; numbers are
   the refused batch's, and `step` one past the last adds a new last step (2026-11-06). Nothing
   applies unless every step passes; a batch that passes forgets
   the refused one, and every refused batch ends by saying how to retry. Refused: a retry with no
-  refused batch, a change with both or neither of `step` and `after`, a number outside it.
+  refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
+  it. The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server

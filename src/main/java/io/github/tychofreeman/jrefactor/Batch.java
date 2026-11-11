@@ -62,32 +62,37 @@ final class Batch {
           refusal.getMessage()
               + "\nTo fix it without resending the rest, batch with retry: true and only the steps"
               + " that change, by their number here: {\"step\": 2, \"args\": {...}} replaces step"
-              + " 2, {\"after\": 2, \"tool\": ..., \"args\": {...}} adds one after it.");
+              + " 2 (with \"tool\" to change its tool), {\"after\": 2, \"tool\": ..., \"args\":"
+              + " {...}} adds one after it, {\"remove\": 2} drops it; remove and after move a step.");
     }
   }
 
   /**
    * The steps of {@code base}, the refused batch, with {@code changes} made: {@code step} N
    * replaces step N (keeping its tool when the change names none), {@code after} N adds a step
-   * after step N (0 for first). Numbers are those of {@code base}.
+   * after step N (0 for first), {@code remove} N drops step N; a remove and an after move a step.
+   * Numbers are those of {@code base}.
    */
   static List<Map<String, Object>> retried(
       List<Map<String, Object>> base, List<Map<String, Object>> changes) {
-    List<Map<String, Object>> out = new ArrayList<>(base);
-    java.util.TreeMap<Integer, List<Map<String, Object>>> added = new java.util.TreeMap<>();
+    List<Map<String, Object>> replaced = new ArrayList<>(base);
+    java.util.Set<Integer> removed = new java.util.HashSet<>();
+    java.util.Map<Integer, List<Map<String, Object>>> added = new java.util.HashMap<>();
     for (Map<String, Object> c : changes) {
       Map<String, Object> step = new LinkedHashMap<>(c);
       Object replace = step.remove("step");
       Object after = step.remove("after");
-      if ((replace == null) == (after == null)) {
+      Object remove = step.remove("remove");
+      int kinds = (replace == null ? 0 : 1) + (after == null ? 0 : 1) + (remove == null ? 0 : 1);
+      if (kinds != 1) {
         throw new Refusal(
-            "each step of a retry has step (the number of the one it replaces) or after (the"
-                + " number of the one it follows), not both or neither.");
+            "each step of a retry has one of step (the number of the one it replaces), after (the"
+                + " number of the one it follows) or remove (the number of the one it drops).");
       }
-      int n = ((Number) (replace != null ? replace : after)).intValue();
+      int n = ((Number) (replace != null ? replace : after != null ? after : remove)).intValue();
       // A step numbered one past the last is a new last step, as after the last one.
       boolean appended = replace != null && n == base.size() + 1;
-      if (n < (replace != null ? 1 : 0) || (n > base.size() && !appended)) {
+      if (n < (after != null ? 0 : 1) || (n > base.size() && !appended)) {
         throw new Refusal(
             "the refused batch has steps 1 to "
                 + base.size()
@@ -97,7 +102,9 @@ final class Batch {
                 + (base.size() + 1)
                 + " adds one at the end).");
       }
-      if (appended) {
+      if (remove != null) {
+        removed.add(n);
+      } else if (appended) {
         if (!step.containsKey("tool")) {
           throw new Refusal("step " + n + " is a new step, so it needs its tool.");
         }
@@ -106,13 +113,17 @@ final class Batch {
         if (!step.containsKey("tool")) {
           step.put("tool", base.get(n - 1).get("tool"));
         }
-        out.set(n - 1, step);
+        replaced.set(n - 1, step);
       } else {
         added.computeIfAbsent(n, k -> new ArrayList<>()).add(step);
       }
     }
-    for (Map.Entry<Integer, List<Map<String, Object>>> e : added.descendingMap().entrySet()) {
-      out.addAll(e.getKey(), e.getValue());
+    List<Map<String, Object>> out = new ArrayList<>(added.getOrDefault(0, List.of()));
+    for (int i = 1; i <= base.size(); i++) {
+      if (!removed.contains(i)) {
+        out.add(replaced.get(i - 1));
+      }
+      out.addAll(added.getOrDefault(i, List.of()));
     }
     return out;
   }
