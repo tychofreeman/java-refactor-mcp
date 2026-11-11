@@ -230,7 +230,7 @@ final class MoveMember {
 
     int ms = m.getStartPosition();
     int me = ms + m.getLength();
-    List<TextEdit> inner = movedEdits(text, m, typeName, sourceKey, isStatic, crosses);
+    List<TextEdit> inner = movedEdits(text, m, typeName, isStatic, crosses);
     List<TextEdit> shifted = new ArrayList<>();
     for (TextEdit e : inner) {
       shifted.add(new TextEdit(e.start() - ms, e.end() - ms, e.text()));
@@ -566,12 +566,7 @@ final class MoveMember {
    * when it moves to another package, {@code crosses}).
    */
   private static List<TextEdit> movedEdits(
-      String text,
-      MethodDeclaration m,
-      String typeName,
-      String sourceKey,
-      boolean isStatic,
-      boolean crosses) {
+      String text, MethodDeclaration m, String typeName, boolean isStatic, boolean crosses) {
     List<TextEdit> out = new ArrayList<>();
     // static goes before the return type; public before the first modifier, or with static when
     // there is none, as one insertion so the two keep that order.
@@ -629,8 +624,7 @@ final class MoveMember {
               public boolean visit(SimpleName node) {
                 if (node.resolveBinding() instanceof IVariableBinding v
                     && v.isField()
-                    && v.getDeclaringClass() != null
-                    && v.getDeclaringClass().getKey().equals(sourceKey)
+                    && reached(v.getDeclaringClass(), m)
                     && !isNamePart(node)) {
                   int s = node.getStartPosition();
                   if (Modifier.isStatic(v.getModifiers())) {
@@ -647,8 +641,7 @@ final class MoveMember {
                 IMethodBinding b = node.resolveMethodBinding();
                 if (node.getExpression() == null
                     && b != null
-                    && b.getDeclaringClass() != null
-                    && b.getDeclaringClass().getKey().equals(sourceKey)) {
+                    && reached(b.getDeclaringClass(), m)) {
                   int s = node.getStartPosition();
                   if (Modifier.isStatic(b.getModifiers())) {
                     out.add(new TextEdit(s, s, typeName + "."));
@@ -842,5 +835,24 @@ final class MoveMember {
       out = out.getDeclaringClass();
     }
     return out;
+  }
+
+  /**
+   * Whether a member {@code declaring} declares is reached through {@code m}'s class without a
+   * qualifier: declared by that class or one of its superclasses, so that it is the instance's own.
+   */
+  private static boolean reached(ITypeBinding declaring, MethodDeclaration m) {
+    if (declaring == null || m.resolveBinding() == null) {
+      return false;
+    }
+    String key = declaring.getErasure().getKey();
+    for (ITypeBinding t = m.resolveBinding().getDeclaringClass();
+        t != null;
+        t = t.getSuperclass()) {
+      if (t.getErasure().getKey().equals(key)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
