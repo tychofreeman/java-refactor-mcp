@@ -74,6 +74,10 @@ class ServerTest {
                 "capabilities", Map.of(),
                 "clientInfo", Map.of("name", "test", "version", "0")));
     assertEquals("java-refactor-mcp", ((Map<?, ?>) result(init).get("serverInfo")).get("name"));
+    // The version a model sees, at the head of the instructions (#346).
+    assertTrue(
+        String.valueOf(result(init).get("instructions")).startsWith("java-refactor-mcp devel. "),
+        () -> String.valueOf(result(init).get("instructions")));
     send(Map.of("jsonrpc", "2.0", "method", "notifications/initialized"));
   }
 

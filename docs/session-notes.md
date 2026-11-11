@@ -15,6 +15,9 @@ fact here becomes wrong, fix or remove it in the same PR.
   commits, then delete the PR's branch (78 merged branches had piled up by
   2026-11-04; deleting them in bulk from a session was refused as destructive,
   so the user deletes them).
+- The version a model sees heads the server's instructions, `java-refactor-mcp 0.30.2. ...`
+  (`Server.instructions()`, #346, the user's choice of 2026-11-11 over a `version` tool):
+  serverInfo carries it too, but a model is not shown that.
 - Releases (2026-11-05, the user): every push to `main` that changes code and
   passes CI is released by the `release` job of `ci.yml`, with the jar attached.
   Label a PR `minor` (a new tool) or `major` to bump that part; otherwise the

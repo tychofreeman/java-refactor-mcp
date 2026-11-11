@@ -187,7 +187,7 @@ public final class Server {
     var spec =
         McpServer.sync(new StdioServerTransportProvider(json, in, out))
             .serverInfo(NAME, version())
-            .instructions(INSTRUCTIONS)
+            .instructions(instructions())
             .capabilities(ServerCapabilities.builder().tools(false).build());
     for (Tools.Def def : Tools.ALL) {
       spec.toolCall(
@@ -251,5 +251,13 @@ public final class Server {
     } finally {
       quiet.calls.decrementAndGet();
     }
+  }
+
+  /**
+   * The instructions sent at connect: the server's name and version first, so a model knows which
+   * build it talks to (#346), then {@link #INSTRUCTIONS}.
+   */
+  static String instructions() {
+    return NAME + " " + version() + ". " + INSTRUCTIONS;
   }
 }
