@@ -287,6 +287,10 @@ Each was chosen from options; the record named beside it has the options it beat
   found by the record's binding key in one `parseAll`; `value_semantics=true` accepts the
   changed `toString` (the user's choice; the options it beat are in the contract).
 
+- `move` of a method takes the private methods only it calls along (#317, 2026-11-10, the user:
+  "if it doesn't break anything"): `MoveMember.along` orders them callees first, and
+  `withAlong` moves each by its own `run` in the same call, so one undo reverts all. Over a list
+  of members to move together (the issue's other idea). Not fields: those stay refused.
 - `move` keeps the `receiver` parameter even when the moved body does not use it (the user,
   2026-11-10, #330): over dropping it, which would also stop a null instance from failing at the
   call. `remove_parameter` drops it after, when the model wants that.

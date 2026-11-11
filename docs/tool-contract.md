@@ -1102,7 +1102,10 @@ Refusals: an override, a method another class overrides, a constructor, no body,
 method reference to it, a call of itself, super, an anonymous or local class in the body, a use of
 a private method or field of its class that stays behind, when the target is outside that class
 (#317: "Main.renameAll uses Main.carryOut, private to Main, which Renamer cannot reach: move
-Main.carryOut to Renamer first (a batch can hold both moves, that one before this)"), a call from
+Main.carryOut to Renamer first (a batch can hold both moves, that one before this)"; since
+2026-11-10, the user's "yes, if it doesn't break anything", private methods that only the moved
+one calls, directly or through each other, move first in the same call, each by its own move, and
+the result names them; the refusal stays for one called from elsewhere or in a cycle), a call from
 another class with no instance, a nested call inside an argument, and the gate's "would add compile
 errors". A null instance that the method dereferences fails inside it, not at the call.
 
