@@ -1052,3 +1052,10 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   generated accessor) is a read.
 - Both were done with edits instead: `add_declaration` of a `Read` and a `Rewrite` record and the
   methods, `replace_statements` of the branch, and `replace_text` for the uses.
+
+## 2026-11-10: a batch step with its arguments beside "tool" (SafeDelete, #322)
+
+- A `batch` whose steps were `{"tool": "replace_text", "file": ..., "old": ..., "new": ...}`
+  was refused "step 1 of 5 (replace_text) refused: replace_text needs file." The step had a
+  file, beside `tool` rather than in `args`. Wanted: a step with no `args` takes its other keys
+  as the arguments, or the refusal says to put them in `"args"`.
