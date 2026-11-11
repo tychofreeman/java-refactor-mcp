@@ -4,12 +4,16 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BreakStatement;
+import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IBinding;
@@ -17,6 +21,8 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.LabeledStatement;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NumberLiteral;
@@ -24,9 +30,12 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -53,9 +62,9 @@ final class ConvertLoop {
             () -> line != null,
             () -> "convert_loop needs line, the 1-based line the loop starts on."),
         Precondition.that(
-            () -> List.of("for_each", "iterator", "for").contains(to),
+            () -> List.of("for_each", "iterator", "for", "while").contains(to),
             () ->
-                "convert_loop takes to=for_each, iterator or for; to="
+                "convert_loop takes to=for_each, iterator, for or while; to="
                     + to
                     + " is not built yet."));
     Opened opened = Opened.of(project, rel);
@@ -88,19 +97,25 @@ final class ConvertLoop {
           indexed != null
               ? indexToEach(text, indexed, edits)
               : iteratorToEach(text, f, line, edits);
-    } else if (loop instanceof ForStatement) {
+    } else if (loop instanceof ForStatement f && to.equals("while")) {
+      said = forToWhile(text, f, edits);
+    } else if (loop instanceof WhileStatement w && to.equals("for")) {
+      said = whileToFor(text, w, edits);
+    } else if (loop instanceof DoStatement) {
       throw new Refusal(
-          "convert_loop takes a for to for_each only, for now. Convert it to for_each first, then"
-              + " to "
-              + to
-              + ".");
+          "the loop at line " + line + " is a do-while, which convert_loop does not take yet.");
     } else {
+      String form = loop instanceof ForStatement ? "for" : "while";
       throw new Refusal(
-          "the loop at line "
-              + line
-              + " is a "
-              + (loop instanceof WhileStatement ? "while" : "do-while")
-              + ", which convert_loop does not take yet.");
+          form.equals(to)
+              ? "the loop at line " + line + " is already a " + to + "."
+              : "convert_loop takes a "
+                  + form
+                  + " to "
+                  + (form.equals("for") ? "for_each or while" : "for")
+                  + ". Convert it in two steps, through "
+                  + (form.equals("for") ? "for_each" : "for")
+                  + ".");
     }
     edits.sort(Comparator.comparingInt(Edit::start).reversed());
     StringBuilder updated = new StringBuilder(text);
@@ -592,5 +607,277 @@ final class ConvertLoop {
 
   private static String source(String text, ASTNode node) {
     return text.substring(node.getStartPosition(), Nodes.end(node));
+  }
+
+  /**
+   * A for to a while: {@code for (init; cond; update) body} becomes {@code init; while (cond) {
+   * body; update; }}, the update also written before each {@code continue} of the loop (roadmap
+   * #133). The two go in a block when a statement after the loop names a variable the init
+   * declares, or the loop is not a statement of a block.
+   */
+  private static String forToWhile(String text, ForStatement loop, List<Edit> edits) {
+    Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
+    String indent = Lines.indentOf(text, whole.getStartPosition());
+    int step = step(text);
+    List<String> updates = new ArrayList<>();
+    for (Object u : loop.updaters()) {
+      updates.add(source(text, (ASTNode) u) + ";");
+    }
+    List<String> inits = new ArrayList<>();
+    List<String> declared = new ArrayList<>();
+    for (Object i : loop.initializers()) {
+      inits.add(source(text, (ASTNode) i) + ";");
+      if (i instanceof VariableDeclarationExpression d) {
+        for (Object f : d.fragments()) {
+          declared.add(((VariableDeclarationFragment) f).getName().getIdentifier());
+        }
+      }
+    }
+    boolean wrap =
+        !(whole.getParent() instanceof Block)
+            || (!declared.isEmpty() && namedAfter(whole, declared));
+    Statement body = loop.getBody();
+    if (wrap && !Nodes.all(body, TextBlock.class).isEmpty()) {
+      throw new Refusal(
+          "the loop at line "
+              + Lines.number(text, loop.getStartPosition())
+              + " must go in a block, and it holds a text block, which indenting would change.");
+    }
+    List<Edit> inBody = new ArrayList<>();
+    if (!updates.isEmpty()) {
+      for (ContinueStatement c : continues(body, loop)) {
+        before(text, c, updates, step, inBody);
+      }
+    }
+    String cond = loop.getExpression() == null ? "true" : source(text, loop.getExpression());
+    String bodyText =
+        ends(body) ? within(text, body, inBody) : last(text, whole, body, updates, step, inBody);
+    String label =
+        whole instanceof LabeledStatement l
+            ? text.substring(l.getStartPosition(), loop.getStartPosition())
+            : "";
+    String written = label + "while (" + cond + ") " + bodyText;
+    for (int k = inits.size() - 1; k >= 0; k--) {
+      written = inits.get(k) + "\n" + indent + written;
+    }
+    if (wrap) {
+      String pad = " ".repeat(step);
+      StringBuilder b = new StringBuilder("{\n").append(indent).append(pad);
+      String[] lines = written.split("\n", -1);
+      b.append(lines[0]);
+      for (int k = 1; k < lines.length; k++) {
+        b.append('\n').append(lines[k].isBlank() ? "" : pad + lines[k]);
+      }
+      written = b.append('\n').append(indent).append('}').toString();
+    }
+    edits.add(new Edit(whole.getStartPosition(), Nodes.end(whole), written));
+    return "a while (" + cond + ")" + (wrap ? ", in a block." : ".");
+  }
+
+  /**
+   * A while to a for: the local declared just before it, which the condition reads and nothing
+   * after the loop names, becomes the init; the last statement of the body, when it is an
+   * assignment or an increment and no {@code continue} of the loop skips it, the update.
+   */
+  private static String whileToFor(String text, WhileStatement loop, List<Edit> edits) {
+    Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
+    String cond = source(text, loop.getExpression());
+    String init = "";
+    if (whole.getParent() instanceof Block block) {
+      int at = block.statements().indexOf(whole);
+      if (at > 0
+          && block.statements().get(at - 1) instanceof VariableDeclarationStatement before
+          && before.fragments().size() == 1) {
+        VariableDeclarationFragment f = (VariableDeclarationFragment) before.fragments().get(0);
+        String name = f.getName().getIdentifier();
+        boolean read = false;
+        for (SimpleName n : Nodes.all(loop.getExpression(), SimpleName.class)) {
+          read |= same(n.resolveBinding(), f.resolveBinding());
+        }
+        if (read && f.getInitializer() != null && !namedAfter(whole, List.of(name))) {
+          String s = source(text, before);
+          init = s.substring(0, s.length() - 1).strip();
+          edits.add(
+              new Edit(
+                  Lines.start(text, before.getStartPosition()),
+                  Lines.start(text, whole.getStartPosition()),
+                  ""));
+        }
+      }
+    }
+    String update = "";
+    String kept = "";
+    if (loop.getBody() instanceof Block body && !body.statements().isEmpty()) {
+      Statement lastOne = (Statement) body.statements().get(body.statements().size() - 1);
+      if (lastOne instanceof ExpressionStatement e
+          && (e.getExpression() instanceof Assignment
+              || e.getExpression() instanceof PostfixExpression
+              || (e.getExpression() instanceof PrefixExpression p
+                  && (p.getOperator() == PrefixExpression.Operator.INCREMENT
+                      || p.getOperator() == PrefixExpression.Operator.DECREMENT)))) {
+        if (continues(body, loop).isEmpty()) {
+          update = source(text, e.getExpression());
+          edits.add(
+              new Edit(
+                  Lines.start(text, e.getStartPosition()), Lines.end(text, Nodes.end(e) - 1), ""));
+        } else {
+          kept =
+              " The last statement stays in the body, since a continue in the loop skips it and"
+                  + " would run the update.";
+        }
+      }
+    }
+    String header =
+        "for (" + init + "; " + cond + ";" + (update.isEmpty() ? " " : " " + update) + ")";
+    edits.add(new Edit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
+    return "a " + header + "." + kept;
+  }
+
+  /** Whether a statement after {@code s} in its block names one of {@code names}. */
+  private static boolean namedAfter(Statement s, List<String> names) {
+    if (!(s.getParent() instanceof Block block)) {
+      return false;
+    }
+    List<?> all = block.statements();
+    for (Object later : all.subList(all.indexOf(s) + 1, all.size())) {
+      for (SimpleName n : Nodes.all((ASTNode) later, SimpleName.class)) {
+        if (names.contains(n.getIdentifier())) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** The continue statements in {@code body} that go to the next pass of {@code loop}. */
+  private static List<ContinueStatement> continues(Statement body, Statement loop) {
+    String label =
+        loop.getParent() instanceof LabeledStatement l ? l.getLabel().getIdentifier() : null;
+    List<ContinueStatement> out = new ArrayList<>();
+    for (ContinueStatement c : Nodes.all(body, ContinueStatement.class)) {
+      if (c.getLabel() != null
+          ? c.getLabel().getIdentifier().equals(label)
+          : innermostLoop(c) == loop) {
+        out.add(c);
+      }
+    }
+    return out;
+  }
+
+  /** The loop an unlabeled continue in {@code n} goes to, or null past a lambda or a class. */
+  private static ASTNode innermostLoop(ASTNode n) {
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      if (p instanceof ForStatement
+          || p instanceof EnhancedForStatement
+          || p instanceof WhileStatement
+          || p instanceof DoStatement) {
+        return p;
+      }
+      if (p instanceof LambdaExpression || p instanceof AbstractTypeDeclaration) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** Edits that run {@code statements} just before {@code c}, in braces when it has none. */
+  private static void before(
+      String text, ContinueStatement c, List<String> statements, int step, List<Edit> edits) {
+    if (c.getParent() instanceof Block) {
+      String indent = Lines.indentOf(text, c.getStartPosition());
+      StringBuilder b = new StringBuilder();
+      for (String s : statements) {
+        b.append(s).append('\n').append(indent);
+      }
+      edits.add(new Edit(c.getStartPosition(), c.getStartPosition(), b.toString()));
+      return;
+    }
+    String outer = Lines.indentOf(text, c.getParent().getStartPosition());
+    String inner = outer + " ".repeat(step);
+    StringBuilder b = new StringBuilder("{\n");
+    for (String s : statements) {
+      b.append(inner).append(s).append('\n');
+    }
+    b.append(inner).append(source(text, c)).append('\n').append(outer).append('}');
+    edits.add(new Edit(c.getStartPosition(), Nodes.end(c), b.toString()));
+  }
+
+  /**
+   * Whether the last statement of {@code body} cannot be followed: a return, throw, break or
+   * continue.
+   */
+  private static boolean ends(Statement body) {
+    Statement last = body;
+    if (body instanceof Block block) {
+      if (block.statements().isEmpty()) {
+        return false;
+      }
+      last = (Statement) block.statements().get(block.statements().size() - 1);
+    }
+    return last instanceof ReturnStatement
+        || last instanceof ThrowStatement
+        || last instanceof BreakStatement
+        || last instanceof ContinueStatement;
+  }
+
+  /** {@code body}'s source with {@code edits}, which all fall inside it, applied. */
+  private static String within(String text, Statement body, List<Edit> edits) {
+    List<Edit> sorted = new ArrayList<>(edits);
+    sorted.sort(Comparator.comparingInt(Edit::start).reversed());
+    StringBuilder b = new StringBuilder(source(text, body));
+    for (Edit e : sorted) {
+      b.replace(e.start() - body.getStartPosition(), e.end() - body.getStartPosition(), e.text());
+    }
+    return b.toString();
+  }
+
+  /**
+   * {@code body}'s source with {@code edits} applied and {@code statements} last: before the
+   * closing brace of a block that has it on a line of its own, else in a new block.
+   */
+  private static String last(
+      String text,
+      Statement whole,
+      Statement body,
+      List<String> statements,
+      int step,
+      List<Edit> edits) {
+    String indent = Lines.indentOf(text, whole.getStartPosition());
+    String inner = indent + " ".repeat(step);
+    String applied = within(text, body, edits);
+    StringBuilder add = new StringBuilder();
+    if (body instanceof Block block
+        && !block.statements().isEmpty()
+        && Lines.number(text, Nodes.end(block) - 1)
+            != Lines.number(
+                text, Nodes.end((ASTNode) block.statements().get(block.statements().size() - 1)))) {
+      String at =
+          Lines.indentOf(
+              text,
+              ((Statement) block.statements().get(block.statements().size() - 1))
+                  .getStartPosition());
+      for (String s : statements) {
+        add.append(at).append(s).append('\n');
+      }
+      int close = applied.lastIndexOf('}');
+      int lineStart = applied.lastIndexOf('\n', close) + 1;
+      return applied.substring(0, lineStart) + add + applied.substring(lineStart);
+    }
+    String rest =
+        body instanceof Block
+            ? applied.substring(1, applied.length() - 1).strip()
+            : applied.strip();
+    add.append("{\n");
+    if (!rest.isEmpty()) {
+      add.append(LoopToStream.reindent(rest, inner)).append('\n');
+    }
+    for (String s : statements) {
+      add.append(inner).append(s).append('\n');
+    }
+    return add.append(indent).append('}').toString();
+  }
+
+  private static int step(String text) {
+    return Declarations.step(text) > 0 ? Declarations.step(text) : 4;
   }
 }

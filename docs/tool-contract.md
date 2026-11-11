@@ -1081,7 +1081,7 @@ and other results are not built yet"); a checked exception the body does not cat
 changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
 catches a local read in the body that is not effectively final.
 
-## `convert_loop` (in progress: `for_each`, `iterator`, `for`)
+## `convert_loop` (in progress: `for_each`, `iterator`, `for`, `while`)
 
 Arguments: `file`, `line` (the line the loop starts on), `to`, `preserve_exceptions`. A loop
 becomes another statement form running the same code in the same order (the user, 2026-11-10:
@@ -1107,9 +1107,21 @@ statement forms here, the functional ones in `loop_to_stream`). Built so far:
 
 A label stays on the loop; `break` and `continue` keep their meaning in every pair. Result:
 `rewrote the loop at line N of <file> as a for (String name : names).` Refusals: no loop on the
-line; a `to` not yet built; `while` and `do`-`while` (not yet: increments 2 and 6 of
-`docs/sessions/convert-loop-sketch.md`, roadmap #133 and #134); a for that is neither shape; a
-for to anything but `for_each` ("Convert it to for_each first"); an enhanced for to `for_each`.
+line; a `to` not yet built; a `do`-`while` (not yet: increment 6 of
+`docs/sessions/convert-loop-sketch.md`, roadmap #134); a for that is neither shape; a pair not
+built ("Convert it in two steps, through for_each" or "through for"); a loop already in the form.
+
+- `to=while` from a for: `for (init; cond; update) body` becomes `init; while (cond) { body
+  update; }`, each init and update a statement of its own, `while (true)` for a for with no
+  condition (roadmap #133, 2026-11-11). The update also goes before each `continue` of the loop
+  (unlabeled in no inner loop, or naming its label), in braces when the continue has none; it is
+  not written last when the body ends in a return, throw, break or continue. The init and the
+  while go in a block when a statement after the loop names a variable the init declares, or the
+  loop is not a statement of a block; a label stays on the while.
+- `to=for` from a while: the local declared just before it, which the condition reads and no
+  statement after the loop names, becomes the init; the body's last statement, an assignment or
+  an increment, becomes the update unless a `continue` of the loop would skip it (the result says
+  it stays in the body). `for (; cond; update)` and `for (init; cond; )` when one is missing.
 
 ## `invert_if` (built)
 Inverts an if that has an else: the branches swap and the condition is negated. Arguments: `file`,

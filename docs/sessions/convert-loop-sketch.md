@@ -100,7 +100,7 @@ The type check catches little here; most hazards compile. Each needs a rule and 
 1. Index `for` and `iterator` to and from `for_each`: the most common conversion, and the
    model's `Range` and `Elements` readers. Done 2026-11-11 (`ConvertLoop`), reading each form
    directly; the `LoopShape` model waits for `while`, the first form with no elements.
-2. `for` and `while`, both ways.
+2. `for` and `while`, both ways. Done 2026-11-11 with roadmap #133 (`forToWhile`, `whileToFor`).
 3. `for_each` to and from `forEach` (and a `Map`'s `entrySet()` loop to `map.forEach`).
 4. `for_each` to `stream` for #294's shapes: `forEach`, `map` + `toList` or `collect`, `filter`,
    `flatMap`, then the sums, `count` and the matches.
