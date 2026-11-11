@@ -1066,3 +1066,11 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   refused: "MoveMember.mayBeNull uses the name receiver, which move gives the receiver parameter.
   Rename it first." A static method gets no receiver parameter, so the name is free. Done with
   `rename` of the parameter in the same batch, then `move`.
+
+## 2026-11-11: a pushed commit that did not compile stopped bin/jrefactor (#345)
+
+- A commit with a `-Werror` warning (a raw `stream()`) was pushed: `./mvnw verify` failed but
+  the shell chain went on with `;`. `bin/jrefactor` rebuilds its jar from the newest commit, so
+  every later call failed ("build failed"), and the two fixes (the cast, and the holder-name check
+  that took a method `report` for a clash) were made with `sed`. No tool sequence applies: the
+  tools themselves could not start. Lesson for sessions: chain verify and commit with `&&`.

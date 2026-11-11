@@ -392,10 +392,18 @@ not published; the text below uses them where it was written with them.
   class `<struct>` in a file of its own, their Javadoc and modifiers but
   `private` kept; the class holds one in `private final <Struct> <field> = new
   <Struct>();` in the first field's place, and every use becomes `field.x`.
+  Final fields without an initializer (#345, 2026-11-11) are set by each constructor
+  that does not call `this(...)`: the new class gets a constructor taking them in
+  order, the holder is declared without an initializer, and the first of a
+  constructor's `this.f = e;` statements becomes `this.field = new <Struct>(e1, e2);`,
+  the others removed. Each `e` must read only the constructor's parameters (never
+  assigned) and constants, and call or create nothing.
   Refused: a field used outside its class ("street is used in Other.java line 5
   ... Encapsulate them first"), an initializer that reads anything but constants
-  (new objects of constants are fine), a final field without an initializer, a
-  static field, a holder name the class already uses. Result: `moved street and
+  (new objects of constants are fine), a constructor that does not set such a field
+  in a statement of its own body, sets it twice, sets it to more than parameters and
+  constants ("the constructor at line 10 sets err to wrap(err), ..."), or reads one of
+  the fields between setting them, a static field, a holder name the class already uses. Result: `moved street and
   city of Person into Address (com/example/Address.java), held in home`.
 - On a record (`name` a top-level record, roadmap #118): the named components, next
   to each other, become one component `<Struct> <field>` of a new record in a file
