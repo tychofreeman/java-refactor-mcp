@@ -522,7 +522,10 @@ final class Tools {
           swap order: pass it only when the order of the calls does not matter.
           A return, break, continue, throw or yield never moves, and neither a statement with a \
           side effect nor one that may throw moves past one that may leave the block early (an \
-          if that returns), nor a call past a read of what it could change.\
+          if that returns), nor a call past a read of what it could change. past_try=true moves \
+          a statement past a try next to it though their effects are ordered (they still share \
+          no written name): below the try it then runs only when the try completes normally, \
+          and the result says so.\
           """,
           List.of(
               Arg.FILE,
@@ -536,7 +539,11 @@ final class Tools {
               Arg.bool(
                   "names_only",
                   "Relax the side-effect rule: only a shared name that one statement "
-                      + "writes refuses the swap.")),
+                      + "writes refuses the swap."),
+              Arg.bool(
+                  "past_try",
+                  "Swap a statement with a try next to it whatever their side effects, and say"
+                      + " what changes.")),
           Kind.REFACTORING,
           Tools::moveStatement);
 
@@ -1466,7 +1473,8 @@ final class Tools {
         args.required("file"),
         args.integer("line"),
         args.required("direction"),
-        args.flag("names_only"));
+        args.flag("names_only"),
+        args.flag("past_try"));
   }
 
   private static Outcome invertIf(SourceProject project, Args args) throws Exception {

@@ -94,6 +94,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `remove_parameter` with `value` (#315, 2026-11-11, the user, after a before/after example):
   an option, over a `parameter_to_field` tool; `Signatures.removeWithValue` compares each call's
   argument with the field by binding key and the call's receiver.
+- `move_statement` with `past_try` (#343, 2026-11-11, the user: option (a), over keeping the
+  refusal or only rewording it): the one option that changes behavior on purpose; it skips the
+  behavior gate and names the change in the result (`MoveStatement.pastTryNote`).
 - `move_type` is its own tool, and widens private members used across the
   boundary rather than refusing.
 - A failed Maven classpath keeps the server serving and names the cause in

@@ -1,0 +1,1 @@
+past_try applies when one of the two statements is a try
