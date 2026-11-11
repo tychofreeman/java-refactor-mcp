@@ -382,7 +382,7 @@ final class Extract {
     ITypeBinding[] arguments = b.getTypeArguments();
     List<String> names = new ArrayList<>();
     for (int i = 0; i < arguments.length; i++) {
-      ITypeBinding a = arguments[i];
+      ITypeBinding a = arguments[i].isCapture() ? arguments[i].getWildcard() : arguments[i];
       if (a.isWildcardType()) {
         ITypeBinding bound = a.getBound();
         if (bound == null && i < parameters.length && parameters[i].getTypeBounds().length > 0) {

@@ -21,10 +21,12 @@ import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
@@ -228,7 +230,12 @@ final class Fold {
       String qualifier =
           instance || sameType(c.root(), mb.getDeclaringClass()) ? "" : typeName + ".";
       String replacement =
-          qualifier + methodName + "(" + String.join(", ", argTexts) + ")" + (returns ? "" : ";");
+          qualifier
+              + methodName
+              + "("
+              + String.join(", ", argTexts)
+              + ")"
+              + (returns || c.block() == null ? "" : ";");
       edits
           .computeIfAbsent(c.file(), k -> new ArrayList<>())
           .add(new TextEdit(c.start(), c.end(), replacement));
@@ -351,6 +358,28 @@ final class Fold {
             }
             if (!returns && n instanceof Block b) {
               matchRuns(file, unit, b, pattern, params, bodyLocals, found);
+            }
+            // A lambda's expression body is a statement too: s -> err.println(s).
+            if (!returns
+                && pattern.size() == 1
+                && pattern.get(0) instanceof ExpressionStatement only
+                && n instanceof LambdaExpression l
+                && l.getBody() instanceof Expression x) {
+              Holes h = new Holes(params, bodyLocals);
+              if (only.getExpression().subtreeMatch(h, x)) {
+                found.add(
+                    new Candidate(
+                        file,
+                        unit,
+                        x,
+                        x,
+                        x.getStartPosition(),
+                        Nodes.end(x),
+                        h.args,
+                        Set.of(),
+                        null,
+                        0));
+              }
             }
             return true;
           }

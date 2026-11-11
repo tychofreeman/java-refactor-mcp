@@ -339,12 +339,6 @@ final class ConvertLambda {
     if (sam == null || lb == null) {
       throw new Refusal("the lambda's type does not resolve, so its class cannot be written.");
     }
-    for (ITypeBinding arg : fi.getTypeArguments()) {
-      if (arg.isWildcardType() || arg.isCapture()) {
-        throw new Refusal(
-            "the lambda's type has a wildcard, which an anonymous class cannot name. Keep it.");
-      }
-    }
     refuseSelf(l.getBody(), fi, "lambda", "an anonymous class");
     String ind = Lines.indentOf(text, l.getStartPosition());
     List<String> params = new ArrayList<>();
@@ -372,8 +366,9 @@ final class ConvertLambda {
               + ind
               + "  }";
     }
+    // A wildcard in the target type takes its bound: an anonymous class names one type.
     return "new "
-        + Extract.typeName(fi)
+        + Extract.groundTypeName(fi)
         + "() {\n"
         + ind
         + "  @Override\n"
