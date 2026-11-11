@@ -462,7 +462,10 @@ Roadmap #90, 2026-11-04 (gorefactor's `method_to_function`, `function_to_method`
 
 - Instance to static in place: `move_member` with `to` the method's own class; the
   method becomes `static`, takes the instance as `receiver`, and calls pass it
-  (`Price.charge(this, a)`), as it does for another class.
+  (`Price.charge(this, a)`), as it does for another class. A field or method the instance
+  has, its class's or a superclass's, is read through `receiver` (#330, 2026-11-10: an
+  inherited one had been left bare, and moving to the superclass that declares it failed the
+  type check).
 - `function_to_method`: `file`, `name` (a static method whose first parameter is
   of its own class), `imports`. `static int area(Shape s, int k)` becomes `int
   area(int k)`, `s` becomes `this` in the body, and `Shape.area(x, 3)` becomes
