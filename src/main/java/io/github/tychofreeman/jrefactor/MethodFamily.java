@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
@@ -77,6 +78,9 @@ final class MethodFamily {
       throw new Refusal(rel + " is not a Java file under a source root.");
     }
     Declarations.Named named = Declarations.find(home.unit(), args.required("name"), rel);
+    if (named.decl() instanceof AbstractTypeDeclaration type) {
+      named = constructorOf(home.unit(), type, args.required("name"), rel);
+    }
     if (!(named.decl() instanceof MethodDeclaration target)) {
       throw new Refusal(named.label() + " is not a method or constructor.");
     }
@@ -370,5 +374,22 @@ final class MethodFamily {
                 }
               });
     }
+  }
+
+  /** The constructor of {@code type}, named {@code name} as a type: refused when it has none. */
+  private static Declarations.Named constructorOf(
+      CompilationUnit unit, AbstractTypeDeclaration type, String name, String rel) {
+    String simple = type.getName().getIdentifier();
+    boolean any = false;
+    for (Object o : type.bodyDeclarations()) {
+      any |= o instanceof MethodDeclaration m && m.isConstructor();
+    }
+    if (!any) {
+      throw new Refusal(
+          simple
+              + " declares no constructor. Add one with add_declaration (constructor), then"
+              + " change it.");
+    }
+    return Declarations.find(unit, name + "." + simple, rel);
   }
 }

@@ -15,12 +15,12 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -29,13 +29,11 @@ import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
-import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
@@ -124,6 +122,9 @@ final class MoveMember {
         Precondition.that(
             () -> target != null && target.resolveBinding() != null,
             () -> to + " is not a class of " + project.relative(targetFile) + " that resolves."));
+    if (!sameTopLevel(method.getDeclaringClass(), target.resolveBinding())) {
+      checkPrivateUses(m, method, typeName, to, name);
+    }
     boolean crosses = !Objects.equals(project.packageOf(file), project.packageOf(targetFile));
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
@@ -192,7 +193,7 @@ final class MoveMember {
         if (site.getExpression() != null) {
           fragments.add(site.getExpression());
         }
-        if (!isStatic && site.getExpression() != null && mayBeNull(site.getExpression())) {
+        if (!isStatic && site.getExpression() != null && NonNull.mayBeNull(site.getExpression())) {
           nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
         list.add(
@@ -691,7 +692,7 @@ final class MoveMember {
       if (expr != null) {
         // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
         parts.add(
-            keep && mayBeNull(expr)
+            keep && NonNull.mayBeNull(expr)
                 ? "java.util.Objects.requireNonNull(" + source(fileText, expr) + ")"
                 : source(fileText, expr));
       } else {
@@ -742,14 +743,6 @@ final class MoveMember {
         s, s + site.getLength(), to + "." + member + "(" + String.join(", ", parts) + ")");
   }
 
-  /** Whether {@code receiver} may be null: anything but this, a new object or a literal. */
-  private static boolean mayBeNull(Expression receiver) {
-    return !(receiver instanceof ThisExpression
-        || receiver instanceof ClassInstanceCreation
-        || receiver instanceof StringLiteral
-        || receiver instanceof TypeLiteral);
-  }
-
   private static boolean callsMember(Expression arg, String key) {
     for (MethodInvocation node : Nodes.all(arg, MethodInvocation.class)) {
       IMethodBinding b = node.resolveMethodBinding();
@@ -771,5 +764,83 @@ final class MoveMember {
 
   private static String source(String text, ASTNode node) {
     return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
+  }
+
+  /**
+   * Refuses a move whose body uses a private member of its class that stays behind, which the
+   * target cannot reach: it names the methods to move first (or with it, in one batch) and the
+   * fields to widen.
+   */
+  private static void checkPrivateUses(
+      MethodDeclaration m, IMethodBinding method, String typeName, String to, String name) {
+    String sourceKey = method.getDeclaringClass().getKey();
+    java.util.Set<String> methods = new java.util.LinkedHashSet<>();
+    java.util.Set<String> fields = new java.util.LinkedHashSet<>();
+    for (MethodInvocation call : Nodes.all(m.getBody(), MethodInvocation.class)) {
+      IMethodBinding b = call.resolveMethodBinding();
+      if (b != null
+          && !b.getKey().equals(method.getKey())
+          && Modifier.isPrivate(b.getModifiers())
+          && b.getDeclaringClass() != null
+          && b.getDeclaringClass().getKey().equals(sourceKey)) {
+        methods.add(typeName + "." + b.getName());
+      }
+    }
+    for (SimpleName n : Nodes.all(m.getBody(), SimpleName.class)) {
+      if (n.resolveBinding() instanceof IVariableBinding v
+          && v.isField()
+          && Modifier.isPrivate(v.getModifiers())
+          && v.getDeclaringClass() != null
+          && v.getDeclaringClass().getKey().equals(sourceKey)) {
+        fields.add(typeName + "." + v.getName());
+      }
+    }
+    if (methods.isEmpty() && fields.isEmpty()) {
+      return;
+    }
+    List<String> fixes = new ArrayList<>();
+    if (!methods.isEmpty()) {
+      fixes.add(
+          "move "
+              + String.join(" and ", methods)
+              + " to "
+              + to
+              + " first (a batch can hold both moves, that one before this)");
+    }
+    if (!fields.isEmpty()) {
+      fixes.add("make " + String.join(" and ", fields) + " package-private first");
+    }
+    throw new Refusal(
+        name
+            + " uses "
+            + String.join(", ", concat(methods, fields))
+            + ", private to "
+            + typeName
+            + ", which "
+            + to
+            + " cannot reach: "
+            + String.join("; or ", fixes)
+            + ".");
+  }
+
+  private static List<String> concat(java.util.Set<String> a, java.util.Set<String> b) {
+    List<String> out = new ArrayList<>(a);
+    out.addAll(b);
+    return out;
+  }
+
+  /**
+   * Whether {@code a} and {@code b} are in one top-level type, whose private members both reach.
+   */
+  private static boolean sameTopLevel(ITypeBinding a, ITypeBinding b) {
+    return outermost(a).getKey().equals(outermost(b).getKey());
+  }
+
+  private static ITypeBinding outermost(ITypeBinding t) {
+    ITypeBinding out = t;
+    while (out.getDeclaringClass() != null) {
+      out = out.getDeclaringClass();
+    }
+    return out;
   }
 }

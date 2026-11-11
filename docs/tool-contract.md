@@ -285,10 +285,13 @@ a method at its end; 2026-11-07); imports are fixed in both files.
 A name that is both a field and a method is refused; a field with other variables
 in its declaration is refused (move one variable per declaration).
 Calls need no change, since `Sub` inherits the method.
-
+A method the supertype declares abstract with the same signature takes that declaration's
+place (#320, 2026-11-10): its Javadoc stays, and `@Override` goes unless the abstract one had
+it; the supertype's other subclasses keep their overrides. The supertype stays abstract; when
+nothing else in it is, the result says it could be made a concrete class.
 - Refused: no superclass and no `to`; `to` that is not a direct supertype; a
   supertype outside the project's sources; a method the supertype already
-  declares (the same signature); a method that overrides a concrete method the
+  declares (the same signature) other than abstractly; a method that overrides a concrete method the
   supertype inherits (`Root.name()` for `Base extends Root`: `Base` and its other
   subclasses would run the pulled body); a bare name that matches several overloads,
   which are listed (name one with its parameter types, `Sub.hello(int)`); a
@@ -699,7 +702,9 @@ failures start `engine error (not a refusal; ...)`.
 
 `add_parameter`, `remove_parameter`, `move_parameter` (roadmap #22). Each takes
 `file` (the declaring file) and `name` (as `replace_declaration`: `Type.member`,
-`member`, `m(int, String)` for an overload; a constructor by its type's name),
+`member`, `m(int, String)` for an overload; a constructor by its type's name, `Renamer`,
+also for a class (#331, 2026-11-10: it found the class, "Renamer is not a method or
+constructor"; a class with several constructors lists them, one with none is refused),
 and `parameter`. In place of `name` (2026-11-08, roadmap #130, the user's choice over the
 declaration's line only), `line` of `file` finds the method from its declaration on that line,
 else from the one project method the line's calls call (`m(...)`, `super.m(...)`, `new T(...)`,
@@ -1081,7 +1086,10 @@ widened to package access (named in the result). Result: `moved Type.m to T in f
 in K files`, with `; private widened to package access` when so.
 
 Refusals: an override, a method another class overrides, a constructor, no body, a generic class, a
-method reference to it, a call of itself, super, an anonymous or local class in the body, a call from
+method reference to it, a call of itself, super, an anonymous or local class in the body, a use of
+a private method or field of its class that stays behind, when the target is outside that class
+(#317: "Main.renameAll uses Main.carryOut, private to Main, which Renamer cannot reach: move
+Main.carryOut to Renamer first (a batch can hold both moves, that one before this)"), a call from
 another class with no instance, a nested call inside an argument, and the gate's "would add compile
 errors". A null instance that the method dereferences fails inside it, not at the call.
 
@@ -1107,12 +1115,14 @@ field, and the gate's "would add compile errors".
 
 - `retry` (2026-11-06, the user's choice over keeping the passed steps and over a refusal
   only): after a refused batch, `retry: true` with `steps` of `{"step": N, ...}` (replaces
-  step N; its `tool` kept when left out) and `{"after": N, ...}` (adds a step after step N, 0
-  for first) runs the refused batch with those changes, its check kept unless given; numbers are
+  step N; its `tool` kept when left out, changed when given), `{"after": N, ...}` (adds a step
+  after step N, 0 for first) and `{"remove": N}` (drops step N; with an `after`, moves it, #318)
+  runs the refused batch with those changes, its check kept unless given; numbers are
   the refused batch's, and `step` one past the last adds a new last step (2026-11-06). Nothing
   applies unless every step passes; a batch that passes forgets
   the refused one, and every refused batch ends by saying how to retry. Refused: a retry with no
-  refused batch, a change with both or neither of `step` and `after`, a number outside it.
+  refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
+  it. The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server

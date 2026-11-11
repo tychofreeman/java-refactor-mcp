@@ -131,13 +131,18 @@ Each was chosen from options; the record named beside it has the options it beat
   accepted and ignored (`Tools.RETIRED_ARGS`, dropped by `Args.without` before the argument check).
   A new option that would make the model choose a place is against this choice. A tool that adds
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
-  `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do.
+  `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
+  the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
+  file's step (`MemberMove.reindented`, #316); it had written two spaces.
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
   receiver): matches in instance members of its class and subclasses become `m(...)`, refused
   when the project overrides it (`Fold.overrider`, `Fold.thisOf`).
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+- `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
+  the result says when nothing else in it is (the issue's "or offers to"), over making it
+  concrete there: a class made concrete can then be instantiated, which the model did not ask for.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
@@ -234,6 +239,10 @@ Each was chosen from options; the record named beside it has the options it beat
   from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member
   `pull_up` or `push_down` removes now takes one blank line beside it with it
   (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
+
+- A type written into code names a member type of the type around that code, or of one around
+  that, by its simple name: `Extract.typeName(b, at)` (#328, 2026-11-10; `extract_function`
+  passes the member's type). `Extract.typeName(b)` qualifies every member type.
 
 - `extract_variable` of a lambda or method reference declares the local with its target type's
   wildcards replaced by their bounds (`Extract.groundTypeName`, JLS 9.9; #298): `Function<? super T,

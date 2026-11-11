@@ -265,6 +265,15 @@ final class Extract {
 
   /** {@code b} as source names it, by simple names (imports are fixed after). */
   static String typeName(ITypeBinding b) {
+    return typeName(b, null);
+  }
+
+  /**
+   * {@code b} as code in {@code at} (none when null) names it: a member type of {@code at} or of a
+   * type around it by its simple name, as {@code Rename} inside {@code RenamePlan}, not {@code
+   * RenamePlan.Rename}.
+   */
+  static String typeName(ITypeBinding b, ITypeBinding at) {
     if (b == null || b.isNullType() || b.isRecovered()) {
       return "Object";
     }
@@ -272,32 +281,34 @@ final class Extract {
       return b.getName();
     }
     if (b.isCapture()) {
-      return typeName(b.getErasure());
+      return typeName(b.getErasure(), at);
     }
     if (b.isWildcardType()) {
       ITypeBinding bound = b.getBound();
-      return bound == null ? "?" : (b.isUpperbound() ? "? extends " : "? super ") + typeName(bound);
+      return bound == null
+          ? "?"
+          : (b.isUpperbound() ? "? extends " : "? super ") + typeName(bound, at);
     }
     if (b.isAnonymous()) {
-      return typeName(b.getInterfaces().length > 0 ? b.getInterfaces()[0] : b.getSuperclass());
+      return typeName(b.getInterfaces().length > 0 ? b.getInterfaces()[0] : b.getSuperclass(), at);
     }
     if (b.isArray()) {
-      return typeName(b.getElementType()) + "[]".repeat(b.getDimensions());
+      return typeName(b.getElementType(), at) + "[]".repeat(b.getDimensions());
     }
     if (b.isIntersectionType()) {
-      return typeName(b.getTypeBounds()[0]);
+      return typeName(b.getTypeBounds()[0], at);
     }
     ITypeBinding erasure = b.getErasure();
     String name = erasure.getName();
     for (ITypeBinding outer = erasure.getDeclaringClass();
-        outer != null && !erasure.isLocal();
+        outer != null && !erasure.isLocal() && !encloses(outer, at);
         outer = outer.getDeclaringClass()) {
       name = outer.getName() + "." + name;
       erasure = outer;
     }
     List<String> arguments = new ArrayList<>();
     for (ITypeBinding argument : b.getTypeArguments()) {
-      arguments.add(typeName(argument));
+      arguments.add(typeName(argument, at));
     }
     return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
   }
@@ -367,5 +378,15 @@ final class Extract {
       }
     }
     return typeName(b.getErasure()) + "<" + String.join(", ", names) + ">";
+  }
+
+  /** Whether {@code outer} is {@code at} or a type around it. */
+  private static boolean encloses(ITypeBinding outer, ITypeBinding at) {
+    for (ITypeBinding t = at; t != null; t = t.getDeclaringClass()) {
+      if (t.getErasure().getKey().equals(outer.getErasure().getKey())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

@@ -1059,3 +1059,10 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   was refused "step 1 of 5 (replace_text) refused: replace_text needs file." The step had a
   file, beside `tool` rather than in `args`. Wanted: a step with no `args` takes its other keys
   as the arguments, or the refusal says to put them in `"args"`.
+
+## 2026-11-10: move of a static method refused for a parameter named receiver
+
+- Moving `MoveMember.mayBeNull(Expression receiver)`, a static method, to a new `NonNull` was
+  refused: "MoveMember.mayBeNull uses the name receiver, which move gives the receiver parameter.
+  Rename it first." A static method gets no receiver parameter, so the name is free. Done with
+  `rename` of the parameter in the same batch, then `move`.
