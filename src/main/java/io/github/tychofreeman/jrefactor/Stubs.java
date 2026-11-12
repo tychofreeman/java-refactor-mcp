@@ -97,10 +97,12 @@ final class Stubs {
     for (int i = 0; i < ROUNDS && !introduced.isEmpty(); i++) {
       round.wanted.clear();
       round.wantedUses.clear();
+      boolean moved = false;
       for (Path file : files(project, introduced)) {
+        moved |= FieldOrder.fix(project, file, old);
         round.find(file);
       }
-      if (round.wanted.isEmpty()) {
+      if (round.wanted.isEmpty() && !moved) {
         break;
       }
       for (Map.Entry<Path, List<Stub>> target : round.wanted.entrySet()) {

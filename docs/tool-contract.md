@@ -669,7 +669,9 @@ in the same turn only if it is sent after it.
   placed by kind (the user, 2026-11-07): a field or initializer after the type's last field, a
   constructor after its last constructor or field, either before its first member when it has
   none of those, and any other member at its end; members of one kind keep their order in
-  `content`, and each place is a part of the result. `after` and `before` (a member name, until
+  `content`, and each place is a part of the result. A field an edit adds that an earlier
+  field's initializer reads (in the same call, or by a batch's end) moves to just before that
+  field (#357, `FieldOrder`), so it is never read before it is defined. `after` and `before` (a member name, until
   then) are accepted and ignored (`Tools.RETIRED_ARGS`). A method with the same name
   and parameter types, compared erased (`List` and `List<?>`, roadmap #107), whose body is
   only `throw new UnsupportedOperationException("not implemented")` is replaced, and so is a

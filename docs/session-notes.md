@@ -146,7 +146,9 @@ Each was chosen from options; the record named beside it has the options it beat
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
   the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
-  file's step (`MemberMove.reindented`, #316); it had written two spaces.
+  file's step (`MemberMove.reindented`, #316); it had written two spaces. A field an edit adds
+  that an earlier field's initializer reads moves before that field (`FieldOrder`, called in
+  `Stubs.declare`, #357), so the repair also sees a reader a later batch step writes.
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
   receiver): matches in instance members of its class and subclasses become `m(...)`, refused
   when the project overrides it (`Fold.overrider`, `Fold.thisOf`).
