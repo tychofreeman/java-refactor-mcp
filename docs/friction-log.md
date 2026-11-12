@@ -1091,3 +1091,7 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   Placement by kind puts a new field after the last field; a static field another static field's
   initializer reads must come before it. Done with `replace_text` before `REMOVE_ELSE`. Wanted:
   `Placement.place` puts a static field before the first static field whose initializer reads it.
+
+Follow-up (2026-11-11, issue #357, `docs/sessions/place-before-reader.md`): a field an edit adds
+moves before the field whose initializer reads it, when the check finds the forward reference;
+not in placement, since in a batch the reader may name it only in a later step.

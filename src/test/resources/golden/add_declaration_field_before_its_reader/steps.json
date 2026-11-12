@@ -1,0 +1,4 @@
+[
+  {"tool": "add_declaration", "args": {"file": "com/example/Tools.java", "content": "static final String MOVE = \"move\";\n"}},
+  {"tool": "replace_text", "args": {"file": "com/example/Tools.java", "old": "List.of(RENAME)", "new": "List.of(RENAME, MOVE)"}}
+]
