@@ -1084,6 +1084,10 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   as an instance one. Done instead by widening the helpers in place (`replace_text` of
   `private`), which `ConvertLoop` calls as `LoopToStream.elementOf`.
 
+Follow-up (2026-11-11, issue #356, `docs/sessions/move-recursive-static.md`): `move` of a static
+method no longer refuses a call of itself or a parameter named `receiver`; the call moves
+unqualified.
+
 ## 2026-11-11: add_declaration put a Def after the list that names it (convert_loop)
 
 - `add_declaration` of `static final Def CONVERT_LOOP` to `Tools` placed it after `ALL`, whose
@@ -1095,3 +1099,11 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
 Follow-up (2026-11-11, issue #357, `docs/sessions/place-before-reader.md`): a field an edit adds
 moves before the field whose initializer reads it, when the check finds the forward reference;
 not in placement, since in a batch the reader may name it only in a later step.
+
+## 2026-11-11: batch retry from the CLI (move-recursive-static)
+
+- A batch through `bin/jrefactor` was refused (an `old` misquoted), and the refusal said to send
+  `retry: true` with the changed step. The next `bin/jrefactor` run answered "there is no refused
+  batch": `Session.refusedBatch` lives in one process, and the CLI starts one per call. The whole
+  batch was sent again. The CLI's refusal should not offer `retry`, or the CLI should keep the
+  refused batch on disk, as `undo` keeps its journal.

@@ -153,7 +153,10 @@ final class MoveMember {
             @Override
             public boolean visit(MethodInvocation node) {
               IMethodBinding b = node.resolveMethodBinding();
-              if (b != null && b.getKey().equals(key)) {
+              // A call in the moved method itself moves with it: movedEdits writes it.
+              if (b != null
+                  && b.getKey().equals(key)
+                  && !(p.equals(file) && Nodes.within(node, m))) {
                 sites.add(node);
               }
               return true;
@@ -501,6 +504,8 @@ final class MoveMember {
 
   /** The refusals about the body: what its names would mean in the target. */
   private static void checkBody(MethodDeclaration m, IMethodBinding method, String name) {
+    // A static method has no receiver: its own name and its calls of itself move as they are.
+    boolean instance = !Modifier.isStatic(method.getModifiers());
     m.getBody()
         .accept(
             new ASTVisitor() {
@@ -535,7 +540,7 @@ final class MoveMember {
 
               @Override
               public boolean visit(SimpleName node) {
-                if (node.getIdentifier().equals("receiver")) {
+                if (instance && node.getIdentifier().equals("receiver")) {
                   throw new Refusal(
                       name
                           + " uses the name receiver, which move gives the receiver"
@@ -547,7 +552,7 @@ final class MoveMember {
               @Override
               public boolean visit(MethodInvocation node) {
                 IMethodBinding b = node.resolveMethodBinding();
-                if (b != null && b.getKey().equals(method.getKey())) {
+                if (instance && b != null && b.getKey().equals(method.getKey())) {
                   throw new Refusal(
                       name
                           + " calls itself. A recursive call would go through the receiver; move it"
@@ -645,6 +650,7 @@ final class MoveMember {
                 IMethodBinding b = node.resolveMethodBinding();
                 if (node.getExpression() == null
                     && b != null
+                    && !b.getKey().equals(m.resolveBinding().getKey())
                     && reached(b.getDeclaringClass(), m)) {
                   int s = node.getStartPosition();
                   if (Modifier.isStatic(b.getModifiers())) {
@@ -652,6 +658,17 @@ final class MoveMember {
                   } else if (!isStatic) {
                     out.add(new TextEdit(s, s, "receiver."));
                   }
+                }
+                // A static method's call of itself through its class: the class it moves to.
+                if (node.getExpression() != null
+                    && b != null
+                    && isStatic
+                    && b.getKey().equals(m.resolveBinding().getKey())) {
+                  out.add(
+                      new TextEdit(
+                          node.getExpression().getStartPosition(),
+                          node.getName().getStartPosition(),
+                          ""));
                 }
                 return true;
               }
