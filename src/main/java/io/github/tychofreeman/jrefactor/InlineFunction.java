@@ -56,7 +56,6 @@ final class InlineFunction {
 
   private InlineFunction() {}
 
-  /** One use of a parameter in the body: the range of its name and which parameter it is. */
   /**
    * A use of a parameter in the body: where it is, which parameter, and whether it stands alone (a
    * whole argument, return value, initializer or right-hand side), so its argument needs no

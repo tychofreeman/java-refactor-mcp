@@ -68,19 +68,25 @@ jobs:
           echo "Changed files:"; echo "$files"; echo "code=$code"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
+  # On the release's JDK (21) and the latest LTS (25): a later javac adds lint warnings, which
+  # -Werror fails on, and the jar built for 21 must run on both.
   build-and-test:
-    name: Build and test (JDK 21)
+    name: Build and test (JDK ${{ matrix.java }})
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['21', '25']
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: ${{ matrix.java }}
           cache: maven
 
       # Compiles with -Xlint:all -Werror and runs the golden tests.
@@ -180,4 +186,5 @@ jobs:
           start=()
           [ -z "$LAST" ] || start=(--notes-start-tag "$LAST")
           gh release create "$TAG" target/java-refactor-mcp.jar --target "$SHA" --title "$TAG" \
+            --notes "Runs on Java 21 or later; built for 21, tested on 21 and 25." \
             --generate-notes "${start[@]}"

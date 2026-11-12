@@ -138,12 +138,12 @@ working tree first, to probe server code before a commit.
 
 `./mvnw package` (and `verify`) also builds `target/java-refactor-mcp.jar`, the
 server: `java -jar target/java-refactor-mcp.jar <project root>`. CI runs
-`./mvnw verify` on JDK 21 and `spotless:check` on every push to `main` and every
-pull request.
+`./mvnw verify` on JDK 21 and JDK 25, and `spotless:check`, on every push to `main`
+and every pull request; the release jar is built on 21 (`maven.compiler.release`).
 
-- JDK 21 (a full JDK with `javac`, not only the JRE). Maven comes from the
-  wrapper (`.mvn/wrapper/maven-wrapper.properties`). Set `JAVA_HOME` to the
-  JDK 21 if the default `java` is another version.
+- JDK 21 or later (a full JDK with `javac`, not only the JRE). Maven comes from the
+  wrapper (`.mvn/wrapper/maven-wrapper.properties`). Later compilers add lint
+  warnings, which `-Werror` fails on: a change must build on 21 and on 25.
 - Versions are pinned in `pom.xml`; note a bump in `docs/session-notes.md`.
 - In the agent sandbox, Maven does not use the egress proxy by itself, so it fails
   to resolve `repo.maven.apache.org` by name. Fix: a `~/.m2/settings.xml` with an

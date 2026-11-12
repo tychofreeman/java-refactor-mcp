@@ -362,16 +362,15 @@ final class Cli {
     }
   }
 
-  /**
-   * Where undo stacks, classpaths and type checks are kept: {@code $XDG_CACHE_HOME/jrefactor}, or
-   * {@code ~/.cache/jrefactor}.
-   */
   /** The file that keeps the classpath of the project at {@code root} in {@code cacheDir}. */
   static Path classpathCache(Path cacheDir, Path root) {
     return cacheDir.resolve(cacheName(root) + "-classpath.txt");
   }
 
-  /** Where the command line and the server keep their caches (see {@link #cacheDir}). */
+  /**
+   * Where undo stacks, classpaths and type checks are kept: {@code $XDG_CACHE_HOME/jrefactor}, or
+   * {@code ~/.cache/jrefactor}.
+   */
   static Path cacheDir() {
     String cache = System.getenv("XDG_CACHE_HOME");
     Path base =

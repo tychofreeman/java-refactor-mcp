@@ -497,6 +497,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The Maven Wrapper was the user's choice over apt, a tarball or Docker, when
   their machine had no Maven. That machine had only JRE packages, which fails as
   "release version 21 not supported"; the fix is `openjdk-21-jdk-headless`. Its
-  default `java` is 25, so set `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`.
+  default `java` is 25. Since 2026-11-11 the project builds on 25 too, and CI runs `verify` on
+  21 and 25 (the user's choice, `docs/sessions/build-on-jdk25.md`): JDK 25's `javac` warns on
+  a doc comment attached to no declaration, which `-Werror` fails on, so a stray one broke the
+  MCP server's rebuild there. The release jar stays built for 21 and runs on 21 or later.
 - CI skips the build for docs-only changes. Dependabot opens weekly PRs for
   Maven and Actions.

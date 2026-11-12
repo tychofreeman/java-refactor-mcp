@@ -65,8 +65,9 @@ The arguments and results of each are in
 
 ## Requirements
 
-- **Java 21** to run the server. Building it, or using the launcher, needs a
-  full JDK 21 (with `javac`), as `JAVA_HOME` or on `PATH`.
+- **Java 21 or later** to run the server (each release is built for 21 and
+  tested on 21 and 25). Building it, or using the launcher, needs a full JDK
+  21 or later (with `javac`), as `JAVA_HOME` or on `PATH`.
 - **A Maven project:** a `pom.xml` at the root, sources in `src/main/java`
   and `src/test/java`. The server gets the classpath by running the
   project's `./mvnw`, or `mvn` on the `PATH`. Gradle, multi-module builds
@@ -183,8 +184,8 @@ transformations").
   shows whether the server started; a wrong Java version shows up as a
   failed start.
 - **"release version 21 not supported" when building.** The `java` found is
-  a runtime without a compiler, or another version: set `JAVA_HOME` to a
-  JDK 21.
+  a runtime without a compiler, or older than 21: set `JAVA_HOME` to a JDK
+  21 or later.
 
 ## Using the CLI
 
