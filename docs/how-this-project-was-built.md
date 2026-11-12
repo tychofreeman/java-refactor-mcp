@@ -476,3 +476,6 @@ refusal, the shared instructions, or the contract.
 - The A/B runs used one small task set, at parity in cost after the third
   run; whether the tools save cost on larger feature work is not measured
   (gorefactor's `ab-features` set is not ported).
+- Until 2026-11-11 CI built on JDK 21 only, and a warning only JDK 25's compiler raises broke
+  the server's own rebuild on a machine whose default `java` is 25; CI now builds and tests on
+  both (`docs/sessions/build-on-jdk25.md`).
