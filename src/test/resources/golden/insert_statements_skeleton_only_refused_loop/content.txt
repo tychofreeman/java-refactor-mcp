@@ -1,0 +1,3 @@
+for (Order o : orders) {
+  total = total.plus(o.amount());
+}

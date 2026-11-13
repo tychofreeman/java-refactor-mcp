@@ -1,0 +1,1 @@
+a loop, its element's type typed, is what build writes with the type read from the code. Send build: [{"loop":"orders","name":"o","body":["total = total.plus(o.amount());"]}] in place of content.

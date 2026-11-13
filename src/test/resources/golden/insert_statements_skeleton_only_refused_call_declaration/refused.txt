@@ -1,0 +1,1 @@
+a local declared from a call, its type typed, is what build writes with the type read from the code. Send build: [{"call":"Money.zero","into":"start"}] in place of content.

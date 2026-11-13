@@ -101,6 +101,9 @@ final class Primitives {
     String after =
         text.substring(0, at) + block + "\n" + text.substring(Math.min(at, text.length()));
     if (project.session().skeletonOnly) {
+      if (built == null) {
+        Generated.checkBuild(args.required("content"));
+      }
       Generated.checkChanged(text, after, rel, "insert_statements");
     }
     int count = block.split("\n", -1).length;
@@ -228,6 +231,9 @@ final class Primitives {
     }
     if (project.session().skeletonOnly && around == null && !content.isBlank()) {
       Generated.checkSurround(text.substring(start, end), content);
+      if (built == null) {
+        Generated.checkBuild(content);
+      }
     }
     String after;
     String said;
