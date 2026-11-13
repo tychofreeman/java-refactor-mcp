@@ -47,6 +47,30 @@ default (`docs/design.md`, Decisions).
   `inline_variable`, an initializer that may throw moved into an `if`, a loop, a
   `?:` or `&&`/`||` branch, a lambda, a `switch` or a `try` (it would throw there
   only, if at all, or be caught).
+- Which guards keep it (roadmap #173, 2026-11-13, `Guards`; every refactoring that
+  goes through the behavior gate). Code that may throw only by an integer `/` or `%`
+  (ArithmeticException) or by a dereference of a variable or expression (`p.cost`,
+  `a.length`, a record accessor; NullPointerException) is kept under a guard only
+  when the guard tests its own operand: compares the divisor to a constant number
+  (`d == 0`, `0 != d`, `d > 0`), or tests the receiver for null (`x == null`,
+  `x != null`, `Objects.isNull(x)`, `Objects.nonNull(x)`, `x instanceof T`), or
+  switches on it. The operand is the same variable or field by binding, through the
+  same qualifier (`this.d` is `d`), or else the same expression as written. Moving
+  it from under such a guard is refused as before ("... under the guard that keeps
+  it from throwing; ... Keep it there.", "... guards it; ... above that guard. Keep
+  it there."). Moving it from under any other condition (an `if`, `?:`, `&&`/`||`,
+  a loop or a `switch`), or above an early exit that does not test the operand, is
+  reported: "n / d may throw (n / d) and runs only sometimes where it is (in a
+  branch of ?:), under a condition that does not test what it divides by or
+  dereferences; extracting n / d moves it out from under that condition: it would
+  now throw where the condition skipped it", or "... moves it above the statement at
+  line 5, which may leave the block early but does not test what it divides by or
+  dereferences: it would now throw where that exit came first". Under
+  `preserve_exceptions` that is refused, as every report is.
+  Everything else that may throw (an array element, a reference cast, a call, a new
+  object) keeps the rule before: any guard keeps it, and moving it from under one is
+  refused. Leaving a catch clause, a lambda or an anonymous class is refused as
+  before, and so is leaving a try that catches or finishes (unchanged).
 
 ## Moved code keeps its meaning (`NameCheck`)
 

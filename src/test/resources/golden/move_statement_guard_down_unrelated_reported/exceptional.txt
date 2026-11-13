@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- the statement at line 8 may throw (total / count), and swapping the statements at lines 5 and 8 moves it above the statement at line 5, which may leave the block early but does not test what it divides by or dereferences: it would now throw where that exit came first
