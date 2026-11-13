@@ -681,7 +681,10 @@ in the same turn only if it is sent after it.
   placed by kind (the user, 2026-11-07): a field or initializer after the type's last field, a
   constructor after its last constructor or field, either before its first member when it has
   none of those, and any other member at its end; members of one kind keep their order in
-  `content`, and each place is a part of the result. A field an edit adds that an earlier
+  `content`, and each place is a part of the result. The first member of an enum that has
+  constants only goes after them, a `;` written after the last constant (on its own line after a
+  trailing comma, or when there is no constant), and a body on one line is opened up (roadmap
+  #141; every tool that adds a member to a type does the same). A field an edit adds that an earlier
   field's initializer reads (in the same call, or by a batch's end) moves to just before that
   field (#357, `FieldOrder`), so it is never read before it is defined. `after` and `before` (a member name, until
   then) are accepted and ignored (`Tools.RETIRED_ARGS`). A method with the same name

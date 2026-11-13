@@ -11,6 +11,7 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -216,6 +217,10 @@ final class MemberMove {
   static List<TextEdit> appendTo(String text, AbstractTypeDeclaration type, String moved) {
     String indent = memberIndent(text, type);
     String member = indent + reindented(moved, indent, Declarations.step(text));
+    TextEdit afterConstants = afterConstants(text, type, indent, member);
+    if (afterConstants != null) {
+      return List.of(afterConstants);
+    }
     int brace = Nodes.end(type) - 1;
     int at = Lines.start(text, brace);
     if (text.substring(at, brace).isBlank()) {
@@ -367,5 +372,61 @@ final class MemberMove {
       out.append(indent).append(" ".repeat(scaled)).append(l.stripLeading());
     }
     return out.toString();
+  }
+
+  /**
+   * For an enum with no member, the edit that adds {@code block} (indented as a member, by {@code
+   * indent}) after its constants: a {@code ;} ends them when none does, a blank line follows, and a
+   * body on one line is opened up, its constants kept. Null for any other type, where a member
+   * needs no separator.
+   */
+  static TextEdit afterConstants(
+      String text, AbstractTypeDeclaration type, String indent, String block) {
+    if (!(type instanceof EnumDeclaration e) || !e.bodyDeclarations().isEmpty()) {
+      return null;
+    }
+    List<?> constants = e.enumConstants();
+    int close = Nodes.end(type) - 1;
+    int first = constants.isEmpty() ? close : ((ASTNode) constants.get(0)).getStartPosition();
+    int open = text.lastIndexOf('{', first - 1);
+    int last =
+        constants.isEmpty() ? open + 1 : Nodes.end((ASTNode) constants.get(constants.size() - 1));
+    int next = pastComments(text, last);
+    boolean comma = text.charAt(next) == ',';
+    if (comma) {
+      next = pastComments(text, next + 1);
+    }
+    String separator = text.charAt(next) == ';' ? "" : ";";
+    int line = Lines.start(text, close);
+    if (text.substring(line, close).isBlank()) {
+      if (separator.isEmpty()) {
+        return new TextEdit(line, line, "\n" + block + "\n");
+      }
+      if (comma || constants.isEmpty()) {
+        // After a trailing comma the ; goes on a line of its own, as it does with no constant.
+        return new TextEdit(line, line, indent + ";\n\n" + block + "\n");
+      }
+      return new TextEdit(last, line, ";" + text.substring(last, line) + "\n" + block + "\n");
+    }
+    String head = text.substring(open + 1, last);
+    String tail = text.substring(last, close).stripTrailing();
+    String inner = (head + (comma ? tail + separator : separator + tail)).strip();
+    return new TextEdit(open + 1, close, "\n" + indent + inner + "\n\n" + block + "\n");
+  }
+
+  /** The offset of the first character at or after {@code at} that is not space or a comment. */
+  private static int pastComments(String text, int at) {
+    while (at < text.length()) {
+      if (Character.isWhitespace(text.charAt(at))) {
+        at++;
+      } else if (text.startsWith("//", at)) {
+        at = Lines.end(text, at);
+      } else if (text.startsWith("/*", at)) {
+        at = text.indexOf("*/", at + 2) + 2;
+      } else {
+        break;
+      }
+    }
+    return at;
   }
 }
