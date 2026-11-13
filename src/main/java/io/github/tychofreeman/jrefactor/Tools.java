@@ -1525,35 +1525,128 @@ final class Tools {
             return Signatures.removeParameter(project, ByLine.named(project, args));
           });
 
+  /** insert_statements with one build loop, by gorefactor's name: an alias, not published. */
+  static final Def CREATE_LOOP =
+      new Def(
+          "create_loop",
+          """
+          Insert a loop over what over names, its head written from the code: insert_statements \
+          with build [{"loop": over, "name": ..., "form": ..., "type": ..., "body": [...]}].\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line a statement starts on.").required(),
+              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
+              Arg.string("over", "What the loop walks: an array, an Iterable, a Map, or an int.")
+                  .required(),
+              Arg.string("name", "The loop variable's name."),
+              Arg.oneOf("form", "for_each (the default) or index.", "for_each", "index"),
+              Arg.string("type", "The elements' type, when the code does not say it."),
+              Arg.json(
+                  "body",
+                  """
+                  {
+                    "type": "array",
+                    "description": "The loop's body: entries as build takes them.",
+                    "items": {"anyOf": [{"type": "string"}, {"type": "object"}]}
+                  }
+                  """),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          (project, args) ->
+              insertOne(
+                  project,
+                  args,
+                  Map.of(
+                      "over", "loop", "name", "name", "form", "form", "type", "type", "body",
+                      "body")));
+
+  /** insert_statements with one build call or construction, by gorefactor's name: an alias. */
+  static final Def CREATE_CALL =
+      new Def(
+          "create_call",
+          """
+          Insert a call or a construction written from names: insert_statements with build \
+          [{"call": ..., "args": [...], "into": ..., "type": ...}] (or new in place of call).\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line a statement starts on.").required(),
+              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
+              Arg.string("call", "The method, with what it is called on."),
+              Arg.string("new", "In place of call: the class to construct."),
+              Arg.strings("args", "The arguments, in order."),
+              Arg.string("into", "The variable the result goes into, or return."),
+              Arg.string("type", "The type to declare into with."),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          (project, args) ->
+              insertOne(
+                  project,
+                  args,
+                  Map.of(
+                      "call", "call", "new", "new", "args", "args", "into", "into", "type",
+                      "type")));
+
+  /** insert_statements with one build guard, by gorefactor's name: an alias, not published. */
+  static final Def CREATE_GUARD =
+      new Def(
+          "create_guard",
+          """
+          Insert a guard and its exit: insert_statements with build [{"guard": ..., "exit": ..., \
+          "value": ..., "message": ...}] (or guard_null in place of guard).\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line a statement starts on.").required(),
+              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
+              Arg.string("guard", "The condition."),
+              Arg.string("guard_null", "In place of guard: what must not be null."),
+              Arg.string("exit", "return, continue, break, throw, or require for guard_null.")
+                  .required(),
+              Arg.string("value", "What return returns, or the exception's type for throw."),
+              Arg.string("message", "The exception's message, for throw or require."),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          (project, args) ->
+              insertOne(
+                  project,
+                  args,
+                  Map.of(
+                      "guard",
+                      "guard",
+                      "guard_null",
+                      "guard_null",
+                      "exit",
+                      "exit",
+                      "value",
+                      "value",
+                      "message",
+                      "message")));
+
   /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
    * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
    * method_to_function for move_member in place, extract_struct for extract_type, Go's and
    * TypeScript's old extract_interface for extract_supertype, replace_parameter for
-   * remove_parameter with value.
+   * remove_parameter with value, create_loop, create_call and create_guard for insert_statements
+   * with one build entry.
    */
   static final Map<String, Def> ALIASES =
-      Map.of(
-          "extract_method",
-          EXTRACT_FUNCTION,
-          "method_to_function",
-          METHOD_TO_FUNCTION,
-          "move_type",
-          MOVE_TYPE,
-          "move_member",
-          MOVE_MEMBER,
-          "move_file",
-          MOVE_FILE,
-          "inline_function",
-          INLINE_FUNCTION,
-          "inline_variable",
-          INLINE_VARIABLE,
-          "extract_struct",
-          EXTRACT_TYPE,
-          "extract_interface",
-          EXTRACT_SUPERTYPE,
-          "replace_parameter",
-          REPLACE_PARAMETER);
+      Map.ofEntries(
+          Map.entry("extract_method", EXTRACT_FUNCTION),
+          Map.entry("method_to_function", METHOD_TO_FUNCTION),
+          Map.entry("move_type", MOVE_TYPE),
+          Map.entry("move_member", MOVE_MEMBER),
+          Map.entry("move_file", MOVE_FILE),
+          Map.entry("inline_function", INLINE_FUNCTION),
+          Map.entry("inline_variable", INLINE_VARIABLE),
+          Map.entry("extract_struct", EXTRACT_TYPE),
+          Map.entry("extract_interface", EXTRACT_SUPERTYPE),
+          Map.entry("replace_parameter", REPLACE_PARAMETER),
+          Map.entry("create_loop", CREATE_LOOP),
+          Map.entry("create_call", CREATE_CALL),
+          Map.entry("create_guard", CREATE_GUARD));
 
   /**
    * Argument names a tool still accepts under its published ones, by tool: extract_type's
@@ -1823,5 +1916,27 @@ final class Tools {
         args.required("name"),
         args.required("method"),
         args.string("type"));
+  }
+
+  /**
+   * insert_statements with one build entry: each argument {@code entry} names, under its key there,
+   * and the placement arguments as given.
+   */
+  private static Outcome insertOne(SourceProject project, Args args, Map<String, String> entry)
+      throws Exception {
+    Map<String, Object> built = new LinkedHashMap<>();
+    entry.forEach((arg, key) -> {
+      if (args.has(arg)) {
+        built.put(key, args.raw(arg));
+      }
+    });
+    Map<String, Object> values = new LinkedHashMap<>();
+    for (String key : List.of("file", "line", "where", "imports")) {
+      if (args.has(key)) {
+        values.put(key, args.raw(key));
+      }
+    }
+    values.put("build", List.of(built));
+    return Primitives.insertStatements(project, new Args(args.tool(), values));
   }
 }

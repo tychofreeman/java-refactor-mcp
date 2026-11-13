@@ -94,7 +94,7 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `replace_text`, `batch` and `undo`, and (roadmap #120, 2026-11-06) `extract_function`, which
 was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI but not
 published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
-`move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value."); the query form only, as the generators sketch decided.
+`move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value."); the query form only, as the generators sketch decided. gorefactor's `create_loop`, `create_call` and `create_guard` (roadmap #166, 2026-11-13) are `insert_statements` with one `build` entry, unpublished: `file`, `line` and `where` place it, and the rest are the entry's keys (`over` is the loop's `loop`; `create_call` takes `call` or `new`, `args`, `into`, `type`; `create_guard` takes `guard` or `guard_null`, `exit`, `value`, `message`). Results and refusals are `insert_statements`'s; there is no `op` (the loop is a shell, as decided).
 
 One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
