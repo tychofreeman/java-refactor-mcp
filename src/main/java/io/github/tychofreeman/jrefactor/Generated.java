@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -17,7 +18,14 @@ import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.ParameterizedType;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -27,8 +35,13 @@ import org.eclipse.jdt.core.dom.SynchronizedStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.TryStatement;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
+import tools.jackson.databind.ObjectMapper;
 
 final class Generated {
   private Generated() {}
@@ -77,17 +90,11 @@ final class Generated {
    * writes.
    */
   static void checkSurround(String replaced, String content) {
-    CompilationUnit unit = Jdt.parseSyntax("class X { void m() {\n" + content + "\n}}");
-    if (unit.types().isEmpty()
-        || !(((TypeDeclaration) unit.types().get(0)).getMethods().length == 1)) {
+    String text = "class X { void m() {\n" + content + "\n}}";
+    Statement s = only(text);
+    if (s == null) {
       return;
     }
-    List<?> statements =
-        ((TypeDeclaration) unit.types().get(0)).getMethods()[0].getBody().statements();
-    if (statements.size() != 1) {
-      return;
-    }
-    Statement s = (Statement) statements.get(0);
     Statement inner =
         s instanceof TryStatement t
             ? t.getBody()
@@ -103,7 +110,6 @@ final class Generated {
     if (!(inner instanceof Block b)) {
       return;
     }
-    String text = "class X { void m() {\n" + content + "\n}}";
     String body =
         text.substring(b.getStartPosition() + 1, b.getStartPosition() + b.getLength() - 1);
     if (!squeezed(body).equals(squeezed(replaced))) {
@@ -243,5 +249,173 @@ final class Generated {
       }
     }
     return key.toString();
+  }
+
+  /**
+   * Refuses, under skeleton-only creation, statement content that is one statement build writes
+   * from names: a local declared from a call or a construction, a for-each, or an index loop. The
+   * refusal names the build to send in its place.
+   */
+  static void checkBuild(String content) {
+    String text = "class X { void m() {\n" + content + "\n}}";
+    Statement s = only(text);
+    if (s == null) {
+      return;
+    }
+    Map<String, Object> entry = new LinkedHashMap<>();
+    String what;
+    if (s instanceof VariableDeclarationStatement v
+        && v.fragments().size() == 1
+        && v.modifiers().isEmpty()
+        && !v.getType().isVar()
+        && ((VariableDeclarationFragment) v.fragments().get(0)).getExtraDimensions() == 0) {
+      VariableDeclarationFragment f = (VariableDeclarationFragment) v.fragments().get(0);
+      Expression init = f.getInitializer();
+      List<?> arguments;
+      if (init instanceof MethodInvocation call && call.typeArguments().isEmpty()) {
+        entry.put(
+            "call",
+            (call.getExpression() == null ? "" : source(text, call.getExpression()) + ".")
+                + call.getName().getIdentifier());
+        arguments = call.arguments();
+        what = "a local declared from a call, its type typed,";
+      } else if (init instanceof ClassInstanceCreation c
+          && c.getAnonymousClassDeclaration() == null
+          && c.getExpression() == null
+          && c.typeArguments().isEmpty()) {
+        Type made =
+            c.getType() instanceof ParameterizedType p && p.typeArguments().isEmpty()
+                ? p.getType()
+                : c.getType();
+        entry.put("new", source(text, made));
+        arguments = c.arguments();
+        what = "a local declared from a construction, its type typed,";
+      } else {
+        return;
+      }
+      List<String> args = new ArrayList<>();
+      for (Object a : arguments) {
+        args.add(source(text, (ASTNode) a));
+      }
+      if (!args.isEmpty()) {
+        entry.put("args", args);
+      }
+      entry.put("into", f.getName().getIdentifier());
+      if (entry.containsKey("new") && !source(text, v.getType()).equals(entry.get("new"))) {
+        entry.put("type", source(text, v.getType()));
+      }
+    } else if (s instanceof EnhancedForStatement f
+        && !f.getParameter().getType().isVar()
+        && f.getParameter().modifiers().isEmpty()
+        && f.getBody() instanceof Block b) {
+      entry.put("loop", source(text, f.getExpression()));
+      entry.put("name", f.getParameter().getName().getIdentifier());
+      body(text, b, entry);
+      what = "a loop, its element's type typed,";
+    } else if (s instanceof ForStatement f
+        && counted(text, f) != null
+        && f.getBody() instanceof Block b) {
+      entry.put("loop", counted(text, f));
+      entry.put("form", "index");
+      entry.put(
+          "name",
+          ((VariableDeclarationFragment)
+                  ((VariableDeclarationExpression) f.initializers().get(0)).fragments().get(0))
+              .getName()
+              .getIdentifier());
+      body(text, b, entry);
+      what = "an index loop";
+    } else {
+      return;
+    }
+    throw new Refusal(
+        ON
+            + what
+            + " is what build writes"
+            + (what.contains("typed") ? " with the type read from the code" : "")
+            + ". Send build: ["
+            + new ObjectMapper().writeValueAsString(entry)
+            + "] in place of content.");
+  }
+
+  /** The source of {@code n} in {@code text}. */
+  private static String source(String text, ASTNode n) {
+    return text.substring(n.getStartPosition(), Nodes.end(n));
+  }
+
+  /** A loop's body as build's body: each statement as typed, when there are any. */
+  private static void body(String text, Block b, Map<String, Object> entry) {
+    List<String> body = new ArrayList<>();
+    for (Object o : b.statements()) {
+      ASTNode n = (ASTNode) o;
+      body.add(
+          Primitives.indent(
+              text.substring(Lines.start(text, n.getStartPosition()), Nodes.end(n)), ""));
+    }
+    if (!body.isEmpty()) {
+      entry.put("body", body);
+    }
+  }
+
+  /**
+   * What {@code f} counts over when it is for (int i = 0; i < n; i++), n an int, a.length or
+   * list.size(): n, a or list; else null.
+   */
+  private static String counted(String text, ForStatement f) {
+    if (f.initializers().size() != 1
+        || !(f.initializers().get(0) instanceof VariableDeclarationExpression d)
+        || d.fragments().size() != 1
+        || !d.getType().toString().equals("int")
+        || f.updaters().size() != 1
+        || !(f.getExpression() instanceof InfixExpression less)
+        || less.getOperator() != InfixExpression.Operator.LESS
+        || less.hasExtendedOperands()) {
+      return null;
+    }
+    VariableDeclarationFragment i = (VariableDeclarationFragment) d.fragments().get(0);
+    String name = i.getName().getIdentifier();
+    Object update = f.updaters().get(0);
+    boolean steps =
+        update instanceof PostfixExpression p
+                && p.getOperator() == PostfixExpression.Operator.INCREMENT
+                && p.getOperand() instanceof SimpleName n
+                && n.getIdentifier().equals(name)
+            || update instanceof PrefixExpression pre
+                && pre.getOperator() == PrefixExpression.Operator.INCREMENT
+                && pre.getOperand() instanceof SimpleName operand
+                && operand.getIdentifier().equals(name);
+    if (!(i.getInitializer() instanceof NumberLiteral zero)
+        || !zero.getToken().equals("0")
+        || !steps
+        || !(less.getLeftOperand() instanceof SimpleName left)
+        || !left.getIdentifier().equals(name)) {
+      return null;
+    }
+    Expression bound = less.getRightOperand();
+    if (bound instanceof QualifiedName q && q.getName().getIdentifier().equals("length")) {
+      return source(text, q.getQualifier());
+    }
+    if (bound instanceof FieldAccess a && a.getName().getIdentifier().equals("length")) {
+      return source(text, a.getExpression());
+    }
+    if (bound instanceof MethodInvocation m
+        && m.getName().getIdentifier().equals("size")
+        && m.arguments().isEmpty()
+        && m.getExpression() != null) {
+      return source(text, m.getExpression());
+    }
+    return bound instanceof SimpleName ? source(text, bound) : null;
+  }
+
+  /** The one statement of {@code text}, content in a method; null for none or several. */
+  private static Statement only(String text) {
+    CompilationUnit unit = Jdt.parseSyntax(text);
+    if (unit.types().isEmpty()
+        || !(((TypeDeclaration) unit.types().get(0)).getMethods().length == 1)) {
+      return null;
+    }
+    List<?> statements =
+        ((TypeDeclaration) unit.types().get(0)).getMethods()[0].getBody().statements();
+    return statements.size() == 1 ? (Statement) statements.get(0) : null;
   }
 }

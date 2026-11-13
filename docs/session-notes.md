@@ -531,6 +531,8 @@ Each was chosen from options; the record named beside it has the options it beat
   also in a type sent whole through `replace_declaration`, and in each method that
   `replace_statements`, `replace_expression`, `insert_statements` or `replace_text` adds or changes
   into that shape (`Generated.checkChanged`, 2026-11-07); a member already in it is left alone.
+  And (#167, 2026-11-13) statement content that is one statement `build` writes from names
+  (`Generated.checkBuild`, the generators' discoverability mechanism the user chose).
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the

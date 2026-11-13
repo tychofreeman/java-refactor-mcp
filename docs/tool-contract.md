@@ -789,7 +789,15 @@ in the same turn only if it is sent after it.
   file (`Generated.checkChanged`: each method the edit adds, or changes and that was not already
   such a member), naming the `add_declaration` to send in its place, which replaces it
   (2026-11-07). A member left as it was, or one a tool wrote that another edit beside it leaves
-  alone, is not checked. Bodies with logic are not refused. With `declaration` (a
+  alone, is not checked. And (roadmap #167, 2026-11-13) `insert_statements` and
+  `replace_statements` `content` that is one statement `build` writes from names, naming the
+  `build` to send in its place: a local declared from a call or a construction (`Money start =
+  Money.zero();`: "Send build: [{"call":"Money.zero","into":"start"}] in place of content"; a
+  construction's declared type goes in `type` when it is not the class), a for-each (`loop`,
+  `name`, `body` as the statements typed) and an index loop over `n`, `a.length` or
+  `list.size()` (`form` `index`). Content of several statements, a declaration with modifiers or
+  `var`, an assignment, a plain call, a return and a guard pass. Bodies with logic are not
+  refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes

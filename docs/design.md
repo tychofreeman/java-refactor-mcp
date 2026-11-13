@@ -328,7 +328,11 @@ declares too (`order2`), found with `surround`'s loop (#163); a `name` the model
 body declares is left to the gate's compile refusal. For the guard (#164): a `return` with a `value` where the method returns
 nothing is refused before the gate; `guard_null` puts what it names in parentheses unless it is
 a name, a call or an access; a guard adds nothing to the result's `built` list, since it declares
-nothing.
+nothing. Under skeleton-only (#167), what is refused is one statement whose
+types `build` reads from the code: a declared local from a call or construction, a for-each, an
+index loop. Assignments, plain calls, returns and guards pass (they type no type), as does
+content of several statements and a declaration with modifiers or `var`; the suggested `build`
+puts a construction's declared type in `type` when it differs from the class, never a call's.
 
 ## Questions (all answered)
 
@@ -592,6 +596,7 @@ sections 3 and 4.
 | 157 | 164 | `build` with `guard` and `guard_null`: a condition and its exit (`return`, `continue`, `break`, `throw`, `require`), checked where it lands | Done 2026-11-13 (`Build.checkGuard`; no return value, exception or message guessed, as the sketch says) | The generators sketch, increment 6; `docs/sessions/build-guard.md` |
 | 158 | 165 | `build` on `replace_expression`: a call or a construction written as an expression, from names | Done 2026-11-13 (`Build.expression`, one entry drafted in place; `new` is no longer required) | The generators sketch, increment 7; `docs/sessions/build-expression.md` |
 | 159 | 166 | `create_loop`, `create_call` and `create_guard`, gorefactor's names, as unpublished aliases of `insert_statements` with one `build` entry | Done 2026-11-13 (`Tools.insertOne`; `ALIASES` is now `Map.ofEntries`, past `Map.of`'s ten pairs) | The generators sketch, increment 8 (`replace_parameter` is #160); `docs/sessions/create-aliases.md` |
+| 160 | 167 | Under `JREFACTOR_SKELETON_ONLY`, typed statement content that `build` writes is refused, naming the `build` to send | Done 2026-11-13 (`Generated.checkBuild`: one statement only, a local declared from a call or a construction, a for-each or an index loop; the user's choice of mechanism, "Generators" above) | The generators sketch, increment 9; `docs/sessions/skeleton-build-refusal.md` |
 
 ### The 2026-11-04 list
 
