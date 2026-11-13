@@ -584,7 +584,13 @@ Each was chosen from options; the record named beside it has the options it beat
   -Dtest=RefactoringStressTest -Djrefactor.stress.root=<dir> -Djrefactor.stress.calls=300
   -Djrefactor.stress.seed=12 -Djrefactor.stress.counts=true`: about 3.5 s a call on 2 cores, 7 s
   an edit for `NarrowCheckStressTest`. Lang is Java 8 source, so it has no target for
-  `type_switch_to_method` over an enum (switch expressions and arrow cases only).
+  `type_switch_to_method` over an enum (switch expressions and arrow cases only). For that, and
+  for Java 17 shapes (records, sealed types, a named module), smallrye/jdk-classfile-backport
+  (2026-11-13, `docs/sessions/stress-enum-switch.md`): cloned the same way to a directory outside
+  the worktree, no `./mvnw` either, 258 files, about 1.5 s a call; `-Djrefactor.stress.tools=
+  type_switch_to_method_enum,add_parameter_enum_values` for the enum entries. `.refusals=true` also
+  prints each applied call's result. About 40% of the enum entry's picks there are switches over
+  `int` constants (the picker reads no bindings), refused by design.
 - The stress tests see only compile errors. A tool that moves expressions or
   members also needs probes for evaluation order and name capture: probes found
   seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`),
