@@ -1117,4 +1117,67 @@ final class Build {
     }
     return outside.matches("[\\p{L}\\p{N}_$.\\[\\]]+") ? x : "(" + x + ")";
   }
+
+  /**
+   * The call or construction {@code build} names (one entry), as it goes in place of {@code start}
+   * to {@code end} of the opened file: with a diamond where its class is generic, checked as a call
+   * entry is.
+   */
+  static String expression(
+      SourceProject project, Opened opened, int start, int end, Object build, List<String> imports)
+      throws IOException {
+    String shape =
+        "replace_expression's build is one call or construction: {\"call\": \"discounts.apply\","
+            + " \"args\": [\"price\"]} or {\"new\": \"Receipt\", \"args\": [\"order\"]}.";
+    if (!(build instanceof Map<?, ?> map)) {
+      throw new Refusal(shape + " Got " + build + ".");
+    }
+    Entry e = new Entry();
+    generator(map, e);
+    if (!e.kind.equals("call") && !e.kind.equals("new")) {
+      throw new Refusal(
+          shape
+              + " A "
+              + e.kind
+              + " is a statement: send it as build of insert_statements or replace_statements.");
+    }
+    if (e.into != null) {
+      throw new Refusal(
+          "replace_expression's build is the expression alone, so it takes no into: the code"
+              + " around it uses the value.");
+    }
+    Expression x = drafted(project, opened, start, end, e, imports);
+    if (x instanceof ClassInstanceCreation c && !e.target.contains("<") && generic(c)) {
+      e.diamond = true;
+      x = drafted(project, opened, start, end, e, imports);
+    }
+    check(e, x);
+    return e.expression();
+  }
+
+  /** The call or construction {@code e} writes, parsed in place of {@code start} to {@code end}. */
+  private static Expression drafted(
+      SourceProject project, Opened opened, int start, int end, Entry e, List<String> imports)
+      throws IOException {
+    String before = opened.text();
+    String written = e.expression();
+    String text = before.substring(0, start) + written + before.substring(end);
+    Edits.parses(text, "build, written as an expression,");
+    Imports.Fixed fixed =
+        project.packageOf(opened.file()) == null
+            ? new Imports.Fixed(text, 0, List.of())
+            : Imports.fix(project, opened.file(), before, text, imports);
+    // The import fix changes only lines above the expression.
+    int at = start + fixed.text().length() - text.length();
+    CompilationUnit unit = Jdt.parse(project, opened.file(), fixed.text());
+    for (Expression x : Nodes.all(unit, Expression.class)) {
+      if (x.getStartPosition() == at
+          && x.getLength() == written.length()
+          && (x instanceof MethodInvocation || x instanceof ClassInstanceCreation)) {
+        return x;
+      }
+    }
+    throw new Refusal(
+        "build's entry for " + e.target + " is not one expression as written there: " + written);
+  }
 }

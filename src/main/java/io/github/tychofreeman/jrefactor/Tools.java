@@ -470,7 +470,9 @@ final class Tools {
           """
           Replace one expression with new text. Find it by file, the line it starts on \
           and its exact source text (column when the text occurs twice on the line), as \
-          extract_variable does.\
+          extract_variable does. With build in place of new, the call or construction is written \
+          from names: {"call": "discounts.apply", "args": ["price", "customer"]} writes \
+          discounts.apply(price, customer), {"new": "ArrayList"} writes new ArrayList<>().\
           """,
           List.of(
               Arg.FILE,
@@ -478,7 +480,15 @@ final class Tools {
               Arg.string("expression", "Its exact source text.").required(),
               Arg.integer(
                   "column", "Optional 1-based column, when the text occurs twice on the line."),
-              Arg.string("new", "The expression to put in its place.").required(),
+              Arg.string("new", "The expression to put in its place."),
+              Arg.json(
+                  "build",
+                  """
+                  {
+                    "type": "object",
+                    "description": "In place of new: the call or construction to write, by name: {call, args} or {new, args}, as build of insert_statements takes them."
+                  }
+                  """),
               Arg.IMPORTS),
           Kind.EDIT,
           Primitives::replaceExpression);
