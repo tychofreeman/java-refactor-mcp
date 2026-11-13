@@ -572,6 +572,7 @@ sections 3 and 4.
 | 156 | 163 | `surround` on `replace_statements` takes a loop object, `{"loop": "orders"}`, the statements its body | Done 2026-11-13 (`Build.around`: the statements become the body of one `loop` entry, so the head is decided as `build`'s; a name the tool picks is also kept free of the body's declarations) | The generators sketch, increment 5; `docs/sessions/surround-loop.md` |
 | 157 | 164 | `build` with `guard` and `guard_null`: a condition and its exit (`return`, `continue`, `break`, `throw`, `require`), checked where it lands | Done 2026-11-13 (`Build.checkGuard`; no return value, exception or message guessed, as the sketch says) | The generators sketch, increment 6; `docs/sessions/build-guard.md` |
 | 158 | 165 | `build` on `replace_expression`: a call or a construction written as an expression, from names | Done 2026-11-13 (`Build.expression`, one entry drafted in place; `new` is no longer required) | The generators sketch, increment 7; `docs/sessions/build-expression.md` |
+| 159 | 166 | `create_loop`, `create_call` and `create_guard`, gorefactor's names, as unpublished aliases of `insert_statements` with one `build` entry | Done 2026-11-13 (`Tools.insertOne`; `ALIASES` is now `Map.ofEntries`, past `Map.of`'s ten pairs) | The generators sketch, increment 8 (`replace_parameter` is #160); `docs/sessions/create-aliases.md` |
 
 ### The 2026-11-04 list
 
