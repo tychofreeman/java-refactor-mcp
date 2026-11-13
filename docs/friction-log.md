@@ -1209,3 +1209,9 @@ not in placement, since in a batch the reader may name it only in a later step.
 - `spotless:apply` reflowed the stress test's Javadoc between two batches, so a `replace_text` of
   it copied from the first send missed ("old is not in"); copied again from the file. Not a
   defect.
+
+## 2026-11-13: fix-parameter-generic-types
+
+- The `add_parameter` lookup failure logged under parameter-value-cast was issue #406, in
+  `Introduce`'s naming of the method (erasures), not in `add_parameter`: fixed there. Nothing by
+  hand.
