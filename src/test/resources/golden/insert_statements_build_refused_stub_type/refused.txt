@@ -1,0 +1,1 @@
+Pricing.quote is not declared, so the type of its result is not known. Pass type (the type of quote): the call is then written and Pricing.quote is declared as a stub returning it.

@@ -1,0 +1,1 @@
+[{"new": "ArrayList", "into": "open", "type": "List<Order>"}, {"new": "Receipt", "args": ["order"], "into": "receipt"}]

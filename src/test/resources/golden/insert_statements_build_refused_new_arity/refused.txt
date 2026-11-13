@@ -1,0 +1,1 @@
+new Receipt takes (Order order); args has 0 of 1. Pass each, in that order.

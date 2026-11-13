@@ -1,0 +1,1 @@
+[{"call": "audit.record", "args": ["order"], "into": "entry"}]

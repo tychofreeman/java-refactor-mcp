@@ -1,0 +1,1 @@
+replaced lines 19-19 of shop/Checkout.java with 6 lines; built Money total; Money price

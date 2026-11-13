@@ -1,0 +1,7 @@
+[
+  {"call": "Money.zero", "into": "total"},
+  {"call": "pricing.priceOf", "args": ["order", "customer"], "into": "price"},
+  "// the price counts once\ntotal = total.plus(price);",
+  {"call": "audit.record", "args": ["order"]},
+  {"call": "total.plus", "args": ["price"], "into": "return"}
+]

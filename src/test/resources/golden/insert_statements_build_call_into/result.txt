@@ -1,0 +1,1 @@
+inserted 1 line after the statement at line 13 of shop/Checkout.java; built Money price; imported shop.money.Money

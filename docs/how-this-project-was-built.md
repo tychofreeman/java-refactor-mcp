@@ -460,6 +460,18 @@ The lesson: length in a description is not guidance a model uses (the A/B runs h
 and it is paid on every turn. When a description grows, ask whether the text belongs in the
 refusal, the shared instructions, or the contract.
 
+## Statements from names (2026-11-13)
+
+A coverage review counted the session records: of 560 tool steps in the 29 records with
+counts, 540 were edits whose Java the model typed. The refactorings carried changes; nothing
+built a statement. A sketch set out generators (a call, a construction, a loop, a guard) in
+three shapes with the characters each costs, and was plain that a generator saves knowledge
+(a type, an import), not keystrokes. The user took the recommended shape: one `build`
+argument on the edit tools, since every earlier option hidden in a description went unused
+until a refusal named it, and since a list nests where a tool per statement cannot. The
+sketch's one unchecked assumption, that a `var` draft parsed with bindings gives the type to
+write, was checked first with a scratch parse before any of it was built on.
+
 ## Open at the time of writing (2026-11-06)
 
 - `CLAUDE.md` still lists literals as a `replace_text` use, though

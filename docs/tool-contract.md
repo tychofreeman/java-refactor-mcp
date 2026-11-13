@@ -651,6 +651,33 @@ in the same turn only if it is sent after it.
     indentation step in; a `try` catches the checked exceptions they throw and rethrows them
     (`catch (IOException e) { throw e; }`, multi-catch for several, a free name), or has an
     empty `finally` when they throw none. Another head is refused, naming the forms.
+  - `build` in place of `content`, on `insert_statements` and `replace_statements` (roadmap
+    #149, 2026-11-13; the generators, `docs/design.md`): a list whose entries are statements as
+    typed (strings) or objects that name what to write, in order. `{"call": "pricing.priceOf",
+    "args": ["order", "customer"], "into": "price"}` writes `Money price =
+    pricing.priceOf(order, customer);`: `call` is the method with what it is called on, `args`
+    the arguments in order (always given, none guessed), `into` a name (a variable that is in
+    scope there, or that an earlier entry declared, is assigned; any other name is declared as
+    a local, with its type written out, never `var`; `return` returns the result; without
+    `into` the call is a statement), `type` the type to declare the local with when it is not
+    the result's. `{"new": "ArrayList", "into": "open", "type": "List<Order>"}` writes
+    `List<Order> open = new ArrayList<>();` (a generic class named without type arguments gets
+    a diamond; without `type` the local is the class, `Receipt receipt = new Receipt(order);`).
+    The result names what was inferred after the tool's usual line: `inserted 1 line after the
+    statement at line 31 of <file>; built Money price; total (assigned); imported
+    shop.money.Money`. A method nothing declares is stubbed as in any edit, its result type
+    from `type`. Refused, each naming what to send: `content` with `build` ("takes content or
+    build, not both"), and `build` with `surround`; a key the entry does not take ("a call
+    entry takes call, args, into and type; arguments is none of these"); the wrong number of
+    arguments, with each overload's parameters by name ("Pricing.priceOf takes (Order order,
+    String customer); args has 1 of 2", for a constructor "new Receipt takes ..."; an explicit
+    constructor only, so a class with none still gets its stub); `into` with a method that
+    returns nothing; a new local whose call is not declared, or does not fit its arguments,
+    and has no `type` ("Pricing.quote is not declared, so the type of its result is not known.
+    Pass type ..."); a generic class constructed with no arguments and no `type`; `type` with
+    an `into` that is a variable there already; a result type that cannot be written
+    (anonymous, an intersection). A checked exception the method does not declare, and an
+    `into` of another type, are the gate's compile refusals.
   - `add_case`: `file`, `line` (a switch statement or expression), `content`;
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;

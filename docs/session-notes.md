@@ -184,6 +184,10 @@ Each was chosen from options; the record named beside it has the options it beat
   all three slices now and over only the fixes. Slice 1 (constants to an enum, increments 9 to 11)
   and increment 12 (old-style switches) are not built: they wait for a friction entry or a task
   that needs them. Every other open question of the sketch: its Recommended option.
+- Generators (2026-11-13, the user chose each sketch's recommended option; `docs/design.md`,
+  "Generators"): one `build` argument on the edit tools over new tools, a refusal under
+  `JREFACTOR_SKELETON_ONLY` as the way it is found, explicit types never `var`, a loop shell
+  with `body` and no `op`, a call's arguments always in `args`.
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.
@@ -419,6 +423,14 @@ Each was chosen from options; the record named beside it has the options it beat
 - The edit primitives (#91, 2026-11-04) are `Primitives`: `replace_expression`,
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.
+
+- `build` (#149, 2026-11-13) is `Build`: `Primitives.built` hands it the argument as sent
+  (`Args.raw`), the range it replaces and the indentation; `Build.statements` returns the text
+  and what it inferred (`Built.said()`, after the tool's usual line). An entry is an `Entry`
+  (`statement()` writes it; a new kind adds a key in `generator` and a case there). The drafts
+  are parsed after `Imports.fix`, so a type the build names resolves before it is imported;
+  entries are found again by line (`Draft.at`), one statement starting per line. A golden case
+  passes the list as `build.json`.
 
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that

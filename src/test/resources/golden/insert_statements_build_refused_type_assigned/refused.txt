@@ -1,0 +1,1 @@
+customer is a variable there already, so into assigns it and type has nothing to declare.
