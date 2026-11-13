@@ -57,6 +57,7 @@ final class ChangeType {
               + " declares several fields. Split it into one declaration per field first.");
     }
     checkUses(project, file, decl, field, type);
+    CallTargets targets = CallTargets.of(Holding.of(project, field, file).units().values());
     Type old = decl.getType();
     int start = old.getStartPosition();
     int end = start + old.getLength();
@@ -71,7 +72,12 @@ final class ChangeType {
             updated,
             List.of(),
             "changing the type of " + name,
-            "Change the uses that do not compile with the new type first, or keep the type.");
+            wildcardFix(
+                type,
+                oldText,
+                field,
+                "Change the uses that do not compile with the new type first, or keep the type."));
+    targets.require(project, "changing the type of " + name + " to " + type);
     return new Outcome(
         "changed the type of "
             + name
@@ -116,5 +122,52 @@ final class ChangeType {
         }
       }
     }
+  }
+
+  /**
+   * The gate's fix line for a change from {@code old} to {@code type}, the type of {@code name}:
+   * {@code fix}, and before it, when {@code type} holds a wildcard, what the wildcard does not
+   * allow and which one to try.
+   */
+  static String wildcardFix(String type, String old, String name, String fix) {
+    if (type.matches(".*\\?\\s*super\\b.*")) {
+      return "What is read from "
+          + type
+          + " is an Object, and it cannot be passed on as "
+          + old
+          + ". If the code only reads "
+          + name
+          + ", try "
+          + type.replaceAll("\\?\\s*super\\b", "? extends")
+          + "; if it reads and adds, keep "
+          + old
+          + ".\n"
+          + fix;
+    }
+    if (type.matches(".*\\?\\s*extends\\b.*")) {
+      return type
+          + " can be read from but not added to, and cannot be passed on as "
+          + old
+          + ". If the code only adds to "
+          + name
+          + ", try "
+          + type.replaceAll("\\?\\s*extends\\b", "? super")
+          + "; if it reads and adds, keep "
+          + old
+          + ".\n"
+          + fix;
+    }
+    if (type.contains("?")) {
+      return type
+          + " can be read from but not added to, and cannot be passed on as "
+          + old
+          + ". If the code adds to "
+          + name
+          + ", keep "
+          + old
+          + ".\n"
+          + fix;
+    }
+    return fix;
   }
 }

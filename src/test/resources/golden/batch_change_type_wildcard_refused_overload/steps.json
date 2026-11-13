@@ -1,0 +1,4 @@
+[
+  {"tool": "rename", "args": {"file": "com/example/Use.java", "line": 6, "name": "fill", "new_name": "fillAll"}},
+  {"tool": "change_type", "args": {"file": "com/example/Cart.java", "name": "Cart.addAll(List<Item>)", "parameter": "items", "type": "List<? extends Item>"}}
+]

@@ -1012,6 +1012,22 @@ and `type` (the new type as written).
   operand of + at line 7 of F, where changing it from int to long could change the
   result". The uses are the field's in the project, the parameter's in the family's
   bodies, or each call's result. Copies, returns and ordering comparisons are allowed.
+- Calls keep their targets (roadmap #146, 2026-11-13; `CallTargets`): after the change is
+  written, every method call, `new`, `this(...)`, `super(...)` and method reference in the
+  files that name the field or the method must run the declaration it ran before, or the
+  change is refused and the files put back: "changing the type of items of
+  Cart.addAll(List<Item>) to List<? extends Item> would make the call at line 9 of
+  com/example/Use.java run Cart.addAll(List), not Cart.addAll(Collection) as it does now.
+  Rename one of the two first." A widened parameter, a wildcard or a changed return type can
+  make a call pick another overload and still compile. A call that does not resolve before or
+  after (a batch whose check is deferred) is left to the gate.
+- Wildcards (the same row): `type` takes them as written (`List<? extends Item>`, `List<? super
+  Item>`); the model picks the wildcard, the gate and the check above judge it (the user,
+  2026-11-13, over a `wildcard: "auto"` that tries both and over a body analysis). When the
+  gate refuses a `type` with a wildcard, its fix line says what the wildcard does not allow and
+  which to try: "List<? extends Item> can be read from but not added to, and cannot be passed
+  on as List<Item>. If the code only adds to items, try List<? super Item>; if it reads and
+  adds, keep List<Item>."
 - Not built yet: locals, and fields declared with several names.
 
 ## `change_signature` (built)

@@ -259,9 +259,17 @@ final class Signatures {
                         + " name first."));
         change.replace(d.file(), d.m().getReturnType2(), type);
       }
-      return change.apply(
+      return checked(
           project,
+          family,
+          change,
           "changed the return type of " + family.label + " to " + type,
+          "changing the return type of " + family.label + " to " + type,
+          ChangeType.wildcardFix(
+              type,
+              family.target.getReturnType2().toString(),
+              "what it returns",
+              SignatureChange.FIX),
           args.list("imports"));
     }
     String parameter = args.required("parameter");
@@ -294,9 +302,17 @@ final class Signatures {
         change.lambda(l, params);
       }
     }
-    return change.apply(
+    return checked(
         project,
+        family,
+        change,
         "changed the type of " + parameter + " of " + family.label + " to " + type,
+        "changing the type of " + parameter + " of " + family.label + " to " + type,
+        ChangeType.wildcardFix(
+            type,
+            ((SingleVariableDeclaration) family.target.parameters().get(at)).getType().toString(),
+            parameter,
+            SignatureChange.FIX),
         args.list("imports"));
   }
 
@@ -864,4 +880,24 @@ final class Signatures {
 
   /** A method reference that implements a family member, and the method it refers to. */
   record Reference(Source file, MethodReference node, IMethodBinding target) {}
+
+  /**
+   * Applies {@code change}, a change of a type in {@code family}'s declarations, and refuses it
+   * when a call in the family's files then runs another declaration ({@link CallTargets}).
+   */
+  private static Outcome checked(
+      SourceProject project,
+      MethodFamily family,
+      SignatureChange change,
+      String done,
+      String doing,
+      String fix,
+      List<String> imports)
+      throws Exception {
+    CallTargets targets =
+        CallTargets.of(family.sources.values().stream().map(Source::unit).toList());
+    Outcome outcome = change.apply(project, done, imports, fix, -1);
+    targets.require(project, doing);
+    return outcome;
+  }
 }
