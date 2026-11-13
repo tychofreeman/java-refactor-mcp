@@ -53,42 +53,12 @@ final class EnumField {
       throw new Refusal("parameter " + parameter + " is not a valid Java name.");
     }
     Signatures.parsesAs("type", type, "class X { " + type + " x; }");
-    String simple = target.getName().getIdentifier();
-    MethodDeclaration constructor = constructor(target, simple);
-    checkName(target.resolveBinding(), simple, parameter, constructor);
     Map<String, String> passed = passed(target, name, args);
-
     String text = opened.text();
-    List<TextEdit> edits = new ArrayList<>();
-    int at = index(constructor, simple, args.string("before"));
-    for (Object o : target.enumConstants()) {
-      EnumConstantDeclaration c = (EnumConstantDeclaration) o;
-      String value = passed.get(c.getName().getIdentifier());
-      int end = Nodes.end(c.getName());
-      int open = Signatures.after(text, end);
-      if (open == 0 || !text.substring(end, open - 1).isBlank()) {
-        edits.add(new TextEdit(end, end, "(" + value + ")"));
-      } else {
-        edits.add(Signatures.insertAt(text, c.arguments(), open - 1, at, value));
-      }
-    }
-    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 2;
-    String in = " ".repeat(step);
-    String assign = "this." + parameter + " = " + parameter + ";";
-    String members = "private final " + type + " " + parameter + ";\n\n";
-    if (constructor == null) {
-      members += simple + "(" + type + " " + parameter + ") {\n" + in + assign + "\n}\n\n";
-    } else {
-      edits.add(
-          Signatures.insertAt(
-              text,
-              constructor.parameters(),
-              Signatures.open(text, constructor.getName()) - 1,
-              at,
-              type + " " + parameter));
-      edits.add(assignment(text, constructor.getBody(), assign, in));
-    }
-    members += "public " + type + " " + parameter + "() {\n" + in + "return " + parameter + ";\n}";
+    String before = args.string("before");
+    Field fieldResult = field(target, parameter, before, passed, text, type);
+    List<TextEdit> edits = fieldResult.edits();
+    String members = fieldResult.members();
     edits.sort((a, b) -> b.start() - a.start());
     String withValues = TextEdit.apply(text, edits, 0);
     String out = Declarations.plan(withValues, opened.rel(), name, members).text();
@@ -118,6 +88,58 @@ final class EnumField {
             + written.fixed().said(),
         written.declared());
   }
+
+  /**
+   * The field {@code type parameter} on {@code target}, an enum of {@code text}: the edits that
+   * pass each constant its entry of {@code passed} and add the parameter to the constructor (before
+   * {@code before}, else last), and the members to add after them (the field, the constructor when
+   * the enum declares none, the accessor). Refuses a name the enum has or inherits.
+   */
+  static Field field(
+      EnumDeclaration target,
+      String parameter,
+      String before,
+      Map<String, String> passed,
+      String text,
+      String type) {
+    String simple = target.getName().getIdentifier();
+    MethodDeclaration constructor = constructor(target, simple);
+    checkName(target.resolveBinding(), simple, parameter, constructor);
+    List<TextEdit> edits = new ArrayList<>();
+    int at = index(constructor, simple, before);
+    for (Object o : target.enumConstants()) {
+      EnumConstantDeclaration c = (EnumConstantDeclaration) o;
+      String value = passed.get(c.getName().getIdentifier());
+      int end = Nodes.end(c.getName());
+      int open = Signatures.after(text, end);
+      if (open == 0 || !text.substring(end, open - 1).isBlank()) {
+        edits.add(new TextEdit(end, end, "(" + value + ")"));
+      } else {
+        edits.add(Signatures.insertAt(text, c.arguments(), open - 1, at, value));
+      }
+    }
+    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 2;
+    String in = " ".repeat(step);
+    String assign = "this." + parameter + " = " + parameter + ";";
+    String members = "private final " + type + " " + parameter + ";\n\n";
+    if (constructor == null) {
+      members += simple + "(" + type + " " + parameter + ") {\n" + in + assign + "\n}\n\n";
+    } else {
+      edits.add(
+          Signatures.insertAt(
+              text,
+              constructor.parameters(),
+              Signatures.open(text, constructor.getName()) - 1,
+              at,
+              type + " " + parameter));
+      edits.add(assignment(text, constructor.getBody(), assign, in));
+    }
+    members += "public " + type + " " + parameter + "() {\n" + in + "return " + parameter + ";\n}";
+    return new Field(edits, members);
+  }
+
+  /** A field's edits to an enum's text, and the members to add after them. */
+  record Field(List<TextEdit> edits, String members) {}
 
   /** The enum's only constructor, or null when it declares none; several are refused. */
   private static MethodDeclaration constructor(EnumDeclaration target, String simple) {

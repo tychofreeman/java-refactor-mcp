@@ -1157,3 +1157,17 @@ not in placement, since in a batch the reader may name it only in a later step.
   "there is no refused batch since the last one passed; send the whole batch." Resent whole,
   reordered. Wanted: the CLI keeps the last refused batch (as `undo` keeps its history across
   runs), or the refusal names `retry` only where it can work.
+
+## 2026-11-13: `batch` `retry` from the CLI (enum-switch-field)
+
+- A refused `batch` sent through `bin/jrefactor` ends with "To fix it without resending the rest,
+  batch with retry: true and only the steps that change"; the next `bin/jrefactor` run answered
+  "there is no refused batch since the last one passed; send the whole batch": each run is a new
+  session, so `Session.refusedBatch` is gone. Resent the whole batch, twice (the second time this was hit on 2026-11-13; see the entry above). Wanted: the CLI keeps
+  the last refused batch beside its undo journal, or the refusal says to resend when run from the
+  CLI.
+- Extracting `EnumField.field` (the edit without `Args`) needed the range's inputs as locals first:
+  `extract_function` of the lines as they were would have taken `args`. Tried: `extract_variable`
+  of `args.string("before")` then `move_statement` up past four statements, one call per step;
+  done instead by one `replace_text` that reordered four lines and named the value, then
+  `extract_function`. Not a defect; a `move_statement` with a count would have made it two calls.

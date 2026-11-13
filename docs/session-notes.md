@@ -368,8 +368,16 @@ Each was chosen from options; the record named beside it has the options it beat
   `Signatures.addParameter` (it returns null when `name` is no enum of the file): one file's text
   edits (constants' arguments by `Signatures.insertAt`, the constructor's parameter and
   assignment), then the field, constructor and accessor through `Declarations.plan`, all through
-  `Edits.gated`. `values` is an object argument (`Arg.json`, read by `Args.strings`). Slice 3's
-  field form (`type_switch_to_method` on an enum) should write through it.
+  `Edits.gated`. `values` is an object argument (`Arg.json`, read by `Args.strings`).
+  `EnumField.field` is the edit without `Args` (a values map in, the text edits and the members
+  out), which slice 3 writes through.
+
+- `type_switch_to_method` over an enum (#151, 2026-11-13) is `EnumSwitch`, entered from
+  `TypeSwitch.run` before the type-pattern cases are read: the field form takes the case values'
+  text into `EnumField.field`, checks them with `NameCheck`, and applies the members by
+  `Declarations.plan` onto the edited enum text (one whole-file edit for the enum's file, the
+  switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
+  name its refusal gives the case's variable ("the switch's value" for an enum).
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.

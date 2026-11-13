@@ -1,0 +1,1 @@
+the case of RED uses suffix, which on RED would not be there. Pass only what the switch's value and constants give

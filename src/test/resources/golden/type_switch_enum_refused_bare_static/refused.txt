@@ -1,0 +1,1 @@
+the case of RED uses HEAVY, a static of Paint, which Color does not see by that name. Qualify it first (Paint.HEAVY), with replace_expression.

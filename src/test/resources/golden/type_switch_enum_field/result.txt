@@ -1,0 +1,1 @@
+added the field String label to Color, read by label(); 3 constants pass their case's value; the code at line 5 of com/example/Paint.java is now c.label()
