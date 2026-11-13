@@ -452,6 +452,8 @@ Each was chosen from options; the record named beside it has the options it beat
   A guard (#164) needs no decision: it is written as typed (`Entry.guarded`) and checked in
   the last draft (`checkGuard`), as a call is; `surround`'s loop object (#163) is one `loop`
   entry whose body is the replaced lines (`Build.around`).
+  On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
+  expression and finds it again by offset (the import fix changes only lines above it).
 
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that

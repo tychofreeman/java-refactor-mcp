@@ -739,6 +739,14 @@ in the same turn only if it is sent after it.
   optional `imports`, through the gate with stubs and imports as every edit:
   - `replace_expression`: `file`, `line`, `expression` (exact text), `column`,
     `new`. Result: `replaced 0.2 at line 5 of <file>`.
+    `build` in place of `new` (roadmap #165, 2026-11-13): one object, `{"call":
+    "discounts.apply", "args": ["price", "customer"]}` or `{"new": "ArrayList"}`, written as a
+    `build` call or construction entry is (a diamond for a generic class named without type
+    arguments, the arguments checked against the declared overloads), without `into` or
+    `type`. Refused: `new` with `build`, or neither; a `loop`, `guard` or string ("replace_expression's
+    build is one call or construction ... A loop is a statement: send it as build of
+    insert_statements or replace_statements"); `into` ("takes no into: the code around it uses
+    the value"); and the call entry's refusals (the wrong number of arguments).
   - `insert_statements`: `file`, `line` (a statement directly in a block),
     `where` (`before` or `after`, default after), `content`, re-indented to that
     statement. Result: `inserted 1 line after the statement at line 5 of <file>`.

@@ -42,6 +42,6 @@ class ToolsTest {
           !required.contains("\"content\"") && !required.contains("\"new\""),
           def.name() + " takes build and still requires " + required);
     }
-    assertEquals(List.of("insert_statements", "replace_statements"), taking);
+    assertEquals(List.of("replace_expression", "insert_statements", "replace_statements"), taking);
   }
 }

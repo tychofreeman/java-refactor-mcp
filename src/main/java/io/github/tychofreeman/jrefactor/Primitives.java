@@ -28,7 +28,12 @@ final class Primitives {
     String rel = args.required("file");
     int line = line(args, "line");
     String expression = args.required("expression").strip();
-    String replacement = args.required("new");
+    if (args.has("build") == (args.string("new") != null)) {
+      throw new Refusal(
+          args.has("build")
+              ? "replace_expression takes new or build, not both."
+              : "replace_expression needs new, or build.");
+    }
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     CompilationUnit unit = opened.unit();
@@ -37,6 +42,16 @@ final class Primitives {
     Expression e =
         ExtractVariable.find(
             unit, text, expression, lineStart, lineEnd, line, args.integer("column"));
+    String replacement =
+        args.has("build")
+            ? Build.expression(
+                project,
+                opened,
+                e.getStartPosition(),
+                e.getStartPosition() + e.getLength(),
+                args.raw("build"),
+                args.list("imports"))
+            : args.required("new");
     String after =
         text.substring(0, e.getStartPosition())
             + replacement

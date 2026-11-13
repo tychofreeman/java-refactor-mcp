@@ -570,6 +570,7 @@ sections 3 and 4.
 | 155 | 162 | `build` with `loop`: a for-each over an array, an `Iterable` or a `Map`'s entries, or an index loop, the element's type read from the code, with a `body` of entries that may use the variable | Done 2026-11-13 (`Build.walk`; a loop shell with `body` and no `op`, the user's choice, "Generators" above) | The generators sketch, increment 4; `docs/sessions/build-loop.md` |
 | 156 | 163 | `surround` on `replace_statements` takes a loop object, `{"loop": "orders"}`, the statements its body | Done 2026-11-13 (`Build.around`: the statements become the body of one `loop` entry, so the head is decided as `build`'s; a name the tool picks is also kept free of the body's declarations) | The generators sketch, increment 5; `docs/sessions/surround-loop.md` |
 | 157 | 164 | `build` with `guard` and `guard_null`: a condition and its exit (`return`, `continue`, `break`, `throw`, `require`), checked where it lands | Done 2026-11-13 (`Build.checkGuard`; no return value, exception or message guessed, as the sketch says) | The generators sketch, increment 6; `docs/sessions/build-guard.md` |
+| 158 | 165 | `build` on `replace_expression`: a call or a construction written as an expression, from names | Done 2026-11-13 (`Build.expression`, one entry drafted in place; `new` is no longer required) | The generators sketch, increment 7; `docs/sessions/build-expression.md` |
 
 ### The 2026-11-04 list
 
