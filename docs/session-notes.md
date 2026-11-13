@@ -583,6 +583,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The merged list (one `move`, one `inline`, `extract_function`) was A/B-checked on 2026-11-06
   (`docs/sessions/ab-merged-tools.md`): every run passed, cost as the baselines; the mcp arm alone
   was run, as the manual arm does not see the tool list.
+- The generator task set is `eval-tasks/depot.json` (2026-11-13, `docs/sessions/generator-tasks.md`,
+  issue #376): three tasks of statements inside existing methods (a loop over a map field, a call
+  chain, a parameter every call derives), each doable in one tool call.
 - The constructive task set is `eval-tasks/library.json` (2026-11-06, `docs/sessions/constructive-tasks.md`):
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went

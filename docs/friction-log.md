@@ -1209,3 +1209,11 @@ not in placement, since in a batch the reader may name it only in a later step.
 - `spotless:apply` reflowed the stress test's Javadoc between two batches, so a `replace_text` of
   it copied from the first send missed ("old is not in"); copied again from the file. Not a
   defect.
+
+## 2026-11-13: the generator task set (`generator-tasks`)
+
+By hand: the fixture's Maven files (`mvnw`, `.mvn`, `.gitignore`, `pom.xml` with its artifactId
+changed) copied from the library fixture with `cp` and `sed`: no tool copies a directory. The
+reference solutions used to validate the tasks were applied in scratch copies by a script, not in
+the repo. Everything in the repo went through `bin/jrefactor` batches (`create_file`,
+`replace_text`).
