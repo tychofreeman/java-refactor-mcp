@@ -147,6 +147,34 @@ argument fits one field), and only a refusal that suggests a
 record (no turn saved). Before, the refusal named `constructor` (#265), and A/B runs showed a
 turn spent on each such steer.
 
+**Decided 2026-11-13 (the user): generators as a `build` argument, `replace_parameter` first as
+`remove_parameter` with `value`.** The user reviewed `docs/sessions/generators-sketch.md` and
+chose the recommended option of each of its open questions. (1) The generators are an argument,
+`build`, on `insert_statements`, `replace_statements` and `replace_expression`, with gorefactor's
+names as unpublished aliases; over one `build_statements` tool with a `kind`, and over
+`create_loop`, `create_call`, `create_guard` and `replace_parameter` as published tools. (2) A
+model is steered to them by a refusal under `JREFACTOR_SKELETON_ONLY`; over the description alone,
+and over an A/B arm publishing the aliases. (3) `replace_parameter` is first the query form,
+`remove_parameter` with `value` an expression of the other parameters; over gorefactor's form (a
+new parameter computed from the old one, by closing `extract_variable` `as=parameter`'s two gaps),
+and over one tool routing to both. (4) Generated declarations write explicit types; over `var`
+where the file uses it, and over an argument. (5) The loop generator writes the shell with
+`body`; over gorefactor's `op`, and over `op` written as a stream. (6) A call's arguments are
+always given in `args`; over filling them from same-named variables in scope, and over arguments
+by parameter name. (7) The order is `replace_parameter`'s query form, then call, loop, guard;
+over the loop first, and over leaving the guard out.
+
+Built with the query form (roadmap #147), three defaults the sketch left open, each the smallest
+that keeps behavior, to reopen if they cost turns. An expression is always declared as a local at
+the start of the body (`int area = width * height;`), as the sketch's examples show, also for one
+read; over writing it in place of a single read, which the increment's case names suggested but
+which needs the read's type and time to be the parameter's. A constructor that passes the
+parameter to `this(...)` or `super(...)` is refused; over writing the value inline there. A call
+that passes a primitive of another type for a parameter the value reads (`int` for `long`) is
+refused, since the call computed the value in the argument's type and the method would compute it
+in the parameter's; the sketch's six checks did not name it, and a probe
+(`remove_parameter_value_argument_type`) shows the overflow.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -471,6 +499,7 @@ sections 3 and 4.
 | 135 | 142 | `add_parameter` and `remove_parameter` did not reach an enum constant with a body (refused by the gate, "The constructor Color() is undefined"), and the refusal for an enum with no constructor named a fix that was itself refused (the enum sketch, increment 2) | Done 2026-11-13 (`Signatures.constructed`: the constructor an anonymous class's arguments go to, asked by `MethodFamily` for an enum constant and for `new T(...) {...}`, which had the same fault; the refusal names `add_declaration` with content `Color() {}` for an enum, which #141 made work, the smaller of the two: `constructor` takes fields, and a constructor with parameters would not compile until each constant passes them) | `docs/sessions/enums-sketch.md`, section 7; `docs/sessions/enum-constant-body-parameter.md` |
 | 137 | 144 | `extract_supertype` from a generic class, `kind=interface`: the new interface declares the class's type parameters its signatures use, and those their bounds need, in the class's order, each as the class writes it; the class implements it with their names | Done 2026-11-13 (`ExtractSupertype.generics`; the owner chose the sketch's recommendations, slice 2 option (a), over all of the class's parameters always and over a `type_parameters` argument); `kind=class` is #145 | `docs/sessions/generics-sketch.md` (increment 1); the first follow-up of `docs/sessions/extract-supertype.md`; the old refusal named no fix |
 | 139 | 146 | Generics, the shared check and wildcards (increment 3 of `docs/sessions/generics-sketch.md`): a change keeps what every call runs, and `change_type` with a wildcard is pinned | Done 2026-11-13 (`CallTargets`: each call, `new`, `this(...)`, `super(...)` and method reference in the checked files runs, after the change, the declaration it ran before, known by its place among its file's methods, not by its key; read before the write and required after it, as `Rename.checkMeanings`, so it also runs in a batch whose gate is deferred, leaving a call that does not resolve to the end check. `change_type` calls it for a field and a method; the gate's fix line names what a wildcard does not allow. The user, 2026-11-13: the model writes the wildcard in `type`, over `wildcard: "auto"` and over a body analysis) | A review found generics a gap; the friction log has no entry asking for it (the sketch says so) |
+| 140 | 147 | `remove_parameter` `value` as an expression of the method's other parameters, fields, constants and literals, without calls: the query form of `replace_parameter` (`docs/sessions/generators-sketch.md`, slice 4, increment 1) | Done 2026-11-13 (`Signatures.removeWithExpression`: the body starts with a local of the parameter's name and type; `ParameterValue` holds the parameter rules `Introduce` had and the matcher of a call's argument against the value, `passes`; refused: a call that passes anything else, an argument the value reads that has effects or another primitive type, an argument with effects between or, for a value that reads a field, after; a value that may throw is reported through `Exceptional`) | The sketch; the user's choice of 2026-11-13; `docs/sessions/remove-parameter-value-expression.md` |
 
 ### The 2026-11-04 list
 

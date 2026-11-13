@@ -741,6 +741,9 @@ final class Signatures {
     boolean literal =
         value.matches("-?[0-9][0-9_.xXa-fA-FlLdDfF]*|\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)+'")
             || List.of("true", "false", "null").contains(value);
+    if (!literal && !fieldName(m, value)) {
+      return removeWithExpression(project, family, at, parameter, value);
+    }
     IVariableBinding field = literal ? null : fieldNamed(family, d, at, value);
     if (field != null
         && !Modifier.isStatic(field.getModifiers())
@@ -934,5 +937,253 @@ final class Signatures {
       }
     }
     return sameCount.size() == 1 ? sameCount.get(0) : null;
+  }
+
+  /**
+   * Removes the parameter at {@code at} of a method nothing overrides, which every call passes
+   * {@code value} for with its own arguments in place of the other parameters: the body then starts
+   * with a local of the parameter's name and type, set to {@code value}.
+   */
+  private static Outcome removeWithExpression(
+      SourceProject project, MethodFamily family, int at, String parameter, String value)
+      throws Exception {
+    Decl d = family.decls.get(0);
+    MethodDeclaration m = d.m();
+    SingleVariableDeclaration p = (SingleVariableDeclaration) m.parameters().get(at);
+    if (m.getBody() == null) {
+      throw new Refusal(
+          family.label
+              + " has no body to compute "
+              + value
+              + " in. Remove the parameter without value, or keep it.");
+    }
+    if (p.isVarargs() || p.getExtraDimensions() > 0) {
+      throw new Refusal(
+          parameter
+              + " is declared with ... or with [] after its name, which a local set to "
+              + value
+              + " cannot be. Declare it as an array type first (change_type), or keep it.");
+    }
+    ParameterValue.InMethod v = ParameterValue.inMethod(project, d, at, value, family.label);
+    for (Effects.Effect x : Effects.of(v.expression()).all()) {
+      if (x.deferred() || x.changes() || x.kind() == Effects.Kind.NEW_ARRAY) {
+        throw new Refusal(
+            "value "
+                + value
+                + " calls, creates or assigns ("
+                + x.node()
+                + "), and may only read: "
+                + family.label.substring(0, family.label.indexOf('('))
+                + "'s other parameters, fields, constants and literals, with operators. Keep the"
+                + " parameter.");
+      }
+    }
+    int start = ParameterValue.afterConstructorCall(m);
+    if (start != m.getBody().getStartPosition() + 1) {
+      ASTNode first = (ASTNode) m.getBody().statements().get(0);
+      String call = first instanceof ConstructorInvocation ? "this(...)" : "super(...)";
+      IVariableBinding param = p.resolveBinding();
+      for (SimpleName n : Nodes.all(first, SimpleName.class)) {
+        if (param != null
+            && n.resolveBinding() instanceof IVariableBinding b
+            && b.isEqualTo(param)) {
+          throw new Refusal(
+              family.label
+                  + " passes "
+                  + parameter
+                  + " to "
+                  + call
+                  + ", and a local cannot be declared before that. Change the "
+                  + call
+                  + " call not to read it first, or keep the parameter.");
+        }
+      }
+    }
+    if (m.isConstructor() && !v.fixed()) {
+      throw new Refusal(
+          value
+              + " reads a field, which the constructor above this one or a field's initializer"
+              + " could change before a local in the body reads it. Keep the parameter.");
+    }
+    Set<Integer> uses = v.uses();
+    int low = Math.min(at, uses.stream().min(Integer::compare).orElse(at));
+    int high = Math.max(at, uses.stream().max(Integer::compare).orElse(at));
+    for (Call c : family.calls) {
+      Expression argument = (Expression) c.arguments().get(at);
+      if (!ParameterValue.passes(v, c, argument)) {
+        String here = v.at(c);
+        throw new Refusal(
+            "the call at "
+                + c.where(argument)
+                + " passes "
+                + argument
+                + ", not "
+                + value
+                + (here.equals(value) ? "" : " (with that call's arguments: " + here + ")")
+                + ", so "
+                + parameter
+                + " cannot become "
+                + value
+                + ". Change that call first, or keep the parameter.");
+      }
+      for (int i : uses) {
+        Expression passed = (Expression) c.arguments().get(i);
+        String name = ((SingleVariableDeclaration) m.parameters().get(i)).getName().getIdentifier();
+        if (!ParameterValue.quiet(passed)) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(passed)
+                  + " passes "
+                  + passed
+                  + " for "
+                  + name
+                  + ", and "
+                  + value
+                  + " would then be computed from one "
+                  + passed
+                  + " where the call ran two. Put "
+                  + passed
+                  + " in a local first.");
+        }
+        ITypeBinding declared =
+            ((SingleVariableDeclaration) m.parameters().get(i)).getType().resolveBinding();
+        ITypeBinding given = passed.resolveTypeBinding();
+        if (declared != null
+            && (given == null || declared.isPrimitive() || given.isPrimitive())
+            && (given == null || !declared.getName().equals(given.getName()))) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(passed)
+                  + " passes "
+                  + passed
+                  + (given == null ? "" : " (" + given.getName() + ")")
+                  + " for "
+                  + name
+                  + " ("
+                  + declared.getName()
+                  + "): the call computed "
+                  + argument
+                  + " in that type, and the method would compute "
+                  + value
+                  + " in the parameter's. Keep the parameter, or pass "
+                  + name
+                  + " in its own type first.");
+        }
+      }
+      for (int i = 0; i < c.arguments().size(); i++) {
+        Expression other = (Expression) c.arguments().get(i);
+        if (i == at || uses.contains(i) || ParameterValue.quiet(other)) {
+          continue;
+        }
+        if (i > low && i < high) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(other)
+                  + " runs "
+                  + other
+                  + " between the arguments "
+                  + value
+                  + " is computed from and "
+                  + argument
+                  + ", which could then differ from "
+                  + value
+                  + " computed in the method. Put "
+                  + other
+                  + " in a local first.");
+        }
+        if (i > high && !v.fixed()) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(other)
+                  + " passes "
+                  + other
+                  + " after "
+                  + argument
+                  + "; in the method, "
+                  + value
+                  + " would be computed after "
+                  + other
+                  + ", not before it. Put "
+                  + other
+                  + " in a local first, or move the parameter last (move_parameter).");
+        }
+      }
+    }
+    if (v.mayThrow()) {
+      Exceptional.change(
+          project,
+          value
+              + " may throw: each call computed it among its arguments, and "
+              + family.label.substring(0, family.label.indexOf('('))
+              + " now computes it first in its body, after every argument has run",
+          "keep the parameter.");
+    }
+    SignatureChange change = new SignatureChange(family);
+    String text = d.file().text();
+    String local = text.substring(p.getStartPosition(), Nodes.end(p)) + " = " + value + ";";
+    declareFirst(change, d.file(), m, local);
+    change.remove(d.file(), m.parameters(), at);
+    change.removeParamTag(d, at);
+    for (Call c : family.calls) {
+      change.remove(c.file(), c.arguments(), at);
+    }
+    Outcome done =
+        change.apply(project, "removed " + parameter + " from " + family.label, List.of());
+    return new Outcome(
+        done.text() + "; its body starts with " + local.substring(0, local.length() - 1),
+        done.declared());
+  }
+
+  /**
+   * Makes {@code statement} the first of {@code m}'s body, after its {@code this(...)} or {@code
+   * super(...)}: on its own line, a body written on one line opened up for it.
+   */
+  private static void declareFirst(
+      SignatureChange change, Source file, MethodDeclaration m, String statement) {
+    String text = file.text();
+    int from = ParameterValue.afterConstructorCall(m);
+    int close = Nodes.end(m.getBody()) - 1;
+    int next = from;
+    while (next < close && Character.isWhitespace(text.charAt(next))) {
+      next++;
+    }
+    String outer = Lines.indentOf(text, m.getName().getStartPosition());
+    String inner = outer + " ".repeat(Math.max(Declarations.step(text), 2));
+    if (text.substring(from, next).contains("\n")) {
+      int line = Lines.start(text, next);
+      String indent = next == close ? inner : Lines.indentOf(text, next);
+      change.replaceRange(file, line, line, indent + statement + "\n");
+      return;
+    }
+    boolean oneLine = !text.substring(from, close).contains("\n");
+    if (next == close) {
+      change.replaceRange(file, from, close, "\n" + inner + statement + "\n" + outer);
+      return;
+    }
+    change.replaceRange(file, from, next, "\n" + inner + statement + "\n" + inner);
+    if (oneLine) {
+      int last = close;
+      while (Character.isWhitespace(text.charAt(last - 1))) {
+        last--;
+      }
+      change.replaceRange(file, last, close, "\n" + outer);
+    }
+  }
+
+  /**
+   * Whether {@code value} is written as a field is: a name, with {@code this.} or a type before it,
+   * that does not start with one of {@code m}'s parameters.
+   */
+  private static boolean fieldName(MethodDeclaration m, String value) {
+    if (!value.matches("(this\\s*\\.\\s*)?[\\w$]+(\\s*\\.\\s*[\\w$]+)*")) {
+      return false;
+    }
+    String first = value.split("\\s*\\.\\s*")[0];
+    for (Object o : m.parameters()) {
+      if (((SingleVariableDeclaration) o).getName().getIdentifier().equals(first)) {
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -97,6 +97,12 @@ Each was chosen from options; the record named beside it has the options it beat
 - `remove_parameter` with `value` (#315, 2026-11-11, the user, after a before/after example):
   an option, over a `parameter_to_field` tool; `Signatures.removeWithValue` compares each call's
   argument with the field by binding key and the call's receiver.
+- Generators (2026-11-13, the user, after reading `docs/sessions/generators-sketch.md`: "go by
+  each sketch's recommendations"; the options each beat are in `docs/design.md`, Decisions): a
+  `build` argument on `insert_statements`, `replace_statements` and `replace_expression`, not new
+  tools, gorefactor's names as unpublished aliases; slice order `replace_parameter`'s query form,
+  then call, loop, guard. `replace_parameter` here is `remove_parameter` with `value` an
+  expression (roadmap #147): `Signatures.removeWithExpression`, always a local first in the body.
 - `move_statement` with `past_try` (#343, 2026-11-11, the user: option (a), over keeping the
   refusal or only rewording it): the one option that changes behavior on purpose; it skips the
   behavior gate and names the change in the result (`MoveStatement.pastTryNote`).
@@ -347,6 +353,16 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
+
+- `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
+  needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:
+  each call passes the expression), and `inMethod`, `passes`, `quiet` (`remove_parameter`
+  `value`: the method computes it). `inMethod` parses the declaring file with the value declared
+  where the body starts, under a name no source has, so its names carry the bindings they have
+  there; `passes` is an `ASTMatcher` with the call's arguments in place of the parameters, other
+  names by binding key. `Fold.Holes` was not reused: it finds what a parameter stands for, where
+  here the call's arguments give it, it does not look through parentheses, and its
+  `String.format` rule would be wrong here.
 
 - `convert_lambda` (#87, 2026-11-04) is `ConvertLambda`: lambda, method reference and
   anonymous class to one another; the type check catches an ambiguous overload.

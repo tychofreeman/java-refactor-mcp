@@ -1115,3 +1115,25 @@ not in placement, since in a batch the reader may name it only in a later step.
   refused: replace_text needs file." The file was there; what was missing was the `args` object
   around it. Resent with `args`. Wanted: when a step has keys beside `tool` and no `args`, the
   refusal says a step's arguments go in `args`, or the step is read that way.
+
+## 2026-11-13: move of a generic method; stubs declared in a nested record (remove-parameter-value-expression)
+
+- `move` of `Introduce.enclosing` (`static <T extends ASTNode> T enclosing(ASTNode, Class<T>)`)
+  to a new class was refused: "would add compile errors ... The method enclosing(Expression,
+  Class<MethodDeclaration>) is undefined for the type Introduce" (five calls). The calls of a
+  generic method were not rewritten to `ParameterValue.enclosing`. Sequences tried: `move` alone
+  (refused); `move` of its callers first (refused, they need it). Done by hand: `replace_text`
+  dropped `private`, and the method stays in `Introduce`. Wanted: `move` rewrites the calls of a
+  generic static method as it does the others'.
+- `move` of four static methods into a class with only a private constructor wrote them at a
+  four-space step in a two-space file, and qualified the moved methods' calls of each other
+  (`ParameterValue.parameterIndex(...)` inside `ParameterValue`). Spotless fixed the first; two
+  `replace_text` calls the second.
+- `add_declaration` of members that call two helpers not yet declared put the helpers' stubs
+  inside the nested record whose method called them. The next batch declared the real helpers in
+  the class around it and deleted the stubs with `replace_declaration`, refused: "is used in ...
+  line 180. Remove or change those uses first", in either order, since the call binds to the
+  nearer stub until it is gone. Done with `replace_text` of the stubs' text in the same batch.
+  Wanted: a member with a stub's name and parameter count declared in an enclosing type replaces
+  the stub, or the delete of a "not implemented" stub is allowed when the batch declares another
+  method the call then resolves to.

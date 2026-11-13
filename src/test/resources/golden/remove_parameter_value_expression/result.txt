@@ -1,0 +1,1 @@
+removed area from Box.fits(int, int, int) in 1 declaration and 2 calls (com/example/Box.java); its body starts with int area = width * height

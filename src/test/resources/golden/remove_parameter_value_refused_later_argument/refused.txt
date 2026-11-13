@@ -1,0 +1,1 @@
+passes raise() after n * factor; in the method, amount * factor would be computed after raise(), not before it. Put raise() in a local first, or move the parameter last (move_parameter)
