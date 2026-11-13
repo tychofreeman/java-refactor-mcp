@@ -69,4 +69,10 @@ final class Session {
    * #376): set by {@code JREFACTOR_NO_BUILD=1}, the server publishes them as they were before it.
    */
   boolean noBuild = "1".equals(System.getenv("JREFACTOR_NO_BUILD"));
+
+  /**
+   * Whether gorefactor's names for the generators are published as tools of their own (an A/B arm,
+   * issue #376): set by {@code JREFACTOR_PUBLISH_ALIASES=1}.
+   */
+  boolean publishAliases = "1".equals(System.getenv("JREFACTOR_PUBLISH_ALIASES"));
 }

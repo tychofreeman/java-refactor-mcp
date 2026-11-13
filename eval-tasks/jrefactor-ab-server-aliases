@@ -1,0 +1,11 @@
+#!/bin/sh
+# Starts bin/jrefactor-mcp for gorefactor's A/B harness (cmd/refactor-ab), which
+# passes the project to serve as -C <dir>, with gorefactor's names for the generators published (issue #376,
+# the A/B arm "aliases published"): create_loop, create_call, create_guard, replace_parameter.
+set -eu
+export JREFACTOR_PUBLISH_ALIASES=1
+here=$(cd "$(dirname "$0")/.." && pwd)
+if [ "${1:-}" = "-C" ]; then
+  shift
+fi
+exec "$here/bin/jrefactor-mcp" "$@"

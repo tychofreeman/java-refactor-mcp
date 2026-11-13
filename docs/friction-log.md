@@ -1225,3 +1225,8 @@ the wrapper `eval-tasks/jrefactor-ab-server-no-build` made from the skeleton one
 `chmod +x`: no tool copies files or sets a file's mode. The Java went through `bin/jrefactor`
 (`add_declaration`, `create_file`, `replace_statements`, `replace_expression`, `insert_statements`,
 and `extract_variable`, `extract_function`, `inline` and `fold` for the refactoring).
+
+## 2026-11-13: the A/B arm with the aliases published (`alias-arm`)
+
+By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build one with `sed` and
+`chmod +x`. The Java and the docs through `bin/jrefactor`.
