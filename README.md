@@ -54,7 +54,8 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   (an enhanced for as a stream), `convert_loop` (an index or iterator for
   and an enhanced for, a for and a while, a while and a do-while, either way),
   `subclass_to_strategy` (a subclass that overrides one method as a function
-  its superclass holds).
+  its superclass holds), `change_signature` (a method's return type and
+  `throws`, in every override, lambda and method-referenced method).
 - **Edits**, which change behavior on purpose and are still type-checked
   and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),

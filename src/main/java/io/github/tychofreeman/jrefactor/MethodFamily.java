@@ -45,11 +45,30 @@ final class MethodFamily {
   int size;
   MethodDeclaration target;
 
+  /** The files parsed, by path: where a declaration found later is edited. */
+  final Map<Path, Signatures.Source> sources = new LinkedHashMap<>();
+
+  /** With {@link #keepReferences}, the method references that implement a member of the family. */
+  final List<Signatures.Reference> references = new ArrayList<>();
+
+  /** Whether a method reference is kept in {@link #references}, not refused. */
+  private boolean keepReferences;
+
   private MethodFamily(String label) {
     this.label = label;
   }
 
   static MethodFamily of(SourceProject project, Args args) throws Exception {
+    return of(project, args, false, "so its parameters cannot change.");
+  }
+
+  /**
+   * The family of the method {@code args} name. With {@code references}, a method reference is not
+   * refused: one that implements the family is kept. {@code consequence} ends the refusal of a
+   * method that overrides a library's.
+   */
+  static MethodFamily of(SourceProject project, Args args, boolean references, String consequence)
+      throws Exception {
     String rel = args.required("file");
     Path path = project.javaFile(rel);
     Map<Path, String> texts = new LinkedHashMap<>();
@@ -93,6 +112,8 @@ final class MethodFamily {
     }
     MethodFamily family = new MethodFamily(named.label());
     family.target = target;
+    family.keepReferences = references;
+    family.sources.putAll(sources);
     family.size = target.parameters().size();
 
     Set<String> keys =
@@ -100,7 +121,7 @@ final class MethodFamily {
             project,
             sources.values().stream().map(Signatures.Source::unit).toList(),
             binding,
-            "so its parameters cannot change.");
+            consequence);
     Map<String, Signatures.Decl> declared = new HashMap<>();
     for (Signatures.Source s : sources.values()) {
       s.unit()
@@ -137,14 +158,17 @@ final class MethodFamily {
       // it: look in every other file that has one.
       List<Path> lambdas = new ArrayList<>();
       for (Map.Entry<Path, String> e : texts.entrySet()) {
-        if (!sources.containsKey(e.getKey()) && e.getValue().contains("->")) {
+        if (!sources.containsKey(e.getKey())
+            && (e.getValue().contains("->") || references && e.getValue().contains("::"))) {
           lambdas.add(e.getKey());
         }
       }
       Map<Path, CompilationUnit> more = Jdt.parseAll(project, lambdas);
       for (Path f : lambdas) {
-        family.findCalls(
-            new Signatures.Source(f, project.relative(f), texts.get(f), more.get(f)), keys);
+        Signatures.Source s =
+            new Signatures.Source(f, project.relative(f), texts.get(f), more.get(f));
+        family.sources.put(f, s);
+        family.findCalls(s, keys);
       }
     }
     return family;
@@ -237,6 +261,13 @@ final class MethodFamily {
               }
 
               private boolean reference(MethodReference n, IMethodBinding b) {
+                if (keepReferences) {
+                  ITypeBinding type = n.resolveTypeBinding();
+                  if (type != null && ours(type.getFunctionalInterfaceMethod())) {
+                    references.add(new Signatures.Reference(s, n, b));
+                  }
+                  return true;
+                }
                 if (ours(b)) {
                   throw new Refusal(
                       label

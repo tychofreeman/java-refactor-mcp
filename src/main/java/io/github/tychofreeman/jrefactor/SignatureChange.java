@@ -115,6 +115,22 @@ final class SignatureChange {
 
   /** Applies the edits, fixes each file's imports, and writes them all under the gate. */
   Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
+    return apply(
+        project,
+        what,
+        chosen,
+        "Nothing was changed. If a value or type does not resolve at some call, choose one"
+            + " that does.",
+        -1);
+  }
+
+  /**
+   * As {@link #apply(SourceProject, String, List)}, with the refusal's {@code fix}; with {@code
+   * declarations} zero or more, the result counts those and no calls.
+   */
+  Outcome apply(
+      SourceProject project, String what, List<String> chosen, String fix, int declarations)
+      throws Exception {
     Map<Path, String> texts = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
     List<String> notes = new ArrayList<>();
@@ -144,23 +160,15 @@ final class SignatureChange {
         notes.add(s.rel() + ": " + String.join("; ", fixed.notes()));
       }
     }
-    Stubs.Declared stubs =
-        Gate.applyOrRefuse(
-            project,
-            texts,
-            what,
-            "Nothing was changed. If a value or type does not resolve at some call, choose one"
-                + " that does.");
-    int d = family.decls.size();
+    Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
+    int d = declarations < 0 ? family.decls.size() : declarations;
     int c = family.calls.size();
     return new Outcome(
         what
             + " in "
             + d
             + (d == 1 ? " declaration" : " declarations")
-            + " and "
-            + c
-            + (c == 1 ? " call" : " calls")
+            + (declarations < 0 ? " and " + c + (c == 1 ? " call" : " calls") : "")
             + " ("
             + String.join(", ", files)
             + ")"
