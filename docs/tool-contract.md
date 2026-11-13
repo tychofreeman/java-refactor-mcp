@@ -125,6 +125,17 @@ declaring them ("The method price() of type Cart must override or implement a su
 it names `add_supertype` for that type, before the methods in one batch (2026-11-06). Other errors
 with these keep the edit's own advice after the hints.
 
+A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
+follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
+that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by
+their erased types instead, the compiler's erasure read from the syntax: a type variable becomes
+its first bound's erasure, or `Object`, and type arguments are dropped (`raise(Object)`,
+`raise(Throwable)`). A name is matched as written first, then erased (`Declarations.find`, roadmap
+#177, 2026-11-13, issue #408). The refusal for several members of a name lists each by the form
+that names it: "Ex has 2 members named raise: raise(Object), raise(Throwable). Name one with its
+parameter types, as raise(Throwable)." (it listed `raise(T), raise(T)` and suggested `raise(T)`,
+which it then refused again). `line` turns into the same name (`ByLine.named`).
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:

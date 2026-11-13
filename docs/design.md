@@ -217,6 +217,20 @@ a guard) but not reported, as before; over reporting it too, which would add a r
 `qty / 10`. The extraction is now one change (one undo), `Signatures.addParameter` taking the
 occurrences' edits from its caller (`more`), where it had been two writes.
 
+**Decided 2026-11-13 (the owner's brief, smallest option): overloads written alike are named by
+erasure** (roadmap #177, issue #408). `<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`
+are both written `raise(T)`, so no name told them apart, and the refusal suggested `raise(T)`.
+Now `name` also takes the erased parameter types (`raise(Object)`, `raise(Throwable)`), tried
+after the written ones, and the refusal and `line` give that form for a method written like
+another of its type (`Declarations.methodLabel`). Over naming with the bound (`raise(T extends
+Throwable)`, a new syntax to parse and match, and long for intersections) and over pointing the
+refusal at `line` alone (which works only once the name `line` turns into is itself unambiguous,
+so it needed this anyway). Erasure is already how stubs compare signatures (`Declarations.stubFor`,
+roadmap #107) and how the compiler tells the two apart; two methods of a type cannot erase alike.
+The erasure is read from the syntax, as `find` is syntax-only: a type variable of the method or a
+type around it, by name. `MemberMove.member` (`pull_up`, `push_down`, `move` of a member) keeps
+its own resolver and does not take erased names yet.
+
 **Decided 2026-11-13 (the user): the new parameter goes right after the last one the
 expression reads** (roadmap #172). `extract_variable` `as=parameter` refused a call with an
 argument that has effects after one the expression reads (`run(step, tick())` for `q * 3 + 1`:
@@ -679,6 +693,7 @@ sections 3 and 4.
 | 167 | 174 | The gate errored, not refused, when the JDT compiler (ECJ) itself threw while type-checking changed code (issue #405: a method reference against `Task<R, E>` once `E`'s bound became `Object & Comparable<E>`) | Done 2026-11-13 (`Jdt.compilerFailed`: `Jdt.parse` and `parseAll` turn an exception ECJ throws into a refusal naming it and where in ECJ, an exception of a unit's callback passing through; `Gate.checkedAtEnd` puts back the stubs it wrote, as `Gate.apply` did. The cause is ECJ's: javac reports three errors for that code, ECJ 3.47.0 throws on the reference's missing descriptor) | The Commons Lang stress run, `docs/sessions/stress-new-options.md`; `docs/sessions/fix-gate-jdt-errors.md` |
 | 166 | 173 | A guard keeps code that may throw by an integer `/` or `%` or a dereference only when it tests the divisor or the receiver; moving it from under any other guard is reported, not refused | Done 2026-11-13 (`Guards`, asked by `Behavior.checkPlace` and `checkExits`; the user's choice, Decisions above, over any guard ignored and over keeping the 2026-11-04 rule) | The user, 2026-11-13; `docs/sessions/guard-exceptions.md` |
 | 169 | 176 | `change_type` with `type_parameter` takes `line` (and `column`) for a method, as the contract said; it refused, needing `name` (issue #407, from the Commons Lang stress run) | Done 2026-11-13 (`Tools.changeType` sends `line` through `ByLine.named` before `TypeParameters.bound`, as the parameter and return forms do) | `docs/sessions/stress-new-options.md`; `docs/sessions/fix-type-parameter-line.md` |
+| 170 | 177 | Overloads whose parameter types are written alike but erase differently (`<T> T raise(T t)`, `<T extends Throwable> T raise(T t)`) can be named, and the refusal for several overloads suggests a name that works (issue #408, from the Commons Lang stress run) | Done 2026-11-13 (`Declarations.find` matches written parameter types, then erased ones (`erasedTypes`); `methodLabel` gives the erased form for a method written like another, in the refusal and in `ByLine.named`; "Decided 2026-11-13: overloads written alike are named by erasure" above) | `docs/sessions/stress-new-options.md`; `docs/sessions/fix-overload-names.md` |
 | 173 | 180 | `extract_variable` `as=parameter` refused every method with generic parameter types ("no member apply with parameters (Function, Object)"; issue #406, from the stress run) | Done 2026-11-13 (`Introduce.parameter` names the method by its declaration's label, `MemberMove.label`, as `ByLine.named` does, in place of `Signatures.label`'s erasures; a varargs method now reaches `MethodFamily`'s own refusal) | Issue #406; `docs/sessions/fix-parameter-generic-types.md` |
 | 171 | 178 | `inline` of a local declared with an array initializer (`String[] names = {"a", "b"};`) wrote `{"a", "b"}.length`, and the refusal blamed the user's file as if it did not parse (issue #410) | Done 2026-11-13 (`InlineVariable`: `new` and the declared type, its dimensions after the name included, before the initializer, in parentheses where indexed; `Edits.resultParses`: a refactoring's own output that does not parse is refused as the tool's fault, naming the file relative to the root. An array creation, `new int[n]` or an initializer alone, used in several places is refused as a new object is (`Effects.newArraysNow`, `Behavior.flow`), a default to reopen over reporting it: it had been inlined silently, each use a different array) | The Commons Lang stress run, `docs/sessions/stress-new-options.md`; `docs/sessions/fix-inline-array-initializer.md` |
 
