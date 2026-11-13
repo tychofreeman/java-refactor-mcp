@@ -370,7 +370,7 @@ final class TypeSwitch {
               || s instanceof BreakStatement
               || s instanceof ContinueStatement
               || s instanceof YieldStatement;
-      if (jump && leaves(s, e)) {
+      if (jump && leaves(s, e) && !ownYield(s, e)) {
         throw new Refusal(
             "the case of "
                 + typeName
@@ -441,6 +441,12 @@ final class TypeSwitch {
               ? new TextEdit(s, s + n.getLength() + 1, "")
               : new TextEdit(s, s + n.getLength(), "this"));
     }
+    for (YieldStatement y : Nodes.all(e, YieldStatement.class)) {
+      if (ownYield(y, e)) {
+        int s = y.getStartPosition() - base;
+        edits.add(new TextEdit(s, s + "yield".length(), "return"));
+      }
+    }
     edits.sort((a, b) -> b.start() - a.start());
     return TextEdit.apply(text.substring(base, Nodes.end(e)), edits, 0);
   }
@@ -468,5 +474,20 @@ final class TypeSwitch {
       }
     }
     return null;
+  }
+
+  /**
+   * Whether {@code s} is a yield of the switch expression whose case {@code body} is: in the new
+   * method it returns the value instead.
+   */
+  private static boolean ownYield(Statement s, ASTNode body) {
+    if (!(s instanceof YieldStatement) || !(body.getParent() instanceof SwitchExpression sw)) {
+      return false;
+    }
+    ASTNode p = s.getParent();
+    while (p != null && !(p instanceof SwitchExpression)) {
+      p = p.getParent();
+    }
+    return p == sw;
   }
 }

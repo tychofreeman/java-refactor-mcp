@@ -121,7 +121,7 @@ final class EnumSwitch {
     }
     boolean field = value && !"method".equals(as);
     for (Arm a : arms) {
-      if (field && !constant((Expression) a.body())) {
+      if (field && !constant(a.body())) {
         if ("field".equals(as)) {
           throw new Refusal(
               "the case of "
@@ -408,7 +408,7 @@ final class EnumSwitch {
               ? y.getExpression()
               : !value && next instanceof ExpressionStatement s
                   ? s.getExpression()
-                  : !value && next instanceof Block ? (Block) next : null;
+                  : next instanceof Block ? (Block) next : null;
       if (!c.isSwitchLabeledRule() || body == null) {
         throw new Refusal(
             "each case must be an arrow case giving "
@@ -426,8 +426,9 @@ final class EnumSwitch {
   }
 
   /** Whether {@code x} is a compile-time constant or {@code null}. */
-  private static boolean constant(Expression x) {
-    return x instanceof NullLiteral || x.resolveConstantExpressionValue() != null;
+  private static boolean constant(ASTNode x) {
+    return x instanceof NullLiteral
+        || (x instanceof Expression e && e.resolveConstantExpressionValue() != null);
   }
 
   /** The constants case {@code c} names; none for a default. Refuses {@code case null}. */

@@ -625,7 +625,14 @@ them` for a shared case and `implemented` for a default. Refused besides the fie
 constant whose body already declares `name()` ("RED already declares label()."), a name the enum
 has or inherits ("Color inherits name() from Enum; choose another name."), a bare static method of
 another class (as a bare static field), a constant body whose closing brace shares a line with its
-last member, and a block of a switch expression (`yield`, not built yet).
+last member.
+
+Roadmap #153, 2026-11-13 (increment 7): a case of a switch expression may be a block. In the
+method form it becomes the method's body, each `yield` whose target is that switch a `return`
+(one inside a nested switch statement too; a nested switch expression's own `yield` stays). A
+`yield` in the converted switch's case that targets a switch expression around it (the converted
+switch a statement inside one) is refused, as before: "the case of RED has yield 5;, which in the
+new method would leave it instead of the code around the switch."
 
 ## Merging duplicate methods (a composition)
 
