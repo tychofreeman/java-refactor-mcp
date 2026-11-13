@@ -15,6 +15,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.CreationReference;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.ExpressionMethodReference;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -215,7 +216,7 @@ final class MethodFamily {
 
               @Override
               public boolean visit(ClassInstanceCreation n) {
-                if (ours(n.resolveConstructorBinding())) {
+                if (ours(Signatures.constructed(n.resolveConstructorBinding()))) {
                   calls.add(
                       new Signatures.Call(
                           s, n, n.arguments(), Signatures.open(text, n.getType()), -1));
@@ -248,7 +249,7 @@ final class MethodFamily {
 
               @Override
               public boolean visit(EnumConstantDeclaration n) {
-                if (ours(n.resolveConstructorBinding())) {
+                if (ours(Signatures.constructed(n.resolveConstructorBinding()))) {
                   int end = n.getName().getStartPosition() + n.getName().getLength();
                   int i = end;
                   while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
@@ -418,8 +419,9 @@ final class MethodFamily {
     if (!any) {
       throw new Refusal(
           simple
-              + " declares no constructor. Add one with add_declaration (constructor), then"
-              + " change it.");
+              + " declares no constructor. Add one with add_declaration ("
+              + (type instanceof EnumDeclaration ? "content: " + simple + "() {}" : "constructor")
+              + "), then change it.");
     }
     return Declarations.find(unit, name + "." + simple, rel);
   }

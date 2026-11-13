@@ -340,6 +340,11 @@ Each was chosen from options; the record named beside it has the options it beat
   user's choice of 2026-11-11 over copying the body; a `continue` is refused), and a while to a
   do-while is guarded by `if (cond)`, refused unless the condition only reads locals.
 
+- A construction with a class body (`new T(...) {...}`, an enum constant with a body) resolves to
+  the anonymous class's own constructor, not `T`'s: ask `Signatures.constructed(binding)` for the
+  one the arguments go to (#142, 2026-11-13). `MethodFamily.findCalls` does; `ByLine`,
+  `SafeDelete`, `ThrowsCallers` and `Signatures.addComponent` still compare the raw binding.
+
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
 

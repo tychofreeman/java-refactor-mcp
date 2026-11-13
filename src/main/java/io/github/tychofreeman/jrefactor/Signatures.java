@@ -900,4 +900,39 @@ final class Signatures {
     targets.require(project, doing);
     return outcome;
   }
+
+  /**
+   * The constructor a construction runs: {@code b} itself, or for an anonymous class ({@code new
+   * T(...) {...}}, an enum constant with a body), whose own constructor {@code b} is, the
+   * constructor of its superclass that the arguments go to: the one with {@code b}'s parameter
+   * types, else the only one that takes as many. Null when there is none.
+   */
+  static IMethodBinding constructed(IMethodBinding b) {
+    if (b == null || !b.getDeclaringClass().isAnonymous()) {
+      return b;
+    }
+    ITypeBinding superclass = b.getDeclaringClass().getSuperclass();
+    if (superclass == null) {
+      return null;
+    }
+    List<IMethodBinding> sameCount = new ArrayList<>();
+    for (IMethodBinding m : superclass.getDeclaredMethods()) {
+      if (!m.isConstructor() || m.getParameterTypes().length != b.getParameterTypes().length) {
+        continue;
+      }
+      sameCount.add(m);
+      boolean same = true;
+      for (int i = 0; i < m.getParameterTypes().length; i++) {
+        same &=
+            m.getParameterTypes()[i]
+                .getErasure()
+                .getKey()
+                .equals(b.getParameterTypes()[i].getErasure().getKey());
+      }
+      if (same) {
+        return m;
+      }
+    }
+    return sameCount.size() == 1 ? sameCount.get(0) : null;
+  }
 }
