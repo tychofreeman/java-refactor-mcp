@@ -66,7 +66,8 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * (a copy: a killed run can leave a change behind), with {@code jrefactor.stress.calls} (default
  * 30), {@code jrefactor.stress.seed}, {@code jrefactor.stress.tools} (entries of {@link #TOOLS},
  * comma-separated; default all), {@code jrefactor.stress.counts=true} to print without failing, and
- * {@code jrefactor.stress.refusals=true} to print each refusal whole.
+ * {@code jrefactor.stress.refusals=true} to print each refusal, and each applied call's result,
+ * whole.
  */
 class RefactoringStressTest {
 
@@ -165,7 +166,10 @@ class RefactoringStressTest {
               case "extract_supertype_generic" -> "extract_supertype";
               default -> tool;
             };
-        Tools.call(Tools.named(real), project, args);
+        Outcome done = Tools.call(Tools.named(real), project, args);
+        if (refusals) {
+          System.out.println("stress applied: " + what + ": " + done.render().replace('\n', ' '));
+        }
       } catch (Refusal r) {
         String reason = r.getMessage().replaceAll("'[^']*'|\"[^\"]*\"|\\b\\w*Zq\\b", "_");
         reason = reason.substring(0, Math.min(60, reason.length())).replaceAll("\\s+", " ");
