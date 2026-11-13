@@ -220,7 +220,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
-  one the caller's `each` throws passes through unchanged.
+  one the caller's `each` throws passes through unchanged. A type that `parseAll`'s files do not
+  hold is resolved only as far as the batch needed it, and its scope is gone after: the binding of
+  a single static import of its method threw (#411), so `parseAll` adds the files those imports
+  name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
+  declared methods" and returns none.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
