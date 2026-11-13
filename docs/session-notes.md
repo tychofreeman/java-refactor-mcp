@@ -225,6 +225,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Session` holds all per-project state (undo history, deferred flag, library
   index, last type check, `editing`, `preserveExceptions`); there is no static
   mutable state. `Server.Quiet` holds the per-server state.
+- `Opened.topLevel` takes a class or interface only; a record, enum or annotation type of that
+  name is refused saying which it is and listing the file's classes and interfaces
+  (`Opened.notAClass`, #155). The other callers of `MemberMove.typeNamed` with their own
+  wording (`PullUp`, `MoveMember`, `AddResult`, `InlineClass`, `SubclassToStrategy`) were not
+  changed.
 - A new tool starts from `Opened` (read, parse, find the target) and lists its
   up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
   (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,

@@ -1200,7 +1200,9 @@ and `supertype` (as written, such as `Base` or `List<String>`).
 
 Result: `added S as a supertype of T (relation) in file`, with `; imported ...` when the edit
 adds an import. Refusals: a relation other than `extends` or `implements`; a name that is not a
-top-level type of the file that resolves; `implements` on an interface; `extends` on a class that
+top-level type of the file that resolves (a record, an enum or an annotation type is named as
+one, with the file's classes and interfaces: the wording of every tool that finds its type
+through `Opened.topLevel`); `implements` on an interface; `extends` on a class that
 already extends one; and the gate's "would add compile errors", naming them.
 
 ## `move_statement` (built)
