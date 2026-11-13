@@ -373,11 +373,23 @@ there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `fi
 - `kind=class`: `<Supertype>.java` extends the class's old superclass, if any,
   and takes its place in the class's `extends`; each member moves into it as
   `pull_up` moves it (fields and methods), with `pull_up`'s refusals.
+- `kind=class` under an old superclass that needs more (roadmap #179, 2026-11-13, issue #409):
+  the new class is `abstract` when a member moved into it is abstract, or when the old
+  superclass leaves an abstract method that none of the members implements (the class keeps
+  implementing it): `abstract class Base<T> { abstract T get(); }` with `size` gives `public
+  abstract class Sized<T> extends Base<T>`, and the result says `extracted abstract class`. It
+  declares one constructor for each constructor of the old superclass that the class's own
+  constructors call by `super(...)`, with that constructor's parameters (as the call sees them),
+  names, access and `throws`, its body `super(<the parameters>);`, and a no-argument one when
+  another constructor of the class calls `super()` implicitly; none when the class calls only
+  the implicit one. The class's `super(...)` calls are left as written: each now picks the
+  pass-through constructor of the same parameters, which picks the same old one.
 - One call: a refusal at any step changes nothing. Result: `extracted interface
   Pricing (com/example/Pricing.java) from Flat with price; Flat implements it`,
   or `extracted class Priced (...) from Flat with base and price; Flat extends it`.
 - Refused: an interface, a file of the new name that exists, a member not found, a method that
-  is not public or is static (interface); a `supertype` that is one of the class's type
+  is not public or is static (interface); (until 2026-11-13, issue #409, also every `kind=class`
+  under an abstract superclass or one without a no-argument constructor); a `supertype` that is one of the class's type
   parameters ("V is a type parameter of Repo: in Repo's header the name would mean it, not the
   new interface. Choose another name."); a bound that names a private type ("the bound of K
   uses the private type Repo.Key, which Finder, in its own file, cannot name. Make Repo.Key
