@@ -73,6 +73,9 @@ Each was chosen from options; the record named beside it has the options it beat
   guard or a try/catch; elsewhere a tool may change it and names each change.
   `preserve_exceptions` (one flag on every refactoring) makes it refuse instead;
   the changes are a separate part of the result.
+  Narrowed (2026-11-13, the user, roadmap #173, options in `docs/design.md`): for an integer
+  `/` or `%` and a dereference, only a guard that tests the divisor or the receiver keeps it
+  (`Guards`); leaving any other guard is reported.
 - Stubs: declared automatically by edits, no `create_from_usage` tool. A constructor stub whose
   arguments each fit one field of the class assigns them, not throws (the user, 2026-11-07:
   `Stubs.Round.setting`; the options are in `docs/design.md`). A static field read
@@ -258,7 +261,9 @@ Each was chosen from options; the record named beside it has the options it beat
   (each argument; code from outside the root, as an argument is, ran just before it).
   `Behavior.flow` is the gate without `NameCheck`, for a tool that runs it over
   several fragments itself. Per the policy, code that may throw
-  leaving a guard or a catching try is refused there; entering one is reported.
+  leaving a guard or a catching try is refused there; entering one is reported. Which guard
+  keeps a division or a dereference is `Guards` (#173): `operands` (null for anything else that
+  may throw, which any guard keeps), `left` (the conditions a move leaves), `tests`.
 - A refactoring reports or refuses a change to exceptional behavior through
   `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.

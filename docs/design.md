@@ -111,6 +111,25 @@ model in its result, so the model can decide whether the change is acceptable. N
 preserving exceptional behavior (it would refuse most moves that pass the normal-flow rule, such
 as an inlined initializer that may throw) and ignoring it (the model would not know).
 
+**Decided 2026-11-13 (the user): a guard keeps a division or a dereference only when it tests
+the operand (roadmap #173).** This narrows the 2026-11-04 decision for two unchecked exceptions.
+Code that may throw only ArithmeticException (an integer `/` or `%`) or NullPointerException (a
+dereference of a variable or expression) keeps a guard only when the guard tests its own operand:
+compares the divisor to a constant number (`d == 0`, `d > 0`) or tests the receiver for null
+(`x != null`, `Objects.isNull(x)`, `Objects.nonNull(x)`, `x instanceof T`), the same variable,
+field or expression by binding (`Guards`). Moving it from under such a guard is refused as
+before (`if (d == 0) return 0; return n / d;`); from under any other guard it is reported through
+`Exceptional`, as a move outside guards already is (`if (items.isEmpty()) return 0; return total
+/ count;`), and so refused under `preserve_exceptions`. A try/catch keeps it as before, and
+everything else that may throw (an array index, a reference cast, a call, `new`) keeps the 2026-11-04
+rule. The rule is the shared gate's (`Behavior`), so every refactoring that declares a `Move` has
+it. Options it beat: (a) only a try/catch that handles the exception counts, any guard ignored;
+(c) keep the 2026-11-04 rule. Defaults taken in building it, to reopen: a divisor's test is a
+comparison with any constant number (`d >= 1` too); a switch on the operand counts as testing it;
+leaving a catch clause, a lambda or an anonymous class is still refused (they run the code at
+another time rather than guard it); and the same rule applies when a guard moves below code that
+may throw, since `move_statement` makes that swap either way.
+
 **Decided 2026-11-05: an edit chooses an ambiguous import on evidence (the user, roadmap #105).**
 When a simple name could be several classes, the import fix takes the one the file imported
 before the call or its batch, else the only one in a package the file imports from, and names the
@@ -658,6 +677,7 @@ sections 3 and 4.
 | 164 | 171 | `extract_variable` `as=parameter`: a call passing a primitive of another type than a parameter the expression reads gets the argument cast to the parameter's type, in place of #161's refusal | Done 2026-11-13 (`ParameterValue.cast`, `substituted` with the method's parameters; `remove_parameter` `value` keeps its refusal, which a cast cannot reproduce; the user's choice, "an argument of another type is cast" above) | The owner's decision; `docs/sessions/parameter-value-cast.md` |
 | 165 | 172 | `extract_variable` `as=parameter` places the new parameter right after the last parameter the expression reads, so later arguments with effects run after it, in place of #161's refusal | Done 2026-11-13 (`Introduce.parameter` passes `before` to `Signatures.addParameter`; `perCall` checks only the arguments before the new place; an expression that calls or may throw stays last; the user's choice, "the new parameter goes right after the last one the expression reads" above) | The owner's decision; `docs/sessions/parameter-after-last-read.md` |
 | 167 | 174 | The gate errored, not refused, when the JDT compiler (ECJ) itself threw while type-checking changed code (issue #405: a method reference against `Task<R, E>` once `E`'s bound became `Object & Comparable<E>`) | Done 2026-11-13 (`Jdt.compilerFailed`: `Jdt.parse` and `parseAll` turn an exception ECJ throws into a refusal naming it and where in ECJ, an exception of a unit's callback passing through; `Gate.checkedAtEnd` puts back the stubs it wrote, as `Gate.apply` did. The cause is ECJ's: javac reports three errors for that code, ECJ 3.47.0 throws on the reference's missing descriptor) | The Commons Lang stress run, `docs/sessions/stress-new-options.md`; `docs/sessions/fix-gate-jdt-errors.md` |
+| 166 | 173 | A guard keeps code that may throw by an integer `/` or `%` or a dereference only when it tests the divisor or the receiver; moving it from under any other guard is reported, not refused | Done 2026-11-13 (`Guards`, asked by `Behavior.checkPlace` and `checkExits`; the user's choice, Decisions above, over any guard ignored and over keeping the 2026-11-04 rule) | The user, 2026-11-13; `docs/sessions/guard-exceptions.md` |
 
 ### The 2026-11-04 list
 

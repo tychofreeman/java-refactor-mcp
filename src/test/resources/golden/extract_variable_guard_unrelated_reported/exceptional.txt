@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- n / d may throw (n / d) and runs only sometimes where it is (in a branch of ?:), under a condition that does not test what it divides by or dereferences; extracting n / d moves it out from under that condition: it would now throw where the condition skipped it
