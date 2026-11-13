@@ -1,1 +1,0 @@
-Do it in steps: create_file the superclass, declaring the type parameters its members use; add_supertype with relation extends and the supertype as written, such as Stored<T>; then pull_up each member.

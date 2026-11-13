@@ -64,16 +64,6 @@ final class ExtractSupertype {
                     + kind
                     + ". Choose another name."),
         Precondition.that(
-            () -> kind.equals("interface") || type.typeParameters().isEmpty(),
-            () ->
-                name
-                    + " is generic, and extract_supertype extracts only an interface from a generic"
-                    + " class so far. Do it in steps: create_file the superclass, declaring the type"
-                    + " parameters its members use; add_supertype with relation extends and the"
-                    + " supertype as written, such as "
-                    + supertype
-                    + "<T>; then pull_up each member."),
-        Precondition.that(
             () -> !Files.exists(target),
             () -> project.relative(target) + " already exists. Choose another name."));
     String pkg =
@@ -137,13 +127,26 @@ final class ExtractSupertype {
                 + text.substring(
                     superclass.getStartPosition(),
                     superclass.getStartPosition() + superclass.getLength());
-    create(project, target, pkg + "public class " + supertype + extending + " {\n}\n", supertype);
+    List<ASTNode> uses = new ArrayList<>();
+    for (String member : members) {
+      uses.add(MemberMove.member(type, name, member, rel, "extract_supertype"));
+    }
+    if (superclass != null) {
+      uses.add(superclass);
+    }
+    Generics generics = generics(type, text, uses, supertype);
+    create(
+        project,
+        target,
+        pkg + "public class " + supertype + generics.declared() + extending + " {\n}\n",
+        supertype);
     if (superclass == null) {
-      AddSupertype.run(project, rel, name, "extends", supertype);
+      AddSupertype.run(project, rel, name, "extends", supertype + generics.named());
     } else {
       String changed =
           text.substring(0, superclass.getStartPosition())
               + supertype
+              + generics.named()
               + text.substring(superclass.getStartPosition() + superclass.getLength());
       Gate.applyOrRefuse(
           project,
@@ -157,6 +160,7 @@ final class ExtractSupertype {
     return Outcome.of(
         "extracted class "
             + supertype
+            + generics.named()
             + " ("
             + project.relative(target)
             + ") from "
@@ -207,7 +211,8 @@ final class ExtractSupertype {
   }
 
   /**
-   * The type parameters of {@code type} that {@code uses} name, found by binding, with those their
+   * The type parameters of {@code type} that {@code uses} (signatures for an interface; whole
+   * members and the old superclass's type for a class) name, found by binding, with those their
    * bounds name, in the class's order. A bound is copied exactly, so the new type's methods erase
    * to what the class's do; one that names a type {@code supertype}'s file cannot is refused.
    */

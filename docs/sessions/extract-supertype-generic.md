@@ -60,7 +60,8 @@ What would have helped: a batch refusal that names `args` (friction log, 2026-11
 
 ## Follow-ups
 
-- `kind=class` from a generic class: roadmap #145, next.
+- `kind=class` from a generic class: roadmap #145, done in
+  `docs/sessions/extract-supertype-generic-class.md`.
 - A signature or a bound that names a package-private member type by its simple name (`Key`
   for `Repo.Key`) is copied as written and refused by the gate, for a non-generic class too;
   writing it qualified in the new file would lift that.

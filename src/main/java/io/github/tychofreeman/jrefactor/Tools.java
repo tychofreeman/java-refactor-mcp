@@ -333,7 +333,8 @@ final class Tools {
           the class's package. kind=interface: the new interface declares the signatures of the \
           named public instance methods, and the class implements it. kind=class: the named \
           methods and fields move into the new class (as pull_up moves them), which takes the \
-          class's place in its extends and extends the old superclass.\
+          class's place in its extends and extends the old superclass. From a generic class, \
+          the new type declares the type parameters its members use, bounds included.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
