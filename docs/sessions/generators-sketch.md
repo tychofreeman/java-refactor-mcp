@@ -528,7 +528,8 @@ parameter (every call then passes that expression of its own argument), then
 `remove_parameter` of the old one, now unread, in one batch. Two gaps stop the general case:
 `as=parameter` takes one occurrence (`all_occurrences` is "not built yet") and refuses an
 expression with a call. Closing those gaps is smaller than a `replace_parameter` tool and
-serves `parameterize` too; a `replace_parameter` alias could then send the batch.
+serves `parameterize` too; a `replace_parameter` alias could then send the batch. (Both gaps
+closed 2026-11-13, roadmap #161: `all_occurrences`, and calls on a parameter or a class.)
 
 ## 5. How it composes
 

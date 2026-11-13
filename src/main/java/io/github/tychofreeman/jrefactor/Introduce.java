@@ -14,6 +14,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.Statement;
 
 /**
  * extract_variable with as: the expression becomes a constant ({@code private static final}), a
@@ -33,7 +34,8 @@ final class Introduce {
       String as,
       ITypeBinding type,
       String source,
-      int line)
+      int line,
+      boolean all)
       throws Exception {
     Precondition.require(
         Precondition.that(
@@ -44,8 +46,10 @@ final class Introduce {
             () ->
                 source
                     + (as.equals("parameter")
-                        ? " uses a local, a field that is not a constant, a call, or a parameter"
-                            + " the method assigns, so a call could not pass it"
+                        ? " uses a local, a field that is not a constant, a call on the method's"
+                            + " own object or with no receiver (write a static method's class"
+                            + " before it), or a parameter the method assigns, so a call could"
+                            + " not pass it"
                         : " uses a local, a parameter, a field that is not a constant, or a call,"
                             + " so as a "
                             + as
@@ -54,7 +58,7 @@ final class Introduce {
     String typeName = Extract.typeName(type);
     String rel = opened.rel();
     if (as.equals("parameter")) {
-      return parameter(project, opened, e, name, typeName, source, line);
+      return parameter(project, opened, e, name, typeName, source, all);
     }
     AbstractTypeDeclaration owner = enclosing(e, AbstractTypeDeclaration.class);
     BodyDeclaration member = enclosing(e, BodyDeclaration.class);
@@ -122,8 +126,10 @@ final class Introduce {
   }
 
   /**
-   * As a parameter: {@code add_parameter} adds it to the enclosing method (every call passes the
-   * expression), then the expression is replaced with its name.
+   * As a parameter: {@code add_parameter} adds it to the enclosing method, every call passing the
+   * expression, and the expression (with {@code all}, each occurrence of it in the method) becomes
+   * its name, in one change. An expression with a call now runs at each call, before the method:
+   * the behavior gate checks that move.
    */
   private static Outcome parameter(
       SourceProject project,
@@ -132,14 +138,40 @@ final class Introduce {
       String name,
       String typeName,
       String source,
-      int line)
+      boolean all)
       throws Exception {
     MethodDeclaration m = enclosing(e, MethodDeclaration.class);
     Precondition.require(
         Precondition.that(
             () -> m != null && m.resolveBinding() != null,
             () -> source + " is not directly in a method, whose parameter it could be."));
-    int offset = e.getStartPosition() - Lines.start(opened.text(), e.getStartPosition());
+    ParameterValue.InMethod v = new ParameterValue.InMethod(source, e, m, m.parameters().size());
+    List<Expression> found = all ? ParameterValue.sameIn(m, e) : List.of(e);
+    if (v.acts() && found.size() > 1) {
+      throw new Refusal(
+          source
+              + " calls code and occurs "
+              + found.size()
+              + " times in "
+              + m.getName()
+              + ": as a parameter it would run once, at each call, where the method ran it "
+              + found.size()
+              + " times. Leave out all_occurrences, or extract it as a variable instead.");
+    }
+    if (v.acts() && m.isConstructor()) {
+      throw new Refusal(
+          source
+              + " would run before the constructor above this one and the field initializers,"
+              + " not after them. Extract it as a variable instead.");
+    }
+    if (v.acts() || v.mayThrow()) {
+      Statement first = (Statement) m.getBody().statements().get(0);
+      for (Expression x : found) {
+        Behavior.flow(
+            project,
+            new Behavior.Move(x, m.getBody(), List.of(first), source, "making it a parameter"));
+      }
+    }
     Outcome added =
         Signatures.addParameter(
             project,
@@ -151,27 +183,54 @@ final class Introduce {
                     "parameter", name,
                     "type", typeName,
                     "value", source)),
-            ParameterValue.perCall(e, source));
-    // The signature changed; the expression is found again on its line, by its text.
-    Opened again = Opened.of(project, opened.rel());
-    String text = again.text();
-    int lineStart = Lines.start(text, again.unit().getPosition(line, 0));
-    int from = text.indexOf(source, lineStart + Math.max(0, offset - 1));
-    if (from < 0 || Lines.number(text, from) != line) {
-      from = text.indexOf(source, lineStart);
+            ParameterValue.perCall(v),
+            (family, change) -> {
+              if (v.acts() && (family.decls.size() != 1 || !family.lambdas.isEmpty())) {
+                throw new Refusal(
+                    family.label
+                        + " overrides or implements another method, or another overrides or"
+                        + " implements it, and a call that runs another body would now run "
+                        + source
+                        + " too. Extract it as a variable instead.");
+              }
+              Signatures.Decl d =
+                  family.decls.stream()
+                      .filter(x ->
+                          x.file().rel().equals(opened.rel())
+                              && x.m().getStartPosition() == m.getStartPosition())
+                      .findFirst()
+                      .orElseThrow();
+              for (Expression x : found) {
+                change.replaceRange(d.file(), x.getStartPosition(), Nodes.end(x), name);
+              }
+              if (v.acts()) {
+                Exceptional.change(
+                    project,
+                    source
+                        + " may throw: "
+                        + family.label.substring(0, family.label.indexOf('('))
+                        + " computed it in its body, and each call now computes it among its"
+                        + " arguments, before the method runs",
+                    "extract it as a variable instead.");
+              }
+            });
+    List<Integer> lines = new ArrayList<>();
+    for (Expression x : found) {
+      int n = opened.unit().getLineNumber(x.getStartPosition());
+      if (!lines.contains(n)) {
+        lines.add(n);
+      }
     }
-    String after = text.substring(0, from) + name + text.substring(from + source.length());
-    Edits.Written written =
-        Edits.gated(
-            project,
-            again.file(),
-            text,
-            after,
-            List.of(),
-            "using parameter " + name,
-            "Nothing was changed.");
+    String at =
+        lines.size() == 1
+            ? "line " + lines.get(0)
+            : "lines "
+                + String.join(
+                    ", ", lines.subList(0, lines.size() - 1).stream().map(String::valueOf).toList())
+                + " and "
+                + lines.get(lines.size() - 1);
     return new Outcome(
-        added.text() + "; " + source + " at line " + line + " is now " + name, written.declared());
+        added.text() + "; " + source + " at " + at + " is now " + name, added.declared());
   }
 
   /** Whether {@code e} is literals, constants and operators on them. */

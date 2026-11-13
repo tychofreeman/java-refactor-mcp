@@ -385,7 +385,12 @@ Each was chosen from options; the record named beside it has the options it beat
   `TypeSwitch.Case` is shared.
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
-  or a parameter through `Signatures.addParameter`; literals and constants only.
+  or a parameter through `Signatures.addParameter`. As a parameter (#125, #161) the expression
+  is a `ParameterValue.InMethod`, the record `remove_parameter` `value` uses, so the per-call
+  rules (`ParameterValue.perCall`) are one set for both directions; the occurrences are replaced
+  in the same `SignatureChange` (`addParameter`'s `more`, which may also refuse by the family),
+  one write and one undo. With a call it is checked as a `Behavior.Move` to the body's first
+  statement (`Behavior.flow`).
 
 - `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
   needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:

@@ -73,8 +73,9 @@ final class ParameterValue {
   }
 
   /**
-   * Whether {@code e} is literals, constants and parameters of its method that the method never
-   * assigns, so each call can pass it with its own arguments in place of the parameters.
+   * Whether {@code e} is literals, constants, parameters of its method that the method never
+   * assigns, and calls on them or on a class, so each call can pass it with its own arguments in
+   * place of the parameters.
    */
   static boolean byParameters(Expression e) {
     MethodDeclaration m = Introduce.enclosing(e, MethodDeclaration.class);
@@ -96,6 +97,14 @@ final class ParameterValue {
             return false;
           }
         }
+        case CALL -> {
+          if (x.deferred()
+              || !(x.node() instanceof MethodInvocation call)
+              || call.getExpression() == null
+              || call.getExpression() instanceof ThisExpression) {
+            return false;
+          }
+        }
         case MAY_THROW -> {}
         default -> {
           return false;
@@ -106,27 +115,90 @@ final class ParameterValue {
   }
 
   /**
-   * The argument a call passes for {@code e} (source text {@code source}): {@code e} with each of
+   * The argument a call passes for {@code v}, the value of a new parameter: {@code v} with each of
    * its method's parameters replaced by that call's argument, parenthesized unless it is a name or
-   * a literal; refused for an argument with effects, which would run twice.
+   * a literal. Refused for an argument that would then run twice, be read in another type, or be
+   * read again after something that could change it.
    */
-  static java.util.function.Function<Signatures.Call, String> perCall(Expression e, String source) {
-    List<int[]> uses = occurrences(e, Introduce.enclosing(e, MethodDeclaration.class));
+  static java.util.function.Function<Signatures.Call, String> perCall(InMethod v) {
     return c -> {
-      for (int[] u : uses) {
-        Expression arg = (Expression) c.arguments().get(u[2]);
+      for (int i : v.uses()) {
+        Expression arg = (Expression) c.arguments().get(i);
+        String passed = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
+        String name =
+            ((SingleVariableDeclaration) v.method().parameters().get(i)).getName().getIdentifier();
         if (!quiet(arg)) {
           throw new Refusal(
               "a call passes "
-                  + c.file().text().substring(arg.getStartPosition(), Nodes.end(arg))
+                  + passed
                   + " for "
-                  + source.substring(u[0], u[0] + u[1])
+                  + name
                   + ", which has effects, and passing "
-                  + source
+                  + v.text()
                   + " with it would run them twice. Put it in a local first.");
         }
+        ITypeBinding declared =
+            ((SingleVariableDeclaration) v.method().parameters().get(i)).getType().resolveBinding();
+        ITypeBinding given = arg.resolveTypeBinding();
+        if (declared != null
+            && (given == null || declared.isPrimitive() || given.isPrimitive())
+            && (given == null || !declared.getName().equals(given.getName()))) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(arg)
+                  + " passes "
+                  + passed
+                  + (given == null ? "" : " (" + given.getName() + ")")
+                  + " for "
+                  + name
+                  + " ("
+                  + declared.getName()
+                  + "): the method computed "
+                  + v.text()
+                  + " in the parameter's type, and the call would compute it in the argument's. Pass "
+                  + name
+                  + " in its own type first, or extract it as a variable instead.");
+        }
+        boolean fixed = Effects.of(arg).fixed();
+        if (v.acts() && !fixed && !v.readsFirst(i)) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(arg)
+                  + " passes "
+                  + passed
+                  + " for "
+                  + name
+                  + ", and would now pass "
+                  + v.at(c)
+                  + ", reading "
+                  + passed
+                  + " again after a call in it that could change it. Put "
+                  + passed
+                  + " in a local first.");
+        }
+        for (int j = i + 1; j < c.arguments().size(); j++) {
+          Expression other = (Expression) c.arguments().get(j);
+          if (!quiet(other) && (!fixed || writes(other, arg))) {
+            throw new Refusal(
+                "the call at "
+                    + c.where(other)
+                    + " runs "
+                    + other
+                    + " after "
+                    + passed
+                    + ", and would now pass "
+                    + v.at(c)
+                    + " last, reading "
+                    + passed
+                    + " again after "
+                    + other
+                    + " could change it. Put "
+                    + other
+                    + " in a local first.");
+          }
+        }
       }
-      return substituted(uses, source, c);
+      return v.at(c);
     };
   }
 
@@ -579,5 +651,39 @@ final class ParameterValue {
           ? key(o) == null && v.getName().equals(o.getName())
           : key(v).equals(key(o));
     }
+  }
+
+  /** Whether {@code other} assigns a variable that {@code read} reads. */
+  private static boolean writes(Expression other, Expression read) {
+    java.util.Set<String> names = new java.util.HashSet<>();
+    for (IVariableBinding r : Effects.of(read).named()) {
+      names.add(r.getVariableDeclaration().getKey());
+    }
+    return Effects.of(other).written().stream()
+        .anyMatch(w -> names.contains(w.getVariableDeclaration().getKey()));
+  }
+
+  /**
+   * The expressions in {@code m}'s body that are {@code e}: the same structure, each name with the
+   * same binding. {@code e} is one of them.
+   */
+  static List<Expression> sameIn(MethodDeclaration m, Expression e) {
+    ASTMatcher same =
+        new ASTMatcher() {
+          @Override
+          public boolean match(SimpleName p, Object other) {
+            return other instanceof SimpleName o
+                && o.getIdentifier().equals(p.getIdentifier())
+                && key(p.resolveBinding()) != null
+                && key(p.resolveBinding()).equals(key(o.resolveBinding()));
+          }
+        };
+    List<Expression> out = new ArrayList<>();
+    for (Expression x : Nodes.all(m.getBody(), Expression.class)) {
+      if (x.getNodeType() == e.getNodeType() && e.subtreeMatch(same, x)) {
+        out.add(x);
+      }
+    }
+    return out;
   }
 }

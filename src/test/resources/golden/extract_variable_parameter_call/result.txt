@@ -1,0 +1,1 @@
+added String customer to Pricing.priceOf(Order) in 1 declaration and 2 calls (shop/Checkout.java, shop/Pricing.java); order.customer() at line 5 is now customer

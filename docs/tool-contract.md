@@ -1149,7 +1149,7 @@ arguments.
   (`any ? price * qty : 0`). Also refuses: assigned to; a statement not
   directly in a block; a type that does not resolve; a new name that a field of the
   enclosing class or its superclasses already has, which the local would hide.
-  `all_occurrences` and `pointer` are not built yet.
+  `all_occurrences` is built only with `as=parameter` (below); `pointer` is not built yet.
 - `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
   expr;` after the type's fields (its first member when it has none, 2026-11-07), `field`
   adds `private final T name = expr;` there too
@@ -1163,10 +1163,26 @@ arguments.
   with its own arguments in their place, parenthesized unless a name or a literal
   (`total(n + 1, 3)` passes `(n + 1) / 10` for `qty / 10`); a call whose argument for such a
   parameter has effects is refused ("would run them twice"). Refused also: a field of that name
-  already in the type. Result:
+  already in the type.
+  Since roadmap #161 (2026-11-13), the mirror of `remove_parameter` `value` (#147, #148), each
+  call's argument is also refused when it is a primitive of another type than the parameter
+  (the call would compute the expression in the argument's type), or when an argument after it
+  that has effects could change what it reads, which the expression would now read again last.
+  A may-throw expression goes through the behavior gate, moving to the start of the body: under
+  a guard or in a catching try it is refused. `all_occurrences=true` (only with
+  `as=parameter`; refused otherwise) makes every occurrence in the method the parameter, matched
+  by structure and binding, in the same one change. The expression may call a method on a
+  parameter or a class (`order.customer()`, `Rates.of(qty)`): the call now runs at each call,
+  after its arguments and before the method, so the behavior gate checks the move to the start
+  of the body (an effect before it, a branch, a loop, an early exit refuse), and each call's
+  argument that the expression reads and is not fixed must be read in it before its calls.
+  Refused with a call: one on the method's own object or with no receiver; more than one
+  occurrence; a constructor (it would run before the field initializers); a method something
+  overrides or implements, or that a lambda implements (a call that runs another body would run
+  it too). Reported through `Exceptional`: the call may throw before the method runs. Result:
   `introduced constant RATE (private static final double RATE = 0.2) in Price,
   in place of 0.2 at line 5 of <file>`; for a parameter, `add_parameter`'s
-  result and `; 0.2 at line 5 is now rate`.
+  result and `; 0.2 at line 5 is now rate` (`at lines 5 and 6` for several occurrences).
 
 ## `inline_variable` (built)
 
