@@ -311,7 +311,10 @@ argument count is refused only against explicit constructors (a class with none 
 stub that assigns fields); `type` beside an `into` that is already a variable is refused, not
 ignored; a checked exception and a mismatched `into` are left to the gate's wording. A loop variable's name that the tool picks is kept free of the names its body
 declares too (`order2`), found with `surround`'s loop (#163); a `name` the model gives that a
-body declares is left to the gate's compile refusal.
+body declares is left to the gate's compile refusal. For the guard (#164): a `return` with a `value` where the method returns
+nothing is refused before the gate; `guard_null` puts what it names in parentheses unless it is
+a name, a call or an access; a guard adds nothing to the result's `built` list, since it declares
+nothing.
 
 ## Questions (all answered)
 
@@ -566,6 +569,7 @@ sections 3 and 4.
 | 150 | 157 | Generics, slice 1: `add_parameter` with `type_parameter` and `members`: the named fields, methods and constructors are typed `T` where their declared types name `value` (increment 5 of `docs/sessions/generics-sketch.md`) | Done 2026-11-13 (`TypeParameters.typed`: signatures only, bodies left to the gate, whose fix line names a bound; refused up front: a static member, a field created as an array of `value`, a field declared with others, a method that overrides a supertype's, a member that does not name `value`. `CallTargets` now passes a virtual call that names a method its old target overrides. The user, 2026-11-13, the sketch's recommendation: signatures only, over retyping the locals the bodies initialize and over inferring the rest from one member) | A review found generics a gap; the friction log has no entry asking for it |
 | 155 | 162 | `build` with `loop`: a for-each over an array, an `Iterable` or a `Map`'s entries, or an index loop, the element's type read from the code, with a `body` of entries that may use the variable | Done 2026-11-13 (`Build.walk`; a loop shell with `body` and no `op`, the user's choice, "Generators" above) | The generators sketch, increment 4; `docs/sessions/build-loop.md` |
 | 156 | 163 | `surround` on `replace_statements` takes a loop object, `{"loop": "orders"}`, the statements its body | Done 2026-11-13 (`Build.around`: the statements become the body of one `loop` entry, so the head is decided as `build`'s; a name the tool picks is also kept free of the body's declarations) | The generators sketch, increment 5; `docs/sessions/surround-loop.md` |
+| 157 | 164 | `build` with `guard` and `guard_null`: a condition and its exit (`return`, `continue`, `break`, `throw`, `require`), checked where it lands | Done 2026-11-13 (`Build.checkGuard`; no return value, exception or message guessed, as the sketch says) | The generators sketch, increment 6; `docs/sessions/build-guard.md` |
 
 ### The 2026-11-04 list
 

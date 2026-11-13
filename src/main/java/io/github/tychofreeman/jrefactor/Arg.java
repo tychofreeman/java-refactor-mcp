@@ -38,7 +38,7 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
           """
           {
             "type": "array",
-            "description": "In place of content: the statements to write, in order. Each entry is a statement as typed, or an object: {call, args, into, type} for a call, {new, args, into, type} for a construction, {loop, name, form, type, body} for a loop whose body is a list of entries.",
+            "description": "In place of content: the statements to write, in order. Each entry is a statement as typed, or an object: {call, args, into, type} for a call, {new, args, into, type} for a construction, {loop, name, form, type, body} for a loop whose body is a list of entries, {guard, exit, value, message} for if (condition) and an exit (return, continue, break or throw), {guard_null, exit, value, message} for the same when what it names is null (exit require: Objects.requireNonNull).",
             "items": {
               "anyOf": [
                 {"type": "string"},

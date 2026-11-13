@@ -1,0 +1,1 @@
+value is what return returns or what throw throws; continue takes none.
