@@ -105,6 +105,15 @@ final class Behavior {
               + m.landings().size()
               + " times.");
     }
+    if (m.landings().size() > 1 && !code.newArraysNow().isEmpty()) {
+      throw new Refusal(
+          m.label()
+              + " creates an array, and "
+              + m.verb()
+              + " puts it in "
+              + m.landings().size()
+              + " places, so each would hold a different array where there was one.");
+    }
     for (ASTNode landing : m.landings()) {
       checkPlace(project, m, code, throwing, landing);
       checkCrossed(project, m, code, throwing, landing);
