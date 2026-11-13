@@ -214,6 +214,8 @@ Each was chosen from options; the record named beside it has the options it beat
   been outside every root, so `create_file` wrote it unchecked.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
+  An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
+  one the caller's `each` throws passes through unchanged.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start

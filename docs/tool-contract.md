@@ -69,6 +69,14 @@ class without one (2026-11-07), and fix imports; lines are 1-based.
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+When the JDT compiler itself throws while type-checking (ECJ fails this way on some code that does
+not compile, issue #405), the call is refused, every file put back: "The Java compiler (ECJ) failed
+while type-checking, so nothing was changed: <exception> (in <where in ECJ>). It fails this way on
+some code that does not compile, such as a lambda or method reference whose target type no longer
+fits its type parameter's bounds. Change the edit so the code it writes type-checks (another type,
+bound or argument); if every edit fails this way, the project as it is trips the compiler: fix the
+code there first." (`Jdt.compilerFailed`, 2026-11-13.)
+
 An edit (any tool through `Edits.gated`) that adds a final instance field with no value to a
 class with no constructor but "not implemented" stubs also adds the constructor that sets every
 such field, in declaration order, after the last of them; a stub of the same parameter types is
