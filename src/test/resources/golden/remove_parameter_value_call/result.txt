@@ -1,0 +1,1 @@
+removed customer from Pricing.priceOf(Order, String) in 1 declaration and 2 calls (shop/Checkout.java, shop/Pricing.java); its body starts with String customer = order.customer()

@@ -1,0 +1,1 @@
+passes sent after order.customer(); in the method, order.customer() would run after sent, not before it

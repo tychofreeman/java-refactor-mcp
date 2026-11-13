@@ -1219,7 +1219,7 @@ final class Tools {
                   "value",
                   "Optional: what every call passes for it, a field (out, this.out, Config.OUT)"
                       + " or a literal, which the body then reads, or an expression of the"
-                      + " other parameters, fields, constants and literals (width * height),"
+                      + " other parameters, fields, constants and literals, calls too (width * height, order.customer()),"
                       + " which the body then starts by computing.")),
           Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, ByLine.named(project, args)));

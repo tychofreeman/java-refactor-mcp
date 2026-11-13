@@ -27,6 +27,7 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
@@ -186,6 +187,32 @@ final class ParameterValue {
      */
     boolean fixed() {
       return Effects.of(expression).fixed();
+    }
+
+    /** Whether computing it does something: a call, a new object. */
+    boolean acts() {
+      return Effects.of(expression).changes();
+    }
+
+    /**
+     * Whether each read of the parameter at {@code index} comes before everything the value does:
+     * it is in the call's own receiver or arguments, or written before it.
+     */
+    boolean readsFirst(int index) {
+      for (SimpleName n : Nodes.all(expression, SimpleName.class)) {
+        if (!(n.resolveBinding() instanceof IVariableBinding v)
+            || parameterIndex(method, v) != index) {
+          continue;
+        }
+        for (Effects.Effect x : Effects.of(expression).all()) {
+          if (x.changes()
+              && !Nodes.within(n, x.node())
+              && n.getStartPosition() > x.node().getStartPosition()) {
+            return false;
+          }
+        }
+      }
+      return true;
     }
 
     /** Whether computing it may throw. */
@@ -390,6 +417,117 @@ final class ParameterValue {
     @Override
     public boolean match(InfixExpression p, Object other) {
       return super.match(p, unwrapped(other));
+    }
+
+    @Override
+    public boolean match(ThisExpression p, Object other) {
+      return unwrapped(other) instanceof ThisExpression o
+          && p.getQualifier() == null
+          && o.getQualifier() == null
+          && ownCall();
+    }
+
+    @Override
+    public boolean match(SuperMethodInvocation p, Object other) {
+      return false;
+    }
+
+    /**
+     * A call matches a call of the same method, or of one that overrides it when it is called on an
+     * object, with matching arguments; a method of the method's own object only on a call on this.
+     */
+    @Override
+    public boolean match(MethodInvocation p, Object other) {
+      if (!(unwrapped(other) instanceof MethodInvocation o)
+          || !p.typeArguments().isEmpty()
+          || !o.typeArguments().isEmpty()
+          || p.arguments().size() != o.arguments().size()) {
+        return false;
+      }
+      IMethodBinding mine = p.resolveMethodBinding();
+      IMethodBinding theirs = o.resolveMethodBinding();
+      if (mine == null || theirs == null) {
+        return false;
+      }
+      boolean isStatic = Modifier.isStatic(mine.getModifiers());
+      boolean own =
+          !isStatic && (p.getExpression() == null || p.getExpression() instanceof ThisExpression);
+      boolean same = key(mine).equals(key(theirs));
+      if (!same && (isStatic || own || !overrides(theirs, mine))) {
+        return false;
+      }
+      if (isStatic) {
+        if (!typeOrNone(p.getExpression()) || !typeOrNone(o.getExpression())) {
+          return false;
+        }
+      } else if (own) {
+        if (!(o.getExpression() == null
+                || o.getExpression() instanceof ThisExpression t && t.getQualifier() == null)
+            || !(p.getExpression() == null
+                || p.getExpression() instanceof ThisExpression t && t.getQualifier() == null)
+            || !ownCall()) {
+          return false;
+        }
+      } else if (o.getExpression() == null
+          || !safeSubtreeMatch(p.getExpression(), o.getExpression())) {
+        return false;
+      }
+      for (int i = 0; i < p.arguments().size(); i++) {
+        if (!safeSubtreeMatch(p.arguments().get(i), o.arguments().get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private static boolean typeOrNone(Expression receiver) {
+      return receiver == null
+          || receiver instanceof Name n && n.resolveBinding() instanceof ITypeBinding;
+    }
+
+    /**
+     * Whether {@code theirs} overrides {@code mine}: the same name and parameter types, in a
+     * subtype of its class. The two are of different parses, so by key.
+     */
+    private static boolean overrides(IMethodBinding theirs, IMethodBinding mine) {
+      ITypeBinding[] a = theirs.getMethodDeclaration().getParameterTypes();
+      ITypeBinding[] b = mine.getMethodDeclaration().getParameterTypes();
+      if (!theirs.getName().equals(mine.getName())
+          || a.length != b.length
+          || Modifier.isStatic(theirs.getModifiers())
+          || Modifier.isPrivate(mine.getModifiers())) {
+        return false;
+      }
+      for (int i = 0; i < a.length; i++) {
+        if (!a[i].getErasure().getKey().equals(b[i].getErasure().getKey())) {
+          return false;
+        }
+      }
+      String target = mine.getDeclaringClass().getErasure().getKey();
+      java.util.Deque<ITypeBinding> todo = new java.util.ArrayDeque<>();
+      java.util.Set<String> seen = new java.util.HashSet<>();
+      todo.add(theirs.getDeclaringClass());
+      while (!todo.isEmpty()) {
+        ITypeBinding t = todo.pop();
+        if (!seen.add(t.getErasure().getKey())) {
+          continue;
+        }
+        if (t.getErasure().getKey().equals(target)) {
+          return true;
+        }
+        if (t.getSuperclass() != null) {
+          todo.add(t.getSuperclass());
+        }
+        todo.addAll(List.of(t.getInterfaces()));
+      }
+      return false;
+    }
+
+    /** Whether the call is on the caller's own object: unqualified, or on this. */
+    private boolean ownCall() {
+      return call.node() instanceof MethodInvocation mi
+          && (mi.getExpression() == null
+              || mi.getExpression() instanceof ThisExpression t && t.getQualifier() == null);
     }
 
     /** Whether {@code other} reads the field {@code v} of what {@code of} matches. */

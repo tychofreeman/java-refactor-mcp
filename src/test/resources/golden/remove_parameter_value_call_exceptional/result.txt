@@ -1,0 +1,1 @@
+removed label from Feed.send(Order, String) in 1 declaration and 1 call (shop/Feed.java); its body starts with String label = label(order)
