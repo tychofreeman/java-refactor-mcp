@@ -190,13 +190,35 @@ smallest, to reopen if they cost turns. `all_occurrences` is built only with `as
 and refused with a local, a constant or a field; over building it for all four. A call in the
 expression must have a receiver that is a parameter, a chain from one, or a class: a call on
 the method's own object (`rate(order)`, `this.rate(order)`) or a static method named without
-its class is refused; over writing it at each call on that call's receiver (the matcher's rule
+its class is refused (reversed by #169, below); over writing it at each call on that call's receiver (the matcher's rule
 in the other direction) and over qualifying a static method with its class at a call in
 another type. Only an expression with a call is reported through `Exceptional` as now throwing
 at the call; a may-throw expression without one is checked by the behavior gate (refused under
 a guard) but not reported, as before; over reporting it too, which would add a report to every
 `qty / 10`. The extraction is now one change (one undo), `Signatures.addParameter` taking the
 occurrences' edits from its caller (`more`), where it had been two writes.
+
+**Decided 2026-11-13 (the user): a call on the method's own object is written on each call's
+object** (roadmap #169). `extract_variable` `as=parameter` of an expression with `rate(order)`
+or `this.rate(order)` in it writes the call on the object each call of the method runs on: at
+`x.m(a)` the new argument is `x.rate(a')`; at `m(a)` or `this.m(a)` in the class or a subclass it
+is `rate(a')`; at `super.m(a)` it is `super.rate(a')` only when that means the same method (no
+override of `rate` in the calling class or below it), else refused. Over qualifying the call
+(which has no receiver to qualify it with at a call in another type) and over refusing, as
+#161 did. The static counterpart is the same decision: a static method named without its class
+(`scale(x)`) is written `Pricing.scale(x')` at a call where its name alone would not reach it
+(outside the class, its subclasses and the types nested in them) and left bare elsewhere.
+What keeps behavior (`ParameterValue.sameTargets`): the call's receiver is now evaluated twice,
+so it must be steady (this, a class, a local or parameter no argument assigns, or a final field
+of one), else "put it in a local first"; an unqualified call of the method from a type that is
+not the class or a subclass (an enclosing object's) is refused, naming `Outer.this.m(...)`; each
+call in the written argument must resolve, in a probe parse of the calling file with the
+argument in place, to the method the body called or an override of it (another overload, or a
+method of a nearer type, is refused), and one the call site cannot see is refused naming the
+fix, "widen it first". Two defaults, the smallest, to reopen if they cost turns: a call on a
+qualified `Outer.this` in the body stays refused, and at `super.m(...)` the tool does not write
+`rate(a')` in place of `super.rate(a')` (which would also keep behavior, since a method with
+one declaration runs the same body either way), as the decision names `super.rate`.
 
 ## Constructive transformations (2026-11-05)
 
@@ -599,6 +621,7 @@ sections 3 and 4.
 | 159 | 166 | `create_loop`, `create_call` and `create_guard`, gorefactor's names, as unpublished aliases of `insert_statements` with one `build` entry | Done 2026-11-13 (`Tools.insertOne`; `ALIASES` is now `Map.ofEntries`, past `Map.of`'s ten pairs) | The generators sketch, increment 8 (`replace_parameter` is #160); `docs/sessions/create-aliases.md` |
 | 160 | 167 | Under `JREFACTOR_SKELETON_ONLY`, typed statement content that `build` writes is refused, naming the `build` to send | Done 2026-11-13 (`Generated.checkBuild`: one statement only, a local declared from a call or a construction, a for-each or an index loop; the user's choice of mechanism, "Generators" above) | The generators sketch, increment 9; `docs/sessions/skeleton-build-refusal.md` |
 | 161 | 168 | `bin/session-report` counts the edit steps to Java by what carried the code (`build`, `surround`, `constructor`, `implement`, `test_for`, `declaration`, `content`, `new`), the Java typed in them, and the characters of names given to `build` | Done 2026-11-13 (`SessionReport.Typed`; the guard's condition counts with the names) | The generators sketch, section 8 and increment 10's report part only (no task set, no A/B run: issue #376); `docs/sessions/session-report-build.md` |
+| 162 | 169 | `extract_variable` `as=parameter` with a call on the method's own object (`rate(order)`) or a static method named without its class: written at each call on that call's object, or on its class | Done 2026-11-13 (`ParameterValue.reachable`, `InMethod.written`, `sameTargets`: a steady receiver, the class or a subclass for an unqualified call, `super` only without an override below, each written call resolving to the same method or an override in a probe parse, a visible one; the user's choice, "Decided 2026-11-13: a call on the method's own object" above) | #161's follow-up; `docs/sessions/extract-variable-parameter-receiver.md` |
 
 ### The 2026-11-04 list
 

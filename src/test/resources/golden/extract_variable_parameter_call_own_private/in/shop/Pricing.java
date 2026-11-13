@@ -1,0 +1,15 @@
+package shop;
+
+class Pricing {
+  int priceOf(Order order) {
+    return rate(order) * 2;
+  }
+
+  private int rate(Order order) {
+    return order.customer().length();
+  }
+
+  int use(Order o) {
+    return priceOf(o) + this.priceOf(o);
+  }
+}
