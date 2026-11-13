@@ -705,7 +705,9 @@ in the same turn only if it is sent after it.
   `constructor` (field names, in order) in place of `content`: a constructor with a parameter
   per field, of its type as written, assigning each (`this.owner = owner;`), with the class's
   access. Refused: a name that is not a field (listing them), a static field, a final field
-  with a value, a type that is not a class.
+  with a value, a type that is not a class; for an enum the refusal names what to send ("Color
+  is an enum; ... Add the constructor as content (Color() {}), then add_parameter for each value:
+  it passes one at every constant", roadmap #143).
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
   `(parameter types)` for an overload), `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old
