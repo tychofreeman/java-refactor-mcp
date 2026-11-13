@@ -172,6 +172,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+  A tool that takes `line` routes it there before its own checks: `change_type` with
+  `type_parameter` did not, and refused `line` (#407, 2026-11-13; `Tools.changeType`).
 - `change_signature` (#342, 2026-11-12, the user asked for it and chose each): a new tool, over
   `add_throws`/`remove_throws` options on `change_type` (whose `return_type` stays); the
   implementations follow (overrides, lambdas, method-referenced methods, the returns of a body
