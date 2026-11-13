@@ -16,7 +16,8 @@
   each member is moved with `PullUp`, so its checks apply (a member that uses
   what only the class has is refused by the gate; an override of an inherited
   concrete method by #69's rule).
-- **First version limits:** a top-level class that is not generic; an
+- **First version limits:** a top-level class that is not generic (lifted for an interface on
+  2026-11-13, roadmap #144, `docs/sessions/extract-supertype-generic.md`); an
   interface takes public instance methods only (their signatures, with
   `throws`); the new type goes in the class's package, as a new file.
 

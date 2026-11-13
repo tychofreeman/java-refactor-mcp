@@ -302,21 +302,33 @@ nothing else in it is, the result says it could be made a concrete class.
 ## `extract_supertype` (built)
 
 Roadmap #85, 2026-11-04. `extract_interface`, the old name in Go and TypeScript (renamed
-there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `file`, `name` (a top-level class, not
-generic), `supertype` (the new type's simple name), `kind` (`interface` or
+there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `file`, `name` (a top-level class), `supertype` (the new type's simple name), `kind` (`interface` or
 `class`), `members` (names, with parameter types for an overload).
 
 - `kind=interface`: `<Supertype>.java` in the class's package declares the
   signatures of the named methods (public instance methods only, with their
   `throws`), and the class gains `implements <Supertype>` (as `add_supertype`).
+- From a generic class (roadmap #144, 2026-11-13; `kind=interface` so far), the new type
+  declares exactly the class's type parameters its signatures name, found by binding, and those
+  their bounds name, in the class's order, each as the class writes it; the class passes their
+  names. `Repo<K extends Comparable<K>, V>` with `V find(K key)` gives `interface Finder<K
+  extends Comparable<K>, V>` and `implements Finder<K, V>`; with `V first()`, `Source<V>`; with
+  `int size()`, `Sized`. Bounds are copied exactly so the interface's methods erase to what the
+  class's do, and no bridge method appears. A generic method's own type parameters travel in
+  its signature.
 - `kind=class`: `<Supertype>.java` extends the class's old superclass, if any,
   and takes its place in the class's `extends`; each member moves into it as
   `pull_up` moves it (fields and methods), with `pull_up`'s refusals.
 - One call: a refusal at any step changes nothing. Result: `extracted interface
   Pricing (com/example/Pricing.java) from Flat with price; Flat implements it`,
   or `extracted class Priced (...) from Flat with base and price; Flat extends it`.
-- Refused: an interface, a generic class, a file of the new name that exists, a
-  member not found, a method that is not public or is static (interface).
+- Refused: an interface, a file of the new name that exists, a member not found, a method that
+  is not public or is static (interface); a `supertype` that is one of the class's type
+  parameters ("V is a type parameter of Repo: in Repo's header the name would mean it, not the
+  new interface. Choose another name."); a bound that names a private type ("the bound of K
+  uses the private type Repo.Key, which Finder, in its own file, cannot name. Make Repo.Key
+  package-private or move it to its own file first (move)."); `kind=class` from a generic class,
+  until it is built (the refusal gives the steps: `create_file`, `add_supertype`, `pull_up`).
 
 ## `convert_lambda` (built)
 
@@ -1380,4 +1392,6 @@ actionable. Avoid generic messages such as "unsupported".
 ## Open
 - Overloads and generics have their own refusals in each tool; checked exceptions
   are reported through `preserve_exceptions`. A shared wording for these across
-  tools is not written yet.
+  tools is not written yet. `extract_supertype` no longer refuses a generic class for an
+  interface (#144); `move` of a member, `subclass_to_strategy`, `inline` of a function and
+  `extract_type` still refuse generics (`docs/sessions/generics-sketch.md`, "Risks").
