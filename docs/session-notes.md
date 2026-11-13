@@ -103,7 +103,7 @@ Each was chosen from options; the record named beside it has the options it beat
   tools, gorefactor's names as unpublished aliases; slice order `replace_parameter`'s query form,
   then call, loop, guard. `replace_parameter` here is `remove_parameter` with `value` an
   expression (roadmap #147; with calls, #148): `Signatures.removeWithExpression`, always a local
-  first in the body. Its effect rules are by position at each call and stricter than the sketch's
+  first in the body; `replace_parameter` is its unpublished alias (#160, `value` required). Its effect rules are by position at each call and stricter than the sketch's
   (`docs/design.md`, Decisions): with a call in the value, an argument after it must be fixed, not
   only effect-free.
 - `move_statement` with `past_try` (#343, 2026-11-11, the user: option (a), over keeping the

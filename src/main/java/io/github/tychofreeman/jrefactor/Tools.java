@@ -1442,10 +1442,36 @@ final class Tools {
           Tools::methodToFunction);
 
   /**
+   * remove_parameter with value, by gorefactor's name for a parameter the method computes: an
+   * alias, not published.
+   */
+  static final Def REPLACE_PARAMETER =
+      new Def(
+          "replace_parameter",
+          """
+          Replace a parameter with a value the method computes from its other parameters: \
+          remove_parameter with value.\
+          """,
+          List.of(
+              Arg.FILE.described("Java file that declares the method."),
+              Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
+              Arg.string("parameter", "The parameter to remove.").required(),
+              Arg.string("value", "What every call passes for it, as the method can compute it.")
+                  .required()),
+          Kind.REFACTORING,
+          (project, args) -> {
+            args.required("value");
+            return Signatures.removeParameter(project, ByLine.named(project, args));
+          });
+
+  /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
    * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
    * method_to_function for move_member in place, extract_struct for extract_type, Go's and
-   * TypeScript's old extract_interface for extract_supertype.
+   * TypeScript's old extract_interface for extract_supertype, replace_parameter for
+   * remove_parameter with value.
    */
   static final Map<String, Def> ALIASES =
       Map.of(
@@ -1466,7 +1492,9 @@ final class Tools {
           "extract_struct",
           EXTRACT_TYPE,
           "extract_interface",
-          EXTRACT_SUPERTYPE);
+          EXTRACT_SUPERTYPE,
+          "replace_parameter",
+          REPLACE_PARAMETER);
 
   /**
    * Argument names a tool still accepts under its published ones, by tool: extract_type's
