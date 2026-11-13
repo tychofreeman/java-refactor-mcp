@@ -559,6 +559,30 @@ and an `if` chain of `s instanceof T v` make a void method of each case's statem
 an interface, a concrete one of an abstract class), the selector name as `this`; a body may
 declare its own locals; a `return`, `break`, `continue` or `yield` leaving a case is refused.
 
+### Over an enum: the field form
+
+Roadmap #151, 2026-11-13 (`docs/sessions/enums-sketch.md`, slice 3, increment 5; the owner chose
+the sketch's recommendations: slice 3 lives in `type_switch_to_method`, over a new
+`enum_switch_to_method` tool and over a composition of `extract_function` and
+`function_to_method`; the tool chooses a field when every case gives a compile-time constant (or
+`null`), else a method per constant, with an optional `as`, over always a method and over `as`
+required). A switch expression over an enum of the project (a top-level one), each case naming
+constants and giving a constant expression or `null`, becomes `e.name()` (`name()` when the
+selector is `this`), and the enum gets the field of the switch's type through `add_parameter`'s
+enum edit (`EnumField`): `private final R name;`, the constructor written or widened, the
+accessor `public R name()`, each constant passing its case's value as written (`case GREEN, BLUE
+->` gives both), a `default` giving the value of every constant no case names. Result: `added the
+field String label to Color, read by label(); 3 constants pass their case's value; the code at
+line 5 of com/example/Paint.java is now c.label()`. Refused: `case null` ("case null cannot move
+into Color: label() cannot be called on null. Test for null before the switch first, and take the
+case out of it."); a case that uses a local or a parameter (the type-pattern wording, "Pass only
+what the switch's value and constants give"); a static field named bare that the enum does not
+declare ("the case of RED uses HEAVY, a static of Paint, which Color does not see by that name.
+Qualify it first (Paint.HEAVY), with replace_expression."); a name in a value that the enum's
+file would resolve to another declaration (`NameCheck`); a name the enum already has or inherits
+(`add_parameter`'s wording); until the method form is built, a case whose value is not a constant
+and a switch statement.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`

@@ -1,0 +1,1 @@
+case null cannot move into Color: label() cannot be called on null. Test for null before the switch first, and take the case out of it.

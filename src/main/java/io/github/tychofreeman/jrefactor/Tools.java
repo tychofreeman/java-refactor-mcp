@@ -1031,7 +1031,12 @@ final class Tools {
           variable as the receiver (c.r() becomes r()).
           A switch statement of arrow cases, or an if chain of s instanceof T v, makes a void \
           method of each case's statements; a default (or final else) becomes Shape's own \
-          implementation (a default method of an interface).\
+          implementation (a default method of an interface).
+          Over an enum of the project, a switch expression whose cases each give a constant (or \
+          null) becomes a field: with name label, case RED -> "r"; case GREEN, BLUE -> "cool"; \
+          gives RED("r"), GREEN("cool"), BLUE("cool"), a field set by the enum's constructor and \
+          read by label(), and the switch becomes c.label(); a default gives the value of every \
+          constant no case names.\
           """,
           List.of(
               Arg.FILE,

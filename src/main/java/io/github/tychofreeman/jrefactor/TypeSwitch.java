@@ -84,6 +84,13 @@ final class TypeSwitch {
             "switch, or if of instanceof patterns,",
             "",
             "the switch or the if");
+    Expression over =
+        node instanceof SwitchExpression sw
+            ? sw.getExpression()
+            : node instanceof SwitchStatement ss ? ss.getExpression() : null;
+    if (over != null && over.resolveTypeBinding() instanceof ITypeBinding e && e.isEnum()) {
+      return EnumSwitch.run(project, opened, node, over, e, name, line);
+    }
     Expression selector;
     ITypeBinding result = null;
     List<Case> cases;
@@ -247,7 +254,7 @@ final class TypeSwitch {
       }
       if (c.isDefault()) {
         String v = selector instanceof SimpleName n ? n.getIdentifier() : null;
-        usesOnly(body, v, "the supertype");
+        usesOnly(body, v, "the supertype", "the pattern variable");
         out.add(new Case(null, v, body));
         continue;
       }
@@ -271,7 +278,7 @@ final class TypeSwitch {
     for (Statement at = first; at != null; ) {
       if (!(at instanceof IfStatement i)) {
         String v = selector instanceof SimpleName n ? n.getIdentifier() : null;
-        usesOnly(at, v, "the supertype");
+        usesOnly(at, v, "the supertype", "the pattern variable");
         out.add(new Case(null, v, at));
         break;
       }
@@ -304,17 +311,18 @@ final class TypeSwitch {
               + (t == null ? "a type that does not resolve" : t.getQualifiedName())
               + ", not a type of the project's.");
     }
-    usesOnly(body, v, t.getName());
+    usesOnly(body, v, t.getName(), "the pattern variable");
     return new Case(t, v, body);
   }
 
   /**
-   * Refuses a body that uses anything but {@code v} (the pattern variable, or null), its own
-   * locals, statics and constants: a local, a parameter, {@code this} or a member of the method's
-   * own class would mean another thing on the case's type; a {@code return}, {@code break} or
-   * {@code continue} that leaves the body would leave the new method instead.
+   * Refuses a body that uses anything but {@code v} (the pattern variable, or null; the refusal
+   * calls it {@code variable}), its own locals, statics and constants: a local, a parameter, {@code
+   * this} or a member of the method's own class would mean another thing on the case's type; a
+   * {@code return}, {@code break} or {@code continue} that leaves the body would leave the new
+   * method instead.
    */
-  private static void usesOnly(ASTNode e, String v, String typeName) {
+  static void usesOnly(ASTNode e, String v, String typeName, String variable) {
     java.util.Set<String> own = new java.util.HashSet<>();
     for (VariableDeclaration d : Nodes.all(e, VariableDeclaration.class)) {
       own.add(d.getName().getIdentifier());
@@ -332,7 +340,9 @@ final class TypeSwitch {
                 + n.getIdentifier()
                 + ", which on "
                 + typeName
-                + " would not be there. Pass only what the pattern variable and constants give;"
+                + " would not be there. Pass only what "
+                + variable
+                + " and constants give;"
                 + " a value of the method needs to be a parameter of the new method, which"
                 + " type_switch_to_method does not add yet.");
       }
@@ -394,7 +404,7 @@ final class TypeSwitch {
   }
 
   /** Whether {@code n} is the member part of a name or access qualified by something else. */
-  private static boolean qualifiedByOther(SimpleName n) {
+  static boolean qualifiedByOther(SimpleName n) {
     return (n.getParent() instanceof QualifiedName q && q.getName() == n)
         || (n.getParent() instanceof FieldAccess f && f.getName() == n);
   }
