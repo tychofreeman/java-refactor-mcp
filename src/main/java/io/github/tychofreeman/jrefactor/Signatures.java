@@ -62,6 +62,12 @@ final class Signatures {
   private Signatures() {}
 
   static Outcome addParameter(SourceProject project, Args args) throws Exception {
+    Precondition.require(
+        Precondition.that(
+            () -> args.has("parameter") && args.has("type"),
+            () ->
+                "add_parameter needs parameter and type, the new parameter's name and its Java"
+                    + " type; or type_parameter, to add a type parameter to a class."));
     String value = args.required("value");
     parsesAs("value", value, "class X { Object x = " + value + "; }");
     Opened opened = Opened.of(project, args.required("file"));

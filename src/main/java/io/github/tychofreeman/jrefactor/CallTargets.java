@@ -58,42 +58,7 @@ final class CallTargets {
    * have deferred.
    */
   void require(SourceProject project, String what) throws IOException {
-    Map<Path, List<Target>> after =
-        targets(Jdt.parseAll(project, new ArrayList<>(before.keySet())).values());
-    for (Map.Entry<Path, List<Target>> e : before.entrySet()) {
-      List<Target> was = e.getValue();
-      List<Target> now = after.get(e.getKey());
-      if (now == null || now.size() != was.size()) {
-        throw new IllegalStateException(
-            "the calls of "
-                + e.getKey()
-                + " changed in number, so their targets cannot be compared");
-      }
-      for (int k = 0; k < was.size(); k++) {
-        Target a = was.get(k);
-        Target b = now.get(k);
-        if (!a.kind().equals(b.kind())) {
-          throw new IllegalStateException(
-              "the calls of " + e.getKey() + " changed, so their targets cannot be compared");
-        }
-        if (a.id() != null && b.id() != null && !a.id().equals(b.id())) {
-          throw new Refusal(
-              what
-                  + " would make the call at line "
-                  + a.line()
-                  + " of "
-                  + project.relative(e.getKey())
-                  + " run "
-                  + b.label()
-                  + ", not "
-                  + a.label()
-                  + " as it does now. "
-                  + (a.kind().startsWith("new")
-                      ? "Change the parameters of one of the two constructors first."
-                      : "Rename one of the two first."));
-        }
-      }
-    }
+    require(project, Jdt.parseAll(project, new ArrayList<>(before.keySet())).values(), what);
   }
 
   private static Map<Path, List<Target>> targets(Collection<CompilationUnit> units) {
@@ -141,9 +106,13 @@ final class CallTargets {
 
   /**
    * Where {@code d} stands in the parsed files; for a constructor nothing declares, its type's
-   * place; for a declaration outside them, which the change does not edit, its key.
+   * place; for a declaration outside them, which the change does not edit, its key. An anonymous
+   * class's constructor is its own each time, and its key holds its supertype: it is not compared.
    */
   private static String place(IMethodBinding d, Map<String, String> places) {
+    if (d.getDeclaringClass().isAnonymous()) {
+      return "anonymous";
+    }
     String at = places.get(d.getKey());
     if (at == null && d.isDefaultConstructor()) {
       String type = places.get(d.getDeclaringClass().getTypeDeclaration().getKey());
@@ -177,5 +146,48 @@ final class CallTargets {
       case MethodReference r -> r.resolveMethodBinding();
       default -> null;
     };
+  }
+
+  /**
+   * As {@link #require(SourceProject, String)}, with the checked files already parsed again, in one
+   * parse, as they now are on disk: {@code units}.
+   */
+  void require(SourceProject project, Collection<CompilationUnit> units, String what)
+      throws IOException {
+    Map<Path, List<Target>> after = targets(units);
+    for (Map.Entry<Path, List<Target>> e : before.entrySet()) {
+      List<Target> was = e.getValue();
+      List<Target> now = after.get(e.getKey());
+      if (now == null || now.size() != was.size()) {
+        throw new IllegalStateException(
+            "the calls of "
+                + e.getKey()
+                + " changed in number, so their targets cannot be compared");
+      }
+      for (int k = 0; k < was.size(); k++) {
+        Target a = was.get(k);
+        Target b = now.get(k);
+        if (!a.kind().equals(b.kind())) {
+          throw new IllegalStateException(
+              "the calls of " + e.getKey() + " changed, so their targets cannot be compared");
+        }
+        if (a.id() != null && b.id() != null && !a.id().equals(b.id())) {
+          throw new Refusal(
+              what
+                  + " would make the call at line "
+                  + a.line()
+                  + " of "
+                  + project.relative(e.getKey())
+                  + " run "
+                  + b.label()
+                  + ", not "
+                  + a.label()
+                  + " as it does now. "
+                  + (a.kind().startsWith("new")
+                      ? "Change the parameters of one of the two constructors first."
+                      : "Rename one of the two first."));
+        }
+      }
+    }
   }
 }

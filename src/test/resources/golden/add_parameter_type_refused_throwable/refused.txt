@@ -1,0 +1,1 @@
+Failure is a Throwable, and a generic class cannot extend Throwable.
