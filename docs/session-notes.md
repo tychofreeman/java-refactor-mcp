@@ -160,8 +160,11 @@ Each was chosen from options; the record named beside it has the options it beat
   implementations follow (overrides, lambdas, method-referenced methods, the returns of a body
   made void) and calls are left to the same batch, over declarations only and over an option that
   adds the exception to each caller up the chain; removing a `throws` a body still needs is
-  refused, over removing it only from the declarations that do not.
-- `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
+  refused, over removing it only from the declarations that do not. A new checked exception
+  (2026-11-13, the user): `callers=propagate` by default, each caller declaring it up the chain,
+  with `stop_at` (the user's addition) naming where it ends in a catch; `catch` and `refuse` as
+  options. A catch rethrows unchecked, never swallows; a call inside an existing try gets one more
+  clause on it, over a nested try.- `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
   type (`type`) or the tool declares a nested interface named after the method, over
   java.util.function when it fits and over always an interface; the superclass's old constructors
   stay, delegating with its own body's function, over adding the parameter to every construction;
@@ -294,7 +297,11 @@ Each was chosen from options; the record named beside it has the options it beat
   holds each parsed file, so a referenced method's file is edited once) and
   `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `pure` and
   `statement`; the gate judges calls, bodies that still throw and unreachable catches.
-
+  `ThrowsCallers` is `callers`: every file parsed into `family.sources`, calls and declarations
+  indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either
+  handled already (`catches`, `allows`), declared further (`declare`, by `Signatures.family`) or
+  caught (`catchAt`); `write` emits the clauses and the tries as inserts, so they do not overlap
+  other edits. The exception's supertypes come from a probe field parsed in the target's file.
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
   of the files that name the subclass and the superclass's file, text edits per file, each
   through `Imports.fix` (the subclass's imports as the chosen ones) and all through

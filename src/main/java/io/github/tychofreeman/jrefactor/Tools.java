@@ -267,9 +267,13 @@ final class Tools {
           return_type=void and add_throws=IOException turn boolean apply(Rename r) into void \
           apply(Rename r) throws IOException. For void, return x; becomes return; and a lambda \
           r -> true becomes r -> {}, a returned call kept as a statement. remove_throws drops \
-          an exception from each throws clause. Calls are not edited: change one that uses the \
-          result, or must handle a new exception, in the same batch. The method may be found \
-          by line in place of name, as add_parameter finds it.\
+          an exception from each throws clause. A new checked exception is carried to the \
+          callers: each calling method declares it too, and its callers after it, up to a \
+          method named by stop_at or one that cannot declare it (run() of a Runnable), where \
+          the call is caught and rethrown unchecked, in a new try or as one more catch of the \
+          try it is in. Calls are not edited otherwise: change one that uses the result in the \
+          same batch. The method may be found by line in place of name, as add_parameter \
+          finds it.\
           """,
           List.of(
               Arg.FILE.described("Java file path; the file that declares the method."),
@@ -283,6 +287,16 @@ final class Tools {
               Arg.string(
                   "remove_throws",
                   "Optional: exception types to stop declaring, separated by commas."),
+              Arg.string(
+                  "callers",
+                  "Optional, with add_throws: propagate (the default: each calling method"
+                      + " declares the exception too, up the chain), catch (each call is caught"
+                      + " and rethrown unchecked) or refuse (a call that does not handle it is"
+                      + " refused)."),
+              Arg.string(
+                  "stop_at",
+                  "Optional, with callers=propagate: Type.method names, separated by commas,"
+                      + " where propagating ends in a catch."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           (project, args) -> ChangeSignature.run(project, ByLine.named(project, args)));

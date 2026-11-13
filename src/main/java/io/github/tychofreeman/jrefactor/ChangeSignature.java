@@ -46,12 +46,22 @@ final class ChangeSignature {
     String returnType = args.string("return_type");
     List<String> added = names(args.string("add_throws"));
     List<String> removed = names(args.string("remove_throws"));
+    String callers = args.string("callers") == null ? "propagate" : args.string("callers");
+    List<String> stops = names(args.string("stop_at"));
     Precondition.require(
         Precondition.that(
             () -> returnType != null || !added.isEmpty() || !removed.isEmpty(),
             () ->
                 "change_signature needs return_type (the new type), add_throws or remove_throws"
-                    + " (exception types)."));
+                    + " (exception types)."),
+        Precondition.that(
+            () -> List.of("propagate", "catch", "refuse").contains(callers),
+            () -> "callers is propagate, catch or refuse, not " + callers + "."),
+        Precondition.that(
+            () -> stops.isEmpty() || callers.equals("propagate") && !added.isEmpty(),
+            () ->
+                "stop_at names where propagating an added exception ends, so it needs"
+                    + " add_throws and callers=propagate."));
     if (returnType != null) {
       Signatures.parsesAs(
           "return_type", returnType, "abstract class X { abstract " + returnType + " x(); }");
@@ -64,6 +74,7 @@ final class ChangeSignature {
     List<Signatures.Decl> decls = new ArrayList<>(family.decls);
     decls.addAll(referenced(project, family));
     List<String> said = new ArrayList<>();
+    List<String> chosen = new ArrayList<>(args.list("imports"));
 
     if (returnType != null) {
       boolean toVoid = returnType.equals("void");
@@ -106,56 +117,11 @@ final class ChangeSignature {
       said.add("return type " + returnType);
     }
 
+    int declarations = decls.size();
     if (!added.isEmpty() || !removed.isEmpty()) {
       List<String> missing = new ArrayList<>(removed);
       for (Signatures.Decl d : decls) {
-        List<?> thrown = d.m().thrownExceptionTypes();
-        List<String> now = new ArrayList<>();
-        List<String> kept = new ArrayList<>();
-        for (Object o : thrown) {
-          String text = src(d.file(), (ASTNode) o);
-          now.add(text);
-          String match = matching(removed, (Type) o, text);
-          if (match == null) {
-            kept.add(text);
-          } else {
-            missing.remove(match);
-          }
-        }
-        for (String name : added) {
-          boolean has = false;
-          for (Object o : thrown) {
-            has |= matching(List.of(name), (Type) o, src(d.file(), (ASTNode) o)) != null;
-          }
-          if (!has) {
-            kept.add(name);
-          }
-        }
-        if (kept.equals(now)) {
-          continue;
-        }
-        String text = d.file().text();
-        if (thrown.isEmpty()) {
-          List<?> ps = d.m().parameters();
-          int close =
-              text.indexOf(
-                  ')', ps.isEmpty() ? d.open() : Nodes.end((ASTNode) ps.get(ps.size() - 1)));
-          List<?> dims = d.m().extraDimensions();
-          int at = dims.isEmpty() ? close + 1 : Nodes.end((ASTNode) dims.get(dims.size() - 1));
-          change.replaceRange(d.file(), at, at, " throws " + String.join(", ", kept));
-        } else {
-          int first = ((ASTNode) thrown.get(0)).getStartPosition();
-          int last = Nodes.end((ASTNode) thrown.get(thrown.size() - 1));
-          if (kept.isEmpty()) {
-            int from = text.lastIndexOf("throws", first);
-            while (from > 0 && Character.isWhitespace(text.charAt(from - 1))) {
-              from--;
-            }
-            change.replaceRange(d.file(), from, last, "");
-          } else {
-            change.replaceRange(d.file(), first, last, String.join(", ", kept));
-          }
-        }
+        throwsClause(change, d, added, removed, missing);
       }
       if (!missing.isEmpty()) {
         throw new Refusal(
@@ -170,19 +136,107 @@ final class ChangeSignature {
       if (!removed.isEmpty()) {
         said.add("throws " + String.join(", ", removed) + " removed");
       }
+      if (!added.isEmpty() && !callers.equals("refuse")) {
+        ThrowsCallers handled =
+            ThrowsCallers.handle(
+                project, family, change, decls, added, callers.equals("propagate"), stops, chosen);
+        List<String> gained = new ArrayList<>();
+        for (Signatures.Decl d : handled.decls) {
+          throwsClause(change, d, handled.names.get(d.m()), List.of(), new ArrayList<>());
+          gained.add(Signatures.label(d.binding()));
+        }
+        declarations += handled.decls.size();
+        chosen.addAll(handled.imports);
+        if (!gained.isEmpty()) {
+          said.add("its callers now declare it: " + listed(gained));
+        }
+        if (!handled.caught.isEmpty()) {
+          said.add("caught and rethrown unchecked at " + listed(handled.caught));
+        }
+      }
     }
     return change.apply(
         project,
         "changed the signature of " + family.label + " (" + String.join("; ", said) + ")",
-        args.list("imports"),
+        chosen,
         "Nothing was changed. "
             + (removed.isEmpty()
                 ? ""
                 : "A body that still throws a removed exception must stop first, and a catch of"
                     + " one that can no longer be thrown must go. ")
-            + "Calls are not edited: one that uses the result, or does not handle a new"
-            + " exception, changes in the same batch as this step, with check \"end\".",
-        decls.size());
+            + "Calls are not edited"
+            + (added.isEmpty() ? "" : ", but for a new exception (callers)")
+            + ": one that uses the result"
+            + (callers.equals("refuse") && !added.isEmpty()
+                ? ", or does not handle a new exception,"
+                : "")
+            + " changes in the same batch as this step, with check \"end\".",
+        declarations);
+  }
+
+  /** At most eight of {@code items}, then how many more. */
+  private static String listed(List<String> items) {
+    return items.size() <= 8
+        ? String.join(", ", items)
+        : String.join(", ", items.subList(0, 8)) + " and " + (items.size() - 8) + " more";
+  }
+
+  /**
+   * Edits the throws clause of {@code d}: without each of {@code removed} it names (taken from
+   * {@code missing} when found), with each of {@code added} it lacks.
+   */
+  private static void throwsClause(
+      SignatureChange change,
+      Signatures.Decl d,
+      List<String> added,
+      List<String> removed,
+      List<String> missing) {
+    List<?> thrown = d.m().thrownExceptionTypes();
+    List<String> now = new ArrayList<>();
+    List<String> kept = new ArrayList<>();
+    for (Object o : thrown) {
+      String text = src(d.file(), (ASTNode) o);
+      now.add(text);
+      String match = matching(removed, (Type) o, text);
+      if (match == null) {
+        kept.add(text);
+      } else {
+        missing.remove(match);
+      }
+    }
+    for (String name : added) {
+      boolean has = false;
+      for (Object o : thrown) {
+        has |= matching(List.of(name), (Type) o, src(d.file(), (ASTNode) o)) != null;
+      }
+      if (!has) {
+        kept.add(name);
+      }
+    }
+    if (kept.equals(now)) {
+      return;
+    }
+    String text = d.file().text();
+    if (thrown.isEmpty()) {
+      List<?> ps = d.m().parameters();
+      int close =
+          text.indexOf(')', ps.isEmpty() ? d.open() : Nodes.end((ASTNode) ps.get(ps.size() - 1)));
+      List<?> dims = d.m().extraDimensions();
+      int at = dims.isEmpty() ? close + 1 : Nodes.end((ASTNode) dims.get(dims.size() - 1));
+      change.replaceRange(d.file(), at, at, " throws " + String.join(", ", kept));
+      return;
+    }
+    int first = ((ASTNode) thrown.get(0)).getStartPosition();
+    int last = Nodes.end((ASTNode) thrown.get(thrown.size() - 1));
+    if (kept.isEmpty()) {
+      int from = text.lastIndexOf("throws", first);
+      while (from > 0 && Character.isWhitespace(text.charAt(from - 1))) {
+        from--;
+      }
+      change.replaceRange(d.file(), from, last, "");
+    } else {
+      change.replaceRange(d.file(), first, last, String.join(", ", kept));
+    }
   }
 
   /** The names in a comma-separated list, none for null. */
