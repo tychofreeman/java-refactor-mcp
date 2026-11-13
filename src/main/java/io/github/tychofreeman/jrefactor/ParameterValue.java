@@ -182,7 +182,7 @@ final class ParameterValue {
                   + passed
                   + " in a local first.");
         }
-        for (int j = i + 1; j < c.arguments().size(); j++) {
+        for (int j = i + 1; j < Math.min(v.at(), c.arguments().size()); j++) {
           Expression other = (Expression) c.arguments().get(j);
           if (!quiet(other) && (!fixed || writes(other, arg))) {
             throw new Refusal(
@@ -194,7 +194,8 @@ final class ParameterValue {
                     + passed
                     + ", and would now pass "
                     + v.at(c)
-                    + " last, reading "
+                    + (v.at() < c.arguments().size() ? " after it" : " last")
+                    + ", reading "
                     + passed
                     + " again after "
                     + other

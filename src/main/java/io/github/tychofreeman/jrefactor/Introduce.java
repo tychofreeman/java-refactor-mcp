@@ -14,6 +14,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 
 /**
@@ -144,7 +145,28 @@ final class Introduce {
         Precondition.that(
             () -> m != null && m.resolveBinding() != null,
             () -> source + " is not directly in a method, whose parameter it could be."));
-    ParameterValue.InMethod v = new ParameterValue.InMethod(source, e, m, m.parameters().size());
+    int size = m.parameters().size();
+    ParameterValue.InMethod read = new ParameterValue.InMethod(source, e, m, size);
+    // Right after the last parameter it reads, so the arguments after that run after it, as they
+    // ran before the body; one that calls or may throw stays last, after every argument.
+    int place =
+        read.acts() || read.mayThrow()
+            ? size
+            : read.uses().stream().max(Integer::compare).map(i -> i + 1).orElse(size);
+    ParameterValue.InMethod v = new ParameterValue.InMethod(source, e, m, place);
+    Map<String, Object> request =
+        new java.util.HashMap<>(
+            Map.of(
+                "file", opened.rel(),
+                "name", Signatures.label(m.resolveBinding()),
+                "parameter", name,
+                "type", typeName,
+                "value", source));
+    if (place < size) {
+      request.put(
+          "before",
+          ((SingleVariableDeclaration) m.parameters().get(place)).getName().getIdentifier());
+    }
     List<Expression> found = all ? ParameterValue.sameIn(m, e) : List.of(e);
     if (v.acts() && found.size() > 1) {
       throw new Refusal(
@@ -174,14 +196,7 @@ final class Introduce {
     Outcome added =
         Signatures.addParameter(
             project,
-            new Args(
-                "add_parameter",
-                Map.of(
-                    "file", opened.rel(),
-                    "name", Signatures.label(m.resolveBinding()),
-                    "parameter", name,
-                    "type", typeName,
-                    "value", source)),
+            new Args("add_parameter", request),
             ParameterValue.perCall(project, v),
             (family, change) -> {
               if (v.acts() && (family.decls.size() != 1 || !family.lambdas.isEmpty())) {
