@@ -79,4 +79,25 @@ class OpenedTest {
     assertEquals("second", r.getMessage());
     assertEquals(2, checked[0]);
   }
+
+  @Test
+  void namesTheKindOfATypeThatIsNotAClassOrInterface(@TempDir Path root) throws Exception {
+    Path src = root.resolve("com/example");
+    Files.createDirectories(src);
+    Files.writeString(
+        src.resolve("Shapes.java"),
+        "package com.example;\n\nclass Shapes {}\n\nrecord Point(int x) {}\n\nenum Color { RED }\n");
+    SourceProject project = new SourceProject(root, List.of(root), List.of(), null, new Session());
+    Opened opened = Opened.of(project, "com/example/Shapes.java");
+    Refusal record = assertThrows(Refusal.class, () -> opened.topLevel("Point"));
+    assertEquals(
+        "Point is a record, and this tool takes a class or interface here. Send the name of one:"
+            + " com/example/Shapes.java declares Shapes.",
+        record.getMessage());
+    Refusal e = assertThrows(Refusal.class, () -> opened.topLevel("Color"));
+    assertEquals(
+        "Color is an enum, and this tool takes a class or interface here. Send the name of one:"
+            + " com/example/Shapes.java declares Shapes.",
+        e.getMessage());
+  }
 }

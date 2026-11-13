@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.function.Predicate;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
@@ -27,6 +30,9 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
   /** The top-level class or interface named {@code name}, which must resolve. */
   TypeDeclaration topLevel(String name) {
     TypeDeclaration type = MemberMove.typeNamed(unit, name);
+    if (type == null) {
+      notAClass(name);
+    }
     if (type == null || type.resolveBinding() == null) {
       throw new Refusal(name + " is not a top-level type of " + rel + " that resolves.");
     }
@@ -77,5 +83,36 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
               + ". Put each on a line of its own first.");
     }
     return found.get(0);
+  }
+
+  /**
+   * Refuses {@code name} when the file declares it as a record, an enum or an annotation type,
+   * saying which, and the classes and interfaces it does declare; returns otherwise.
+   */
+  private void notAClass(String name) {
+    List<String> classes = new ArrayList<>();
+    String kind = null;
+    for (Object o : unit.types()) {
+      AbstractTypeDeclaration t = (AbstractTypeDeclaration) o;
+      if (t instanceof TypeDeclaration) {
+        classes.add(t.getName().getIdentifier());
+      } else if (t.getName().getIdentifier().equals(name)) {
+        kind =
+            t instanceof RecordDeclaration
+                ? "a record"
+                : t instanceof EnumDeclaration ? "an enum" : "an annotation type";
+      }
+    }
+    if (kind != null) {
+      throw new Refusal(
+          name
+              + " is "
+              + kind
+              + ", and this tool takes a class or interface here. Send the name of one: "
+              + rel
+              + " declares "
+              + (classes.isEmpty() ? "none" : String.join(", ", classes))
+              + ".");
+    }
   }
 }
