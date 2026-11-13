@@ -6,7 +6,6 @@ import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
@@ -15,13 +14,6 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
-import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.NumberLiteral;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
-import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.StringLiteral;
 
 /**
  * extract_variable with as: the expression becomes a constant ({@code private static final}), a
@@ -48,7 +40,7 @@ final class Introduce {
             () -> List.of("constant", "field", "parameter").contains(as),
             () -> "as is constant, field or parameter: what " + source + " becomes."),
         Precondition.that(
-            () -> as.equals("parameter") ? byParameters(e) : constantOnly(e),
+            () -> as.equals("parameter") ? ParameterValue.byParameters(e) : constantOnly(e),
             () ->
                 source
                     + (as.equals("parameter")
@@ -159,7 +151,7 @@ final class Introduce {
                     "parameter", name,
                     "type", typeName,
                     "value", source)),
-            perCall(e, source));
+            ParameterValue.perCall(e, source));
     // The signature changed; the expression is found again on its line, by its text.
     Opened again = Opened.of(project, opened.rel());
     String text = again.text();
@@ -205,114 +197,8 @@ final class Introduce {
     return true;
   }
 
-  /**
-   * Whether {@code e} is literals, constants and parameters of its method that the method never
-   * assigns, so each call can pass it with its own arguments in place of the parameters.
-   */
-  private static boolean byParameters(Expression e) {
-    MethodDeclaration m = enclosing(e, MethodDeclaration.class);
-    if (m == null) {
-      return false;
-    }
-    for (Effects.Effect x : Effects.of(e).all()) {
-      switch (x.kind()) {
-        case NAME -> {
-          IVariableBinding v = x.variable();
-          boolean constant =
-              v.isField()
-                  && Modifier.isStatic(v.getModifiers())
-                  && Modifier.isFinal(v.getModifiers());
-          if (!constant && parameterIndex(m, v) < 0) {
-            return false;
-          }
-          if (!constant && assigned(m, v)) {
-            return false;
-          }
-        }
-        case MAY_THROW -> {}
-        default -> {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  /** The index of {@code v} among {@code m}'s parameters, or -1. */
-  private static int parameterIndex(MethodDeclaration m, IVariableBinding v) {
-    for (int i = 0; i < m.parameters().size(); i++) {
-      IVariableBinding p = ((SingleVariableDeclaration) m.parameters().get(i)).resolveBinding();
-      if (p != null && p.getKey().equals(v.getVariableDeclaration().getKey())) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  /** Whether {@code m}'s body assigns {@code v} (=, a compound assignment, ++ or --). */
-  private static boolean assigned(MethodDeclaration m, IVariableBinding v) {
-    String key = v.getVariableDeclaration().getKey();
-    for (SimpleName n : Nodes.all(m, SimpleName.class)) {
-      if (n.resolveBinding() instanceof IVariableBinding b
-          && b.getVariableDeclaration().getKey().equals(key)) {
-        ASTNode p = n.getParent();
-        if ((p instanceof Assignment a && a.getLeftHandSide() == n)
-            || p instanceof PostfixExpression
-            || (p instanceof PrefixExpression pre
-                && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                    || pre.getOperator() == PrefixExpression.Operator.DECREMENT))) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * The argument a call passes for {@code e} (source text {@code source}): {@code e} with each of
-   * its method's parameters replaced by that call's argument, parenthesized unless it is a name or
-   * a literal; refused for an argument with effects, which would run twice.
-   */
-  private static java.util.function.Function<Signatures.Call, String> perCall(
-      Expression e, String source) {
-    MethodDeclaration m = enclosing(e, MethodDeclaration.class);
-    java.util.List<int[]> uses = new java.util.ArrayList<>();
-    for (SimpleName n : Nodes.all(e, SimpleName.class)) {
-      if (n.resolveBinding() instanceof IVariableBinding v && parameterIndex(m, v) >= 0) {
-        uses.add(
-            new int[] {
-              n.getStartPosition() - e.getStartPosition(), n.getLength(), parameterIndex(m, v)
-            });
-      }
-    }
-    uses.sort((a, b) -> b[0] - a[0]);
-    return c -> {
-      StringBuilder out = new StringBuilder(source);
-      for (int[] u : uses) {
-        Expression arg = (Expression) c.arguments().get(u[2]);
-        String text = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
-        for (Effects.Effect x : Effects.of(arg).all()) {
-          if (x.kind() != Effects.Kind.NAME && x.kind() != Effects.Kind.MAY_THROW) {
-            throw new Refusal(
-                "a call passes "
-                    + text
-                    + " for "
-                    + source.substring(u[0], u[0] + u[1])
-                    + ", which has effects, and passing "
-                    + source
-                    + " with it would run them twice. Put it in a local first.");
-          }
-        }
-        boolean plain =
-            arg instanceof Name || arg instanceof NumberLiteral || arg instanceof StringLiteral;
-        out.replace(u[0], u[0] + u[1], plain ? text : "(" + text + ")");
-      }
-      return out.toString();
-    };
-  }
-
   /** The nearest {@code type} around {@code n}, or null past a lambda or an anonymous class. */
-  private static <T extends ASTNode> T enclosing(ASTNode n, Class<T> type) {
+  static <T extends ASTNode> T enclosing(ASTNode n, Class<T> type) {
     for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
       if (type.isInstance(p)) {
         return type.cast(p);

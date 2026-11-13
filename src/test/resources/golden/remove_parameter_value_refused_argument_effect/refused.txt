@@ -1,0 +1,1 @@
+passes next() for width, and width * height would then be computed from one next() where the call ran two. Put next() in a local first

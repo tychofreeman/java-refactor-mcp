@@ -1176,7 +1176,11 @@ final class Tools {
           dropped argument must have no side effects (a name, a literal, this, a field). With \
           value, a parameter every call passes the same field or literal for is removed though \
           the body reads it: void report(PrintStream out, String r) called as report(out, r) \
-          becomes void report(String r), its body reading the field out.\
+          becomes void report(String r), its body reading the field out. value may also be an \
+          expression of the other parameters, which every call passes with its own arguments in \
+          their place: with value width * height, boolean fits(int width, int height, int area) \
+          called as fits(w, h + 1, w * (h + 1)) becomes boolean fits(int width, int height), \
+          called as fits(w, h + 1), its body starting with int area = width * height;.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
@@ -1187,7 +1191,9 @@ final class Tools {
               Arg.string(
                   "value",
                   "Optional: what every call passes for it, a field (out, this.out, Config.OUT)"
-                      + " or a literal; the body then reads that.")),
+                      + " or a literal, which the body then reads, or an expression of the"
+                      + " other parameters, fields, constants and literals (width * height),"
+                      + " which the body then starts by computing.")),
           Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, ByLine.named(project, args)));
 

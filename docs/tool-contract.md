@@ -753,6 +753,31 @@ too (`ByLine.named`).
   a call on `this`. Refused: a method something overrides or implements, a call passing
   anything else ("the call at ... passes System.err, not this.out ..."), a parameter the body
   assigns, an instance field for a static method.
+  `value` may also be an expression of the method's other parameters, fields, constants and
+  literals, without calls (roadmap #147, 2026-11-13: the query form of `replace_parameter`,
+  `docs/sessions/generators-sketch.md`): `width * height`, `order.customer`, `(hours - FULL) *
+  rate`. Every call must pass it with its own arguments in place of the parameters (`fits(w, h +
+  1, w * (h + 1))`), matched by structure, parentheses aside, each other name by binding; the
+  body then starts with a local of the parameter's name and type (`int area = width * height;`,
+  after a `this(...)` or `super(...)`), which the body may assign, and a body written on one line
+  is opened up for it. The result ends "; its body starts with int area = width * height". A
+  value that may throw (a division, a dereference) threw among the call's arguments and now
+  throws in the method: reported as a change to exceptional behavior, refused under
+  `preserve_exceptions`. Refused: a call that passes another expression ("the call at ...
+  passes w + h, not width * height (with that call's arguments: w * h), so area cannot become
+  width * height. Change that call first, or keep the parameter."); an argument the value
+  reads that has effects ("... passes next() for width, and width * height would then be
+  computed from one next() where the call ran two. Put next() in a local first."), or that is
+  a primitive of another type than its parameter ("... passes w (int) for width (long): the
+  call computed w * h in that type ..."); an argument with effects between the arguments the
+  value reads and the removed one, or, when the value reads a field that is not a constant,
+  after them ("... passes raise() after n * factor; in the method, amount * factor would be
+  computed after raise(), not before it. Put raise() in a local first, or move the parameter
+  last (move_parameter)."); a name that is not another parameter, a field or a constant in the
+  method ("value may use Box.fits's other parameters (width, height), fields, constants and
+  literals; scale is none of these there."); a value that calls, creates or assigns; a
+  constructor that passes the parameter to `this(...)` or `super(...)`, or whose value reads a
+  field past one; a method with no body; a varargs parameter.
 - `move_parameter`: optional `before` (default last).
 
 The change covers the method's family: every project declaration that overrides

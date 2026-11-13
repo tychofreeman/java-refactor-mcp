@@ -1,0 +1,1 @@
+passes w (int) for width (long): the call computed w * h in that type

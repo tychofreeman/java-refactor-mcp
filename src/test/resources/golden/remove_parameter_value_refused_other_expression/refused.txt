@@ -1,0 +1,1 @@
+passes w + h, not width * height (with that call's arguments: w * h), so area cannot become width * height
