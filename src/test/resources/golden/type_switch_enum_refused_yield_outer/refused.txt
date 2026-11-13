@@ -1,0 +1,1 @@
+the case of RED has yield 5;, which in the new method would leave it instead of the code around the switch.

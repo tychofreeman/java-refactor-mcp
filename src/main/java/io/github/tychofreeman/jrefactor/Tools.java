@@ -1054,7 +1054,8 @@ final class Tools {
           constant no case names. Otherwise each constant a case names overrides the method with \
           its case's body, in the constant's own body (RED { @Override public String label() \
           {...} }), the switch's value as this, and the enum declares it abstract, or with the \
-          default's body; as=method or as=field chooses.\
+          default's body; as=method or as=field chooses. A case's block in a switch expression \
+          becomes the method's body, each yield of the switch a return.\
           """,
           List.of(
               Arg.FILE,
