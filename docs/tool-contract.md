@@ -1190,9 +1190,11 @@ arguments.
   call's argument of another type than the parameter, where one is primitive, is cast to the
   parameter's type (#171: `scale(n)` with `int n` passes `(long) n * 1000000` for `x * 1000000`;
   `((Long) v).hashCode()` as a receiver); refused only where the parameter's type is not a
-  primitive or an unparameterized java.lang type ("this tool casts only to ..."). It is refused
-  when an argument after it
-  that has effects could change what it reads, which the expression would now read again last.
+  primitive or an unparameterized java.lang type ("this tool casts only to ..."). The new
+  parameter goes right after the last parameter the expression reads (#172), in every
+  declaration, lambda and call (`run(step, step * 3 + 1, tick())`), or last when it reads none,
+  or calls or may throw. It is refused when an argument between a read one and the new place
+  has effects that could change what it reads, which the expression would read again there.
   A may-throw expression goes through the behavior gate, moving to the start of the body: under
   a guard or in a catching try it is refused. `all_occurrences=true` (only with
   `as=parameter`; refused otherwise) makes every occurrence in the method the parameter, matched

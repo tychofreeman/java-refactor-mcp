@@ -198,6 +198,23 @@ a guard) but not reported, as before; over reporting it too, which would add a r
 `qty / 10`. The extraction is now one change (one undo), `Signatures.addParameter` taking the
 occurrences' edits from its caller (`more`), where it had been two writes.
 
+**Decided 2026-11-13 (the user): the new parameter goes right after the last one the
+expression reads** (roadmap #172). `extract_variable` `as=parameter` refused a call with an
+argument that has effects after one the expression reads (`run(step, tick())` for `q * 3 + 1`:
+the new last argument would read `step` after `tick()`). The new parameter now goes right after
+the last parameter the expression reads, in every declaration, lambda and call of the family,
+so the new argument runs after exactly the arguments before it: `run(step, step * 3 + 1,
+tick())`. Over keeping the refusal and over declaring a local at each call. When the expression
+reads no parameter, or its last is already last, it stays last. Refused still: an argument with
+effects between a read argument and the new place (`run(step, tick(), 5)` for `q + r`); an
+argument with effects before the read one is no change (`run(tick(), step, tick())` for `r * 2`
+applies), since the parameter and the new argument both read it after that argument. One
+default, the smallest, to reopen if it costs turns: an expression that calls or may throw stays
+last, under its existing rules, since placing it earlier would run its call, or its exception,
+before the later arguments' effects. `remove_parameter` `value` has no mirror: the argument
+goes away and the value is computed in the body after every argument, so there is no place to
+choose; #147's rule for the arguments after it stands.
+
 **Decided 2026-11-13 (the user): an argument of another type is cast, not refused** (roadmap
 #171). Where `extract_variable` `as=parameter` refused a call passing a primitive of another
 type than the parameter the expression reads (#161), it writes the argument cast to the
@@ -638,6 +655,7 @@ sections 3 and 4.
 | 161 | 168 | `bin/session-report` counts the edit steps to Java by what carried the code (`build`, `surround`, `constructor`, `implement`, `test_for`, `declaration`, `content`, `new`), the Java typed in them, and the characters of names given to `build` | Done 2026-11-13 (`SessionReport.Typed`; the guard's condition counts with the names) | The generators sketch, section 8 and increment 10's report part only (no task set, no A/B run: issue #376); `docs/sessions/session-report-build.md` |
 | 162 | 169 | `extract_variable` `as=parameter` with a call on the method's own object (`rate(order)`) or a static method named without its class: written at each call on that call's object, or on its class | Done 2026-11-13 (`ParameterValue.reachable`, `InMethod.written`, `sameTargets`: a steady receiver, the class or a subclass for an unqualified call, `super` only without an override below, each written call resolving to the same method or an override in a probe parse, a visible one; the user's choice, "Decided 2026-11-13: a call on the method's own object" above) | #161's follow-up; `docs/sessions/extract-variable-parameter-receiver.md` |
 | 164 | 171 | `extract_variable` `as=parameter`: a call passing a primitive of another type than a parameter the expression reads gets the argument cast to the parameter's type, in place of #161's refusal | Done 2026-11-13 (`ParameterValue.cast`, `substituted` with the method's parameters; `remove_parameter` `value` keeps its refusal, which a cast cannot reproduce; the user's choice, "an argument of another type is cast" above) | The owner's decision; `docs/sessions/parameter-value-cast.md` |
+| 165 | 172 | `extract_variable` `as=parameter` places the new parameter right after the last parameter the expression reads, so later arguments with effects run after it, in place of #161's refusal | Done 2026-11-13 (`Introduce.parameter` passes `before` to `Signatures.addParameter`; `perCall` checks only the arguments before the new place; an expression that calls or may throw stays last; the user's choice, "the new parameter goes right after the last one the expression reads" above) | The owner's decision; `docs/sessions/parameter-after-last-read.md` |
 
 ### The 2026-11-04 list
 
