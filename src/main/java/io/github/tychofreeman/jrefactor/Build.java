@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -441,7 +442,7 @@ final class Build {
     }
     e.declared = index ? null : e.type;
     String chosen = index ? "i" : map ? "entry" : Names.elementName(of);
-    for (int n = 2; !free(chosen, loop, taken); n++) {
+    for (int n = 2; !free(chosen, loop, taken) || declares(loop.getBody(), chosen); n++) {
       chosen =
           index && n <= 18
               ? String.valueOf((char) ('i' + n - 1))
@@ -879,5 +880,36 @@ final class Build {
             + " entry is a string that is not empty; got "
             + map.get(key)
             + ".");
+  }
+
+  /**
+   * A loop around the statements from {@code start} to {@code end} of the opened file: surround's
+   * loop object, whose body is those statements.
+   */
+  static Built around(
+      SourceProject project,
+      Opened opened,
+      int start,
+      int end,
+      Map<?, ?> loop,
+      String indent,
+      String step,
+      List<String> imports)
+      throws IOException {
+    if (!loop.containsKey("loop")
+        || !List.of("loop", "name", "form", "type").containsAll(keys(loop))) {
+      throw new Refusal(
+          "surround's loop takes loop, name, form and type: its body is the statements from"
+              + " start_line to end_line. To write other statements, send build.");
+    }
+    Map<Object, Object> entry = new LinkedHashMap<>(loop);
+    entry.put("body", List.of(opened.text().substring(start, end).stripTrailing()));
+    return statements(project, opened, start, end, List.of(entry), indent, step, imports);
+  }
+
+  /** Whether code in {@code body} declares a variable named {@code name}. */
+  private static boolean declares(ASTNode body, String name) {
+    return Nodes.all(body, VariableDeclaration.class).stream()
+        .anyMatch(v -> v.getName().getIdentifier().equals(name));
   }
 }

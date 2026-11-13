@@ -309,7 +309,9 @@ call is told by its own type binding being null, not by the local's.
 Defaults taken where the sketch was silent, to reopen if they chafe: a constructor's wrong
 argument count is refused only against explicit constructors (a class with none keeps the
 stub that assigns fields); `type` beside an `into` that is already a variable is refused, not
-ignored; a checked exception and a mismatched `into` are left to the gate's wording.
+ignored; a checked exception and a mismatched `into` are left to the gate's wording. A loop variable's name that the tool picks is kept free of the names its body
+declares too (`order2`), found with `surround`'s loop (#163); a `name` the model gives that a
+body declares is left to the gate's compile refusal.
 
 ## Questions (all answered)
 
@@ -562,6 +564,7 @@ sections 3 and 4.
 | 148 | 155 | A record (or an enum, an annotation type) named to a tool that takes a top-level class or interface was refused as "not a top-level type", which it is | Done 2026-11-13 (`Opened.notAClass`: "Point is a record, and this tool takes a class or interface here. Send the name of one: com/example/Point.java declares none."; what the tools accept is unchanged) | `docs/sessions/generics-sketch.md`, "Slice 2 in detail" |
 | 149 | 156 | Generics, slice 1: `add_parameter` with `type_parameter` on a class, no members yet (increment 4 of `docs/sessions/generics-sketch.md`) | Done 2026-11-13 (`TypeParameters`: the class declares the parameter and every use in the project passes `value`, by the table in `docs/tool-contract.md`; a use in the class's own instance code passes the parameter; diamonds where a declared type fixes the target, checked by bindings after the write; a raw use left behind is refused; `CallTargets`. The user, 2026-11-13, each the sketch's recommendation: on `add_parameter`, over a new `add_type_parameter` tool and over `change_type`; `Box<T>` in instance code and `Box<String>` in static code, over a fallback per error and over always `Box<String>`; diamonds where a declared type fixes the target, over always the full form and over wherever inference agrees) | A review found generics a gap; the friction log has no entry asking for it |
 | 155 | 162 | `build` with `loop`: a for-each over an array, an `Iterable` or a `Map`'s entries, or an index loop, the element's type read from the code, with a `body` of entries that may use the variable | Done 2026-11-13 (`Build.walk`; a loop shell with `body` and no `op`, the user's choice, "Generators" above) | The generators sketch, increment 4; `docs/sessions/build-loop.md` |
+| 156 | 163 | `surround` on `replace_statements` takes a loop object, `{"loop": "orders"}`, the statements its body | Done 2026-11-13 (`Build.around`: the statements become the body of one `loop` entry, so the head is decided as `build`'s; a name the tool picks is also kept free of the body's declarations) | The generators sketch, increment 5; `docs/sessions/surround-loop.md` |
 
 ### The 2026-11-04 list
 

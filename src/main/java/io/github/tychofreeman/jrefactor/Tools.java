@@ -517,7 +517,8 @@ final class Tools {
           ending on end_line, with content (statements, re-indented); empty content deletes them.
           With surround in place of content (try, if (ready), for (Item i : items), while (more), \
           synchronized (lock)), the statements go inside that block; a try catches and rethrows \
-          the checked exceptions they throw.
+          the checked exceptions they throw. surround {"loop": "orders"} writes the loop's head \
+          from names, as build's loop does: for (Order order : orders) { ... }.
           With build in place of content, the new statements are written from names, as \
           insert_statements does.\
           """,
@@ -527,9 +528,17 @@ final class Tools {
               Arg.integer("end_line", "1-based line the last statement ends on.").required(),
               Arg.string("content", "The new statements; empty to delete."),
               Arg.BUILD,
-              Arg.string(
+              Arg.json(
                   "surround",
-                  "In place of content: the head of a block to put them in (try, if (cond), ...)."),
+                  """
+                  {
+                    "description": "In place of content: the head of a block to put them in (try, if (cond), ...), or a loop object as build takes, without body: {loop, name, form, type}.",
+                    "anyOf": [
+                      {"type": "string"},
+                      {"type": "object"}
+                    ]
+                  }
+                  """),
               Arg.IMPORTS),
           Kind.EDIT,
           Primitives::replaceStatements);

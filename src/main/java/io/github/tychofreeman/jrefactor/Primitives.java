@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ArrayInitializer;
 import org.eclipse.jdt.core.dom.Block;
@@ -152,18 +153,27 @@ final class Primitives {
     }
     int start = Lines.start(text, first.getStartPosition());
     int end = Lines.end(text, Nodes.end(last) - 1);
-    String surround = args.string("surround");
-    Build.Built built =
-        built(
-            project,
-            opened,
-            args,
-            start,
-            end,
-            block,
-            Lines.indentOf(text, first.getStartPosition()));
-    if (built != null && surround != null) {
+    Object around = args.raw("surround");
+    String surround = around instanceof Map<?, ?> ? null : args.string("surround");
+    String indent = Lines.indentOf(text, first.getStartPosition());
+    Build.Built built = built(project, opened, args, start, end, block, indent);
+    if (built != null && around != null) {
       throw new Refusal("replace_statements takes build or surround, not both.");
+    }
+    if (around instanceof Map<?, ?> loop) {
+      if (args.string("content") != null) {
+        throw new Refusal("replace_statements takes content or surround, not both.");
+      }
+      built =
+          Build.around(
+              project,
+              opened,
+              start,
+              end,
+              loop,
+              indent,
+              step(opened, block, indent),
+              args.list("imports"));
     }
     String content =
         built != null ? built.text() : args.string("content") == null ? "" : args.string("content");
@@ -201,7 +211,7 @@ final class Primitives {
               statements,
               text.substring(method.getStartPosition(), Nodes.end(method)));
     }
-    if (project.session().skeletonOnly && surround == null && !content.isBlank()) {
+    if (project.session().skeletonOnly && around == null && !content.isBlank()) {
       Generated.checkSurround(text.substring(start, end), content);
     }
     String after;
@@ -410,9 +420,14 @@ final class Primitives {
     if (args.string("content") != null) {
       throw new Refusal(args.tool() + " takes content or build, not both.");
     }
-    String outer = Lines.indentOf(opened.text(), block.getStartPosition());
-    String step = indent.length() > outer.length() ? indent.substring(outer.length()) : "  ";
+    String step = step(opened, block, indent);
     return Build.statements(
         project, opened, start, end, args.raw("build"), indent, step, args.list("imports"));
+  }
+
+  private static String step(Opened opened, ASTNode block, String indent) {
+    String outer = Lines.indentOf(opened.text(), block.getStartPosition());
+    String step = indent.length() > outer.length() ? indent.substring(outer.length()) : "  ";
+    return step;
   }
 }

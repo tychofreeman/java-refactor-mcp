@@ -1,0 +1,1 @@
+replaced lines 16-17 of shop/Ledger.java with 4 lines; built for (Order order : orders)

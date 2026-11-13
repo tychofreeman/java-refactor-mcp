@@ -1,0 +1,1 @@
+total is already a local here (declared at line 15), so the loop's variable cannot have that name. Pass another name, or leave name out and it is order.
