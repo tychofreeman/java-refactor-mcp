@@ -601,6 +601,30 @@ final class Tools {
           Kind.REFACTORING,
           Tools::convertLoop);
 
+  static final Def SUBCLASS_TO_STRATEGY =
+      new Def(
+          "subclass_to_strategy",
+          """
+          Turn a subclass that only overrides one method into a function its superclass holds: \
+          with class FileRenamer extends Renamer { boolean move(Rename r) {...} }, Renamer gains \
+          an interface Move and a field of it, its move calls the field, the override's body \
+          becomes the static Renamer.moveFile and Renamer's own Renamer.defaultMove; each \
+          constructor of Renamer takes the function, one with the old parameters passing \
+          defaultMove; new FileRenamer(out) becomes new Renamer(out, Renamer::moveFile), \
+          FileRenamer as a type becomes Renamer, and its file is deleted. type names a \
+          functional interface to use in place of a new one.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.string("name", "The subclass, e.g. FileRenamer.").required(),
+              Arg.string("method", "The one method it overrides, e.g. move.").required(),
+              Arg.string(
+                  "type",
+                  "Optional: a functional interface for the field, e.g. Predicate<Rename>;"
+                      + " without it the tool declares one in the superclass.")),
+          Kind.REFACTORING,
+          Tools::subclassToStrategy);
+
   static final Def REMOVE_ELSE =
       new Def(
           "remove_else",
@@ -1319,6 +1343,7 @@ final class Tools {
           INVERT_IF,
           LOOP_TO_STREAM,
           CONVERT_LOOP,
+          SUBCLASS_TO_STRATEGY,
           REMOVE_ELSE,
           ENCAPSULATE_FIELD,
           BATCH,
@@ -1625,5 +1650,14 @@ final class Tools {
   private static Outcome convertLoop(SourceProject project, Args args) throws Exception {
     return ConvertLoop.run(
         project, args.required("file"), args.integer("line"), args.required("to"));
+  }
+
+  private static Outcome subclassToStrategy(SourceProject project, Args args) throws Exception {
+    return SubclassToStrategy.run(
+        project,
+        args.required("file"),
+        args.required("name"),
+        args.required("method"),
+        args.string("type"));
   }
 }

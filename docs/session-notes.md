@@ -155,6 +155,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+- `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
+  type (`type`) or the tool declares a nested interface named after the method, over
+  java.util.function when it fits and over always an interface; the superclass's old constructors
+  stay, delegating with its own body's function, over adding the parameter to every construction;
+  the subclass is deleted and its uses retyped, over keeping it as a holder of the function.
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.
@@ -277,6 +282,13 @@ Each was chosen from options; the record named beside it has the options it beat
   key it now throws on goes through `Exceptional.change`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop` is the statement forms.
+
+- `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
+  of the files that name the subclass and the superclass's file, text edits per file, each
+  through `Imports.fix` (the subclass's imports as the chosen ones) and all through
+  `Gate.applyOrRefuse`, the subclass's file as null. `usesInstance` refuses a body that needs the
+  instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
+  `samOf` finds a named type's method by parsing the superclass with a probe field.
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
