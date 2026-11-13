@@ -231,7 +231,10 @@ Each was chosen from options; the record named beside it has the options it beat
   an executable file executable.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
-  under a source root.
+  under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
+  output that does not parse is refused as the tool's own fault, an edit's as syntax to fix.
+- An array creation (`new int[n]`, or `{1, 2}` alone) is `Effects.Kind.NEW_ARRAY`, not a change
+  (`changes()`); `Behavior.flow` refuses it in several landings only (`newArraysNow`, #178).
 - `Session` holds all per-project state (undo history, deferred flag, library
   index, last type check, `editing`, `preserveExceptions`); there is no static
   mutable state. `Server.Quiet` holds the per-server state.

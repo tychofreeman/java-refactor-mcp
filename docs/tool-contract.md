@@ -109,6 +109,14 @@ constructor Reservation(String book, String member), since final fields book, me
 unset"), and, for a top-level class with no superclass, its instance fields final and one
 constructor, adds "; Reservation now fits a record: convert_to_record makes it one".
 
+A refactoring through `Edits.gated` whose own output does not parse is refused as the tool's
+fault: "inlining names wrote code that does not parse:" with the first three errors and their
+lines, then "This is a fault in the tool, not in your code: p/Arr.java is unchanged. Make this
+change with an edit instead." An edit whose result does not parse keeps "the result does not
+parse: ... Fix the syntax and send it again." (2026-11-13, issue #410: the refactoring's case had
+named the file by its absolute path and asked the model to fix its syntax). A refactoring that
+writes through `Gate.applyOrRefuse` alone gets the gate's compile refusal instead.
+
 A compile refusal lists the errors, then what to send. When the errors are blank final fields no
 constructor sets ("The blank final field book may not have been initialized"), it names
 `add_declaration` with `constructor: ["book", ...]`, sent with the fields in one batch
@@ -1269,7 +1277,12 @@ and `column` (only when the line has two variables of that name).
   an initializer that reads state (a field, an element, a call's result) that a
   call or assignment between the declaration and a use could change; a declared
   type that differs from the initializer's; an initializer that reads a name a later declaration in the block
-  hides at a use. `function` (inline by a function's name) is not built yet.
+  hides at a use; an initializer that creates an array (`new int[n]`, `{1, 2}`) used more than
+  once, since each use would hold a different array where there was one (2026-11-13, issue #410).
+- An array initializer written alone (`String[] names = {"a", "b"};`) is written at each use as
+  an array creation with the declared type, dimensions after the name included:
+  `new String[] {"a", "b"}.length`, `(new int[][] {{1, 2}})[0]` (parenthesized where it is
+  indexed, which does not parse otherwise; 2026-11-13, issue #410).
 
 ## `fold` (built)
 
