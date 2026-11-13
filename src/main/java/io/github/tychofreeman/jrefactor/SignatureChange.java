@@ -19,6 +19,11 @@ final class SignatureChange {
   final MethodFamily family;
   final Map<Signatures.Source, List<TextEdit>> edits = new LinkedHashMap<>();
 
+  /** The gate's fix line for a signature change that adds compile errors. */
+  static final String FIX =
+      "Nothing was changed. If a value or type does not resolve at some call, choose one"
+          + " that does.";
+
   SignatureChange(MethodFamily family) {
     this.family = family;
   }
@@ -115,13 +120,7 @@ final class SignatureChange {
 
   /** Applies the edits, fixes each file's imports, and writes them all under the gate. */
   Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
-    return apply(
-        project,
-        what,
-        chosen,
-        "Nothing was changed. If a value or type does not resolve at some call, choose one"
-            + " that does.",
-        -1);
+    return apply(project, what, chosen, FIX, -1);
   }
 
   /**

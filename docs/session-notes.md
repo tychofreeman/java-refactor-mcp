@@ -399,6 +399,19 @@ Each was chosen from options; the record named beside it has the options it beat
   and type variables, and compares a method's name only with methods' (`NameCheck.spaced`, #344:
   `skipped(skipped)` was taken for a capture).
 
+- `CallTargets` (roadmap #146, 2026-11-13) is the check that a change keeps what every call runs:
+  `CallTargets.of(units)` before the write (units of one parse of the project's files), `require`
+  after it, which parses the files again and refuses when a call, `new`, `this(...)`, `super(...)`
+  or method reference runs another declaration. A declaration is its file and its number among
+  the file's methods, since a signature change alters its binding key; so the change between the
+  two may add or remove no call and no method in those files (it throws `IllegalStateException`
+  when the calls differ in number or kind). It is not a rule of `Behavior.check`: that judges code
+  a tool moves, before the write, and this compares two parses around a write that moves nothing.
+  Inside a batch with check `"end"` it runs as `Rename.checkMeanings` does: the step's files are
+  written, the parse reads them, a call that does not resolve is skipped (the end check judges
+  it), and a refusal aborts the step, which puts its files back. `change_type` calls it; a tool
+  that changes a signature or makes a type generic should.
+
 ## Testing
 
 - A golden case with `skeleton_only=true` runs with `Session.skeletonOnly` on (roadmap #116).

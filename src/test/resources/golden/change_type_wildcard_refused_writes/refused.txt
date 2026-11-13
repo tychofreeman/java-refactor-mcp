@@ -1,0 +1,1 @@
+List<? extends Item> can be read from but not added to, and cannot be passed on as List<Item>. If the code only adds to items, try List<? super Item>; if it reads and adds, keep List<Item>.
