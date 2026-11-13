@@ -68,6 +68,10 @@ final class Signatures {
             () ->
                 "add_parameter needs parameter and type, the new parameter's name and its Java"
                     + " type; or type_parameter, to add a type parameter to a class."));
+    Outcome field = EnumField.add(project, args);
+    if (field != null) {
+      return field;
+    }
     String value = args.required("value");
     parsesAs("value", value, "class X { Object x = " + value + "; }");
     Opened opened = Opened.of(project, args.required("file"));
@@ -492,7 +496,7 @@ final class Signatures {
    * The edit that puts {@code item} at index {@code at} of {@code list}, whose ( is at {@code
    * open}.
    */
-  private static TextEdit insertAt(String text, List<?> list, int open, int at, String item) {
+  static TextEdit insertAt(String text, List<?> list, int open, int at, String item) {
     if (list.isEmpty()) {
       return new TextEdit(open + 1, open + 1, item);
     }

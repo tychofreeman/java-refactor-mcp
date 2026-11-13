@@ -1,0 +1,1 @@
+values gives each constant of an enum its own value, and Renamer is not an enum of com/example/Renamer.java. Pass value, which every call passes.

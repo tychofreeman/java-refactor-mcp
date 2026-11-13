@@ -1,0 +1,1 @@
+added the field boolean warm to Color, set by its constructor and read by warm(); 2 constants pass their values

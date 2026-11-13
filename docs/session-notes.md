@@ -364,6 +364,13 @@ Each was chosen from options; the record named beside it has the options it beat
   one the arguments go to (#142, 2026-11-13). `MethodFamily.findCalls` does; `ByLine`,
   `SafeDelete`, `ThrowsCallers` and `Signatures.addComponent` still compare the raw binding.
 
+- `add_parameter` with `name` an enum (#150, 2026-11-13) is `EnumField`, entered first from
+  `Signatures.addParameter` (it returns null when `name` is no enum of the file): one file's text
+  edits (constants' arguments by `Signatures.insertAt`, the constructor's parameter and
+  assignment), then the field, constructor and accessor through `Declarations.plan`, all through
+  `Edits.gated`. `values` is an object argument (`Arg.json`, read by `Args.strings`). Slice 3's
+  field form (`type_switch_to_method` on an enum) should write through it.
+
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
 

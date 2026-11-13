@@ -31,9 +31,13 @@ final class FromFields {
       throw new Refusal(
           name
               + " is an enum; constructor writes a class's constructor, and the constants of an"
-              + " enum would not pass its parameters. Add the constructor as content ("
+              + " enum would not pass its parameters. For a field with a value per constant, use"
+              + " add_parameter with name "
               + name
-              + "() {}), then add_parameter for each value: it passes one at every constant.");
+              + " and values (it writes the field, the constructor and an accessor); for a"
+              + " constructor alone, add it as content ("
+              + name
+              + "() {}).");
     }
     if (!(owner.decl() instanceof TypeDeclaration t) || t.isInterface()) {
       throw new Refusal(

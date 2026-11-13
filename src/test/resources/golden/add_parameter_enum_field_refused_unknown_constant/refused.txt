@@ -1,0 +1,1 @@
+Color has no constant PURPLE; its constants are RED, GREEN, BLUE.
