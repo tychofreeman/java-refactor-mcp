@@ -52,6 +52,8 @@ fact here becomes wrong, fix or remove it in the same PR.
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log
   (`bin/session-log`, `bin/session-report`) is the measured part.
+  Since #168 the report also says what carried each edit step to Java (`build`, `content`, ...)
+  and how much Java was typed against names given to `build`: the generators' trend.
 - Before fixing a roadmap row, check `main` and the open branches for the same
   row: two sessions once fixed #67 at once, and one PR (#118) was closed.
 - gorefactor's `docs/parity.md` (Go, TypeScript and Java at parity) is the source of roadmap
