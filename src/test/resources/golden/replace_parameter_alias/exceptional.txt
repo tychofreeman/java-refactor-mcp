@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- order.customer() may throw: each call computed it among its arguments, and Pricing.priceOf now computes it first in its body, after every argument has run

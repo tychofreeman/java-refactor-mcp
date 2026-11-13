@@ -94,7 +94,7 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `replace_text`, `batch` and `undo`, and (roadmap #120, 2026-11-06) `extract_function`, which
 was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI but not
 published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
-`move_member` with `to` the method's own class (taken from `name`, `Type.method`).
+`move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value."); the query form only, as the generators sketch decided.
 
 One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
