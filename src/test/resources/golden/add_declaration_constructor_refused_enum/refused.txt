@@ -1,0 +1,1 @@
+Color is an enum; constructor writes a class's constructor, and the constants of an enum would not pass its parameters. Add the constructor as content (Color() {}), then add_parameter for each value: it passes one at every constant.

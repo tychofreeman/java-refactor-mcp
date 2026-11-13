@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -26,6 +27,14 @@ final class FromFields {
   static String constructor(String text, String rel, String type, List<String> fields) {
     Declarations.Owner owner = Declarations.owner(Edits.parses(text, rel), type, rel);
     String name = owner.decl().getName().getIdentifier();
+    if (owner.decl() instanceof EnumDeclaration) {
+      throw new Refusal(
+          name
+              + " is an enum; constructor writes a class's constructor, and the constants of an"
+              + " enum would not pass its parameters. Add the constructor as content ("
+              + name
+              + "() {}), then add_parameter for each value: it passes one at every constant.");
+    }
     if (!(owner.decl() instanceof TypeDeclaration t) || t.isInterface()) {
       throw new Refusal(
           name
