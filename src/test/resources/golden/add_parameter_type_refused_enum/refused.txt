@@ -1,0 +1,1 @@
+Color is an enum, which cannot have type parameters. Add it to a class, or to one of its methods.

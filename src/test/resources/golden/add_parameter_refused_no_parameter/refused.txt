@@ -1,0 +1,1 @@
+add_parameter needs parameter and type, the new parameter's name and its Java type; or type_parameter, to add a type parameter to a class.

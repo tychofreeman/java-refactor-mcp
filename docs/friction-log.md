@@ -1137,3 +1137,14 @@ not in placement, since in a batch the reader may name it only in a later step.
   Wanted: a member with a stub's name and parameter count declared in an enclosing type replaces
   the stub, or the delete of a "not implemented" stub is allowed when the batch declares another
   method the call then resolves to.
+
+## 2026-11-13: the gate passed code that -Werror fails (add-type-parameter)
+
+- `create_file` of `TypeParameters` passed the gate with `new ArrayList<>(target.typeParameters())`
+  (a raw `List` from JDT), and `./mvnw package` then failed: "unchecked method invocation",
+  `-Xlint:all -Werror`. The gate counts compile errors; this project's build also fails on lint
+  warnings. Found only at the next Maven run. A gate option that reports the warnings a change
+  adds (JDT has them as problems) would have said so at the edit.
+- A `batch` with check `"end"` still refuses a step whose result does not parse: a
+  `replace_text` of a method's first lines, completed by the next step's `add_declaration`, was
+  refused. Sent as `replace_declaration` of the whole method. Not a defect; the refusal was clear.

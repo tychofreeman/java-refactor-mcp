@@ -1,0 +1,1 @@
+String is a type that Box already names (line 4); as its type parameter, String would hide it. Choose another name.

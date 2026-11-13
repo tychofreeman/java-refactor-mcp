@@ -455,6 +455,17 @@ Each was chosen from options; the record named beside it has the options it beat
   it), and a refusal aborts the step, which puts its files back. `change_type` calls it; a tool
   that changes a signature or makes a type generic should.
 
+- `add_parameter` with `type_parameter` (roadmap #156, 2026-11-13) is `TypeParameters`, which
+  `Tools.ADD_PARAMETER` routes to before `ByLine.named`: one `Holding` parse of the files that hold
+  the class's name, each `SimpleType`, `NameQualifiedType` or `QualifiedType` that binds to the
+  class (compared by its erasure's qualified name: the declaration's key changes once it is
+  generic) rewritten by where it stands (`exempt`, `fixes`, `inInstanceCode`), each file through
+  `Imports.fix` and all through `Gate.applyOrRefuse`; then one parse for `fullDiamonds`,
+  `requireNoRawUse` and `CallTargets`. A `var` is a `SimpleType` that binds to the variable's
+  type: `named` skips it. `parameter` and `type` are not `.required()` in the schema any more;
+  `Signatures.addParameter` refuses a call without them. The decisions (the user, 2026-11-13,
+  each the sketch's recommendation) are in the contract's section.
+
 ## Testing
 
 - A golden case with `skeleton_only=true` runs with `Session.skeletonOnly` on (roadmap #116).

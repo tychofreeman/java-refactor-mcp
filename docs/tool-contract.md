@@ -443,6 +443,55 @@ pattern of it. Result: `added the component int unitCents to Line; 1 constructio
 a class, adding a field filled by its constructors stays a composition: `add_declaration` of the
 field, `add_parameter` of the constructor, `insert_statements` of the assignment.
 
+## `add_parameter` with `type_parameter`
+
+Roadmap #156, 2026-11-13 (the generics sketch, slice 1; the user chose this over a new
+`add_type_parameter` tool and over `change_type`, which would break its rule that uses are not
+edited): with `type_parameter` (as written, with its bound: `T`, `T extends Comparable<T>`) in
+place of `parameter` and `type`, a class gets a type parameter, and `value` is the type
+argument every use in the project passes, test roots included, so each expression outside the
+class has the type it had. `name` is the class (a top-level or member class of `file`);
+`before` names the type parameter to put it ahead of (default: last); `imports` as elsewhere.
+Nothing is typed `T` yet: the members follow.
+
+| Use | Becomes |
+|---|---|
+| A declared type: field, local, parameter, return, type argument, `Box[]`, a cast | `Box<String>` (the result names an unchecked cast) |
+| `extends Box`, `implements Source` | `extends Box<String>`; the subclass's overrides are untouched |
+| `new Box(x)` initializing or assigned to a variable declared `Box`, or returned from a method that returns `Box` | `new Box<>(x)` |
+| `new Box(x)` elsewhere (a receiver, `var`, an argument, in a lambda), and `new Box(x) { ... }` | `new Box<String>(x)` |
+| `o instanceof Box`, `o instanceof Box b`, `Box.class`, `Box::get`, `Box::new`, `new Box[n]`, imports, Javadoc | unchanged |
+| A use in the class's own instance code (its header, its instance members, an inner class) | `Box<T>`; in its static code and static nested types, `Box<String>` |
+| A class that is already generic, `Pair<A>` gaining `B` | `Pair<Integer>` becomes `Pair<Integer, String>`; a raw `Pair` and a diamond stay |
+
+- Decided by the user, 2026-11-13 (each the sketch's recommendation): a use of the class inside
+  itself is `Box<T>` in instance code and `Box<String>` in static code, the gate judging, over
+  trying `Box<T>` and falling back per error, and over always `Box<String>`; a diamond where a
+  declared type fixes the target and the full form elsewhere, over always the full form and
+  over a diamond wherever inference agrees.
+- `value` is resolved once, as a field of the class in its file would be, and written at each
+  use by its simple names (a member type with its outer types, `Box.Entry`); each file's imports
+  are fixed.
+- After writing, one parse checks that each diamond of the class infers the argument its place
+  asks for (one that does not is written out in full), that no use is left raw that was not
+  raw before (refused: a missed use compiles with a warning only), and that every call runs the
+  declaration it ran (`CallTargets`).
+- Result: `added the type parameter T to Box; 24 uses pass String in 2 files (...); 3 uses in
+  its own instance code pass T; a cast to it is now unchecked at line 21 of ...`; and `its
+  Javadoc has no @param <T> yet` when the class's Javadoc has `@param` tags.
+- Refused: `parameter` or `type` with it; a primitive `value` ("int is a primitive, which
+  cannot be a type argument. Pass value Integer; ..."); an enum, an annotation, a Throwable;
+  a record or an interface (not built yet); a name the class already uses for a type
+  ("String is a type that Box already names (line 4); as its type parameter, String would
+  hide it. Choose another name."), or already has as a type parameter; a `before` the class
+  does not declare; a `value` that is a type parameter of the class; a use of the class's name
+  that does not resolve.
+- `parameter` and `type` are no longer required by the schema, since `type_parameter` takes
+  their place; without it the handler refuses a call that lacks them: "add_parameter needs
+  parameter and type, ...; or type_parameter, to add a type parameter to a class."
+- Not built yet: `members` (which members become `T`), a method's type parameter, records and
+  interfaces.
+
 ## `type_switch_to_method` (built)
 
 Roadmap #127, 2026-11-06 (gorefactor's `prepare_switch_for_types` and `type_switch_to_method`

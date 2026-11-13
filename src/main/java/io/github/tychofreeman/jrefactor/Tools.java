@@ -1152,6 +1152,11 @@ final class Tools {
           declaration it overrides or that overrides it changes too, and every lambda that \
           implements it ((a, b) -> a becomes (a, b, retries) -> a). The body does not use it \
           yet, so behavior is unchanged; add it, then change the body.
+          With type_parameter (T, or T extends Comparable<T>) in place of parameter and type, a \
+          class gets a type parameter, and value is the type argument every use passes: class \
+          Box becomes class Box<T>, and Box b = new Box(x) becomes Box<String> b = new Box<>(x). \
+          Inside the class's own instance code a use becomes Box<T>. before names the type \
+          parameter to put it ahead of.
           name finds the method as replace_declaration does (Type.member, member, m(int, String) \
           for an overload; a constructor by its type's name); or, in place of name, line finds it \
           from its declaration or a call on that line of file, in any file (column picks one of two \
@@ -1165,13 +1170,24 @@ final class Tools {
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
-              Arg.string("parameter", "The new parameter's name.").required(),
-              Arg.string("type", "Its Java type.").required(),
-              Arg.string("value", "The Java expression each call passes.").required(),
+              Arg.string("parameter", "The new parameter's name; needed unless type_parameter."),
+              Arg.string("type", "Its Java type; needed unless type_parameter."),
+              Arg.string(
+                  "type_parameter",
+                  "Instead of parameter and type: a type parameter as written, with its bound,"
+                      + " for the class name names."),
+              Arg.string(
+                      "value",
+                      "The Java expression each call passes; with type_parameter, the type"
+                          + " argument each use passes.")
+                  .required(),
               Arg.string("before", "Optional: the parameter to put it before; default last."),
               Arg.IMPORTS),
           Kind.REFACTORING,
-          (project, args) -> Signatures.addParameter(project, ByLine.named(project, args)));
+          (project, args) ->
+              args.has("type_parameter")
+                  ? TypeParameters.add(project, args)
+                  : Signatures.addParameter(project, ByLine.named(project, args)));
 
   static final Def REMOVE_PARAMETER =
       new Def(
