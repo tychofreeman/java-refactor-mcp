@@ -20,7 +20,9 @@ import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
@@ -122,8 +124,11 @@ final class TypeParameters {
     return toClass(project, args, holding, file, type, named.label(), written, parameter, value);
   }
 
-  /** The type argument every use passes: its text, as any file can write it. */
-  private record Value(String text) {}
+  /**
+   * The type argument every use passes: its text, as any file can write it, and its qualified name,
+   * or null when it does not resolve in the class's file.
+   */
+  private record Value(String text, String qualified) {}
 
   private static Outcome toClass(
       SourceProject project,
@@ -209,6 +214,18 @@ final class TypeParameters {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(declaration(target, at, written));
+    List<String> members = args.list("members");
+    edits
+        .get(file)
+        .addAll(
+            typed(
+                holding.units().get(file),
+                target,
+                label,
+                members,
+                v,
+                parameter,
+                args.required("file")));
     Set<String> files = new TreeSet<>();
     List<String> casts = new ArrayList<>();
     int outside = 0;
@@ -292,7 +309,16 @@ final class TypeParameters {
             + target.getName().getIdentifier()
             + "<"
             + v.text()
-            + "> first, or choose another value.";
+            + "> first, or choose another value."
+            + (members.isEmpty()
+                ? ""
+                : " Where a member's body needs a "
+                    + v.text()
+                    + ", give "
+                    + parameter
+                    + " a bound that has what it uses (type_parameter \""
+                    + parameter
+                    + " extends ...\"), or leave that member out of members.");
     Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
     List<Path> parsed = new ArrayList<>(holding.units().keySet());
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, parsed);
@@ -309,6 +335,9 @@ final class TypeParameters {
             + parameter
             + " to "
             + label
+            + (members.isEmpty()
+                ? ""
+                : "; " + v.text() + " became " + parameter + " in " + Extract.and(members))
             + "; "
             + outside
             + (outside == 1 ? " use passes " : " uses pass ")
@@ -428,10 +457,10 @@ final class TypeParameters {
                   + target.getName().getIdentifier()
                   + ", which a use outside it cannot name. Pass a type every use can name.");
         }
-        return new Value(Extract.typeName(t));
+        return new Value(Extract.typeName(t), t.getQualifiedName());
       }
     }
-    return new Value(value);
+    return new Value(value, null);
   }
 
   /** The offset past the last part of {@code target}'s header before its body. */
@@ -623,5 +652,137 @@ final class TypeParameters {
               + ": a use add_parameter does not give its type argument yet. Declare the type"
               + " parameter with replace_declaration and change the uses in the same batch.");
     }
+  }
+
+  /**
+   * The edits that make {@code v} the type parameter in the declared types of {@code members} of
+   * {@code target}: a field's type, a method's or constructor's parameter and return types, with
+   * the type arguments in them. Bodies are left to the gate.
+   */
+  private static List<TextEdit> typed(
+      CompilationUnit unit,
+      TypeDeclaration target,
+      String label,
+      List<String> members,
+      Value v,
+      String parameter,
+      String rel) {
+    List<TextEdit> edits = new ArrayList<>();
+    if (!members.isEmpty() && v.qualified() == null) {
+      throw new Refusal(
+          v.text()
+              + " does not resolve in "
+              + label
+              + "'s file, so where it stands in members cannot be found. Pass a type that file can"
+              + " name, or import it first.");
+    }
+    for (String member : members) {
+      BodyDeclaration d = member(unit, target, label, member, rel);
+      String named = label + "." + member;
+      if (Modifier.isStatic(d.getModifiers())) {
+        throw new Refusal(
+            named
+                + " is static, and a static member cannot use "
+                + parameter
+                + ", the type parameter of its class. Leave it out of members.");
+      }
+      List<Type> declared = new ArrayList<>();
+      if (d instanceof FieldDeclaration f) {
+        declared.add(f.getType());
+        for (Object o : f.fragments()) {
+          Expression init = ((VariableDeclarationFragment) o).getInitializer();
+          for (ArrayCreation a :
+              init == null ? List.<ArrayCreation>of() : Nodes.all(init, ArrayCreation.class)) {
+            ITypeBinding e = a.getType().getElementType().resolveBinding();
+            if (e != null && v.qualified().equals(e.getQualifiedName())) {
+              throw new Refusal(
+                  named
+                      + " is created as "
+                      + a
+                      + ", and an array of "
+                      + parameter
+                      + " cannot be created. Leave "
+                      + member
+                      + " out of members, or make it a List first.");
+            }
+          }
+        }
+      } else if (d instanceof MethodDeclaration m) {
+        IMethodBinding mb = m.resolveBinding();
+        List<IMethodBinding> overridden = mb == null ? List.of() : CallTargets.overridden(mb);
+        if (!overridden.isEmpty()) {
+          IMethodBinding over = overridden.get(0);
+          throw new Refusal(
+              named
+                  + " overrides "
+                  + over.getDeclaringClass().getErasure().getName()
+                  + "."
+                  + over.getName()
+                  + ", whose signature keeps "
+                  + v.text()
+                  + ": with "
+                  + parameter
+                  + " in its place it would no longer override it. Leave "
+                  + member
+                  + " out of members.");
+        }
+        if (m.getReturnType2() != null) {
+          declared.add(m.getReturnType2());
+        }
+        for (Object o : m.parameters()) {
+          declared.add(((SingleVariableDeclaration) o).getType());
+        }
+      } else {
+        throw new Refusal(
+            named + " is not a field, a method or a constructor. Name those in members.");
+      }
+      int before = edits.size();
+      for (Type root : declared) {
+        for (Type t : Nodes.all(root, Type.class)) {
+          ITypeBinding b = t.resolveBinding();
+          boolean head = t.getParent() instanceof ParameterizedType p && p.getType() == t;
+          boolean within = false;
+          for (TextEdit e : edits) {
+            within |= e.start() <= t.getStartPosition() && Nodes.end(t) <= e.end();
+          }
+          if (!head && !within && b != null && v.qualified().equals(b.getQualifiedName())) {
+            edits.add(new TextEdit(t.getStartPosition(), Nodes.end(t), parameter));
+          }
+        }
+      }
+      if (edits.size() == before) {
+        throw new Refusal(
+            named
+                + " has no "
+                + v.text()
+                + " in its declared types, so nothing in it would become "
+                + parameter
+                + ". Leave it out of members.");
+      }
+    }
+    return edits;
+  }
+
+  /**
+   * The member of {@code target} that {@code member} names, as replace_declaration finds one; a
+   * field declared with others in one statement is refused.
+   */
+  private static BodyDeclaration member(
+      CompilationUnit unit, TypeDeclaration target, String label, String member, String rel) {
+    String base = member.contains("(") ? member.substring(0, member.indexOf('(')).strip() : member;
+    for (FieldDeclaration f : target.getFields()) {
+      for (Object o : f.fragments()) {
+        if (f.fragments().size() > 1
+            && ((VariableDeclarationFragment) o).getName().getIdentifier().equals(base)) {
+          throw new Refusal(
+              label
+                  + "."
+                  + base
+                  + " is declared with other fields in one statement. Split it into one"
+                  + " declaration per field first.");
+        }
+      }
+    }
+    return Declarations.find(unit, label + "." + member, rel).decl();
   }
 }

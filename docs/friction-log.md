@@ -1148,3 +1148,12 @@ not in placement, since in a batch the reader may name it only in a later step.
 - A `batch` with check `"end"` still refuses a step whose result does not parse: a
   `replace_text` of a method's first lines, completed by the next step's `add_declaration`, was
   refused. Sent as `replace_declaration` of the whole method. Not a defect; the refusal was clear.
+
+## 2026-11-13: batch retry from the CLI (add-type-parameter-members)
+
+- A `batch` sent through `bin/jrefactor` was refused at step 6 (a delete whose use step 7 then
+  removed: the steps were in the wrong order), and the refusal said to resend only the changed
+  steps with `retry: true`. From the CLI each run is a new session, so the retry was refused:
+  "there is no refused batch since the last one passed; send the whole batch." Resent whole,
+  reordered. Wanted: the CLI keeps the last refused batch (as `undo` keeps its history across
+  runs), or the refusal names `retry` only where it can work.

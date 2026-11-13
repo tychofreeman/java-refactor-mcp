@@ -1,0 +1,1 @@
+Box.lo is declared with other fields in one statement. Split it into one declaration per field first.

@@ -19,6 +19,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 
@@ -28,7 +29,9 @@ import org.eclipse.jdt.core.dom.SuperMethodInvocation;
  * change, to the declaration it resolved to before. The gate cannot see this: a parameter widened
  * to a wildcard, or a type that became a type variable, can make a call pick another overload and
  * still compile. The targets are read before the change is written ({@link #of}) and required after
- * it ({@link #require}), as {@code Rename.checkMeanings} is; the refusal puts the files back.
+ * it ({@link #require}), as {@code Rename.checkMeanings} is; the refusal puts the files back. A
+ * virtual call that now names a method its old target overrides ({@code value.equals(x)} once
+ * {@code value} is a {@code T}) runs the same body, and passes.
  *
  * <p>A declaration is known by where it stands (its file and its place among the file's methods),
  * not by its binding key, which holds the signature these changes alter. So the change may add or
@@ -36,8 +39,11 @@ import org.eclipse.jdt.core.dom.SuperMethodInvocation;
  */
 final class CallTargets {
 
-  /** What a call runs: the declaration's place, its label, and the call's line and kind. */
-  private record Target(String id, String label, int line, String kind) {}
+  /**
+   * What a call runs: the declaration's place, its label, the call's line and kind, and, for a
+   * virtual call, the places of the methods the declaration overrides.
+   */
+  private record Target(String id, String label, int line, String kind, List<String> overrides) {}
 
   /** Each checked file's calls in source order; a null id for one that did not resolve. */
   private final Map<Path, List<Target>> before;
@@ -93,10 +99,16 @@ final class CallTargets {
         IMethodBinding b = binding(n);
         int line = unit.getLineNumber(n.getStartPosition());
         if (b == null || b.isRecovered()) {
-          calls.add(new Target(null, null, line, kind));
+          calls.add(new Target(null, null, line, kind, List.of()));
         } else {
           IMethodBinding d = b.getMethodDeclaration();
-          calls.add(new Target(place(d, places), Signatures.label(d), line, kind));
+          List<String> overrides = new ArrayList<>();
+          if (n instanceof MethodInvocation && !Modifier.isStatic(d.getModifiers())) {
+            for (IMethodBinding o : overridden(d)) {
+              overrides.add(place(o.getMethodDeclaration(), places));
+            }
+          }
+          calls.add(new Target(place(d, places), Signatures.label(d), line, kind, overrides));
         }
       }
       out.put(Jdt.fileOf(unit), calls);
@@ -171,7 +183,11 @@ final class CallTargets {
           throw new IllegalStateException(
               "the calls of " + e.getKey() + " changed, so their targets cannot be compared");
         }
-        if (a.id() != null && b.id() != null && !a.id().equals(b.id())) {
+        // A virtual call that now names a method its old target overrides runs the same body.
+        if (a.id() != null
+            && b.id() != null
+            && !a.id().equals(b.id())
+            && !a.overrides().contains(b.id())) {
           throw new Refusal(
               what
                   + " would make the call at line "
@@ -189,5 +205,27 @@ final class CallTargets {
         }
       }
     }
+  }
+
+  /** The methods of {@code m}'s class's supertypes, transitively, that {@code m} overrides. */
+  static List<IMethodBinding> overridden(IMethodBinding m) {
+    List<IMethodBinding> out = new ArrayList<>();
+    List<ITypeBinding> todo = new ArrayList<>(List.of(m.getDeclaringClass()));
+    for (int k = 0; k < todo.size(); k++) {
+      ITypeBinding type = todo.get(k);
+      if (type.getSuperclass() != null) {
+        todo.add(type.getSuperclass());
+      }
+      todo.addAll(List.of(type.getInterfaces()));
+      if (k == 0) {
+        continue;
+      }
+      for (IMethodBinding other : type.getDeclaredMethods()) {
+        if (m.overrides(other)) {
+          out.add(other);
+        }
+      }
+    }
+    return out;
   }
 }
