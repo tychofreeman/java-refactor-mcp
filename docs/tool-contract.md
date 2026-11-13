@@ -1431,7 +1431,8 @@ and `type` (the new type as written).
 - Bounds (roadmap #159, 2026-11-13, the generics sketch's slice 3; the user chose the sketch's
   recommendation, `change_type`, over `change_signature` for a method's bound and over a new
   tool): `type_parameter` names a type parameter of `name`, a class (`Sorter`; an interface or
-  a record too) or a method (`Sorter.max`, or by `line`), and `type` becomes its bound, written
+  a record too) or a method (`Sorter.max`, or by `line` and `column` as the other signature tools take it, #176),
+  and `type` becomes its bound, written
   as given (`Comparable<T>`, `Object & Comparable<T>`); `type: "Object"` removes it. A method's
   bound changes in every declaration of its family. Uses are not edited: a use outside the bound
   is the gate's refusal ("Change that use first, or choose a bound it meets."); each call of a
