@@ -813,13 +813,14 @@ final class Tools {
       new Def(
           "pull_up",
           """
-          Move a method or field from its class to its direct superclass, or to a direct supertype named by \
-          to: the member leaves Sub and is added to Base, a field after its fields and a method at its \
-          end. Every call still compiles, since Sub inherits the method. name is Sub.method.\
+          Move a method or field up from a class to its direct superclass, or to a direct \
+          supertype named by to: with name Circle.describe, describe() leaves Circle and is added \
+          to its superclass Shape, where every Shape then has it. Calls need no change, since \
+          Circle inherits it.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
-              Arg.string("name", "The class and the method, as Sub.method.").required(),
+              Arg.string("name", "The class and its method or field, as Class.member.").required(),
               Arg.string(
                   "to",
                   "Optional simple name of a direct supertype, when the superclass is not "
@@ -831,13 +832,13 @@ final class Tools {
       new Def(
           "push_down",
           """
-          Move a method or field from its class to each direct subclass in the project: the member leaves \
-          Sub and is added to each subclass, a field after its fields and a method at its end. name is \
-          Sub.method.\
+          Move a method or field down from a class to each of its direct subclasses in the \
+          project: with name Shape.describe, describe() leaves Shape and is added to Circle and \
+          to Square.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
-              Arg.string("name", "The class and the method, as Sub.method.").required()),
+              Arg.string("name", "The class and its method or field, as Class.member.").required()),
           Kind.REFACTORING,
           Tools::pushDown);
 
@@ -1003,10 +1004,11 @@ final class Tools {
           - with line, the local variable name declared or used there: its initializer replaces \
           every use (int subtotal = price * qty; return subtotal + tax; becomes return (price * \
           qty) + tax;); column when the line has two of that name.
-          - without line, name Type.method: every call of the static method becomes its body, \
-          the arguments in place of the parameters, and the method is deleted (return a + \
-          tax(a) with static double tax(double x) { return x * 0.2; } becomes return a + (a * \
-          0.2);); an argument whose effects would run in another order is bound to a local first.
+          - without line, name Type.method: every call of the method becomes its body, the \
+          arguments in place of the parameters (and, for an instance method, the call's receiver \
+          in place of this), and the method is deleted (return a + tax(a) with static double \
+          tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);); an argument whose \
+          effects would run in another order is bound to a local first.
           - with field, name a class (Person) and field its field (home) holding a class only it \
           uses (Address): Address's members take the field's place, home.street becomes street, \
           and Address.java is deleted.\
@@ -1014,7 +1016,7 @@ final class Tools {
           List.of(
               Arg.FILE.described(
                   "Java file path: the variable's, or the file that" + " declares the method."),
-              Arg.string("name", "The variable, or Type.method for a static method.").required(),
+              Arg.string("name", "The variable, or Type.method for a method.").required(),
               Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
               Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
               Arg.string(
