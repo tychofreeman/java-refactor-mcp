@@ -1,0 +1,1 @@
+added int scaled to Pricing.priceOf(int) in 1 declaration and 3 calls (shop/Checkout.java, shop/Pricing.java); scale(qty) at line 5 is now scaled

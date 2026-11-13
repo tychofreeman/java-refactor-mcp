@@ -1,9 +1,16 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTMatcher;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
@@ -74,8 +81,8 @@ final class ParameterValue {
 
   /**
    * Whether {@code e} is literals, constants, parameters of its method that the method never
-   * assigns, and calls on them or on a class, so each call can pass it with its own arguments in
-   * place of the parameters.
+   * assigns, and calls on them, on a class or on the method's own object, so each call can pass it
+   * with its own arguments in place of the parameters.
    */
   static boolean byParameters(Expression e) {
     MethodDeclaration m = Introduce.enclosing(e, MethodDeclaration.class);
@@ -98,10 +105,7 @@ final class ParameterValue {
           }
         }
         case CALL -> {
-          if (x.deferred()
-              || !(x.node() instanceof MethodInvocation call)
-              || call.getExpression() == null
-              || call.getExpression() instanceof ThisExpression) {
+          if (x.deferred() || !(x.node() instanceof MethodInvocation call) || !reachable(call, m)) {
             return false;
           }
         }
@@ -120,7 +124,8 @@ final class ParameterValue {
    * a literal. Refused for an argument that would then run twice, be read in another type, or be
    * read again after something that could change it.
    */
-  static java.util.function.Function<Signatures.Call, String> perCall(InMethod v) {
+  static java.util.function.Function<Signatures.Call, String> perCall(
+      SourceProject project, InMethod v) {
     return c -> {
       for (int i : v.uses()) {
         Expression arg = (Expression) c.arguments().get(i);
@@ -198,6 +203,7 @@ final class ParameterValue {
           }
         }
       }
+      sameTargets(project, v, c);
       return v.at(c);
     };
   }
@@ -222,16 +228,22 @@ final class ParameterValue {
 
   /**
    * {@code source} with each of {@code uses} replaced by the argument {@code c} passes for that
-   * parameter, parenthesized unless it is a name or a literal.
+   * parameter, parenthesized unless it is a name or a literal, and each of {@code more} written.
    */
-  private static String substituted(List<int[]> uses, String source, Signatures.Call c) {
-    StringBuilder out = new StringBuilder(source);
+  private static String substituted(
+      List<int[]> uses, String source, Signatures.Call c, List<Swap> more) {
+    List<Swap> swaps = new ArrayList<>(more);
     for (int[] u : uses) {
       Expression arg = (Expression) c.arguments().get(u[2]);
       String text = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
       boolean plain =
           arg instanceof Name || arg instanceof NumberLiteral || arg instanceof StringLiteral;
-      out.replace(u[0], u[0] + u[1], plain ? text : "(" + text + ")");
+      swaps.add(new Swap(u[0], u[1], plain ? text : "(" + text + ")"));
+    }
+    swaps.sort((a, b) -> b.offset() - a.offset());
+    StringBuilder out = new StringBuilder(source);
+    for (Swap s : swaps) {
+      out.replace(s.offset(), s.offset() + s.length(), s.text());
     }
     return out.toString();
   }
@@ -296,7 +308,64 @@ final class ParameterValue {
      * The value with {@code c}'s arguments in place of the parameters, as {@code c} would write it.
      */
     String at(Signatures.Call c) {
-      return substituted(occurrences(expression, method), text, c);
+      return written(c, false);
+    }
+
+    /**
+     * The value as {@code c} passes it: its arguments in place of the parameters, {@code c}'s
+     * receiver before each call on the method's own object, and a static method's class before it
+     * where its name alone does not reach it; with {@code probe}, by the class's qualified name,
+     * which needs no import.
+     */
+    String written(Signatures.Call c, boolean probe) {
+      List<Swap> swaps = new ArrayList<>();
+      for (MethodInvocation call : Nodes.all(expression, MethodInvocation.class)) {
+        IMethodBinding b = call.resolveMethodBinding();
+        Expression on = call.getExpression();
+        if (b == null || on != null && !(on instanceof ThisExpression)) {
+          continue;
+        }
+        String before;
+        if (Modifier.isStatic(b.getModifiers())) {
+          ITypeBinding type = b.getDeclaringClass();
+          before =
+              reaches(c.node(), type)
+                  ? null
+                  : probe ? type.getErasure().getQualifiedName() : Extract.typeName(type);
+        } else {
+          before =
+              switch (c.node()) {
+                case SuperMethodInvocation s -> "super";
+                case MethodInvocation mi
+                    when mi.getExpression() != null
+                        && !(mi.getExpression() instanceof ThisExpression t
+                            && t.getQualifier() == null) -> {
+                  Expression r = mi.getExpression();
+                  String text = c.file().text().substring(r.getStartPosition(), Nodes.end(r));
+                  yield r instanceof Name || r instanceof ThisExpression || r instanceof FieldAccess
+                      ? text
+                      : "(" + text + ")";
+                }
+                default -> null;
+              };
+        }
+        if (before != null) {
+          swaps.add(
+              new Swap(
+                  call.getStartPosition() - expression.getStartPosition(),
+                  call.getName().getStartPosition() - call.getStartPosition(),
+                  before + "."));
+        }
+      }
+      return substituted(occurrences(expression, method), text, c, swaps);
+    }
+
+    /**
+     * The value with {@code c}'s arguments in place of the parameters, each call written as in the
+     * method.
+     */
+    String inPlace(Signatures.Call c) {
+      return substituted(occurrences(expression, method), text, c, List.of());
     }
   }
 
@@ -575,24 +644,7 @@ final class ParameterValue {
           return false;
         }
       }
-      String target = mine.getDeclaringClass().getErasure().getKey();
-      java.util.Deque<ITypeBinding> todo = new java.util.ArrayDeque<>();
-      java.util.Set<String> seen = new java.util.HashSet<>();
-      todo.add(theirs.getDeclaringClass());
-      while (!todo.isEmpty()) {
-        ITypeBinding t = todo.pop();
-        if (!seen.add(t.getErasure().getKey())) {
-          continue;
-        }
-        if (t.getErasure().getKey().equals(target)) {
-          return true;
-        }
-        if (t.getSuperclass() != null) {
-          todo.add(t.getSuperclass());
-        }
-        todo.addAll(List.of(t.getInterfaces()));
-      }
-      return false;
+      return subtype(theirs.getDeclaringClass(), mine.getDeclaringClass());
     }
 
     /** Whether the call is on the caller's own object: unqualified, or on this. */
@@ -685,5 +737,292 @@ final class ParameterValue {
       }
     }
     return out;
+  }
+
+  /** Text written in place of {@code length} characters at {@code offset} within a value. */
+  private record Swap(int offset, int length, String text) {}
+
+  /**
+   * Whether each call of {@code m} can write {@code call}, a call in its body: on a receiver it
+   * names, a static method's, or one on the method's own object, with no receiver or on this.
+   */
+  private static boolean reachable(MethodInvocation call, MethodDeclaration m) {
+    IMethodBinding b = call.resolveMethodBinding();
+    if (b == null) {
+      return false;
+    }
+    boolean onThis = call.getExpression() instanceof ThisExpression t && t.getQualifier() == null;
+    if (call.getExpression() != null && !onThis) {
+      return !(call.getExpression() instanceof ThisExpression);
+    }
+    if (Modifier.isStatic(b.getModifiers())) {
+      return !onThis;
+    }
+    IMethodBinding in = m.resolveBinding();
+    return in != null && subtype(in.getDeclaringClass(), b.getDeclaringClass());
+  }
+
+  /** Whether {@code t} is {@code of} or a subtype of it, by key: the two may be of two parses. */
+  static boolean subtype(ITypeBinding t, ITypeBinding of) {
+    String target = of.getErasure().getKey();
+    java.util.Deque<ITypeBinding> todo = new java.util.ArrayDeque<>();
+    java.util.Set<String> seen = new java.util.HashSet<>();
+    todo.add(t);
+    while (!todo.isEmpty()) {
+      ITypeBinding x = todo.pop();
+      if (!seen.add(x.getErasure().getKey())) {
+        continue;
+      }
+      if (x.getErasure().getKey().equals(target)) {
+        return true;
+      }
+      if (x.getSuperclass() != null) {
+        todo.add(x.getSuperclass());
+      }
+      todo.addAll(List.of(x.getInterfaces()));
+    }
+    return false;
+  }
+
+  /** The types around {@code n}, the nearest first: whose {@code this} code there reads first. */
+  private static List<ITypeBinding> typesAround(ASTNode n) {
+    List<ITypeBinding> out = new ArrayList<>();
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      ITypeBinding t =
+          switch (p) {
+            case AbstractTypeDeclaration d -> d.resolveBinding();
+            case AnonymousClassDeclaration a -> a.resolveBinding();
+            default -> null;
+          };
+      if (t != null) {
+        out.add(t);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Whether {@code type}'s static methods are named alone at {@code n}: it is in that type, a
+   * subtype, or a type nested in one.
+   */
+  private static boolean reaches(ASTNode n, ITypeBinding type) {
+    return typesAround(n).stream().anyMatch(t -> subtype(t, type));
+  }
+
+  /**
+   * Whether {@code e}, evaluated again after a call's arguments, is the same object: this, a class,
+   * a local or parameter (which no argument may assign), or a final field of one.
+   */
+  private static boolean steady(Expression e) {
+    return switch (e) {
+      case ThisExpression t -> true;
+      case ParenthesizedExpression p -> steady(p.getExpression());
+      case Name n when n.resolveBinding() instanceof ITypeBinding -> true;
+      case SimpleName n ->
+          n.resolveBinding() instanceof IVariableBinding v
+              && (!v.isField() || Modifier.isFinal(v.getModifiers()));
+      case QualifiedName q ->
+          q.resolveBinding() instanceof IVariableBinding v
+              && Modifier.isFinal(v.getModifiers())
+              && steady(q.getQualifier());
+      case FieldAccess f ->
+          f.resolveFieldBinding() != null
+              && Modifier.isFinal(f.resolveFieldBinding().getModifiers())
+              && steady(f.getExpression());
+      default -> false;
+    };
+  }
+
+  /**
+   * Whether {@code site}, or a type of the project below it, declares a method that overrides
+   * {@code b}.
+   */
+  private static boolean overriddenBelow(
+      SourceProject project, IMethodBinding b, ITypeBinding site) {
+    try {
+      List<Path> files = new ArrayList<>();
+      for (Path f : project.javaFiles()) {
+        if (Files.readString(f).contains(b.getName())) {
+          files.add(f);
+        }
+      }
+      for (CompilationUnit u : Jdt.parseAll(project, files).values()) {
+        for (MethodDeclaration d : Nodes.all(u, MethodDeclaration.class)) {
+          IMethodBinding o = d.resolveBinding();
+          if (o != null
+              && !key(o).equals(key(b))
+              && Instance.overrides(o, b)
+              && subtype(o.getDeclaringClass(), site)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /**
+   * Refuses when the value's calls would not run the same code passed at {@code c}: a call on the
+   * method's own object where {@code c}'s receiver could be another object when read again, or is
+   * an enclosing object, or where {@code super} would skip an override; or a call that resolves
+   * there to another method, or to one it cannot see.
+   */
+  private static void sameTargets(SourceProject project, InMethod v, Signatures.Call c) {
+    List<MethodInvocation> calls = Nodes.all(v.expression(), MethodInvocation.class);
+    if (calls.isEmpty()) {
+      return;
+    }
+    String method = v.method().getName().getIdentifier();
+    ITypeBinding owner = v.method().resolveBinding().getDeclaringClass();
+    for (MethodInvocation call : calls) {
+      IMethodBinding b = call.resolveMethodBinding();
+      if (b == null
+          || Modifier.isStatic(b.getModifiers())
+          || call.getExpression() != null && !(call.getExpression() instanceof ThisExpression)) {
+        continue;
+      }
+      switch (c.node()) {
+        case SuperMethodInvocation s -> {
+          List<ITypeBinding> around = typesAround(s);
+          if (s.getQualifier() != null
+              || around.isEmpty()
+              || overriddenBelow(project, b, around.get(0))) {
+            throw new Refusal(
+                "the call at "
+                    + c.where(s)
+                    + " is super."
+                    + method
+                    + "(...), and would pass "
+                    + v.at(c)
+                    + ": super."
+                    + b.getName()
+                    + " runs the "
+                    + b.getName()
+                    + " above "
+                    + (around.isEmpty() ? "it" : around.get(0).getName())
+                    + ", where "
+                    + method
+                    + " ran the object's own "
+                    + b.getName()
+                    + ", which "
+                    + (around.isEmpty() ? "a subclass" : around.get(0).getName() + " or a subclass")
+                    + " overrides. Write that call as "
+                    + method
+                    + "(...) first (no subclass overrides "
+                    + method
+                    + ", so it runs the same body), or extract it as a variable instead.");
+          }
+        }
+        case MethodInvocation mi
+            when mi.getExpression() == null
+                || mi.getExpression() instanceof ThisExpression t && t.getQualifier() == null -> {
+          List<ITypeBinding> around = typesAround(mi);
+          if (around.isEmpty() || !subtype(around.get(0), owner)) {
+            throw new Refusal(
+                "the call at "
+                    + c.where(mi)
+                    + " calls "
+                    + method
+                    + " on an enclosing object, and "
+                    + b.getName()
+                    + " written there would be looked up in "
+                    + (around.isEmpty() ? "another type" : around.get(0).getName())
+                    + " first. Write its receiver first ("
+                    + owner.getName()
+                    + ".this."
+                    + method
+                    + "(...)), or extract it as a variable instead.");
+          }
+        }
+        case MethodInvocation mi -> {
+          Expression on = mi.getExpression();
+          boolean assigned = false;
+          for (Object a : mi.arguments()) {
+            assigned |= writes((Expression) a, on);
+          }
+          if (!steady(on) || assigned) {
+            String text = c.file().text().substring(on.getStartPosition(), Nodes.end(on));
+            throw new Refusal(
+                "the call at "
+                    + c.where(mi)
+                    + " calls "
+                    + method
+                    + " on "
+                    + text
+                    + ", and would now pass "
+                    + v.at(c)
+                    + ", evaluating "
+                    + text
+                    + " again after the arguments, when it could be another object. Put "
+                    + text
+                    + " in a local first.");
+          }
+        }
+        default -> {}
+      }
+    }
+    String probe = v.written(c, true);
+    String text = c.file().text();
+    int at =
+        c.arguments().isEmpty()
+            ? c.open()
+            : Nodes.end((ASTNode) c.arguments().get(c.arguments().size() - 1));
+    String insert = (c.arguments().isEmpty() ? "" : ", ") + probe;
+    int from = at + insert.length() - probe.length();
+    int to = at + insert.length();
+    CompilationUnit unit =
+        Jdt.parse(project, c.file().file(), text.substring(0, at) + insert + text.substring(at));
+    List<MethodInvocation> there =
+        Nodes.all(unit, MethodInvocation.class).stream()
+            .filter(n -> n.getStartPosition() >= from && Nodes.end(n) <= to)
+            .toList();
+    for (IProblem p : unit.getProblems()) {
+      if (p.getID() == IProblem.NotVisibleMethod
+          && p.getSourceStart() >= from
+          && p.getSourceEnd() < to) {
+        String name =
+            there.stream()
+                .filter(n ->
+                    n.getStartPosition() <= p.getSourceStart() && Nodes.end(n) > p.getSourceStart())
+                .reduce((first, second) -> second)
+                .map(n -> n.getName().getIdentifier())
+                .orElse("it");
+        throw new Refusal(
+            "the call at "
+                + c.where(c.node())
+                + " would pass "
+                + v.at(c)
+                + ", which does not compile there: "
+                + p.getMessage()
+                + ". Widen "
+                + name
+                + " first, or extract it as a variable instead.");
+      }
+    }
+    for (int i = 0; i < calls.size() && i < there.size(); i++) {
+      IMethodBinding mine = calls.get(i).resolveMethodBinding();
+      IMethodBinding theirs = there.get(i).resolveMethodBinding();
+      if (mine == null
+          || theirs == null
+          || key(mine).equals(key(theirs))
+          || !Modifier.isStatic(mine.getModifiers()) && Instance.overrides(theirs, mine)) {
+        continue;
+      }
+      throw new Refusal(
+          "the call at "
+              + c.where(c.node())
+              + " would pass "
+              + v.at(c)
+              + ", where "
+              + calls.get(i).getName()
+              + " calls "
+              + Signatures.label(theirs)
+              + ", not "
+              + Signatures.label(mine)
+              + " or an override of it. Rename one of them first, or extract it as a variable"
+              + " instead.");
+    }
   }
 }

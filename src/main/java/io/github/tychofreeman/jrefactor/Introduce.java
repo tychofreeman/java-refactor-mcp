@@ -46,10 +46,9 @@ final class Introduce {
             () ->
                 source
                     + (as.equals("parameter")
-                        ? " uses a local, a field that is not a constant, a call on the method's"
-                            + " own object or with no receiver (write a static method's class"
-                            + " before it), or a parameter the method assigns, so a call could"
-                            + " not pass it"
+                        ? " uses a local, a field that is not a constant, a call on an enclosing"
+                            + " object or on super, or a parameter the method assigns, so a call"
+                            + " could not pass it"
                         : " uses a local, a parameter, a field that is not a constant, or a call,"
                             + " so as a "
                             + as
@@ -183,7 +182,7 @@ final class Introduce {
                     "parameter", name,
                     "type", typeName,
                     "value", source)),
-            ParameterValue.perCall(v),
+            ParameterValue.perCall(project, v),
             (family, change) -> {
               if (v.acts() && (family.decls.size() != 1 || !family.lambdas.isEmpty())) {
                 throw new Refusal(

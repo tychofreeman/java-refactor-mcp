@@ -395,7 +395,11 @@ Each was chosen from options; the record named beside it has the options it beat
   rules (`ParameterValue.perCall`) are one set for both directions; the occurrences are replaced
   in the same `SignatureChange` (`addParameter`'s `more`, which may also refuse by the family),
   one write and one undo. With a call it is checked as a `Behavior.Move` to the body's first
-  statement (`Behavior.flow`).
+  statement (`Behavior.flow`). A call on the method's own object or a static method named alone
+  (#169) is written per call by `InMethod.written` (`at` for the extraction; `inPlace`, without
+  receivers, for `remove_parameter`'s messages) and checked by `ParameterValue.sameTargets`,
+  which parses the calling file with the argument in place and compares each call's binding
+  (by key, or an override) and the probe's not-visible problems.
 
 - `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
   needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:

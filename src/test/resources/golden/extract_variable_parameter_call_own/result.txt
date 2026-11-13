@@ -1,0 +1,1 @@
+added int r to Pricing.priceOf(Order) in 1 declaration and 5 calls (shop/Checkout.java, shop/Pricing.java); rate(order) at line 5 is now r

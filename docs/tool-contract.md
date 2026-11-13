@@ -1198,7 +1198,17 @@ arguments.
   after its arguments and before the method, so the behavior gate checks the move to the start
   of the body (an effect before it, a branch, a loop, an early exit refuse), and each call's
   argument that the expression reads and is not fixed must be read in it before its calls.
-  Refused with a call: one on the method's own object or with no receiver; more than one
+  A call on the method's own object (`rate(order)`, `this.rate(order)`, roadmap #169) is written
+  on each call's object: `x.m(a)` passes `x.rate(a')`, `m(a)` and `this.m(a)` in the class or a
+  subclass pass `rate(a')`, `super.m(a)` passes `super.rate(a')`; a static method named alone
+  (`scale(q)`) is written `Pricing.scale(q')` where its name alone would not reach it. Refused
+  for such a call: a receiver that could be another object when read again ("Put pricing() in
+  a local first"); an unqualified call from an inner type ("Write its receiver first
+  (Pricing.this.priceOf(...))"); `super.m(...)` where the calling class or a subclass overrides
+  the method called; a written call that would resolve to another method ("calls
+  Outlet.rate(Rush), not Shop.rate(Order) or an override of it") or one the call site cannot see
+  ("Widen rate first"); a call on a qualified `Outer.this` in the expression.
+  Refused with a call: more than one
   occurrence; a constructor (it would run before the field initializers); a method something
   overrides or implements, or that a lambda implements (a call that runs another body would run
   it too). Reported through `Exceptional`: the call may throw before the method runs. Result:

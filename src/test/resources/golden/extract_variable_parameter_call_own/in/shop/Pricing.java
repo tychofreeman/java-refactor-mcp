@@ -10,6 +10,6 @@ class Pricing {
   }
 
   int use(Order o) {
-    return priceOf(o);
+    return priceOf(o) + this.priceOf(o);
   }
 }
