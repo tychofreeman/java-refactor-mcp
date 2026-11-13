@@ -1,0 +1,1 @@
+added int h to Codes.code(Long) in 1 declaration and 1 call (p/Codes.java); x.hashCode() at line 5 is now h

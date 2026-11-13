@@ -1182,3 +1182,13 @@ not in placement, since in a batch the reader may name it only in a later step.
   `args.string("as"), false)`, in a call laid out one argument a line; a `replace_text` step in the
   same batch that expected Spotless's layout missed. Not a defect (Spotless re-lays it out); cost
   one resend.
+
+## 2026-11-13: parameter-value-cast
+
+- `add_parameter` (through `extract_variable` `as=parameter`) refused a generic method,
+  `static <T> String show(T x)`: "Show has no member show with parameters (Object). Its members
+  are show(T), use(int)"; and a parameterized parameter type, `show(Comparable<Integer> x)`: "no
+  member show with parameters (Comparable)". `Signatures.label` writes erasures, which
+  `Declarations.find` does not match against a type variable or type arguments. Hit writing a
+  golden; the golden took `Serializable` instead. Wanted: the family lookup by binding, not by the
+  label's text.

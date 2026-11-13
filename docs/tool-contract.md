@@ -1187,8 +1187,11 @@ arguments.
   parameter has effects is refused ("would run them twice"). Refused also: a field of that name
   already in the type.
   Since roadmap #161 (2026-11-13), the mirror of `remove_parameter` `value` (#147, #148), each
-  call's argument is also refused when it is a primitive of another type than the parameter
-  (the call would compute the expression in the argument's type), or when an argument after it
+  call's argument of another type than the parameter, where one is primitive, is cast to the
+  parameter's type (#171: `scale(n)` with `int n` passes `(long) n * 1000000` for `x * 1000000`;
+  `((Long) v).hashCode()` as a receiver); refused only where the parameter's type is not a
+  primitive or an unparameterized java.lang type ("this tool casts only to ..."). It is refused
+  when an argument after it
   that has effects could change what it reads, which the expression would now read again last.
   A may-throw expression goes through the behavior gate, moving to the start of the body: under
   a guard or in a catching try it is refused. `all_occurrences=true` (only with
