@@ -551,7 +551,18 @@ Each was chosen from options; the record named beside it has the options it beat
   rule missed three of 60 random edits, all through inheritance, though every
   example test passed. `NarrowCheckStressTest` and `RefactoringStressTest` are
   opt-in (`-Djrefactor.stress.root`, `.seed`, `.counts`); a killed run is put
-  back by the next one.
+  back by the next one. `RefactoringStressTest` also takes `.tools` (entries of its `TOOLS`,
+  comma-separated: the 2026-11-13 options are the ten ending `_type_class`, `_type_method`,
+  `_enum_values`, `_value`, `_bound`, `_wildcard`, `_enum`, `_parameter_all`, `_parameter_call`,
+  `_generic`) and `.refusals=true` (each refusal whole: read them, as wrong refusals count as
+  bugs too). Commons Lang here (2026-11-13, `docs/sessions/stress-new-options.md`):
+  `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/apache/commons-lang <dir>` outside
+  the worktree; it has no `./mvnw`, so the classpath comes from `mvn` on the PATH (the proxy
+  `settings.xml` first); then `flock /tmp/jr-heavy.lock ./mvnw -q -o test
+  -Dtest=RefactoringStressTest -Djrefactor.stress.root=<dir> -Djrefactor.stress.calls=300
+  -Djrefactor.stress.seed=12 -Djrefactor.stress.counts=true`: about 3.5 s a call on 2 cores, 7 s
+  an edit for `NarrowCheckStressTest`. Lang is Java 8 source, so it has no target for
+  `type_switch_to_method` over an enum (switch expressions and arrow cases only).
 - The stress tests see only compile errors. A tool that moves expressions or
   members also needs probes for evaluation order and name capture: probes found
   seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`),
