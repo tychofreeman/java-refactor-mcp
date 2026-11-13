@@ -198,6 +198,21 @@ a guard) but not reported, as before; over reporting it too, which would add a r
 `qty / 10`. The extraction is now one change (one undo), `Signatures.addParameter` taking the
 occurrences' edits from its caller (`more`), where it had been two writes.
 
+**Decided 2026-11-13 (the user): an argument of another type is cast, not refused** (roadmap
+#171). Where `extract_variable` `as=parameter` refused a call passing a primitive of another
+type than the parameter the expression reads (#161), it writes the argument cast to the
+parameter's type, `(long) n * 1000000` for `x * 1000000`, so the expression runs in the type the
+body used; the call had made the same conversion (widening, boxing or unboxing), and a cast
+context allows each of them. Over refusing. The cast goes only where the types differ, without
+parentheses except around a receiver (`((Long) v).hashCode()`). Two limits, defaults to reopen:
+a cast is written only to a primitive or a java.lang type without type arguments (another
+reference type's name may not be imported in the calling file, and a type variable cannot be
+cast to from a primitive), else refused as before; and `remove_parameter` with an expression
+`value` keeps its refusal (probe `remove_parameter_value_argument_type`), since no cast can
+reproduce it: there the call computed the argument (`x * y` in `int`) and the body would
+compute the value in the parameters' type, and a cast of the body's parameters would be wrong for
+calls that pass the parameter's own type.
+
 **Decided 2026-11-13 (the user): a call on the method's own object is written on each call's
 object** (roadmap #169). `extract_variable` `as=parameter` of an expression with `rate(order)`
 or `this.rate(order)` in it writes the call on the object each call of the method runs on: at
@@ -622,6 +637,7 @@ sections 3 and 4.
 | 160 | 167 | Under `JREFACTOR_SKELETON_ONLY`, typed statement content that `build` writes is refused, naming the `build` to send | Done 2026-11-13 (`Generated.checkBuild`: one statement only, a local declared from a call or a construction, a for-each or an index loop; the user's choice of mechanism, "Generators" above) | The generators sketch, increment 9; `docs/sessions/skeleton-build-refusal.md` |
 | 161 | 168 | `bin/session-report` counts the edit steps to Java by what carried the code (`build`, `surround`, `constructor`, `implement`, `test_for`, `declaration`, `content`, `new`), the Java typed in them, and the characters of names given to `build` | Done 2026-11-13 (`SessionReport.Typed`; the guard's condition counts with the names) | The generators sketch, section 8 and increment 10's report part only (no task set, no A/B run: issue #376); `docs/sessions/session-report-build.md` |
 | 162 | 169 | `extract_variable` `as=parameter` with a call on the method's own object (`rate(order)`) or a static method named without its class: written at each call on that call's object, or on its class | Done 2026-11-13 (`ParameterValue.reachable`, `InMethod.written`, `sameTargets`: a steady receiver, the class or a subclass for an unqualified call, `super` only without an override below, each written call resolving to the same method or an override in a probe parse, a visible one; the user's choice, "Decided 2026-11-13: a call on the method's own object" above) | #161's follow-up; `docs/sessions/extract-variable-parameter-receiver.md` |
+| 164 | 171 | `extract_variable` `as=parameter`: a call passing a primitive of another type than a parameter the expression reads gets the argument cast to the parameter's type, in place of #161's refusal | Done 2026-11-13 (`ParameterValue.cast`, `substituted` with the method's parameters; `remove_parameter` `value` keeps its refusal, which a cast cannot reproduce; the user's choice, "an argument of another type is cast" above) | The owner's decision; `docs/sessions/parameter-value-cast.md` |
 
 ### The 2026-11-04 list
 

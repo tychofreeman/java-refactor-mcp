@@ -11,6 +11,7 @@ import org.eclipse.jdt.core.dom.ASTMatcher;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
@@ -145,9 +146,7 @@ final class ParameterValue {
         ITypeBinding declared =
             ((SingleVariableDeclaration) v.method().parameters().get(i)).getType().resolveBinding();
         ITypeBinding given = arg.resolveTypeBinding();
-        if (declared != null
-            && (given == null || declared.isPrimitive() || given.isPrimitive())
-            && (given == null || !declared.getName().equals(given.getName()))) {
+        if (cast(declared, given) == null) {
           throw new Refusal(
               "the call at "
                   + c.where(arg)
@@ -160,7 +159,9 @@ final class ParameterValue {
                   + declared.getName()
                   + "): the method computed "
                   + v.text()
-                  + " in the parameter's type, and the call would compute it in the argument's. Pass "
+                  + " in the parameter's type, and a call computes it in the argument's unless cast,"
+                  + " but this tool casts only to a primitive or an unparameterized java.lang type."
+                  + " Pass "
                   + name
                   + " in its own type first, or extract it as a variable instead.");
         }
@@ -209,16 +210,28 @@ final class ParameterValue {
   }
 
   /**
-   * Where {@code e} names a parameter of {@code m}: the offset within {@code e}, the length and the
-   * parameter's index, the last first.
+   * Where {@code e} names a parameter of {@code m}: the offset within {@code e}, the length, the
+   * parameter's index, and 1 where the name is a receiver (of a call, a field or an element), the
+   * last first.
    */
   private static List<int[]> occurrences(Expression e, MethodDeclaration m) {
     List<int[]> uses = new ArrayList<>();
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
       if (n.resolveBinding() instanceof IVariableBinding v && parameterIndex(m, v) >= 0) {
+        boolean receiver =
+            switch (n.getParent()) {
+              case MethodInvocation i -> i.getExpression() == n;
+              case FieldAccess f -> f.getExpression() == n;
+              case QualifiedName q -> q.getQualifier() == n;
+              case ArrayAccess a -> a.getArray() == n;
+              default -> false;
+            };
         uses.add(
             new int[] {
-              n.getStartPosition() - e.getStartPosition(), n.getLength(), parameterIndex(m, v)
+              n.getStartPosition() - e.getStartPosition(),
+              n.getLength(),
+              parameterIndex(m, v),
+              receiver ? 1 : 0
             });
       }
     }
@@ -229,16 +242,37 @@ final class ParameterValue {
   /**
    * {@code source} with each of {@code uses} replaced by the argument {@code c} passes for that
    * parameter, parenthesized unless it is a name or a literal, and each of {@code more} written.
+   * With {@code casts}, the method, an argument of another type than its parameter is cast to the
+   * parameter's type, as the call converted it.
    */
   private static String substituted(
-      List<int[]> uses, String source, Signatures.Call c, List<Swap> more) {
+      List<int[]> uses,
+      String source,
+      Signatures.Call c,
+      List<Swap> more,
+      MethodDeclaration casts) {
     List<Swap> swaps = new ArrayList<>(more);
     for (int[] u : uses) {
       Expression arg = (Expression) c.arguments().get(u[2]);
       String text = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
       boolean plain =
           arg instanceof Name || arg instanceof NumberLiteral || arg instanceof StringLiteral;
-      swaps.add(new Swap(u[0], u[1], plain ? text : "(" + text + ")"));
+      String passed = plain ? text : "(" + text + ")";
+      String cast =
+          casts == null
+              ? ""
+              : cast(
+                  ((SingleVariableDeclaration) casts.parameters().get(u[2]))
+                      .getType()
+                      .resolveBinding(),
+                  arg.resolveTypeBinding());
+      if (cast != null && !cast.isEmpty()) {
+        passed = "(" + cast + ") " + passed;
+        if (u[3] == 1) {
+          passed = "(" + passed + ")";
+        }
+      }
+      swaps.add(new Swap(u[0], u[1], passed));
     }
     swaps.sort((a, b) -> b.offset() - a.offset());
     StringBuilder out = new StringBuilder(source);
@@ -357,7 +391,7 @@ final class ParameterValue {
                   before + "."));
         }
       }
-      return substituted(occurrences(expression, method), text, c, swaps);
+      return substituted(occurrences(expression, method), text, c, swaps, method);
     }
 
     /**
@@ -365,7 +399,7 @@ final class ParameterValue {
      * method.
      */
     String inPlace(Signatures.Call c) {
-      return substituted(occurrences(expression, method), text, c, List.of());
+      return substituted(occurrences(expression, method), text, c, List.of(), null);
     }
   }
 
@@ -1024,5 +1058,32 @@ final class ParameterValue {
               + " or an override of it. Rename one of them first, or extract it as a variable"
               + " instead.");
     }
+  }
+
+  /**
+   * The cast that converts an argument of type {@code given} as a call converted it to a parameter
+   * of type {@code declared}: empty when none is needed (the same type, or two reference types),
+   * the parameter's type when one primitive is involved and the parameter is a primitive or a
+   * java.lang type without type arguments, else null (an unresolved argument, a type variable,
+   * another reference type, whose name the call's file may not import).
+   */
+  static String cast(ITypeBinding declared, ITypeBinding given) {
+    if (declared == null) {
+      return "";
+    }
+    if (given == null) {
+      return null;
+    }
+    if (!(declared.isPrimitive() || given.isPrimitive())
+        || declared.getName().equals(given.getName())) {
+      return "";
+    }
+    if (declared.isPrimitive()
+        || !declared.isTypeVariable()
+            && !declared.isParameterizedType()
+            && declared.getErasure().getQualifiedName().startsWith("java.lang.")) {
+      return declared.getName();
+    }
+    return null;
   }
 }
