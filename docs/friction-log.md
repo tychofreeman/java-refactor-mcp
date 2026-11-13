@@ -1192,3 +1192,20 @@ not in placement, since in a batch the reader may name it only in a later step.
   `Declarations.find` does not match against a type variable or type arguments. Hit writing a
   golden; the golden took `Serializable` instead. Wanted: the family lookup by binding, not by the
   label's text.
+
+## 2026-11-13: stress-new-options
+
+- The stress run of the day's options on Commons Lang (`docs/sessions/stress-new-options.md`)
+  found seven bugs, each an issue with its reproduction: the gate errors when the JDT compiler
+  throws on changed code (#405); `extract_variable` `as=parameter` cannot find a method with
+  generic parameter types (#406, the entry above); `change_type` with `type_parameter` refuses `line` (#407);
+  overloads written alike cannot be named, the refusal suggesting the refused name (#408);
+  `extract_supertype` `kind=class` under an abstract superclass or one without a no-argument
+  constructor (#409); `inline` of an array-initializer local (#410); `rename` beside a single
+  static import of a project method (#411). Not fixed in that PR; none pinned by a golden case,
+  since `GoldenTest` cannot keep a known-failing case out of the build.
+- A `change_type` refusal from the gate reads "changed the type of left of ... would add compile
+  errors"; "changing" was meant.
+- `spotless:apply` reflowed the stress test's Javadoc between two batches, so a `replace_text` of
+  it copied from the first send missed ("old is not in"); copied again from the file. Not a
+  defect.
