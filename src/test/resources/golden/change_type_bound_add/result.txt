@@ -1,0 +1,1 @@
+changed the bound of T of Sorter.max(List<T>, Comparator<T>) to Comparable<T>; 1 call keeps its types

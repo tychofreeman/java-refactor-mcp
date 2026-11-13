@@ -1,0 +1,1 @@
+preserve_exceptions is set, so nothing was changed: write the bound as "Object & Comparable<T>", which keeps T's erasure.

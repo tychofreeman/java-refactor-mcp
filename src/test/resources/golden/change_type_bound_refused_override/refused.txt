@@ -1,0 +1,1 @@
+would make Legacy.put(Object) (line 5 of com/example/Legacy.java) no longer override Box.put(Object). Give its class's extends its type argument first

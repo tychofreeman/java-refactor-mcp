@@ -920,34 +920,7 @@ final class TypeParameters {
     }
     String what = "adding the type parameter " + parameter + " to " + label;
 
-    // Each call's and reference's types before, by its kind and number in its file.
-    Map<Path, Map<String, List<String>>> before = new LinkedHashMap<>();
-    Map<ASTNode, Signatures.Source> uses = new LinkedHashMap<>();
-    for (Signatures.Call c : family.calls) {
-      uses.put(c.node(), c.file());
-    }
-    Set<String> keys = new HashSet<>();
-    for (Signatures.Decl d : family.decls) {
-      keys.add(Signatures.key(d.binding()));
-    }
-    for (Signatures.Source s : family.sources.values()) {
-      for (MethodReference r : Nodes.all(s.unit(), MethodReference.class)) {
-        IMethodBinding b = r.resolveMethodBinding();
-        if (b != null && keys.contains(Signatures.key(b.getMethodDeclaration()))) {
-          uses.put(r, s);
-        }
-      }
-    }
-    for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
-      IMethodBinding b = callBinding(u.getKey());
-      if (b != null) {
-        before
-            .computeIfAbsent(u.getValue().file(), k -> new LinkedHashMap<>())
-            .put(
-                ordinal(u.getKey()),
-                List.of(types(b), Integer.toString(u.getValue().line(u.getKey()))));
-      }
-    }
+    Map<Path, Map<String, List<String>>> before = callTypes(family);
     int index = target.typeParameters().size();
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
@@ -1080,6 +1053,41 @@ final class TypeParameters {
         stubs);
   }
 
+  /**
+   * The types of each call and method reference of {@code family}'s methods ({@link #types}), with
+   * its line, by its file and its kind and number in that file ({@link #ordinal}).
+   */
+  private static Map<Path, Map<String, List<String>>> callTypes(MethodFamily family) {
+    Map<Path, Map<String, List<String>>> before = new LinkedHashMap<>();
+    Map<ASTNode, Signatures.Source> uses = new LinkedHashMap<>();
+    for (Signatures.Call c : family.calls) {
+      uses.put(c.node(), c.file());
+    }
+    Set<String> keys = new HashSet<>();
+    for (Signatures.Decl d : family.decls) {
+      keys.add(Signatures.key(d.binding()));
+    }
+    for (Signatures.Source s : family.sources.values()) {
+      for (MethodReference r : Nodes.all(s.unit(), MethodReference.class)) {
+        IMethodBinding b = r.resolveMethodBinding();
+        if (b != null && keys.contains(Signatures.key(b.getMethodDeclaration()))) {
+          uses.put(r, s);
+        }
+      }
+    }
+    for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
+      IMethodBinding b = callBinding(u.getKey());
+      if (b != null) {
+        before
+            .computeIfAbsent(u.getValue().file(), k -> new LinkedHashMap<>())
+            .put(
+                ordinal(u.getKey()),
+                List.of(types(b), Integer.toString(u.getValue().line(u.getKey()))));
+      }
+    }
+    return before;
+  }
+
   /** The method a call or a method reference of the family runs, as it resolves there. */
   private static IMethodBinding callBinding(ASTNode n) {
     return switch (n) {
@@ -1123,5 +1131,237 @@ final class TypeParameters {
       return Extract.typeName(b.getTypeArguments()[index]);
     }
     return "another type";
+  }
+
+  /**
+   * change_type with type_parameter: the bound of a type parameter of a class or a method becomes
+   * {@code type} ({@code Object} takes it away), in every declaration of a method's family. Uses
+   * are not edited: the gate judges them, every call keeps its target and every override stays one
+   * ({@link CallTargets}), a method's calls keep their types, and a cast to the parameter that now
+   * checks for another type is reported through {@link Exceptional}.
+   */
+  static Outcome bound(SourceProject project, Args args) throws Exception {
+    String name = args.required("type_parameter").strip();
+    String type = args.required("type").strip();
+    Precondition.require(
+        Precondition.that(
+            () -> !args.has("parameter") && !args.flag("return_type"),
+            () ->
+                "change_type with type_parameter changes a bound, which has no parameter or"
+                    + " return type: leave them out."),
+        Precondition.that(
+            () -> args.has("name"),
+            () ->
+                "change_type with type_parameter needs name, the class or method that declares "
+                    + name
+                    + "."));
+    Signatures.parsesAs("type", type, "class X<T extends " + type + "> {}");
+    String rel = args.required("file");
+    Path file = project.javaFile(rel);
+    String label;
+    Map<Path, String> sources = new LinkedHashMap<>();
+    Map<Path, CompilationUnit> units = new LinkedHashMap<>();
+    Map<Path, List<TypeParameter>> declared = new LinkedHashMap<>();
+    Map<Path, Map<String, List<String>>> calls = null;
+    int declarations = 1;
+    if (Files.isRegularFile(file)
+        && Declarations.find(Jdt.parseSyntax(Files.readString(file)), args.required("name"), rel)
+                .decl()
+            instanceof MethodDeclaration) {
+      MethodFamily family =
+          MethodFamily.of(project, args, true, "so its type parameters cannot change.");
+      label = family.label;
+      int index = typeParameter(family.target.typeParameters(), name, label);
+      for (Signatures.Source s : family.sources.values()) {
+        sources.put(s.file(), s.text());
+        units.put(s.file(), s.unit());
+      }
+      for (Signatures.Decl d : family.decls) {
+        declared
+            .computeIfAbsent(d.file().file(), k -> new ArrayList<>())
+            .add((TypeParameter) d.m().typeParameters().get(index));
+      }
+      calls = callTypes(family);
+      declarations = family.decls.size();
+    } else {
+      String simple = args.required("name").substring(args.required("name").lastIndexOf('.') + 1);
+      Holding holding = Holding.of(project, simple, file);
+      CompilationUnit home = holding.units().get(file);
+      if (home == null) {
+        throw new Refusal(rel + " is not a Java file under a source root.");
+      }
+      Declarations.Named named = Declarations.find(home, args.required("name"), rel);
+      label = named.label();
+      List<?> list =
+          switch (named.decl()) {
+            case TypeDeclaration t -> t.typeParameters();
+            case RecordDeclaration r -> r.typeParameters();
+            default ->
+                throw new Refusal(
+                    label
+                        + " is not a class, an interface, a record or a method, so it has no type"
+                        + " parameters.");
+          };
+      int index = typeParameter(list, name, label);
+      sources.putAll(holding.texts());
+      units.putAll(holding.units());
+      declared.computeIfAbsent(file, k -> new ArrayList<>()).add((TypeParameter) list.get(index));
+    }
+    boolean none = type.equals("Object") || type.equals("java.lang.Object");
+    String what = "changing the bound of " + name + " of " + label + " to " + type;
+
+    // The casts to the type parameter, by file and line, and its erasure before.
+    Set<String> keys = new HashSet<>();
+    String erasure = null;
+    for (List<TypeParameter> list : declared.values()) {
+      for (TypeParameter tp : list) {
+        ITypeBinding b = tp.resolveBinding();
+        if (b != null) {
+          keys.add(b.getKey());
+          erasure = b.getErasure().getQualifiedName();
+        }
+      }
+    }
+    List<String> casts = new ArrayList<>();
+    for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
+      for (CastExpression c : Nodes.all(e.getValue(), CastExpression.class)) {
+        ITypeBinding b = c.getType().resolveBinding();
+        ITypeBinding element = b == null ? null : b.isArray() ? b.getElementType() : b;
+        if (element != null && keys.contains(element.getKey())) {
+          casts.add(
+              "line "
+                  + e.getValue().getLineNumber(c.getStartPosition())
+                  + " of "
+                  + project.relative(e.getKey()));
+        }
+      }
+    }
+
+    Map<Path, String> texts = new LinkedHashMap<>();
+    String old = "";
+    for (Map.Entry<Path, List<TypeParameter>> e : declared.entrySet()) {
+      String text = sources.get(e.getKey());
+      List<TextEdit> edits = new ArrayList<>();
+      for (TypeParameter tp : e.getValue()) {
+        int from = Nodes.end(tp.getName());
+        old = text.substring(from, Nodes.end(tp)).strip();
+        edits.add(new TextEdit(from, Nodes.end(tp), none ? "" : " extends " + type));
+      }
+      String updated = TextEdit.apply(text, edits, 0);
+      texts.put(
+          e.getKey(), Imports.fix(project, e.getKey(), text, updated, args.list("imports")).text());
+    }
+    CallTargets targets = CallTargets.of(units.values());
+    Stubs.Declared stubs =
+        Gate.applyOrRefuse(
+            project, texts, what, "Change that use first, or choose a bound it meets.");
+    Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(units.keySet()));
+    int kept = 0;
+    if (calls != null) {
+      for (Map.Entry<Path, Map<String, List<String>>> e : calls.entrySet()) {
+        for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
+          ASTNode n = byOrdinal(after.get(e.getKey()), c.getKey());
+          IMethodBinding b = n == null ? null : callBinding(n);
+          String now = b == null ? "nothing" : types(b);
+          if (!c.getValue().get(0).equals(now)) {
+            throw new Refusal(
+                what
+                    + " would change the types of the call at line "
+                    + c.getValue().get(1)
+                    + " of "
+                    + project.relative(e.getKey())
+                    + " (from "
+                    + c.getValue().get(0)
+                    + " to "
+                    + now
+                    + "). Change that call first, or choose a bound it meets.");
+          }
+          kept++;
+        }
+      }
+    }
+    targets.require(
+        project,
+        after.values(),
+        what,
+        "Give its class's extends its type argument first, or write the bound as \"Object & "
+            + type
+            + "\", which keeps "
+            + name
+            + "'s erasure.");
+    String now = erasureAfter(after, declared, name);
+    if (erasure != null && now != null && !erasure.equals(now)) {
+      for (String at : casts) {
+        Exceptional.change(
+            project,
+            "the cast to "
+                + name
+                + " at "
+                + at
+                + " now checks for "
+                + simpleName(now)
+                + ", where it "
+                + (erasure.equals("java.lang.Object")
+                    ? "checked nothing"
+                    : "checked for " + simpleName(erasure))
+                + ": it throws ClassCastException for a value that is not one",
+            "write the bound as \"Object & " + type + "\", which keeps " + name + "'s erasure.");
+      }
+    }
+    return new Outcome(
+        (none ? "removed the bound of " : "changed the bound of ")
+            + name
+            + " of "
+            + label
+            + (declarations > 1
+                ? " and the "
+                    + (declarations - 1)
+                    + (declarations == 2 ? " declaration" : " declarations")
+                    + " it overrides or that override it"
+                : "")
+            + (none ? " (was " + old.replaceFirst("^extends\\s+", "") + ")" : " to " + type)
+            + (calls == null
+                ? ""
+                : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types")),
+        stubs);
+  }
+
+  /** The index in {@code list} of the type parameter {@code name}; refused when it has none. */
+  private static int typeParameter(List<?> list, String name, String label) {
+    List<String> names = new ArrayList<>();
+    for (Object o : list) {
+      names.add(((TypeParameter) o).getName().getIdentifier());
+    }
+    if (!names.contains(name)) {
+      throw new Refusal(
+          label
+              + " has no type parameter "
+              + name
+              + (names.isEmpty()
+                  ? "; it has none."
+                  : ": it has " + String.join(", ", names) + "."));
+    }
+    return names.indexOf(name);
+  }
+
+  /** The erasure of the type parameter {@code name} declared in {@code declared}, as now parsed. */
+  private static String erasureAfter(
+      Map<Path, CompilationUnit> after, Map<Path, List<TypeParameter>> declared, String name) {
+    for (Map.Entry<Path, List<TypeParameter>> e : declared.entrySet()) {
+      CompilationUnit unit = after.get(e.getKey());
+      int start = e.getValue().get(0).getStartPosition();
+      for (TypeParameter tp : Nodes.all(unit, TypeParameter.class)) {
+        if (tp.getStartPosition() == start
+            && tp.getName().getIdentifier().equals(name)
+            && tp.resolveBinding() != null) {
+          return tp.resolveBinding().getErasure().getQualifiedName();
+        }
+      }
+    }
+    return null;
+  }
+
+  private static String simpleName(String qualified) {
+    return qualified.substring(qualified.lastIndexOf('.') + 1);
   }
 }
