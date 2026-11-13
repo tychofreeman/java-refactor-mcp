@@ -1,0 +1,1 @@
+declared int weight() on Color, overridden in RED, GREEN, BLUE; the case of GREEN, BLUE is copied into each of them; the code at line 5 of com/example/Paint.java is now c.weight()

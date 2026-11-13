@@ -580,8 +580,32 @@ what the switch's value and constants give"); a static field named bare that the
 declare ("the case of RED uses HEAVY, a static of Paint, which Color does not see by that name.
 Qualify it first (Paint.HEAVY), with replace_expression."); a name in a value that the enum's
 file would resolve to another declaration (`NameCheck`); a name the enum already has or inherits
-(`add_parameter`'s wording); until the method form is built, a case whose value is not a constant
-and a switch statement.
+(`add_parameter`'s wording).
+
+### Over an enum: the method form
+
+Roadmap #152, 2026-11-13 (the enum sketch, increment 6). When a case of a switch expression is not
+a constant, for a switch statement of arrow cases (an expression statement or a block each), or
+with `as` `method`: each constant a case names overrides `public R name()` with the case's body
+(`return` its expression, or its statements), the switch's value as `this` (`c.name()` becomes
+`name()`), in its own body, which is written when the constant has none (`RED {...}`) and
+otherwise gets the method last. The enum declares the method: with a `default`, the default's body
+as its own `public R name()`; without one, `public abstract R name();` when every constant has a
+case, else (a statement only) `public void name() {}`. A case naming several constants is copied
+into each (the owner's choice of 2026-11-13, the sketch's question 6 (a), over refusing a body of
+more than one expression and over a private static method each calls), and the result says so.
+`as` is `field` or `method` (optional, the sketch's question "what it writes" (a), over always a
+method and over `as` required); `as` `field` refuses a case that is not a constant ("the case of
+RED gives c.name().toLowerCase(), which is not a constant, so it cannot be a field's value. Leave
+out as, or pass as method, for a method in each constant.") and a switch statement. Every moved
+body passes `NameCheck` (a type the enum's file names otherwise is refused). Result: `declared
+LocalDate next() on Schedule, overridden in DAILY, WEEKLY; the code at line 7 of
+com/example/Plan.java is now s.next()`, with `; the case of GREEN, BLUE is copied into each of
+them` for a shared case and `implemented` for a default. Refused besides the field form's: a
+constant whose body already declares `name()` ("RED already declares label()."), a name the enum
+has or inherits ("Color inherits name() from Enum; choose another name."), a bare static method of
+another class (as a bare static field), a constant body whose closing brace shares a line with its
+last member, and a block of a switch expression (`yield`, not built yet).
 
 ## Merging duplicate methods (a composition)
 

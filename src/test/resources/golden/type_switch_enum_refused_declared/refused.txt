@@ -1,0 +1,1 @@
+RED already declares label().

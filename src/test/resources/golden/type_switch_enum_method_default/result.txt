@@ -1,0 +1,1 @@
+implemented void announce() on Level, overridden in HIGH; the code at line 5 of com/example/Alerts.java is now level.announce();

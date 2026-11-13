@@ -378,6 +378,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `Declarations.plan` onto the edited enum text (one whole-file edit for the enum's file, the
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
   name its refusal gives the case's variable ("the switch's value" for an enum).
+  The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
+  enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added
+  by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
+  constant would overlap a body written after it. `TypeSwitch.body` takes the indentation, and
+  `TypeSwitch.Case` is shared.
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`; literals and constants only.
