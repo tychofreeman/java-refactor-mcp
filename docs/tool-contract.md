@@ -1083,8 +1083,43 @@ and other results are not built yet"); a checked exception the body does not cat
 changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
 catches a local read in the body that is not effectively final.
 
-## `convert_loop` (built)
+## `subclass_to_strategy` (built)
 
+Arguments: `file` (the subclass's), `name` (the subclass), `method` (the one method it
+overrides), `type` (optional), `preserve_exceptions`. A subclass that differs from its superclass
+only by one overridden method becomes a function the superclass holds (#332). With `class
+FileRenamer extends Renamer { @Override boolean move(String from, String to) {...} }`:
+
+- `Renamer` gains `interface Move { boolean move(String from, String to); }` (named after the
+  method, with its parameters and `throws`; public when the subclass is) and `private final Move
+  move;` after its last instance field (`moveFunction` when a field has the name). With `type`
+  (`BiPredicate<String, String>`), the field has that type, imported, and no interface is
+  declared; its one abstract method is the one called.
+- `Renamer.move` becomes `return move.move(from, to);`. Its old body becomes `private static
+  boolean defaultMove(...)` and the override's `static boolean moveFile(...)` (the method's name
+  and the subclass's name without the superclass's; public when the subclass is), both after it.
+- Each constructor of `Renamer` takes the function last and assigns it first (after `super(...)`;
+  one that calls `this(...)` passes it on), followed by a constructor with the old parameters,
+  `this(log, Renamer::defaultMove)`, so existing constructions are untouched. A class with no
+  constructor gets both.
+- `new FileRenamer(log)` becomes `new Renamer(log, Renamer::moveFile)`: the arguments of the
+  subclass constructor's `super(...)`, its parameters replaced by the call's arguments.
+  `FileRenamer` as a type (a local, a field, a parameter, a return type, a type argument) becomes
+  `Renamer`; an import of it is removed; its file is deleted.
+
+Refusals: the subclass is not a top-level class extending a top-level class of the project in
+another file, or either has type parameters; it declares more than its constructors and the
+method; the superclass's method is abstract, or the method has type parameters; a class extends
+the subclass; either body uses a member of the instance, `this` or `super` ("Pass what it needs
+as a parameter first"); the superclass already declares a name the tool would write; a
+constructor of the superclass takes varargs or has a variable named as the field; `type` is not a
+functional interface of the method's arity; the subclass is used in an `instanceof`, a cast, a
+class literal, a method reference or a catch, or named other than as a type; a construction has a
+class body; a constructor of the subclass does more than call `super(...)`; a construction's
+argument is not a name or a literal and the subclass's constructor does not pass each parameter on
+once, in order.
+
+## `convert_loop` (built)
 Arguments: `file`, `line` (the line the loop starts on), `to`, `preserve_exceptions`. A loop
 becomes another statement form running the same code in the same order (the user, 2026-11-10:
 statement forms here, the functional ones in `loop_to_stream`). Built so far:
