@@ -749,6 +749,14 @@ in the same turn only if it is sent after it.
     is order") or a field the variable would hide; a `form` other than `for_each` and `index`
     (naming `convert_loop` for the others); an expression that does not resolve, unless `type`
     is given, and then the stub `Stubs` writes for a bare name.
+  - `surround` takes a loop object too (roadmap #163, 2026-11-13): `{"loop": "orders"}` with
+    `name`, `form` and `type` as a `loop` entry takes them, and no `body`: the statements from
+    `start_line` to `end_line` are its body, one step in. The head is decided as a `loop`
+    entry's, and a variable the tool names is also kept free of the names those statements
+    declare (`order2` when they declare `order`). Result: `replaced lines 16-17 of <file> with
+    4 lines; built for (Order order : orders)`. Refused as a `loop` entry is, and for a key
+    other than those four ("surround's loop takes loop, name, form and type: its body is the
+    statements from start_line to end_line. To write other statements, send build.").
   - `add_case`: `file`, `line` (a switch statement or expression), `content`;
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;
