@@ -88,6 +88,12 @@ Each was chosen from options; the record named beside it has the options it beat
   an undefined method gets a functional interface by its arity (`Supplier`,
   `Function`, `BiFunction`), a guess. Stub type variables are written by name
   when the target type declares them, erased otherwise.
+- Overloads written alike (`<T> T raise(T)`, `<T extends Throwable> T raise(T)`; #408,
+  2026-11-13, the brief's smallest option over a bound syntax and over `line` alone): `name` takes
+  their erased parameter types (`raise(Throwable)`), tried after the written ones
+  (`Declarations.find`, `erasedTypes`); `Declarations.methodLabel` is the label that names a method
+  (erased only when another of its type is written alike): use it, not `MemberMove.label`, for a
+  name a tool or a refusal hands back. `MemberMove.member` does not take erased names yet.
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".
