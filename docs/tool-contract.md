@@ -758,8 +758,13 @@ too (`ByLine.named`).
 The change covers the method's family: every project declaration that overrides
 it or that it overrides, transitively, joined by binding key across files (an
 interface method and all its implementations). Calls: method invocations
-(`super.m` too), `new T(...)`, `this(...)`, `super(...)`, enum constants. Each
-changed file has its imports fixed; the whole change passes the gate once.
+(`super.m` too), `new T(...)`, `this(...)`, `super(...)`, enum constants. A construction with
+a class body (`new T(...) { ... }`, an enum constant with a body) is a call of the superclass's
+constructor its arguments go to (`Signatures.constructed`, roadmap #142). Each
+changed file has its imports fixed; the whole change passes the gate once. A type's name with
+no constructor declared is refused, naming what adds one: "Renamer declares no constructor. Add
+one with add_declaration (constructor), then change it."; for an enum, "(content: Color() {})",
+since `constructor` writes a class's.
 
 Refusals: a family member that overrides a library method ("Name.compareTo(Name)
 overrides compareTo in java.lang.Comparable, which is not the project's"), a

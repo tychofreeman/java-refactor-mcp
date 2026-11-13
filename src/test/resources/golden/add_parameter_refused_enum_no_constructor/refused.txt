@@ -1,0 +1,1 @@
+Color declares no constructor. Add one with add_declaration (content: Color() {}), then change it.
