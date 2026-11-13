@@ -301,7 +301,7 @@ final class ConvertLoop {
       }
     }
     if (name == null) {
-      name = LoopToStream.unused(elementName(indexed.of()), loop);
+      name = LoopToStream.unused(Names.elementName(indexed.of()), loop);
     }
     for (Expression read : reads) {
       edits.add(new Edit(read.getStartPosition(), Nodes.end(read), name));
@@ -345,30 +345,6 @@ final class ConvertLoop {
         || (p instanceof PrefixExpression pre
             && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
                 || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
-  }
-
-  /**
-   * A name for the element of {@code of}: a plural's singular ({@code names} to {@code name},
-   * {@code entries} to {@code entry}), a {@code List} suffix dropped, else {@code item}.
-   */
-  private static String elementName(Expression of) {
-    String n =
-        of instanceof SimpleName s
-            ? s.getIdentifier()
-            : of instanceof FieldAccess f
-                ? f.getName().getIdentifier()
-                : of instanceof QualifiedName q ? q.getName().getIdentifier() : "";
-    String singular =
-        n.endsWith("List") && n.length() > 4
-            ? n.substring(0, n.length() - 4)
-            : n.endsWith("ies") && n.length() > 3
-                ? n.substring(0, n.length() - 3) + "y"
-                : n.endsWith("s") && !n.endsWith("ss") && n.length() > 1
-                    ? n.substring(0, n.length() - 1)
-                    : "";
-    return singular.isEmpty() || !Character.isJavaIdentifierStart(singular.charAt(0))
-        ? "item"
-        : singular;
   }
 
   /**

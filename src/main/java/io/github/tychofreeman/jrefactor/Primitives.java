@@ -76,7 +76,7 @@ final class Primitives {
         where.equals("before")
             ? Lines.start(text, s.getStartPosition())
             : Lines.end(text, Nodes.end(s) - 1);
-    Build.Built built = built(project, opened, args, at, at, indent);
+    Build.Built built = built(project, opened, args, at, at, s.getParent(), indent);
     if (built == null && args.string("content") == null) {
       throw new Refusal(
           "insert_statements needs content (the statements) or build (what to write, by name).");
@@ -154,7 +154,14 @@ final class Primitives {
     int end = Lines.end(text, Nodes.end(last) - 1);
     String surround = args.string("surround");
     Build.Built built =
-        built(project, opened, args, start, end, Lines.indentOf(text, first.getStartPosition()));
+        built(
+            project,
+            opened,
+            args,
+            start,
+            end,
+            block,
+            Lines.indentOf(text, first.getStartPosition()));
     if (built != null && surround != null) {
       throw new Refusal("replace_statements takes build or surround, not both.");
     }
@@ -385,10 +392,17 @@ final class Primitives {
 
   /**
    * The statements the {@code build} argument asks for in place of {@code start} to {@code end}, or
-   * null when the call has no build.
+   * null when the call has no build. A loop's body is indented one step further, the step of {@code
+   * block}'s statements inside it.
    */
   private static Build.Built built(
-      SourceProject project, Opened opened, Args args, int start, int end, String indent)
+      SourceProject project,
+      Opened opened,
+      Args args,
+      int start,
+      int end,
+      ASTNode block,
+      String indent)
       throws Exception {
     if (!args.has("build")) {
       return null;
@@ -396,7 +410,9 @@ final class Primitives {
     if (args.string("content") != null) {
       throw new Refusal(args.tool() + " takes content or build, not both.");
     }
+    String outer = Lines.indentOf(opened.text(), block.getStartPosition());
+    String step = indent.length() > outer.length() ? indent.substring(outer.length()) : "  ";
     return Build.statements(
-        project, opened, start, end, args.raw("build"), indent, args.list("imports"));
+        project, opened, start, end, args.raw("build"), indent, step, args.list("imports"));
   }
 }

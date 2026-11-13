@@ -61,8 +61,8 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   `replace_declaration` (empty content is a safe delete),
   `replace_statements`, `insert_statements`, `replace_expression`,
   `add_case`, `add_element`, `replace_text`. `insert_statements` and
-  `replace_statements` also take `build`: calls and constructions written from
-  names, their types read from the code.
+  `replace_statements` also take `build`: calls, constructions and loops written
+  from names, their types read from the code.
 - **Plumbing:** `batch` and `undo`.
 
 The arguments and results of each are in
