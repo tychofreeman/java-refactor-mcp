@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -82,11 +83,18 @@ final class Signatures {
         return addComponent(project, args, opened, r, value);
       }
     }
-    return addParameter(project, args, c -> value);
+    return addParameter(project, args, c -> value, (family, change) -> {});
   }
 
-  /** add_parameter with {@code value} giving the argument each call passes. */
-  static Outcome addParameter(SourceProject project, Args args, Function<Call, String> value)
+  /**
+   * add_parameter with {@code value} giving the argument each call passes; {@code more} checks the
+   * family and adds its own edits to the change before any is made.
+   */
+  static Outcome addParameter(
+      SourceProject project,
+      Args args,
+      Function<Call, String> value,
+      BiConsumer<MethodFamily, SignatureChange> more)
       throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
@@ -98,6 +106,7 @@ final class Signatures {
     int at = family.index(args.string("before"), "before", true);
     family.refuseHiding(parameter);
     SignatureChange change = new SignatureChange(family);
+    more.accept(family, change);
     for (Decl d : family.decls) {
       change.insert(d.file(), d.m().parameters(), d.open(), -1, at, type + " " + parameter);
     }

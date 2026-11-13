@@ -1171,3 +1171,14 @@ not in placement, since in a batch the reader may name it only in a later step.
   of `args.string("before")` then `move_statement` up past four statements, one call per step;
   done instead by one `replace_text` that reordered four lines and named the value, then
   `extract_function`. Not a defect; a `move_statement` with a count would have made it two calls.
+
+## 2026-11-13: extract-variable-parameter-all
+
+- A refused `batch` sent through `bin/jrefactor` offered `retry: true`, and the next run answered
+  that there was no refused batch (as on 2026-11-11, "batch retry from the CLI"). The batch was
+  edited and sent whole. Still wanted: the CLI keeps the refused batch, or its refusal does not
+  offer `retry`.
+- `add_parameter` with `value` `false` wrote the new argument on the line of the last one,
+  `args.string("as"), false)`, in a call laid out one argument a line; a `replace_text` step in the
+  same batch that expected Spotless's layout missed. Not a defect (Spotless re-lays it out); cost
+  one resend.

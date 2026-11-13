@@ -34,12 +34,20 @@ final class ExtractVariable {
       String expression,
       String name,
       Integer column,
-      String as)
+      String as,
+      boolean all)
       throws Exception {
     Precondition.require(
         Precondition.that(
             () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
             () -> name + " is not a valid Java name for the new variable."));
+    if (all && !"parameter".equals(as)) {
+      throw new Refusal(
+          "all_occurrences is built for as=parameter, where each occurrence of "
+              + expression.strip()
+              + " in the method becomes the new parameter. Leave it out, and extract one"
+              + " occurrence at a time.");
+    }
     Opened opened = Opened.of(project, rel);
     Path file = opened.file();
     String text = opened.text();
@@ -59,7 +67,7 @@ final class ExtractVariable {
               + " does not resolve, so its declaration cannot be written. Declare the type first.");
     }
     if (as != null) {
-      return Introduce.run(project, opened, e, name, as, type, expression.strip(), line);
+      return Introduce.run(project, opened, e, name, as, type, expression.strip(), line, all);
     }
     checkFieldName(e, name);
     String typeName =

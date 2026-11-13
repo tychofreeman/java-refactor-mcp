@@ -1,0 +1,1 @@
+added int bonus to Price.total(int, int) in 1 declaration and 2 calls (com/example/Price.java); qty / 10 at lines 5 and 6 is now bonus

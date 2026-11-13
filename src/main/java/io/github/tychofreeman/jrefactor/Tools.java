@@ -159,8 +159,9 @@ final class Tools {
           as=constant, field or parameter makes it a private static final constant or private \
           final field of the type, or a new parameter of the method that every call passes it \
           to, instead of a local; it must then be literals and constants only, or, as a \
-          parameter, also the method's parameters: each call passes it with its own arguments in \
-          their place (qty / 10 becomes bonus, and total(n + 1, 3) passes (n + 1) / 10).\
+          parameter, also the method's parameters and calls on them or on a class: each call \
+          passes it with its own arguments in their place (qty / 10 becomes bonus, and \
+          total(n + 1, 3) passes (n + 1) / 10).\
           """,
           List.of(
               Arg.FILE,
@@ -177,10 +178,14 @@ final class Tools {
                   "Optional: a private static final constant or private final field of "
                       + "the type, or a new parameter of the method (calls pass the "
                       + "expression), instead of a local. The expression must be literals and "
-                      + "constants (as a parameter, also the method's parameters).",
+                      + "constants (as a parameter, also the method's parameters and calls on them).",
                   "constant",
                   "field",
-                  "parameter")),
+                  "parameter"),
+              Arg.bool(
+                  "all_occurrences",
+                  "Optional, with as=parameter: every occurrence of the expression in the method "
+                      + "becomes the parameter, not only this one.")),
           Kind.REFACTORING,
           Tools::extractVariable);
 
@@ -1638,7 +1643,8 @@ final class Tools {
         args.required("expression"),
         args.required("name"),
         args.integer("column"),
-        args.string("as"));
+        args.string("as"),
+        args.flag("all_occurrences"));
   }
 
   private static Outcome inlineVariable(SourceProject project, Args args) throws Exception {
