@@ -481,7 +481,13 @@ place of `parameter` and `type`, a class gets a type parameter, and `value` is t
 argument every use in the project passes, test roots included, so each expression outside the
 class has the type it had. `name` is the class (a top-level or member class of `file`);
 `before` names the type parameter to put it ahead of (default: last); `imports` as elsewhere.
-Nothing is typed `T` yet: the members follow.
+`members` (roadmap #157) names the fields, methods and constructors of the class (`value`,
+`Box(String)`, `get`; with parameter types for an overload) whose declared types become `T`
+where they name `value`: a field's type, a method's or constructor's parameter and return types,
+the type arguments in them included (`List<String>` becomes `List<T>`). Their bodies are not
+changed: a body that then does not compile is the gate's refusal, whose fix line says to give `T`
+a bound that has what the body uses, or to leave that member out. Without `members`, nothing is
+typed `T` yet.
 
 | Use | Becomes |
 |---|---|
@@ -505,7 +511,14 @@ Nothing is typed `T` yet: the members follow.
   asks for (one that does not is written out in full), that no use is left raw that was not
   raw before (refused: a missed use compiles with a warning only), and that every call runs the
   declaration it ran (`CallTargets`).
-- Result: `added the type parameter T to Box; 24 uses pass String in 2 files (...); 3 uses in
+- Decided by the user, 2026-11-13 (the sketch's recommendation): `members` changes the named
+  members' signatures only, the gate judging their bodies, over also retyping the locals their
+  bodies initialize from them and over inferring the rest from one named member.
+- A call whose target changes is refused by `CallTargets` (`print(value)` with `print(String)`
+  and `print(Object)`), except a virtual call that now names a method its old target overrides
+  (`value.equals(x)` runs `Object.equals` by name, `String.equals` at run time, as before).
+- Result: `added the type parameter T to Box; String became T in value, Box(String) and get();
+  24 uses pass String in 2 files (...); 3 uses in
   its own instance code pass T; a cast to it is now unchecked at line 21 of ...`; and `its
   Javadoc has no @param <T> yet` when the class's Javadoc has `@param` tags.
 - Refused: `parameter` or `type` with it; a primitive `value` ("int is a primitive, which
@@ -514,12 +527,19 @@ Nothing is typed `T` yet: the members follow.
   ("String is a type that Box already names (line 4); as its type parameter, String would
   hide it. Choose another name."), or already has as a type parameter; a `before` the class
   does not declare; a `value` that is a type parameter of the class; a use of the class's name
-  that does not resolve.
+  that does not resolve. With `members`: a static member ("Box.DEFAULT is static, and a static
+  member cannot use T, the type parameter of its class. Leave it out of members."); a field
+  created as an array of `value` ("Box.items is created as new String[8], and an array of T
+  cannot be created. Leave items out of members, or make it a List first."); a field declared
+  with others in one statement ("Split it into one declaration per field first."); a method that
+  overrides a supertype's ("Box.put overrides Base.put, whose signature keeps String: ...");
+  a member whose declared types do not name `value` ("Box.size has no String in its declared
+  types, so nothing in it would become T. Leave it out of members."); a nested type; a `value`
+  that does not resolve in the class's file.
 - `parameter` and `type` are no longer required by the schema, since `type_parameter` takes
   their place; without it the handler refuses a call that lacks them: "add_parameter needs
   parameter and type, ...; or type_parameter, to add a type parameter to a class."
-- Not built yet: `members` (which members become `T`), a method's type parameter, records and
-  interfaces.
+- Not built yet: a method's type parameter, records and interfaces.
 
 ## `type_switch_to_method` (built)
 

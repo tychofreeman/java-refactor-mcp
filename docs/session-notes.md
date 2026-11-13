@@ -470,7 +470,10 @@ Each was chosen from options; the record named beside it has the options it beat
   Inside a batch with check `"end"` it runs as `Rename.checkMeanings` does: the step's files are
   written, the parse reads them, a call that does not resolve is skipped (the end check judges
   it), and a refusal aborts the step, which puts its files back. `change_type` calls it; a tool
-  that changes a signature or makes a type generic should.
+  that changes a signature or makes a type generic should. A virtual call (a `MethodInvocation`
+  of an instance method) whose new target is a method its old target overrides passes
+  (`Target.overrides`, by `CallTargets.overridden`, #157): `value.equals(x)` names
+  `Object.equals` once `value` is a `T`, and still runs `String.equals`.
 
 - `add_parameter` with `type_parameter` (roadmap #156, 2026-11-13) is `TypeParameters`, which
   `Tools.ADD_PARAMETER` routes to before `ByLine.named`: one `Holding` parse of the files that hold
@@ -482,6 +485,9 @@ Each was chosen from options; the record named beside it has the options it beat
   type: `named` skips it. `parameter` and `type` are not `.required()` in the schema any more;
   `Signatures.addParameter` refuses a call without them. The decisions (the user, 2026-11-13,
   each the sketch's recommendation) are in the contract's section.
+  `members` (#157) is `TypeParameters.typed`: each named member found as `Declarations.find`
+  finds one, and in its declared types (not its body) each type node that binds to `value`'s
+  qualified name, outermost first, becomes the parameter; the body is the gate's.
 
 ## Testing
 
