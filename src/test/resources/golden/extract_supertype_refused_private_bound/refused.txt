@@ -1,0 +1,1 @@
+the bound of K uses the private type Repo.Key, which Finder, in its own file, cannot name. Make Repo.Key package-private

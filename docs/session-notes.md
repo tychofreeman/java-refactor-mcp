@@ -172,6 +172,13 @@ Each was chosen from options; the record named beside it has the options it beat
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.
+- Generics (2026-11-13, the owner, on `docs/sessions/generics-sketch.md`): the Recommended
+  option of every open question there is the decision. Order: slice 2 (`extract_supertype` from
+  a generic class), then the call-target check and `change_type`'s wildcards, then slice 1
+  (`add_parameter` with `type_parameter`, over a new `add_type_parameter` tool and over
+  `change_type`). Slice 2 is option (a): the new type gets exactly the type parameters its
+  members use, plus those their bounds need, in the class's order, each declared as the class
+  writes it; over all of the class's always, and over a `type_parameters` argument.
 - Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
   `MoveType` keep their own per-file import fix and gate.
 
@@ -269,6 +276,10 @@ Each was chosen from options; the record named beside it has the options it beat
   from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member
   `pull_up` or `push_down` removes now takes one blank line beside it with it
   (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
+  From a generic class (#144, 2026-11-13), `ExtractSupertype.generics` picks the type
+  parameters: names in the extracted nodes that bind to the class's type variables, closed over
+  bounds, each `TypeParameter` copied as text. The class's clause is the names, passed to
+  `AddSupertype.run` as the supertype's text.
 
 - A type written into code names a member type of the type around that code, or of one around
   that, by its simple name: `Extract.typeName(b, at)` (#328, 2026-11-10; `extract_function`

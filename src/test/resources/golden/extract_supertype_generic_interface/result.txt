@@ -1,0 +1,1 @@
+extracted interface Finder<K, V> (com/example/Finder.java) from Repo with find; Repo implements it

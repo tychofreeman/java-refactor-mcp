@@ -8,10 +8,14 @@ import java.util.Map;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.TypeParameter;
 
 /**
  * extract_supertype: a new interface or superclass from members of a class, in a file of its own in
@@ -49,8 +53,26 @@ final class ExtractSupertype {
             () -> !type.isInterface(),
             () -> name + " is an interface; extract_supertype extracts from a class."),
         Precondition.that(
-            () -> type.typeParameters().isEmpty(),
-            () -> name + " is generic, which extract_supertype does not handle yet."),
+            () -> typeParameter(type, supertype) == null,
+            () ->
+                supertype
+                    + " is a type parameter of "
+                    + name
+                    + ": in "
+                    + name
+                    + "'s header the name would mean it, not the new "
+                    + kind
+                    + ". Choose another name."),
+        Precondition.that(
+            () -> kind.equals("interface") || type.typeParameters().isEmpty(),
+            () ->
+                name
+                    + " is generic, and extract_supertype extracts only an interface from a generic"
+                    + " class so far. Do it in steps: create_file the superclass, declaring the type"
+                    + " parameters its members use; add_supertype with relation extends and the"
+                    + " supertype as written, such as "
+                    + supertype
+                    + "<T>; then pull_up each member."),
         Precondition.that(
             () -> !Files.exists(target),
             () -> project.relative(target) + " already exists. Choose another name."));
@@ -61,6 +83,7 @@ final class ExtractSupertype {
     String text = opened.text();
     if (kind.equals("interface")) {
       List<String> signatures = new ArrayList<>();
+      List<ASTNode> uses = new ArrayList<>();
       for (String member : members) {
         BodyDeclaration d = MemberMove.member(type, name, member, rel, "extract_supertype");
         Precondition.require(
@@ -76,18 +99,25 @@ final class ExtractSupertype {
                         + member
                         + " is not a public instance method, which an interface can declare. Make it"
                         + " public first, or leave it out."));
-        signatures.add(signature(text, (MethodDeclaration) d));
+        MethodDeclaration m = (MethodDeclaration) d;
+        signatures.add(signature(text, m));
+        uses.addAll(Nodes.all(m, SingleVariableDeclaration.class));
+        uses.addAll(Nodes.all(m, TypeParameter.class));
+        uses.addAll(Nodes.all(m, Type.class).stream().filter(t -> t.getParent() == m).toList());
       }
-      StringBuilder body = new StringBuilder(pkg + "public interface " + supertype + " {\n");
+      Generics generics = generics(type, text, uses, supertype);
+      StringBuilder body =
+          new StringBuilder(pkg + "public interface " + supertype + generics.declared() + " {\n");
       for (String s : signatures) {
         body.append("  ").append(s).append(";\n");
       }
       body.append("}\n");
       create(project, target, body.toString(), supertype);
-      AddSupertype.run(project, rel, name, "implements", supertype);
+      AddSupertype.run(project, rel, name, "implements", supertype + generics.named());
       return Outcome.of(
           "extracted interface "
               + supertype
+              + generics.named()
               + " ("
               + project.relative(target)
               + ") from "
@@ -157,5 +187,81 @@ final class ExtractSupertype {
     }
     int end = m.getBody() != null ? m.getBody().getStartPosition() : Nodes.end(m);
     return text.substring(start, end).strip();
+  }
+
+  /**
+   * The type parameters of a class that a type extracted from it declares: {@code declared} as the
+   * class writes them, bounds included ({@code <K extends Comparable<K>, V>}), and {@code named},
+   * the type arguments the class passes ({@code <K, V>}). Both empty when it needs none.
+   */
+  private record Generics(String declared, String named) {}
+
+  /** The type parameter of {@code type} named {@code name}, or null. */
+  private static TypeParameter typeParameter(TypeDeclaration type, String name) {
+    for (Object o : type.typeParameters()) {
+      if (((TypeParameter) o).getName().getIdentifier().equals(name)) {
+        return (TypeParameter) o;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The type parameters of {@code type} that {@code uses} name, found by binding, with those their
+   * bounds name, in the class's order. A bound is copied exactly, so the new type's methods erase
+   * to what the class's do; one that names a type {@code supertype}'s file cannot is refused.
+   */
+  private static Generics generics(
+      TypeDeclaration type, String text, List<ASTNode> uses, String supertype) {
+    List<TypeParameter> used = new ArrayList<>();
+    List<ASTNode> pending = new ArrayList<>(uses);
+    while (!pending.isEmpty()) {
+      for (SimpleName n : Nodes.all(pending.remove(0), SimpleName.class)) {
+        if (!(n.resolveBinding() instanceof ITypeBinding b)) {
+          continue;
+        }
+        TypeParameter p = b.isTypeVariable() ? typeParameter(type, b.getName()) : null;
+        if (p != null && b.isEqualTo(p.resolveBinding()) && !used.contains(p)) {
+          used.add(p);
+          for (Object bound : p.typeBounds()) {
+            pending.add((ASTNode) bound);
+          }
+        }
+      }
+    }
+    List<String> declared = new ArrayList<>();
+    List<String> named = new ArrayList<>();
+    for (Object o : type.typeParameters()) {
+      TypeParameter p = (TypeParameter) o;
+      if (!used.contains(p)) {
+        continue;
+      }
+      for (Object bound : p.typeBounds()) {
+        for (SimpleName n : Nodes.all((ASTNode) bound, SimpleName.class)) {
+          for (ITypeBinding t = n.resolveBinding() instanceof ITypeBinding b ? b : null;
+              t != null;
+              t = t.getDeclaringClass()) {
+            if (Modifier.isPrivate(t.getModifiers())) {
+              throw new Refusal(
+                  "the bound of "
+                      + p.getName().getIdentifier()
+                      + " uses the private type "
+                      + Names.typeLabel(t)
+                      + ", which "
+                      + supertype
+                      + ", in its own file, cannot name. Make "
+                      + Names.typeLabel(t)
+                      + " package-private or move it to its own file first (move).");
+            }
+          }
+        }
+      }
+      declared.add(text.substring(p.getStartPosition(), Nodes.end(p)));
+      named.add(p.getName().getIdentifier());
+    }
+    return declared.isEmpty()
+        ? new Generics("", "")
+        : new Generics(
+            "<" + String.join(", ", declared) + ">", "<" + String.join(", ", named) + ">");
   }
 }

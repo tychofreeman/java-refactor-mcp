@@ -1107,3 +1107,11 @@ not in placement, since in a batch the reader may name it only in a later step.
   batch": `Session.refusedBatch` lives in one process, and the CLI starts one per call. The whole
   batch was sent again. The CLI's refusal should not offer `retry`, or the CLI should keep the
   refused batch on disk, as `undo` keeps its journal.
+
+## 2026-11-13: a batch step without `args` (extract-supertype-generic)
+
+- A `batch` sent through `bin/jrefactor` with each step's arguments beside its `tool`
+  (`{"tool": "replace_text", "file": ..., "old": ...}`) was refused: "step 1 of 8 (replace_text)
+  refused: replace_text needs file." The file was there; what was missing was the `args` object
+  around it. Resent with `args`. Wanted: when a step has keys beside `tool` and no `args`, the
+  refusal says a step's arguments go in `args`, or the step is read that way.
