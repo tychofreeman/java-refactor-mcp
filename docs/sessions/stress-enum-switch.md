@@ -129,8 +129,8 @@ enum was converted: the project's code has none that uses only constants.
 
 280 calls, 10 per entry: applied 109, refused 170, failed 1. The failure is `rename` of
 `ClassHierarchyImpl.SYSTEM_STREAM_PROVIDER`: a JDT `NullPointerException` in
-`Rename.checkMeanings`, issue #411, reproduced on main 0f641d8 and commented there; #432 fixed it on main while this record was written. Of the
-refusals read whole:
+`Rename.checkMeanings`, issue #411, reproduced on main 0f641d8 and commented there; #432 fixed
+it on main while this record was written. Of the refusals read whole:
 
 - `move` of a member record whose fields the outer class reads (`RawBytecodeHelper.CodeRange`,
   `StackMapGenerator.RawExceptionCatch`): gated, fix text "Rename one of the clashing types": #440.
