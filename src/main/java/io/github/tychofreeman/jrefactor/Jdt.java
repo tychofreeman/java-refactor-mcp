@@ -66,7 +66,12 @@ final class Jdt {
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setSource(source.toCharArray());
     parser.setUnitName(project.relative(file));
-    CompilationUnit unit = (CompilationUnit) parser.createAST(null);
+    CompilationUnit unit;
+    try {
+      unit = (CompilationUnit) parser.createAST(null);
+    } catch (RuntimeException e) {
+      throw compilerFailed(e);
+    }
     unit.setProperty(FILE, file.toAbsolutePath().normalize());
     return unit;
   }
@@ -82,19 +87,32 @@ final class Jdt {
     String[] paths = files.stream().map(Path::toString).toArray(String[]::new);
     String[] encodings = new String[paths.length];
     java.util.Arrays.fill(encodings, "UTF-8");
-    parser(project)
-        .createASTs(
-            paths,
-            encodings,
-            new String[0],
-            new FileASTRequestor() {
-              @Override
-              public void acceptAST(String sourceFilePath, CompilationUnit ast) {
-                ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
-                each.accept(Path.of(sourceFilePath), ast);
-              }
-            },
-            null);
+    RuntimeException[] fromEach = new RuntimeException[1];
+    try {
+      parser(project)
+          .createASTs(
+              paths,
+              encodings,
+              new String[0],
+              new FileASTRequestor() {
+                @Override
+                public void acceptAST(String sourceFilePath, CompilationUnit ast) {
+                  ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
+                  try {
+                    each.accept(Path.of(sourceFilePath), ast);
+                  } catch (RuntimeException e) {
+                    fromEach[0] = e;
+                    throw e;
+                  }
+                }
+              },
+              null);
+    } catch (RuntimeException e) {
+      if (e == fromEach[0]) {
+        throw e;
+      }
+      throw compilerFailed(e);
+    }
   }
 
   /**
@@ -128,5 +146,27 @@ final class Jdt {
     java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws
     parser.setEnvironment(project.classpath().toArray(String[]::new), sourcepath, encodings, true);
     return parser;
+  }
+
+  /**
+   * The refusal for an exception the compiler threw while resolving: ECJ fails this way on some
+   * code that does not compile, which it should have reported as a problem. Names the exception and
+   * where in the compiler it was thrown.
+   */
+  static Refusal compilerFailed(RuntimeException e) {
+    StackTraceElement[] trace = e.getStackTrace();
+    String where =
+        trace.length == 0
+            ? ""
+            : " (in " + trace[0].getClassName() + "." + trace[0].getMethodName() + ")";
+    return new Refusal(
+        "The Java compiler (ECJ) failed while type-checking, so nothing was changed: "
+            + e
+            + where
+            + ". It fails this way on some code that does not compile, such as a lambda or method"
+            + " reference whose target type no longer fits its type parameter's bounds. Change the"
+            + " edit so the code it writes type-checks (another type, bound or argument); if every"
+            + " edit fails this way, the project as it is trips the compiler: fix the code there"
+            + " first.");
   }
 }
