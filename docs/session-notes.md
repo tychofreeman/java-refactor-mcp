@@ -586,6 +586,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - The generator task set is `eval-tasks/depot.json` (2026-11-13, `docs/sessions/generator-tasks.md`,
   issue #376): three tasks of statements inside existing methods (a loop over a map field, a call
   chain, a parameter every call derives), each doable in one tool call.
+- The A/B arms for the generators (issue #376): `jrefactor-ab-server` (with `build`),
+  `-skeleton` (with the refusal), `-no-build` (`JREFACTOR_NO_BUILD=1`: the statement edits as before
+  `build`, the create aliases refused). The server publishes `Tools.published(session)` and a batch
+  looks its steps up by `Tools.named(name, session)`; the CLI still uses `Tools.ALL`.
 - The constructive task set is `eval-tasks/library.json` (2026-11-06, `docs/sessions/constructive-tasks.md`):
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went

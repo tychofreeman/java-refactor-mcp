@@ -189,7 +189,7 @@ public final class Server {
             .serverInfo(NAME, version())
             .instructions(instructions())
             .capabilities(ServerCapabilities.builder().tools(false).build());
-    for (Tools.Def def : Tools.ALL) {
+    for (Tools.Def def : Tools.published(project.session())) {
       spec.toolCall(
           Tool.builder(def.name(), json, def.schema())
               .description(def.description())
