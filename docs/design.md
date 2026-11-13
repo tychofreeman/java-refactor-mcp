@@ -175,6 +175,15 @@ refused, since the call computed the value in the argument's type and the method
 in the parameter's; the sketch's six checks did not name it, and a probe
 (`remove_parameter_value_argument_type`) shows the overflow.
 
+With a call in the value (roadmap #148), two rules are stricter than the sketch wrote them, both
+to keep behavior. The sketch asked that every argument after the value be effect-free; it must be
+fixed (locals, parameters, constants, literals), since an argument that only reads a field would
+be read before the value's call where the call read it after (probe
+`remove_parameter_value_call_later_read`). And an argument the value reads that is not fixed must
+be read in the value before any of its calls, since the call read it a second time there (probe
+`remove_parameter_value_call_argument_reread`). A constructor is refused whatever it starts with:
+the field initializers and the constructor above would run before the value's call.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -546,6 +555,7 @@ sections 3 and 4.
 | 138 | 145 | `extract_supertype` from a generic class, `kind=class`: the new superclass declares the type parameters its members and the old superclass's type use, with those their bounds need; the class extends it with their names, and the members move as `pull_up` moves them | Done 2026-11-13 (`ExtractSupertype.run`; `PullUp` unchanged: it finds the supertype by erasure and moves text whole); probe `extract_supertype_generic_class` | `docs/sessions/generics-sketch.md` (increment 2) |
 | 139 | 146 | Generics, the shared check and wildcards (increment 3 of `docs/sessions/generics-sketch.md`): a change keeps what every call runs, and `change_type` with a wildcard is pinned | Done 2026-11-13 (`CallTargets`: each call, `new`, `this(...)`, `super(...)` and method reference in the checked files runs, after the change, the declaration it ran before, known by its place among its file's methods, not by its key; read before the write and required after it, as `Rename.checkMeanings`, so it also runs in a batch whose gate is deferred, leaving a call that does not resolve to the end check. `change_type` calls it for a field and a method; the gate's fix line names what a wildcard does not allow. The user, 2026-11-13: the model writes the wildcard in `type`, over `wildcard: "auto"` and over a body analysis) | A review found generics a gap; the friction log has no entry asking for it (the sketch says so) |
 | 140 | 147 | `remove_parameter` `value` as an expression of the method's other parameters, fields, constants and literals, without calls: the query form of `replace_parameter` (`docs/sessions/generators-sketch.md`, slice 4, increment 1) | Done 2026-11-13 (`Signatures.removeWithExpression`: the body starts with a local of the parameter's name and type; `ParameterValue` holds the parameter rules `Introduce` had and the matcher of a call's argument against the value, `passes`; refused: a call that passes anything else, an argument the value reads that has effects or another primitive type, an argument with effects between or, for a value that reads a field, after; a value that may throw is reported through `Exceptional`) | The sketch; the user's choice of 2026-11-13; `docs/sessions/remove-parameter-value-expression.md` |
+| 141 | 148 | `remove_parameter` `value` with a call in it (`order.customer()`), declared first in the body as a local (`docs/sessions/generators-sketch.md`, slice 4, increment 2) | Done 2026-11-13 (`Signatures.removeWithExpression`, `ParameterValue.InMethod.acts` and `readsFirst`, the matcher's calls: the same method, or one overriding it on a receiver; a method of the method's own object only on a call on `this`. Refused: an argument after the value at a call that is not fixed, since the value's call would now run after it; an argument the value reads that is not fixed and is read after one of the value's calls; a constructor. Reported through `Exceptional`, since a call may throw) | The sketch; `docs/sessions/remove-parameter-value-call.md` |
 | 142 | 149 | `build` on `insert_statements` and `replace_statements`: a call or a construction written from names (`call`, `new`, `args`, `into`, `type`), typed strings beside them, the local's type read from bindings | Done 2026-11-13 (`Build`; "Generators" above has the user's choices and the options they beat) | The generators sketch, increment 3 (the coverage review of 2026-11-13: 540 of 560 tool steps typed the Java); `docs/sessions/build-call-new.md` |
 
 ### The 2026-11-04 list

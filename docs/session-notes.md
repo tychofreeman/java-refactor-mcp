@@ -102,7 +102,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `build` argument on `insert_statements`, `replace_statements` and `replace_expression`, not new
   tools, gorefactor's names as unpublished aliases; slice order `replace_parameter`'s query form,
   then call, loop, guard. `replace_parameter` here is `remove_parameter` with `value` an
-  expression (roadmap #147): `Signatures.removeWithExpression`, always a local first in the body.
+  expression (roadmap #147; with calls, #148): `Signatures.removeWithExpression`, always a local
+  first in the body. Its effect rules are by position at each call and stricter than the sketch's
+  (`docs/design.md`, Decisions): with a call in the value, an argument after it must be fixed, not
+  only effect-free.
 - `move_statement` with `past_try` (#343, 2026-11-11, the user: option (a), over keeping the
   refusal or only rewording it): the one option that changes behavior on purpose; it skips the
   behavior gate and names the change in the result (`MoveStatement.pastTryNote`).

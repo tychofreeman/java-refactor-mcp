@@ -966,16 +966,16 @@ final class Signatures {
     }
     ParameterValue.InMethod v = ParameterValue.inMethod(project, d, at, value, family.label);
     for (Effects.Effect x : Effects.of(v.expression()).all()) {
-      if (x.deferred() || x.changes() || x.kind() == Effects.Kind.NEW_ARRAY) {
+      if (x.deferred() || x.kind() == Effects.Kind.WRITE) {
         throw new Refusal(
             "value "
                 + value
-                + " calls, creates or assigns ("
+                + " assigns, or holds code that runs later ("
                 + x.node()
-                + "), and may only read: "
+                + "), and may only read and call: "
                 + family.label.substring(0, family.label.indexOf('('))
-                + "'s other parameters, fields, constants and literals, with operators. Keep the"
-                + " parameter.");
+                + "'s other parameters, fields, constants and literals, with operators and"
+                + " calls. Keep the parameter.");
       }
     }
     int start = ParameterValue.afterConstructorCall(m);
@@ -999,6 +999,13 @@ final class Signatures {
         }
       }
     }
+    if (m.isConstructor() && v.acts()) {
+      throw new Refusal(
+          value
+              + " would run after the constructor above this one and the field initializers,"
+              + " not before them. Keep the parameter, or compute it in a static method that"
+              + " calls the constructor.");
+    }
     if (m.isConstructor() && !v.fixed()) {
       throw new Refusal(
           value
@@ -1017,9 +1024,14 @@ final class Signatures {
                 + c.where(argument)
                 + " passes "
                 + argument
-                + ", not "
-                + value
-                + (here.equals(value) ? "" : " (with that call's arguments: " + here + ")")
+                + (here.equals(
+                        c.file().text().substring(argument.getStartPosition(), Nodes.end(argument)))
+                    ? ", in which a name means something else than in the method (a member of"
+                        + " another object than the one the method runs on, or another"
+                        + " overload)"
+                    : ", not "
+                        + value
+                        + (here.equals(value) ? "" : " (with that call's arguments: " + here + ")"))
                 + ", so "
                 + parameter
                 + " cannot become "
@@ -1069,13 +1081,32 @@ final class Signatures {
                   + name
                   + " in its own type first.");
         }
+        if (v.acts() && !Effects.of(passed).fixed() && (i > at || !v.readsFirst(i))) {
+          throw new Refusal(
+              "the call at "
+                  + c.where(passed)
+                  + " passes "
+                  + passed
+                  + " for "
+                  + name
+                  + ", which a call in "
+                  + value
+                  + " could change: the call read it again as it computed "
+                  + argument
+                  + ", and the method would compute "
+                  + value
+                  + " from the one read. Put "
+                  + passed
+                  + " in a local first.");
+        }
       }
       for (int i = 0; i < c.arguments().size(); i++) {
         Expression other = (Expression) c.arguments().get(i);
-        if (i == at || uses.contains(i) || ParameterValue.quiet(other)) {
+        if (i == at || uses.contains(i)) {
           continue;
         }
-        if (i > low && i < high) {
+        boolean quiet = ParameterValue.quiet(other);
+        if (!quiet && i > low && i < high) {
           throw new Refusal(
               "the call at "
                   + c.where(other)
@@ -1091,7 +1122,9 @@ final class Signatures {
                   + other
                   + " in a local first.");
         }
-        if (i > high && !v.fixed()) {
+        boolean late =
+            v.acts() ? i > at && !Effects.of(other).fixed() : i > high && !quiet && !v.fixed();
+        if (late) {
           throw new Refusal(
               "the call at "
                   + c.where(other)
@@ -1101,7 +1134,7 @@ final class Signatures {
                   + argument
                   + "; in the method, "
                   + value
-                  + " would be computed after "
+                  + (v.acts() ? " would run after " : " would be computed after ")
                   + other
                   + ", not before it. Put "
                   + other

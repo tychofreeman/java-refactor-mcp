@@ -1,0 +1,1 @@
+label(order) may throw: each call computed it among its arguments, and Feed.send now computes it first in its body, after every argument has run. preserve_exceptions is set, so nothing was changed: keep the parameter.

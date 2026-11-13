@@ -785,7 +785,7 @@ too (`ByLine.named`).
   anything else ("the call at ... passes System.err, not this.out ..."), a parameter the body
   assigns, an instance field for a static method.
   `value` may also be an expression of the method's other parameters, fields, constants and
-  literals, without calls (roadmap #147, 2026-11-13: the query form of `replace_parameter`,
+  literals, with calls (roadmap #147 and #148, 2026-11-13: the query form of `replace_parameter`,
   `docs/sessions/generators-sketch.md`): `width * height`, `order.customer`, `(hours - FULL) *
   rate`. Every call must pass it with its own arguments in place of the parameters (`fits(w, h +
   1, w * (h + 1))`), matched by structure, parentheses aside, each other name by binding; the
@@ -806,9 +806,21 @@ too (`ByLine.named`).
   computed after raise(), not before it. Put raise() in a local first, or move the parameter
   last (move_parameter)."); a name that is not another parameter, a field or a constant in the
   method ("value may use Box.fits's other parameters (width, height), fields, constants and
-  literals; scale is none of these there."); a value that calls, creates or assigns; a
+  literals; scale is none of these there."); a value that assigns or holds a lambda; a
   constructor that passes the parameter to `this(...)` or `super(...)`, or whose value reads a
-  field past one; a method with no body; a varargs parameter.
+  field that is not a constant; a method with no body; a varargs parameter.
+  A call in the value (`order.customer()`, `label(order)`, `new Key(a, b)`) matches a call of the
+  same method at the call site, or of one that overrides it when it is called on a receiver; a
+  method of the method's own object matches only unqualified or on `this`, on a call on `this`.
+  It moves from the call's arguments to the first statement of the body, so, further refused:
+  an argument written after it that is not fixed (locals, parameters, constants, literals: "the
+  call at ... passes mark() after order.customer(); in the method, order.customer() would run
+  after mark(), not before it. Put mark() in a local first, or move the parameter last
+  (move_parameter)."); an argument the value reads that is not fixed and that the value reads
+  after one of its calls ("... passes cur for a, which a call in bump() + a could change: the
+  call read it again as it computed bump() + cur ..."); a constructor ("... would run after
+  the constructor above this one and the field initializers, not before them"). Every such
+  removal reports the change to exceptional behavior, as a call may throw.
 - `move_parameter`: optional `before` (default last).
 
 The change covers the method's family: every project declaration that overrides
