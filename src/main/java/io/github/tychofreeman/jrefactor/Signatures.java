@@ -305,8 +305,7 @@ final class Signatures {
    * ({@link PrimitiveUses}): each call's result, for the return type; each use of the parameter in
    * the family's bodies, for a parameter.
    */
-  private static void checkPrimitiveUses(
-      MethodFamily family, Args args, String type, boolean returns) {
+  static void checkPrimitiveUses(MethodFamily family, Args args, String type, boolean returns) {
     IMethodBinding target = family.target.resolveBinding();
     if (target == null) {
       return;
@@ -348,7 +347,7 @@ final class Signatures {
   }
 
   /** Refuses {@code text} as the {@code what} argument unless {@code wrapped} parses. */
-  private static void parsesAs(String what, String text, String wrapped) {
+  static void parsesAs(String what, String text, String wrapped) {
     for (IProblem p : Jdt.parseSyntax(wrapped).getProblems()) {
       if (p.isError()) {
         throw new Refusal(what + " " + text + " does not parse: " + p.getMessage() + ".");
@@ -862,4 +861,7 @@ final class Signatures {
         ? field.getDeclaringClass().getName() + "." + field.getName()
         : "this." + field.getName();
   }
+
+  /** A method reference that implements a family member, and the method it refers to. */
+  record Reference(Source file, MethodReference node, IMethodBinding target) {}
 }

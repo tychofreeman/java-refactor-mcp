@@ -258,6 +258,35 @@ final class Tools {
           Kind.REFACTORING,
           Tools::changeType);
 
+  static final Def CHANGE_SIGNATURE =
+      new Def(
+          "change_signature",
+          """
+          Change a method's return type or the exceptions it declares, in it, in every override \
+          and implementation, and in each method a method reference implements it with: \
+          return_type=void and add_throws=IOException turn boolean apply(Rename r) into void \
+          apply(Rename r) throws IOException. For void, return x; becomes return; and a lambda \
+          r -> true becomes r -> {}, a returned call kept as a statement. remove_throws drops \
+          an exception from each throws clause. Calls are not edited: change one that uses the \
+          result, or must handle a new exception, in the same batch. The method may be found \
+          by line in place of name, as add_parameter finds it.\
+          """,
+          List.of(
+              Arg.FILE.described("Java file path; the file that declares the method."),
+              Arg.string(
+                  "name", "Type.method (with parameter types for an overload), e.g. Move.apply."),
+              Arg.METHOD_LINE,
+              Arg.METHOD_COLUMN,
+              Arg.string("return_type", "Optional: the new return type as written, or void."),
+              Arg.string(
+                  "add_throws", "Optional: exception types to declare, separated by commas."),
+              Arg.string(
+                  "remove_throws",
+                  "Optional: exception types to stop declaring, separated by commas."),
+              Arg.IMPORTS),
+          Kind.REFACTORING,
+          (project, args) -> ChangeSignature.run(project, ByLine.named(project, args)));
+
   static final Def ADD_SUPERTYPE =
       new Def(
           "add_supertype",
@@ -1344,6 +1373,7 @@ final class Tools {
           LOOP_TO_STREAM,
           CONVERT_LOOP,
           SUBCLASS_TO_STRATEGY,
+          CHANGE_SIGNATURE,
           REMOVE_ELSE,
           ENCAPSULATE_FIELD,
           BATCH,
