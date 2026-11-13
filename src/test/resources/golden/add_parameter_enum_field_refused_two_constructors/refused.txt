@@ -1,0 +1,1 @@
+Color has 2 constructors (Color(String), Color(String, int)), and each constant chooses one. add_parameter adds a field to an enum with at most one constructor; to add a plain parameter to one of them, name it: Color(String).

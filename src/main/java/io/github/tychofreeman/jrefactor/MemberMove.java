@@ -411,7 +411,8 @@ final class MemberMove {
     String head = text.substring(open + 1, last);
     String tail = text.substring(last, close).stripTrailing();
     String inner = (head + (comma ? tail + separator : separator + tail)).strip();
-    return new TextEdit(open + 1, close, "\n" + indent + inner + "\n\n" + block + "\n");
+    String closing = Lines.indentOf(text, close);
+    return new TextEdit(open + 1, close, "\n" + indent + inner + "\n\n" + block + "\n" + closing);
   }
 
   /** The offset of the first character at or after {@code at} that is not space or a comment. */

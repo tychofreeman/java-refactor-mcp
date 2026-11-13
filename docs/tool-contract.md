@@ -443,6 +443,35 @@ pattern of it. Result: `added the component int unitCents to Line; 1 constructio
 a class, adding a field filled by its constructors stays a composition: `add_declaration` of the
 field, `add_parameter` of the constructor, `insert_statements` of the assignment.
 
+## `add_parameter` on an enum
+
+Roadmap #150, 2026-11-13 (`docs/sessions/enums-sketch.md`, slice 2; the owner chose option A, an
+option on `add_parameter`, over an `add_field` tool and over the composition): with `name` an
+enum of `file` (`Color`, or `Shelf.Level` for a member enum), `add_parameter` adds a field with a
+value per constant (`EnumField`):
+
+- `private final <type> <parameter>;`, placed by kind;
+- the constructor: written, taking the parameter, when the enum declares none; with one, the
+  parameter is added (last, or before `before`) and `this.<parameter> = <parameter>;` goes last
+  in its body;
+- a record-style accessor `public <type> <parameter>()` (the sketch's question 4, option (a));
+- each constant passes its entry of `values` (an object, constant name to a Java expression),
+  else `value`: `RED` becomes `RED("#f00")`, `RED(1)` `RED(1, "#f00")`; a constant's body stays.
+
+Result: `added the field String hex to Color, set by its constructor and read by hex(); 3
+constants pass their values`. A plain parameter of the enum's constructor, with no field, is
+still added by `line` or by naming the constructor with its parameter types (`Color()`,
+`Color(String)`). Refused: a constant that neither `values` nor `value` gives a value ("values has
+nothing for BLUE, and there is no value for the rest. Add BLUE to values, or pass value for every
+constant values does not name."), a key of `values` that is no constant ("Color has no constant
+PURPLE; its constants are RED, GREEN, BLUE."), two or more constructors ("Color has 2
+constructors (Color(String), Color(String, int)), and each constant chooses one. ... name it:
+Color(String)."), a field, constructor parameter or method without parameters of that name
+("Color already has a field code."), a method of that name the enum inherits ("Color inherits
+ordinal() from Enum; choose another name."), and `values` when `name` is not an enum ("values
+gives each constant of an enum its own value, and Renamer is not an enum of ... Pass value, which
+every call passes.").
+
 ## `add_parameter` with `type_parameter`
 
 Roadmap #156, 2026-11-13 (the generics sketch, slice 1; the user chose this over a new
@@ -784,8 +813,8 @@ in the same turn only if it is sent after it.
   per field, of its type as written, assigning each (`this.owner = owner;`), with the class's
   access. Refused: a name that is not a field (listing them), a static field, a final field
   with a value, a type that is not a class; for an enum the refusal names what to send ("Color
-  is an enum; ... Add the constructor as content (Color() {}), then add_parameter for each value:
-  it passes one at every constant", roadmap #143).
+  is an enum; ... For a field with a value per constant, use add_parameter with name Color and
+  values (...); for a constructor alone, add it as content (Color() {}).", roadmap #143, #150).
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
   `(parameter types)` for an overload), `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old
@@ -824,7 +853,9 @@ methods: Pricing.price(int) at columns 14 and 27; Use.size(Pricing) at column 38
 name."), and so is a line with neither. `change_type` with `parameter` or `return_type` takes it
 too (`ByLine.named`).
 - `add_parameter`: `type`, `value` (a Java expression each call passes),
-  optional `before` (default last), optional `imports`.
+  optional `before` (default last), optional `imports`; `values` (constant to expression) with
+  `name` an enum, where `value` is then the rest's and optional when `values` names every
+  constant (see "`add_parameter` on an enum").
 - `remove_parameter`: also deletes the parameter's `@param` tag. Optional `value` (#315,
   2026-11-11, the user's choice over a `parameter_to_field` tool): a field (`out`, `this.out`,
   `Config.OUT`) or a literal that every call passes; the body may then read the parameter, and

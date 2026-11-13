@@ -1,0 +1,1 @@
+added the field String hex to Color, set by its constructor and read by hex(); 3 constants pass their values

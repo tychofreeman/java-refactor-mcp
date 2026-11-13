@@ -140,4 +140,23 @@ final class Args {
   Object raw(String key) {
     return values.get(key);
   }
+
+  /**
+   * A JSON object whose values are strings (a number or true/false as its text); empty when not
+   * given.
+   */
+  Map<String, String> strings(String key) {
+    Object value = values.get(key);
+    if (value == null) {
+      return Map.of();
+    }
+    if (value instanceof Map<?, ?> map
+        && map.values().stream()
+            .allMatch(v -> v instanceof String || v instanceof Number || v instanceof Boolean)) {
+      Map<String, String> strings = new LinkedHashMap<>();
+      map.forEach((k, v) -> strings.put(String.valueOf(k), String.valueOf(v)));
+      return strings;
+    }
+    throw new Refusal(key + " must be an object of strings; got " + value + ".");
+  }
 }

@@ -1,1 +1,1 @@
-Color is an enum; constructor writes a class's constructor, and the constants of an enum would not pass its parameters. Add the constructor as content (Color() {}), then add_parameter for each value: it passes one at every constant.
+Color is an enum; constructor writes a class's constructor, and the constants of an enum would not pass its parameters. For a field with a value per constant, use add_parameter with name Color and values (it writes the field, the constructor and an accessor); for a constructor alone, add it as content (Color() {}).

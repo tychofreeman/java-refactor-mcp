@@ -1163,7 +1163,12 @@ final class Tools {
           calls). value is a Java expression every call can see, with no side effects. before puts the parameter ahead of that one \
           (default: last).
           With name a record (Line) whose canonical constructor is implicit or compact, it adds a \
-          component, and every new Line(...) passes value.\
+          component, and every new Line(...) passes value.
+          With name an enum (Color), it adds a field: private final, set by the enum's constructor \
+          (written when the enum has none) and read by an accessor of the parameter's name, and \
+          each constant passes its entry of values, else value: with parameter hex and values \
+          {"RED": "\\"#f00\\""}, RED becomes RED("#f00"). A parameter of the constructor alone is \
+          added by its line, or by name as Color(String).\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
@@ -1177,10 +1182,16 @@ final class Tools {
                   "Instead of parameter and type: a type parameter as written, with its bound,"
                       + " for the class name names."),
               Arg.string(
-                      "value",
-                      "The Java expression each call passes; with type_parameter, the type"
-                          + " argument each use passes.")
-                  .required(),
+                  "value",
+                  "The Java expression each call passes; with type_parameter, the type"
+                      + " argument each use passes."),
+              Arg.json(
+                  "values",
+                  """
+                  {"type": "object", "description": "For an enum: constant name to the Java \
+                  expression it passes; the other constants pass value.", \
+                  "additionalProperties": {"type": "string"}}\
+                  """),
               Arg.string("before", "Optional: the parameter to put it before; default last."),
               Arg.IMPORTS),
           Kind.REFACTORING,
