@@ -241,14 +241,19 @@ final class Tools {
           A method's parameter (parameter) or return type (return_type=true) changes in it and \
           every override and implementation, and in lambdas that write the parameter's type; \
           calls are not edited. The method may be found by line in place of name, as \
-          add_parameter finds it.\
+          add_parameter finds it.
+          With type_parameter (T) and name a class or a method, type is T's bound: static <T> T \
+          max(List<T> xs) becomes static <T extends Comparable<T>> T max(List<T> xs) with type \
+          Comparable<T>, in the method and every override; type Object removes the bound. Uses \
+          are not edited.\
           """,
           List.of(
               Arg.FILE.described("Java file path; the file that declares " + "the field."),
               Arg.string(
                   "name",
                   "Type.field, the field whose type to change; or Type.method (with "
-                      + "parameter types for an overload) with parameter or return_type."),
+                      + "parameter types for an overload) with parameter or return_type; or the"
+                      + " class or method with type_parameter."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
               Arg.string("type", "The new type as written, such as long or List<String>.")
@@ -259,6 +264,10 @@ final class Tools {
               Arg.bool(
                   "return_type",
                   "Optional: change the method's return type, in it and every override."),
+              Arg.string(
+                  "type_parameter",
+                  "Instead of a field, parameter or return type: the type parameter of name whose"
+                      + " bound becomes type."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::changeType);
@@ -1764,6 +1773,9 @@ final class Tools {
   }
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
+    if (args.has("type_parameter")) {
+      return TypeParameters.bound(project, args);
+    }
     if (args.has("parameter") || args.flag("return_type")) {
       return Signatures.changeType(project, ByLine.named(project, args));
     }

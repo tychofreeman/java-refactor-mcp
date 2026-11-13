@@ -45,16 +45,26 @@ final class CallTargets {
    */
   private record Target(String id, String label, int line, String kind, List<String> overrides) {}
 
+  /** A method that overrides another: its label, what it overrides, and where it is declared. */
+  private record Overriding(String label, String overridden, Path file, int line) {}
+
   /** Each checked file's calls in source order; a null id for one that did not resolve. */
   private final Map<Path, List<Target>> before;
 
-  private CallTargets(Map<Path, List<Target>> before) {
+  /** Each override among the checked files' methods, by "its place > the overridden's place". */
+  private final Map<String, Overriding> overrides;
+
+  private CallTargets(Map<Path, List<Target>> before, Map<String, Overriding> overrides) {
     this.before = before;
+    this.overrides = overrides;
   }
 
-  /** What the calls in {@code units}, parsed together from the project's files, run now. */
+  /**
+   * What the calls in {@code units}, parsed together from the project's files, run now, and which
+   * methods of them override which.
+   */
   static CallTargets of(Collection<CompilationUnit> units) {
-    return new CallTargets(targets(units));
+    return new CallTargets(targets(units), overrides(units));
   }
 
   /**
@@ -68,26 +78,7 @@ final class CallTargets {
   }
 
   private static Map<Path, List<Target>> targets(Collection<CompilationUnit> units) {
-    // Where each method and type of the units stands: its file and its number among the file's.
-    Map<String, String> places = new HashMap<>();
-    for (CompilationUnit unit : units) {
-      int k = 0;
-      for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
-        IMethodBinding b = m.resolveBinding();
-        if (b != null) {
-          places.put(b.getKey(), Jdt.fileOf(unit) + "#" + k);
-        }
-        k++;
-      }
-      k = 0;
-      for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
-        ITypeBinding b = t.resolveBinding();
-        if (b != null) {
-          places.put(b.getKey(), Jdt.fileOf(unit) + "#type " + k);
-        }
-        k++;
-      }
-    }
+    Map<String, String> places = places(units);
     Map<Path, List<Target>> out = new LinkedHashMap<>();
     for (CompilationUnit unit : units) {
       List<Target> calls = new ArrayList<>();
@@ -114,6 +105,32 @@ final class CallTargets {
       out.put(Jdt.fileOf(unit), calls);
     }
     return out;
+  }
+
+  /**
+   * Where each method and type of {@code units} stands: its file and its number among the file's.
+   */
+  private static Map<String, String> places(Collection<CompilationUnit> units) {
+    Map<String, String> places = new HashMap<>();
+    for (CompilationUnit unit : units) {
+      int k = 0;
+      for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
+        IMethodBinding b = m.resolveBinding();
+        if (b != null) {
+          places.put(b.getKey(), Jdt.fileOf(unit) + "#" + k);
+        }
+        k++;
+      }
+      k = 0;
+      for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+        ITypeBinding b = t.resolveBinding();
+        if (b != null) {
+          places.put(b.getKey(), Jdt.fileOf(unit) + "#type " + k);
+        }
+        k++;
+      }
+    }
+    return places;
   }
 
   /**
@@ -162,9 +179,10 @@ final class CallTargets {
 
   /**
    * As {@link #require(SourceProject, String)}, with the checked files already parsed again, in one
-   * parse, as they now are on disk: {@code units}.
+   * parse, as they now are on disk: {@code units}. A method that stops or starts overriding another
+   * is refused too, with {@code fix} as the way out.
    */
-  void require(SourceProject project, Collection<CompilationUnit> units, String what)
+  void require(SourceProject project, Collection<CompilationUnit> units, String what, String fix)
       throws IOException {
     Map<Path, List<Target>> after = targets(units);
     for (Map.Entry<Path, List<Target>> e : before.entrySet()) {
@@ -205,6 +223,17 @@ final class CallTargets {
         }
       }
     }
+    Map<String, Overriding> now = overrides(units);
+    for (Map.Entry<String, Overriding> e : overrides.entrySet()) {
+      if (!now.containsKey(e.getKey())) {
+        throw new Refusal(overriding(project, what, e.getValue(), "no longer override", fix));
+      }
+    }
+    for (Map.Entry<String, Overriding> e : now.entrySet()) {
+      if (!overrides.containsKey(e.getKey())) {
+        throw new Refusal(overriding(project, what, e.getValue(), "override", fix));
+      }
+    }
   }
 
   /** The methods of {@code m}'s class's supertypes, transitively, that {@code m} overrides. */
@@ -227,5 +256,60 @@ final class CallTargets {
       }
     }
     return out;
+  }
+
+  /**
+   * As {@link #require(SourceProject, Collection, String, String)}, a change of override refused
+   * with the fix of changing one of the two signatures.
+   */
+  void require(SourceProject project, Collection<CompilationUnit> units, String what)
+      throws IOException {
+    require(project, units, what, "Change the parameters of one of the two first.");
+  }
+
+  /**
+   * Each method of {@code units} that overrides another, by "its place > the overridden's place"; a
+   * method of a library is known by its key.
+   */
+  private static Map<String, Overriding> overrides(Collection<CompilationUnit> units) {
+    Map<String, String> places = places(units);
+    Map<String, Overriding> out = new LinkedHashMap<>();
+    for (CompilationUnit unit : units) {
+      for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
+        IMethodBinding b = m.resolveBinding();
+        if (b == null || b.isConstructor() || Modifier.isStatic(b.getModifiers())) {
+          continue;
+        }
+        for (IMethodBinding o : overridden(b)) {
+          IMethodBinding d = o.getMethodDeclaration();
+          out.put(
+              places.get(b.getKey()) + " > " + place(d, places),
+              new Overriding(
+                  Signatures.label(b),
+                  Signatures.label(d),
+                  Jdt.fileOf(unit),
+                  unit.getLineNumber(m.getName().getStartPosition())));
+        }
+      }
+    }
+    return out;
+  }
+
+  /** The refusal for a method that would {@code verb} (start or stop overriding) another. */
+  private static String overriding(
+      SourceProject project, String what, Overriding o, String verb, String fix) {
+    return what
+        + " would make "
+        + o.label()
+        + " (line "
+        + o.line()
+        + " of "
+        + project.relative(o.file())
+        + ") "
+        + verb
+        + " "
+        + o.overridden()
+        + ". "
+        + fix;
   }
 }

@@ -1342,6 +1342,30 @@ and `type` (the new type as written).
   which to try: "List<? extends Item> can be read from but not added to, and cannot be passed
   on as List<Item>. If the code only adds to items, try List<? super Item>; if it reads and
   adds, keep List<Item>."
+- Overrides stay overrides (roadmap #159, 2026-11-13; `CallTargets`): a method of those files
+  that overrides another must still override it after the change, and none may start to:
+  "... would make Legacy.put(Object) (line 5 of com/example/Legacy.java) no longer override
+  Box.put(Object). Change the parameters of one of the two first."
+- Bounds (roadmap #159, 2026-11-13, the generics sketch's slice 3; the user chose the sketch's
+  recommendation, `change_type`, over `change_signature` for a method's bound and over a new
+  tool): `type_parameter` names a type parameter of `name`, a class (`Sorter`; an interface or
+  a record too) or a method (`Sorter.max`, or by `line`), and `type` becomes its bound, written
+  as given (`Comparable<T>`, `Object & Comparable<T>`); `type: "Object"` removes it. A method's
+  bound changes in every declaration of its family. Uses are not edited: a use outside the bound
+  is the gate's refusal ("Change that use first, or choose a bound it meets."); each call of a
+  method must keep its parameter and return types; calls keep their targets and overrides stay
+  overrides (above), with the fix "Give its class's extends its type argument first, or write
+  the bound as "Object & Comparable<T>", which keeps T's erasure." When the erasure changes, a
+  cast to the parameter (or an array of it) now checks for the new erasure: each is reported
+  through `Exceptional.change` ("the cast to T at line 8 of com/example/Box.java now checks for
+  Comparable, where it checked nothing: it throws ClassCastException for a value that is not
+  one"), and refused under `preserve_exceptions` (the user, 2026-11-13, the sketch's
+  recommendation, over always refusing and over saying nothing). Result: `changed the bound of
+  T of Sorter.max(List<T>, Comparator<T>) to Comparable<T>; 1 call keeps its types`, or
+  `removed the bound of T of Box (was Comparable<T>)`. Refused: `parameter` or `return_type`
+  with it; a type parameter `name` does not declare ("Box has no type parameter U: it has
+  T."); a method that overrides a library's. Not reported: a `T...` parameter, whose array a
+  call now creates as the new erasure.
 - Not built yet: locals, and fields declared with several names.
 
 ## `change_signature` (built)

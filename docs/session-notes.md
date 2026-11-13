@@ -497,6 +497,9 @@ Each was chosen from options; the record named beside it has the options it beat
   of an instance method) whose new target is a method its old target overrides passes
   (`Target.overrides`, by `CallTargets.overridden`, #157): `value.equals(x)` names
   `Object.equals` once `value` is a `T`, and still runs `String.equals`.
+  It also keeps overrides (#159): `of` records each method of the checked files that overrides
+  another, by "its place > the overridden's place" (`overrides`), and `require` refuses one lost
+  or gained, with the caller's fix (`require(project, units, what, fix)`).
 
 - `add_parameter` with `type_parameter` (roadmap #156, 2026-11-13) is `TypeParameters`, which
   `Tools.ADD_PARAMETER` routes to before `ByLine.named`: one `Holding` parse of the files that hold
@@ -515,6 +518,10 @@ Each was chosen from options; the record named beside it has the options it beat
   the `Holding` parse: `MethodFamily.of` with references kept; each call's and reference's types
   (`types`: return and parameters by qualified name) are read before the write and compared after
   by its kind and number in its file (`ordinal`), since the declarations' edits move offsets.
+  `change_type` with `type_parameter` (#159) is `TypeParameters.bound`, which `Tools.changeType`
+  routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
+  declaration (one for a class, the family's for a method); casts to the parameter are found by
+  the type variable's key before the write and reported when its erasure differs after.
 
 ## Testing
 
