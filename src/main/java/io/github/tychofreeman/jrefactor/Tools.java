@@ -156,12 +156,10 @@ final class Tools {
           gives int subtotal = price * qty; return subtotal + tax;.
           Identify the expression by file, the line it starts on and its exact source text. When \
           the text occurs twice on that line, pass column, the 1-based column where it starts.
-          as=constant, field or parameter makes it a private static final constant or private \
-          final field of the type, or a new parameter of the method that every call passes it \
-          to, instead of a local; it must then be literals and constants only, or, as a \
-          parameter, also the method's parameters and calls on them or on a class: each call \
-          passes it with its own arguments in their place (qty / 10 becomes bonus, and \
-          total(n + 1, 3) passes (n + 1) / 10).\
+          as=constant, field or parameter makes it a constant or field of the type, or a new \
+          parameter of the method, instead of a local; as a parameter, each call passes it with \
+          its own arguments in their place (qty / 10 becomes bonus, and total(n + 1, 3) passes \
+          (n + 1) / 10).\
           """,
           List.of(
               Arg.FILE,
@@ -610,16 +608,12 @@ final class Tools {
           """
           Swap a statement with the one before it (direction up) or after it (direction down), in \
           the same block. Identify the statement by the line it starts on.
-          The two statements must be independent. Strict (the default): they share no name that \
-          one of them writes, and at most one of them has a side effect (a call, an assignment, a \
-          new object). names_only=true relaxes that to the shared-name rule only, so two calls can \
-          swap order: pass it only when the order of the calls does not matter.
-          A return, break, continue, throw or yield never moves, and neither a statement with a \
-          side effect nor one that may throw moves past one that may leave the block early (an \
-          if that returns), nor a call past a read of what it could change. past_try=true moves \
-          a statement past a try next to it though their effects are ordered (they still share \
-          no written name): below the try it then runs only when the try completes normally, \
-          and the result says so.\
+          The two statements must be independent: by default they share no name that one of \
+          them writes, and at most one of them has a side effect (a call, an assignment, a new \
+          object). names_only=true keeps only the shared-name rule, so two calls can swap: pass \
+          it only when the order of the calls does not matter. past_try=true swaps a statement \
+          with a try next to it though their effects are ordered: below the try it then runs \
+          only when the try completes normally, and the result says so.\
           """,
           List.of(
               Arg.FILE,
@@ -675,17 +669,18 @@ final class Tools {
       new Def(
           "convert_loop",
           """
-          Rewrite a loop as another statement form that runs the same code in the same order: \
-          to=for_each turns an index for over a list or an array, for (int i = 0; i < \
-          names.size(); i++) { print(names.get(i)); }, into for (String name : names) { \
-          print(name); }, and a for over an iterator whose body starts with T e = it.next() \
-          into for (T e : source); to=iterator and to=for turn an enhanced for into a for over \
-          its iterator, or over the index of a list or an array, the element read first in the \
-          body. to=while writes a for's init before a while and its update last in the body and \
-          before each continue; to=for turns a while back into a for, the local declared just \
-          before it and the body's last assignment taking their places. to=while turns do { body \
-          } while (c); into while (true) { body if (!c) break; }, and to=do_while a while into \
-          if (c) { do { body } while (c); }. Identify the loop by the line it starts on.\
+          Rewrite a loop as another statement form that runs the same code in the same order. \
+          Identify the loop by the line it starts on; to is the form to write:
+          - for_each: from an index for over a list or an array, for (int i = 0; i < \
+          names.size(); i++) { print(names.get(i)); } becomes for (String name : names) { \
+          print(name); }; or from a for over an iterator whose body starts with T e = it.next().
+          - iterator, or for: from an enhanced for, a for over its iterator, or over the index of \
+          a list or an array, the element read first in the body.
+          - while: from a for, its init before the while and its update last in the body (and \
+          before each continue); from a do-while, while (true) { body if (!c) break; }.
+          - for: from a while, the local declared just before it and the body's last assignment \
+          taking the init's and update's places.
+          - do_while: from a while, if (c) { do { body } while (c); }.\
           """,
           List.of(
               Arg.FILE,
@@ -855,9 +850,7 @@ final class Tools {
           method its supertypes leave abstract; add members after with add_declaration.
           With test_for in place of content (Cart.total, Cart.add(int) for one overload), a test \
           file starts from its target: JUnit's imports, and a red test method that builds the \
-          receiver, calls the method and ends in fail; type the assertion in place of fail.
-          When the server runs skeleton-only (JREFACTOR_SKELETON_ONLY=1), Java content may hold \
-          only a type's header: start from declaration or test_for, and add members after.\
+          receiver, calls the method and ends in fail; type the assertion in place of fail.\
           """,
           List.of(
               Arg.FILE.described("Path of the file."),
@@ -1434,13 +1427,9 @@ final class Tools {
           statements match the same statements in any block, a local it declares standing for a \
           local the code declares and does not use after them. Every other name must mean what it \
           means in the body. So near-duplicates become calls: write the method with the \
-          differences as parameters, then fold it. In a String.format of the body, a %s whose \
-          argument is a parameter also matches constant text: "%s: %s", room, what matches \
-          "%s: temp", room, and the call passes "temp".
-          With line (and in), only the matches that start on that line are folded.
-          A match the call would not reproduce is left, and the result says why: arguments run in \
-          another order or another number of times, one moved out of a branch or past an effect, \
-          a private method called from another class.\
+          differences as parameters, then fold it.
+          With line (and in), only the matches that start on that line are folded. A match the \
+          call would not reproduce is left, and the result says why.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
