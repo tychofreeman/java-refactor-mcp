@@ -1,0 +1,1 @@
+[{"loop": "orders", "name": "o", "body": ["total = total.plus(o.amount());"]}]

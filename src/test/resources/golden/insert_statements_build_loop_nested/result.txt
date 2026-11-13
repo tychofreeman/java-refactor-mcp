@@ -1,0 +1,1 @@
+inserted 6 lines after the statement at line 15 of shop/Ledger.java; built for (Map.Entry<String, List<Order>> entry : byCustomer.entrySet()); for (Order item : entry.getValue()); Money amount; total (assigned)

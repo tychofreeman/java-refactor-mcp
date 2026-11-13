@@ -1,0 +1,1 @@
+total is a Money, which a loop cannot walk: loop takes an array, an Iterable, a Map, or (with form index) an int.

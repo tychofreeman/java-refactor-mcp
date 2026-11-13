@@ -1,0 +1,1 @@
+inserted 6 lines after the statement at line 15 of shop/Ledger.java; built for (int i = 0; i < names.length; i++); for (int j = 0; j < orders.size(); j++); for (int i = 0; i < names.length; i++)

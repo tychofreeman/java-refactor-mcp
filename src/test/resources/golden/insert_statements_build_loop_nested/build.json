@@ -1,0 +1,1 @@
+[{"loop": "byCustomer", "body": [{"loop": "entry.getValue()", "body": [{"call": "item.amount", "into": "amount"}, {"call": "total.plus", "args": ["amount"], "into": "total"}]}]}]

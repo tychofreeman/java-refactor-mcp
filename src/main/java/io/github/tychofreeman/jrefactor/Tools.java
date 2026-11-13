@@ -495,7 +495,9 @@ final class Tools {
           "into": "price"}] writes Money price = pricing.priceOf(order, customer); (into a \
           variable that is there assigns it, into return returns it), {"new": "ArrayList", \
           "into": "open", "type": "List<Order>"} writes List<Order> open = new ArrayList<>(); \
-          and a string entry is a statement as typed. The result names each type it wrote.\
+          and a string entry is a statement as typed. {"loop": "orders", "body": [...]} writes \
+          for (Order order : orders) { ... } (a Map walks its entrySet(), form index counts), \
+          the body's entries using the loop's variable. The result names each type it wrote.\
           """,
           List.of(
               Arg.FILE,

@@ -729,6 +729,26 @@ in the same turn only if it is sent after it.
     an `into` that is a variable there already; a result type that cannot be written
     (anonymous, an intersection). A checked exception the method does not declare, and an
     `into` of another type, are the gate's compile refusals.
+  - A `loop` entry (roadmap #162, 2026-11-13): `{"loop": "orders", "name": "o", "form":
+    "for_each", "type": "Order", "body": [...]}`, all but `loop` optional. `loop` is what is
+    walked: an array or an `Iterable` (`for (Order order : orders)`), a `Map` (`for
+    (Map.Entry<String, List<Order>> entry : byCustomer.entrySet())`), or with `form` `index` a
+    `List` (`i < orders.size()`), an array (`i < names.length`) or an `int` (`i < count`).
+    The element's type is read from the code and written out (a wildcard as its bound); `type`
+    gives it when it cannot be, and is refused with `form` `index`. The variable is `name`, or
+    the walked name's singular (`orders` gives `order`, else `item`), `entry` for a map, `i`
+    then `j` for an index, each made free of the locals, the fields and the build's own names
+    in scope. `body` is a list of entries as `build` is, written one indentation step in,
+    which may use the variable; an empty loop is written when it is left out. The result
+    names each head: `built for (Order order : orders); Money price`. Refused: what cannot be
+    walked ("total is a Money, which a loop cannot walk: loop takes an array, an Iterable, a
+    Map, or (with form index) an int"); a raw `Iterable` without `type` ("raw is a List with no
+    type argument, so its elements' type is not known. Pass type"); `form` `index` over what is
+    not a `List` or array ("has no index: use for_each"); a `name` that is a local or parameter
+    in scope ("total is already a local here (declared at line 15) ... leave name out and it
+    is order") or a field the variable would hide; a `form` other than `for_each` and `index`
+    (naming `convert_loop` for the others); an expression that does not resolve, unless `type`
+    is given, and then the stub `Stubs` writes for a bare name.
   - `add_case`: `file`, `line` (a switch statement or expression), `content`;
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;

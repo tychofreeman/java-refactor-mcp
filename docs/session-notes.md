@@ -439,7 +439,9 @@ Each was chosen from options; the record named beside it has the options it beat
   (`statement()` writes it; a new kind adds a key in `generator` and a case there). The drafts
   are parsed after `Imports.fix`, so a type the build names resolves before it is imported;
   entries are found again by line (`Draft.at`), one statement starting per line. A golden case
-  passes the list as `build.json`.
+  passes the list as `build.json`. A loop's body is decided one draft after its head
+  (`Build.scope` runs until nothing new is decided), since what an inner loop walks can name the
+  outer loop's variable; an entry decided in an earlier draft is not decided again (`decided`).
 
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that

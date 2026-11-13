@@ -11,29 +11,41 @@ import java.util.regex.Pattern;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchStatement;
+import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 /**
  * The generators of the {@code build} argument: a list whose entries are typed statements or
- * objects that name what to write (a call, a construction), written as statements whose types come
- * from bindings. The statements are drafted into a copy of the file, with {@code var} where a type
- * is not known yet, and that copy is parsed to read each type.
+ * objects that name what to write (a call, a construction, a loop with its body), written as
+ * statements whose types come from bindings. The statements are drafted into a copy of the file,
+ * with {@code var} where a type is not known yet, and that copy is parsed to read each type.
  */
 final class Build {
 
@@ -59,14 +71,20 @@ final class Build {
   private static final String SHAPE =
       "build is a list of entries, each a typed statement (\"return total;\") or an object that"
           + " names what to write: {\"call\": \"pricing.priceOf\", \"args\": [\"order\"], \"into\":"
-          + " \"price\"} or {\"new\": \"ArrayList\", \"into\": \"open\", \"type\":"
-          + " \"List<Order>\"}.";
+          + " \"price\"}, {\"new\": \"ArrayList\", \"into\": \"open\", \"type\":"
+          + " \"List<Order>\"} or {\"loop\": \"orders\", \"body\": [...]}.";
 
-  /** One entry of a build: a typed statement, or a call or construction to write. */
+  /** A loop variable's name in the first draft, before the walked expression's type is known. */
+  private static final String ELEMENT = "element$";
+
+  private static final String EACH = "for_each";
+  private static final String INDEX = "index";
+
+  /** One entry of a build: a typed statement, or a call, construction or loop to write. */
   private static final class Entry {
     // A typed statement, or null for a generator.
     String typed;
-    // call or new, and the method or class it names.
+    // call, new or loop, and the method, class or walked expression it names.
     String kind;
     String target;
     List<String> args = List.of();
@@ -78,11 +96,35 @@ final class Build {
     String declared;
     // Whether a construction is written with a diamond.
     boolean diamond;
+    // A loop's variable (null until chosen, unless given), form, and the entries of its body.
+    String name;
+    boolean named;
+    // Whether a call or construction's into and diamond are decided, from an earlier draft.
+    boolean decided;
+    String form = EACH;
+    List<Entry> body = List.of();
+    // What a loop walks as written (orders, byCustomer.entrySet()) or counts to (names.length);
+    // null in the first draft.
+    String walked;
     // The index of its first line among the build's lines.
     int line;
 
+    boolean loop() {
+      return typed == null && kind.equals("loop");
+    }
+
+    /** A loop's head: for (Order order : orders). */
+    String head() {
+      if (walked == null) {
+        return "for (var " + (named ? name : ELEMENT) + " : " + target + ")";
+      }
+      return form.equals(INDEX)
+          ? "for (int " + name + " = 0; " + name + " < " + walked + "; " + name + "++)"
+          : "for (" + (declared == null ? "var" : declared) + " " + name + " : " + walked + ")";
+    }
+
     boolean assigns() {
-      return typed == null && into != null && !into.equals(RETURN);
+      return typed == null && !loop() && into != null && !into.equals(RETURN);
     }
 
     String expression() {
@@ -110,7 +152,7 @@ final class Build {
   }
 
   /** The file with a build's statements in it, parsed, and the line the first of them is on. */
-  private record Draft(String text, CompilationUnit unit, int firstLine) {
+  private record Draft(String text, CompilationUnit unit, int firstLine, int shift) {
 
     /** The statement written for {@code e}. */
     Statement at(Entry e) {
@@ -121,7 +163,18 @@ final class Build {
         }
       }
       throw new Refusal(
-          "build's entry for " + e.target + " is not one statement as written: " + e.statement());
+          "build's entry for "
+              + e.target
+              + " is not one statement as written: "
+              + (e.loop() ? e.head() : e.statement()));
+    }
+
+    /** "declared at line 13" of the file as it was, for a declaration a build's loop can see. */
+    String where(ASTNode declaration) {
+      int line = Lines.number(text, declaration.getStartPosition());
+      return line < firstLine
+          ? "declared at line " + (line - shift)
+          : "declared by an earlier entry of this build";
     }
 
     /** The call or construction written for {@code e}. */
@@ -155,7 +208,8 @@ final class Build {
 
   /**
    * The statements {@code build} asks for, as they go in place of {@code start} to {@code end} of
-   * the opened file (the same offset, to insert them), at {@code indent}.
+   * the opened file (the same offset, to insert them), at {@code indent}, a body one {@code step}
+   * further in.
    */
   static Built statements(
       SourceProject project,
@@ -164,17 +218,85 @@ final class Build {
       int end,
       Object build,
       String indent,
+      String step,
       List<String> imports)
       throws IOException {
-    List<Entry> entries = entries(build);
-    // First every into as an assignment, to see which names are variables there already.
-    Draft draft = draft(project, opened, start, end, entries, indent, imports);
-    Set<String> declared = new HashSet<>();
+    List<Entry> entries = entries(build, false);
+    Place place = new Place(project, opened, start, end, indent, step, imports);
+    // First every into as an assignment, to see which names are variables there already, and
+    // every loop over what it names, to see what that is.
+    // A loop's body is decided in the draft after the loop's own head, since what it walks may
+    // name the loop's variable; then each new local and loop variable is written as var, to read
+    // its type.
+    Draft draft = place.draft(entries);
+    while (scope(entries, draft, new HashSet<>())) {
+      draft = place.draft(entries);
+    }
+    List<String> inferred = new ArrayList<>();
+    types(entries, draft, inferred);
+    return new Built(render(entries, step), inferred);
+  }
+
+  /** Where a build's statements go, to draft them there. */
+  private record Place(
+      SourceProject project,
+      Opened opened,
+      int start,
+      int end,
+      String indent,
+      String step,
+      List<String> imports) {
+
+    Draft draft(List<Entry> entries) throws IOException {
+      String before = opened.text();
+      String text =
+          before.substring(0, start)
+              + Primitives.indent(render(entries, step), indent)
+              + "\n"
+              + before.substring(Math.min(end, before.length()));
+      Edits.parses(text, "build, written as statements,");
+      Imports.Fixed fixed =
+          project.packageOf(opened.file()) == null
+              ? new Imports.Fixed(text, 0, List.of())
+              : Imports.fix(project, opened.file(), before, text, imports);
+      return new Draft(
+          fixed.text(),
+          Jdt.parse(project, opened.file(), fixed.text()),
+          Lines.number(text, start) + fixed.lineShift(),
+          fixed.lineShift());
+    }
+  }
+
+  /**
+   * Decides, from a draft, what each entry not yet decided writes: whether an into declares or
+   * assigns, a construction's diamond, a loop's form and variable, and a loop's body once its head
+   * is decided. {@code taken} are the names the build has given to variables that code at these
+   * entries can see. Returns whether anything was decided that the next draft must show.
+   */
+  private static boolean scope(List<Entry> entries, Draft draft, Set<String> taken) {
     boolean again = false;
     for (Entry e : entries) {
       if (e.typed != null) {
         continue;
       }
+      if (e.loop()) {
+        if (e.walked == null) {
+          walk(e, draft, taken);
+          again = true;
+          continue;
+        }
+        Set<String> inner = new HashSet<>(taken);
+        inner.add(e.name);
+        again |= scope(e.body, draft, inner);
+        continue;
+      }
+      if (e.decided) {
+        if (e.declares) {
+          taken.add(e.into);
+        }
+        continue;
+      }
+      e.decided = true;
       Expression x = draft.expression(e);
       if (x instanceof ClassInstanceCreation c && !e.target.contains("<") && generic(c)) {
         e.diamond = true;
@@ -187,7 +309,7 @@ final class Build {
           ((Assignment) x.getParent()).getLeftHandSide() instanceof SimpleName n
               ? n.resolveBinding()
               : null;
-      if (b instanceof IVariableBinding && !b.isRecovered() || declared.contains(e.into)) {
+      if (b instanceof IVariableBinding && !b.isRecovered() || taken.contains(e.into)) {
         if (e.type != null) {
           throw new Refusal(
               e.into
@@ -196,18 +318,27 @@ final class Build {
         }
         continue;
       }
-      declared.add(e.into);
+      taken.add(e.into);
       e.declares = true;
       e.declared = e.type;
       again = true;
     }
-    // Then each new local as var, to read its type.
-    if (again) {
-      draft = draft(project, opened, start, end, entries, indent, imports);
-    }
-    List<String> inferred = new ArrayList<>();
+    return again;
+  }
+
+  /** Checks each call and construction of the second draft and reads each type from it. */
+  private static void types(List<Entry> entries, Draft draft, List<String> inferred) {
     for (Entry e : entries) {
       if (e.typed != null) {
+        continue;
+      }
+      if (e.loop()) {
+        if (e.form.equals(EACH) && e.declared == null) {
+          Expression walked = ((EnhancedForStatement) draft.at(e)).getExpression();
+          e.declared = Extract.typeName(element(walked.resolveTypeBinding()), around(walked));
+        }
+        inferred.add(e.head());
+        types(e.body, draft, inferred);
         continue;
       }
       Expression x = draft.expression(e);
@@ -219,43 +350,210 @@ final class Build {
         inferred.add(e.declares ? e.declared + " " + e.into : e.into + " (assigned)");
       }
     }
-    return new Built(render(entries), inferred);
   }
 
-  /** The entries' statements, one after another; each entry learns its line. */
-  private static String render(List<Entry> entries) {
+  /** The entries' statements, one after another, a body one step in; each entry learns its line. */
+  private static String render(List<Entry> entries, String step) {
     List<String> lines = new ArrayList<>();
-    for (Entry e : entries) {
-      e.line = lines.size();
-      lines.addAll(List.of(e.statement().split("\n", -1)));
-    }
+    render(entries, "", step, lines);
     return String.join("\n", lines);
   }
 
-  private static Draft draft(
-      SourceProject project,
-      Opened opened,
-      int start,
-      int end,
-      List<Entry> entries,
-      String indent,
-      List<String> imports)
-      throws IOException {
-    String before = opened.text();
-    String text =
-        before.substring(0, start)
-            + Primitives.indent(render(entries), indent)
-            + "\n"
-            + before.substring(Math.min(end, before.length()));
-    Edits.parses(text, "build, written as statements,");
-    Imports.Fixed fixed =
-        project.packageOf(opened.file()) == null
-            ? new Imports.Fixed(text, 0, List.of())
-            : Imports.fix(project, opened.file(), before, text, imports);
-    return new Draft(
-        fixed.text(),
-        Jdt.parse(project, opened.file(), fixed.text()),
-        Lines.number(text, start) + fixed.lineShift());
+  private static void render(List<Entry> entries, String indent, String step, List<String> lines) {
+    for (Entry e : entries) {
+      e.line = lines.size();
+      if (e.loop()) {
+        lines.add(indent + e.head() + " {");
+        render(e.body, indent + step, step, lines);
+        lines.add(indent + "}");
+        continue;
+      }
+      for (String line : e.statement().split("\n", -1)) {
+        lines.add(line.isBlank() ? "" : indent + line);
+      }
+    }
+  }
+
+  /**
+   * Decides what a loop entry writes, from the first draft: what it walks (an array, an Iterable, a
+   * Map's entries) or counts to, and its variable's name.
+   */
+  private static void walk(Entry e, Draft draft, Set<String> taken) {
+    if (!(draft.at(e) instanceof EnhancedForStatement loop)) {
+      throw new Refusal(
+          "loop is the expression to walk (orders, byCustomer); got " + e.target + ".");
+    }
+    Expression of = loop.getExpression();
+    ITypeBinding t = of.resolveTypeBinding();
+    String operand =
+        of instanceof Name
+                || of instanceof FieldAccess
+                || of instanceof MethodInvocation
+                || of instanceof ArrayAccess
+                || of instanceof ThisExpression
+                || of instanceof ParenthesizedExpression
+            ? e.target
+            : "(" + e.target + ")";
+    boolean index = e.form.equals(INDEX);
+    boolean map = false;
+    if (t == null || t.isRecovered()) {
+      if (e.type == null || index) {
+        throw new Refusal(
+            e.target
+                + " does not resolve there: declare it in an earlier step"
+                + (index
+                    ? "."
+                    : ", or pass type (its elements' type) and it is declared as a stub."));
+      }
+      e.walked = e.target;
+    } else if (t.isArray()) {
+      e.walked = index ? operand + ".length" : e.target;
+    } else if (LoopToStream.elementOf(t) != null || is(t, "java.lang.Iterable")) {
+      if (index && !is(t, "java.util.List")) {
+        throw new Refusal(
+            e.target + " is a " + Extract.typeName(t) + ", which has no index: use for_each.");
+      }
+      if (!index && e.type == null && LoopToStream.elementOf(t) == null) {
+        throw new Refusal(
+            e.target
+                + " is a "
+                + Extract.typeName(t)
+                + (t.isRawType() ? " with no type argument" : "")
+                + ", so its elements' type is not known. Pass type (the elements' type).");
+      }
+      e.walked = index ? operand + ".size()" : e.target;
+    } else if (is(t, "java.util.Map")) {
+      if (index) {
+        throw new Refusal(
+            e.target + " is a " + Extract.typeName(t) + ", which has no index: use for_each.");
+      }
+      map = true;
+      e.walked = operand + ".entrySet()";
+    } else if (index && List.of("int", "short", "byte", "char").contains(t.getName())) {
+      e.walked = e.target;
+    } else {
+      throw new Refusal(
+          e.target
+              + " is "
+              + article(Extract.typeName(t))
+              + ", which a loop cannot walk: loop takes an array, an Iterable, a Map, or (with"
+              + " form index) an int.");
+    }
+    e.declared = index ? null : e.type;
+    String chosen = index ? "i" : map ? "entry" : Names.elementName(of);
+    for (int n = 2; !free(chosen, loop, taken); n++) {
+      chosen =
+          index && n <= 18
+              ? String.valueOf((char) ('i' + n - 1))
+              : (index ? "i" : chosen.replaceAll("\\d+$", "")) + n;
+    }
+    if (!e.named) {
+      e.name = chosen;
+      return;
+    }
+    ASTNode local = local(e.name, loop);
+    if (local != null || taken.contains(e.name)) {
+      throw new Refusal(
+          e.name
+              + " is already a local here ("
+              + (local == null ? "declared by an earlier entry of this build" : draft.where(local))
+              + "), so the loop's variable cannot have that name. Pass another name, or leave name"
+              + " out and it is "
+              + chosen
+              + ".");
+    }
+    ITypeBinding owner = fieldOwner(e.name, loop);
+    if (owner != null) {
+      throw new Refusal(
+          e.name
+              + " is a field of "
+              + Names.typeLabel(owner)
+              + ", which the loop's variable would hide in its body. Pass another name, or leave"
+              + " name out and it is "
+              + chosen
+              + ".");
+    }
+  }
+
+  private static String article(String type) {
+    return ("AEIOU".indexOf(type.charAt(0)) >= 0 ? "an " : "a ") + type;
+  }
+
+  /** The type of the elements a for-each over {@code t} gives. */
+  private static ITypeBinding element(ITypeBinding t) {
+    return t == null ? null : t.isArray() ? t.getComponentType() : LoopToStream.elementOf(t);
+  }
+
+  /** Whether {@code t} is the type named {@code qualified} or a subtype of it. */
+  private static boolean is(ITypeBinding t, String qualified) {
+    if (t == null) {
+      return false;
+    }
+    if (t.getErasure().getQualifiedName().equals(qualified)) {
+      return true;
+    }
+    for (ITypeBinding i : t.getInterfaces()) {
+      if (is(i, qualified)) {
+        return true;
+      }
+    }
+    return is(t.getSuperclass(), qualified);
+  }
+
+  /** Whether a new variable at {@code at} can be named {@code name}. */
+  private static boolean free(String name, ASTNode at, Set<String> taken) {
+    return !taken.contains(name) && local(name, at) == null && fieldOwner(name, at) == null;
+  }
+
+  /** The local or parameter named {@code name} that code at {@code at} can see, or null. */
+  private static ASTNode local(String name, ASTNode at) {
+    ASTNode child = at;
+    for (ASTNode p = at.getParent(); p != null; child = p, p = p.getParent()) {
+      List<?> before = List.of();
+      if (p instanceof Block b) {
+        before = b.statements().subList(0, b.statements().indexOf(child));
+      } else if (p instanceof SwitchStatement sw && sw.statements().contains(child)) {
+        before = sw.statements().subList(0, sw.statements().indexOf(child));
+      } else if (p instanceof ForStatement f && !f.initializers().contains(child)) {
+        before = f.initializers();
+      } else if (p instanceof EnhancedForStatement f && f.getBody() == child) {
+        before = List.of(f.getParameter());
+      } else if (p instanceof MethodDeclaration m) {
+        before = m.parameters();
+      } else if (p instanceof LambdaExpression l) {
+        before = l.parameters();
+      } else if (p instanceof CatchClause c) {
+        before = List.of(c.getException());
+      }
+      for (Object o : before) {
+        List<?> declared =
+            o instanceof VariableDeclarationStatement v
+                ? v.fragments()
+                : o instanceof VariableDeclarationExpression v ? v.fragments() : List.of(o);
+        for (Object d : declared) {
+          if (d instanceof VariableDeclaration v && v.getName().getIdentifier().equals(name)) {
+            return v;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The type around {@code at}, or a supertype or enclosing type of it, with a field {@code name}.
+   */
+  private static ITypeBinding fieldOwner(String name, ASTNode at) {
+    for (ITypeBinding t = around(at); t != null; t = t.getDeclaringClass()) {
+      for (ITypeBinding s = t; s != null; s = s.getSuperclass()) {
+        for (IVariableBinding f : s.getDeclaredFields()) {
+          if (f.getName().equals(name)) {
+            return s;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /** Refuses a call or construction that cannot be what the entry means. */
@@ -443,8 +741,8 @@ final class Build {
     return null;
   }
 
-  private static List<Entry> entries(Object build) {
-    if (!(build instanceof List<?> items) || items.isEmpty()) {
+  private static List<Entry> entries(Object build, boolean body) {
+    if (!(build instanceof List<?> items) || items.isEmpty() && !body) {
       throw new Refusal(SHAPE);
     }
     List<Entry> out = new ArrayList<>();
@@ -464,27 +762,32 @@ final class Build {
 
   private static void generator(Map<?, ?> map, Entry e) {
     List<String> kinds = new ArrayList<>();
-    for (String kind : List.of("call", "new")) {
+    for (String kind : List.of("call", "new", "loop")) {
       if (map.containsKey(kind)) {
         kinds.add(kind);
       }
     }
     if (kinds.size() != 1) {
       throw new Refusal(
-          "a build entry names one thing to write, by the key call or new; this one has "
+          "a build entry names one thing to write, by the key call, new or loop; this one has "
               + (map.isEmpty() ? "no keys" : String.join(", ", keys(map)))
               + ".");
     }
     e.kind = kinds.get(0);
-    List<String> takes = List.of(e.kind, "args", "into", "type");
+    List<String> takes =
+        e.kind.equals("loop")
+            ? List.of("loop", "name", "form", "type", "body")
+            : List.of(e.kind, "args", "into", "type");
     for (String key : keys(map)) {
       if (!takes.contains(key)) {
         throw new Refusal(
             "a "
                 + e.kind
                 + " entry takes "
-                + e.kind
-                + ", args, into and type; "
+                + String.join(", ", takes.subList(0, takes.size() - 1))
+                + " and "
+                + takes.get(takes.size() - 1)
+                + "; "
                 + key
                 + " is none of these.");
       }
@@ -496,6 +799,10 @@ final class Build {
               + " Money.zero), without its arguments: those go in args. Got "
               + e.target
               + ".");
+    }
+    if (e.kind.equals("loop")) {
+      loop(map, e);
+      return;
     }
     Object args = map.get("args");
     if (args != null) {
@@ -526,6 +833,34 @@ final class Build {
         throw new Refusal(
             "type is the type a new local is declared with, so it goes with into (its name).");
       }
+    }
+  }
+
+  private static void loop(Map<?, ?> map, Entry e) {
+    if (map.containsKey("name")) {
+      e.name = string(map, "name", e).strip();
+      e.named = true;
+      if (!NAME.matcher(e.name).matches()) {
+        throw new Refusal("name is the loop variable's name; got " + e.name + ".");
+      }
+    }
+    if (map.containsKey("form")) {
+      e.form = string(map, "form", e).strip();
+      if (!e.form.equals(EACH) && !e.form.equals(INDEX)) {
+        throw new Refusal(
+            "form is for_each (the default) or index; got "
+                + e.form
+                + ". For another form, build the for_each and send convert_loop on its line.");
+      }
+    }
+    if (map.containsKey("type")) {
+      e.type = string(map, "type", e).strip();
+      if (e.form.equals(INDEX)) {
+        throw new Refusal("type is the elements' type of a for_each; an index loop has none.");
+      }
+    }
+    if (map.containsKey("body")) {
+      e.body = entries(map.get("body"), true);
     }
   }
 
