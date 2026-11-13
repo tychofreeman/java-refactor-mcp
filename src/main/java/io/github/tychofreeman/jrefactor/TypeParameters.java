@@ -1,9 +1,11 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NameQualifiedType;
@@ -40,6 +43,7 @@ import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -107,6 +111,11 @@ final class TypeParameters {
     String rel = args.required("file");
     String name = args.required("name");
     Path file = project.javaFile(rel);
+    if (Files.isRegularFile(file)
+        && Declarations.find(Jdt.parseSyntax(Files.readString(file)), name, rel).decl()
+            instanceof MethodDeclaration) {
+      return toMethod(project, args, written, parameter, value);
+    }
     String simple = name.substring(name.lastIndexOf('.') + 1);
     Holding holding = Holding.of(project, simple, file);
     CompilationUnit home = holding.units().get(file);
@@ -117,7 +126,8 @@ final class TypeParameters {
     if (!(named.decl() instanceof AbstractTypeDeclaration type)) {
       throw new Refusal(
           named.label()
-              + " is not a class. add_parameter with type_parameter takes the name of a class of "
+              + " is not a class or a method. add_parameter with type_parameter takes the name of"
+              + " a class or a method of "
               + rel
               + ".");
     }
@@ -684,7 +694,10 @@ final class TypeParameters {
             named
                 + " is static, and a static member cannot use "
                 + parameter
-                + ", the type parameter of its class. Leave it out of members.");
+                + ", the type parameter of its class. Leave it out of members; a static method can"
+                + " take a type parameter of its own (add_parameter with type_parameter and name "
+                + named
+                + ").");
       }
       List<Type> declared = new ArrayList<>();
       if (d instanceof FieldDeclaration f) {
@@ -737,19 +750,7 @@ final class TypeParameters {
             named + " is not a field, a method or a constructor. Name those in members.");
       }
       int before = edits.size();
-      for (Type root : declared) {
-        for (Type t : Nodes.all(root, Type.class)) {
-          ITypeBinding b = t.resolveBinding();
-          boolean head = t.getParent() instanceof ParameterizedType p && p.getType() == t;
-          boolean within = false;
-          for (TextEdit e : edits) {
-            within |= e.start() <= t.getStartPosition() && Nodes.end(t) <= e.end();
-          }
-          if (!head && !within && b != null && v.qualified().equals(b.getQualifiedName())) {
-            edits.add(new TextEdit(t.getStartPosition(), Nodes.end(t), parameter));
-          }
-        }
-      }
+      retype(declared, edits, v, parameter);
       if (edits.size() == before) {
         throw new Refusal(
             named
@@ -761,6 +762,26 @@ final class TypeParameters {
       }
     }
     return edits;
+  }
+
+  /**
+   * Adds to {@code edits} one that writes {@code parameter} for each type in {@code declared} that
+   * is {@code v}, the type arguments in them included, outermost first.
+   */
+  private static void retype(List<Type> declared, List<TextEdit> edits, Value v, String parameter) {
+    for (Type root : declared) {
+      for (Type t : Nodes.all(root, Type.class)) {
+        ITypeBinding b = t.resolveBinding();
+        boolean head = t.getParent() instanceof ParameterizedType p && p.getType() == t;
+        boolean within = false;
+        for (TextEdit e : edits) {
+          within |= e.start() <= t.getStartPosition() && Nodes.end(t) <= e.end();
+        }
+        if (!head && !within && b != null && v.qualified().equals(b.getQualifiedName())) {
+          edits.add(new TextEdit(t.getStartPosition(), Nodes.end(t), parameter));
+        }
+      }
+    }
   }
 
   /**
@@ -784,5 +805,323 @@ final class TypeParameters {
       }
     }
     return Declarations.find(unit, label + "." + member, rel).decl();
+  }
+
+  /**
+   * add_parameter with type_parameter on a method: it and every declaration of its family declare
+   * the type parameter, and each {@code value} in their parameter and return types becomes it.
+   * Calls are not edited: each must infer {@code value} for it and keep the types it had.
+   */
+  private static Outcome toMethod(
+      SourceProject project, Args args, String written, String parameter, String value)
+      throws Exception {
+    MethodFamily family =
+        MethodFamily.of(project, args, true, "so its type parameters cannot change.");
+    MethodDeclaration target = family.target;
+    String label = family.label;
+    Precondition.require(
+        Precondition.that(
+            () -> !args.has("members"),
+            () ->
+                "members names the members of a class that get its type parameter; for a method,"
+                    + " every "
+                    + value
+                    + " in its parameter and return types becomes "
+                    + parameter
+                    + ". Leave members out."),
+        Precondition.that(
+            () -> !target.isConstructor(),
+            () ->
+                label
+                    + " is a constructor. Add the type parameter to its class (name "
+                    + target.getName().getIdentifier()
+                    + ")."),
+        Precondition.that(
+            () -> target.getParent() instanceof TypeDeclaration,
+            () ->
+                label
+                    + " is declared in a record, an enum or an anonymous class; add_parameter adds a"
+                    + " type parameter to a method of a class or an interface only, so far."),
+        Precondition.that(
+            () -> family.lambdas.isEmpty(),
+            () ->
+                label
+                    + " is implemented by a lambda ("
+                    + (family.lambdas.isEmpty()
+                        ? ""
+                        : family.lambdas.get(0).file().rel()
+                            + ", line "
+                            + family.lambdas.get(0).file().line(family.lambdas.get(0).node()))
+                    + "), and a lambda cannot implement a generic method. Turn the lambda into an"
+                    + " anonymous class first (convert_lambda with to anonymous)."));
+    for (Signatures.Decl d : family.decls) {
+      for (SimpleName n : Nodes.all(d.m(), SimpleName.class)) {
+        if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
+          throw new Refusal(
+              t.isTypeVariable()
+                  ? Signatures.label(d.binding())
+                      + " already names a type parameter "
+                      + parameter
+                      + " (line "
+                      + d.file().line(n)
+                      + " of "
+                      + d.file().rel()
+                      + "). Choose another name."
+                  : parameter
+                      + " is a type that "
+                      + Signatures.label(d.binding())
+                      + " already names (line "
+                      + d.file().line(n)
+                      + " of "
+                      + d.file().rel()
+                      + "); as its type parameter, "
+                      + parameter
+                      + " would hide it. Choose another name.");
+        }
+      }
+    }
+    Signatures.Source home = family.sources.get(project.javaFile(args.required("file")));
+    TypeDeclaration owner = (TypeDeclaration) target.getParent();
+    List<String> chosen = args.list("imports");
+    Value v = value(project, home.file(), home.text(), owner, value, chosen);
+    if (v.qualified() == null) {
+      throw new Refusal(
+          value
+              + " does not resolve in "
+              + home.rel()
+              + ", so where it stands in "
+              + label
+              + " cannot be found. Pass a type that file can name, or import it first.");
+    }
+    List<TextEdit> inParameters = new ArrayList<>();
+    for (Object o : target.parameters()) {
+      retype(List.of(((SingleVariableDeclaration) o).getType()), inParameters, v, parameter);
+    }
+    List<TextEdit> inReturn = new ArrayList<>();
+    if (target.getReturnType2() != null) {
+      retype(List.of(target.getReturnType2()), inReturn, v, parameter);
+    }
+    if (inParameters.isEmpty()) {
+      throw new Refusal(
+          inReturn.isEmpty()
+              ? label
+                  + " has no "
+                  + v.text()
+                  + " in its parameter or return types, so nothing in it would become "
+                  + parameter
+                  + ". Name a method whose parameters use it."
+              : label
+                  + " has "
+                  + v.text()
+                  + " in its return type only: "
+                  + parameter
+                  + " would be in the return type only, so no call could infer it from its"
+                  + " arguments. Name a method whose parameters use it.");
+    }
+    String what = "adding the type parameter " + parameter + " to " + label;
+
+    // Each call's and reference's types before, by its kind and number in its file.
+    Map<Path, Map<String, List<String>>> before = new LinkedHashMap<>();
+    Map<ASTNode, Signatures.Source> uses = new LinkedHashMap<>();
+    for (Signatures.Call c : family.calls) {
+      uses.put(c.node(), c.file());
+    }
+    Set<String> keys = new HashSet<>();
+    for (Signatures.Decl d : family.decls) {
+      keys.add(Signatures.key(d.binding()));
+    }
+    for (Signatures.Source s : family.sources.values()) {
+      for (MethodReference r : Nodes.all(s.unit(), MethodReference.class)) {
+        IMethodBinding b = r.resolveMethodBinding();
+        if (b != null && keys.contains(Signatures.key(b.getMethodDeclaration()))) {
+          uses.put(r, s);
+        }
+      }
+    }
+    for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
+      IMethodBinding b = callBinding(u.getKey());
+      if (b != null) {
+        before
+            .computeIfAbsent(u.getValue().file(), k -> new LinkedHashMap<>())
+            .put(
+                ordinal(u.getKey()),
+                List.of(types(b), Integer.toString(u.getValue().line(u.getKey()))));
+      }
+    }
+    int index = target.typeParameters().size();
+
+    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+    for (Signatures.Decl d : family.decls) {
+      List<TextEdit> list = edits.computeIfAbsent(d.file().file(), k -> new ArrayList<>());
+      MethodDeclaration m = d.m();
+      List<?> declared = m.typeParameters();
+      int at = declared.size();
+      String beforeName = args.string("before");
+      if (beforeName != null) {
+        List<String> names = new ArrayList<>();
+        for (Object o : declared) {
+          names.add(((TypeParameter) o).getName().getIdentifier());
+        }
+        at = names.indexOf(beforeName);
+        if (m == target) {
+          index = at;
+        }
+        if (at < 0) {
+          throw new Refusal(
+              Signatures.label(d.binding())
+                  + " has no type parameter "
+                  + beforeName
+                  + " to put "
+                  + parameter
+                  + " before"
+                  + (names.isEmpty() ? "." : ": it has " + String.join(", ", names) + "."));
+        }
+      }
+      if (declared.isEmpty()) {
+        int start = m.getReturnType2().getStartPosition();
+        list.add(new TextEdit(start, start, "<" + written + "> "));
+      } else {
+        list.add(inserted(declared, at, written));
+      }
+      List<Type> roots = new ArrayList<>();
+      roots.add(m.getReturnType2());
+      for (Object o : m.parameters()) {
+        roots.add(((SingleVariableDeclaration) o).getType());
+      }
+      retype(roots, list, v, parameter);
+    }
+    Map<Path, String> texts = new LinkedHashMap<>();
+    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
+      String old = family.sources.get(e.getKey()).text();
+      texts.put(
+          e.getKey(),
+          Imports.fix(project, e.getKey(), old, TextEdit.apply(old, e.getValue(), 0), chosen)
+              .text());
+    }
+    List<CompilationUnit> units = new ArrayList<>();
+    for (Signatures.Source s : family.sources.values()) {
+      units.add(s.unit());
+    }
+    CallTargets targets = CallTargets.of(units);
+    String fix =
+        "Where a body needs a "
+            + v.text()
+            + ", give "
+            + parameter
+            + " a bound that has what it uses (type_parameter \""
+            + parameter
+            + " extends ...\"), or choose another value.";
+    Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
+    Map<Path, CompilationUnit> after =
+        Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
+    int calls = 0;
+    int references = 0;
+    for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
+      CompilationUnit unit = after.get(e.getKey());
+      for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
+        ASTNode n = byOrdinal(unit, c.getKey());
+        IMethodBinding b = n == null ? null : callBinding(n);
+        String was = c.getValue().get(0);
+        String now = b == null ? "nothing" : types(b);
+        if (!was.equals(now)) {
+          throw new Refusal(
+              what
+                  + " would change the types of the call at line "
+                  + c.getValue().get(1)
+                  + " of "
+                  + project.relative(e.getKey())
+                  + ": it would infer "
+                  + parameter
+                  + " as "
+                  + inferred(b, index)
+                  + ", not "
+                  + v.text()
+                  + ". Give it an argument or a target typed with "
+                  + v.text()
+                  + " first, or leave the method as it is.");
+        }
+        if (n instanceof MethodReference) {
+          references++;
+        } else {
+          calls++;
+        }
+      }
+    }
+    targets.require(project, after.values(), what);
+    int others = family.decls.size() - 1;
+    return new Outcome(
+        "added the type parameter "
+            + parameter
+            + " to "
+            + label
+            + (others == 0
+                ? ""
+                : " and the "
+                    + others
+                    + (others == 1 ? " declaration" : " declarations")
+                    + " it overrides or that override it")
+            + "; "
+            + v.text()
+            + " became "
+            + parameter
+            + " in "
+            + (inReturn.isEmpty() ? "its parameter types" : "its parameter and return types")
+            + "; "
+            + calls
+            + (calls == 1 ? " call" : " calls")
+            + (references == 0
+                ? ""
+                : " and "
+                    + references
+                    + (references == 1 ? " method reference" : " method references"))
+            + (calls + references == 1 ? " infers " : " infer ")
+            + v.text()
+            + ", none changed",
+        stubs);
+  }
+
+  /** The method a call or a method reference of the family runs, as it resolves there. */
+  private static IMethodBinding callBinding(ASTNode n) {
+    return switch (n) {
+      case MethodInvocation m -> m.resolveMethodBinding();
+      case SuperMethodInvocation m -> m.resolveMethodBinding();
+      case MethodReference r -> r.resolveMethodBinding();
+      default -> null;
+    };
+  }
+
+  /** The return and parameter types of {@code b}, by their qualified names. */
+  private static String types(IMethodBinding b) {
+    List<String> out = new ArrayList<>();
+    out.add(b.getReturnType().getQualifiedName());
+    for (ITypeBinding t : b.getParameterTypes()) {
+      out.add(t.getQualifiedName());
+    }
+    return String.join(" ", out);
+  }
+
+  /** Where {@code n} stands in its file: its kind and its number among the nodes of that kind. */
+  private static String ordinal(ASTNode n) {
+    return n.getClass().getSimpleName() + " " + Nodes.all(n.getRoot(), n.getClass()).indexOf(n);
+  }
+
+  /** The node of {@code unit} that {@link #ordinal} names; null when there is none. */
+  private static ASTNode byOrdinal(CompilationUnit unit, String ordinal) {
+    String kind = ordinal.substring(0, ordinal.indexOf(' '));
+    int k = Integer.parseInt(ordinal.substring(ordinal.indexOf(' ') + 1));
+    for (ASTNode n : Nodes.all(unit, ASTNode.class)) {
+      if (n.getClass().getSimpleName().equals(kind) && k-- == 0) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  /** The type a call infers for the type parameter at {@code index}, as the result names it. */
+  private static String inferred(IMethodBinding b, int index) {
+    if (b != null && b.getTypeArguments().length > index) {
+      return Extract.typeName(b.getTypeArguments()[index]);
+    }
+    return "another type";
   }
 }

@@ -491,6 +491,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `members` (#157) is `TypeParameters.typed`: each named member found as `Declarations.find`
   finds one, and in its declared types (not its body) each type node that binds to `value`'s
   qualified name, outermost first, becomes the parameter; the body is the gate's.
+  A method (#158) is `TypeParameters.toMethod`, routed by a syntax-only `Declarations.find` before
+  the `Holding` parse: `MethodFamily.of` with references kept; each call's and reference's types
+  (`types`: return and parameters by qualified name) are read before the write and compared after
+  by its kind and number in its file (`ordinal`), since the declarations' edits move offsets.
 
 ## Testing
 

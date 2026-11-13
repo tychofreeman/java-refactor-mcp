@@ -1175,7 +1175,10 @@ final class Tools {
           parameter to put it ahead of. members names the fields, methods and constructors of the \
           class (value, Box(String), get) whose declared types become T where they name value: \
           private final String value becomes private final T value, and String get() T get(). \
-          Their bodies are not changed.
+          Their bodies are not changed. With name a method, the method and every declaration it \
+          overrides or that overrides it get the type parameter, and value becomes T in their \
+          parameter and return types: static String first(List<String> xs) becomes static <T> T \
+          first(List<T> xs). Calls are not changed; each still infers value.
           name finds the method as replace_declaration does (Type.member, member, m(int, String) \
           for an overload; a constructor by its type's name); or, in place of name, line finds it \
           from its declaration or a call on that line of file, in any file (column picks one of two \
@@ -1199,7 +1202,7 @@ final class Tools {
               Arg.string(
                   "type_parameter",
                   "Instead of parameter and type: a type parameter as written, with its bound,"
-                      + " for the class name names."),
+                      + " for the class or method name names."),
               Arg.strings(
                   "members",
                   "With type_parameter: the fields, methods and constructors (Box(String)) whose"

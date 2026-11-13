@@ -1,0 +1,1 @@
+is implemented by a lambda (com/example/Source.java, line 9), and a lambda cannot implement a generic method. Turn the lambda into an anonymous class first (convert_lambda with to anonymous).
