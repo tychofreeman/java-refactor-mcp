@@ -1019,16 +1019,38 @@ declaration) (#342, the user's choices of 2026-11-12).
 - `add_throws`: appended to each declaration's `throws` that lacks it, imported.
 - `remove_throws`: dropped from each `throws` clause that names it (by simple name, or by the
   qualified name given), the clause with it when it was alone.
-- Calls are not edited. Result: `changed the signature of Move.apply(Rename) (return type void;
-  throws IOException added) in 2 declarations (<files>)`.
-
+- `callers`, with `add_throws` of a checked exception (the user, 2026-11-13; no body throws it
+  yet, so each way keeps behavior):
+  - `propagate` (the default): each method that calls one that now throws it, outside a try that
+    catches it, declares it too, in its whole family, and its callers are followed in turn; a
+    lambda's functional interface declares it when the project declares that interface. Where it
+    cannot be declared, the call is caught: in a method named by `stop_at` (`Type.method`,
+    several separated by commas), in an override of a library's method (`run()`), in a lambda of
+    a library's interface, in an initializer block.
+  - `catch`: every call that does not handle it is caught, and no caller's signature changes.
+  - `refuse`: calls are left alone, and one that does not handle it is the gate's refusal.
+  - A catch rethrows unchecked, `throw new UncheckedIOException(e)` for an `IOException` and
+    `throw new IllegalStateException(e)` otherwise, the variable `e` or the first free `e2`,
+    `e3`. A call in the try block or the resources of a try gets one more catch clause on that
+    try, after its last one. Another gets a new try around its statement, through the end of its
+    block when the statement declares a local that later statements use; an expression lambda
+    becomes a block lambda around the try. Tries that would nest or overlap are written as one.
+  - An unchecked exception (a `RuntimeException` or an `Error`) needs none of this.
+- Calls are not edited otherwise. Result: `changed the signature of Move.apply(Rename) (return
+  type void; throws IOException added; its callers now declare it: Service.put(String); caught
+  and rethrown unchecked at <file> line 9) in 3 declarations (<files>)`, each list cut at eight.
 Refusals: none of the three options; a type that does not parse; a constructor's return type, or
 a `[]` written after the parameters; an override of a library's method; a `return e;` whose `e`
 may do or throw something and is not a statement ("Put it in a local first"); a `remove_throws`
-no declaration of the family names; and the gate's, for a call that uses the result or does not
-handle a new exception, a body that still throws a removed one, or a catch of one no longer
-thrown: "Calls are not edited: one that uses the result, or does not handle a new exception,
-changes in the same batch as this step, with check "end"."
+no declaration of the family names; a `callers` that is not one of the three, or a `stop_at`
+without `add_throws` and `propagate`; an added exception that does not resolve ("Pass its
+qualified name in imports"); a `stop_at` method no chain of calls reaches; a throwing method
+used as a method reference where the exception cannot be declared ("Turn it into a lambda first
+(convert_lambda)"); a call in a field's initializer or an enum constant, or in `this(...)` or
+`super(...)`; a statement to wrap that shares its line with other code or holds a text block;
+and the gate's, for a call that uses the result, a body that still throws a removed exception, or
+a catch of one no longer thrown: "Calls are not edited ...: one that uses the result changes in
+the same batch as this step, with check "end"."
 
 ## `add_supertype` (built)
 Adds a supertype to a top-level class or interface, in its header. Arguments: `file`, `name`
