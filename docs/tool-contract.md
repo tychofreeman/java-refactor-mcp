@@ -999,8 +999,38 @@ and `type` (the new type as written).
   bodies, or each call's result. Copies, returns and ordering comparisons are allowed.
 - Not built yet: locals, and fields declared with several names.
 
-## `add_supertype` (built)
+## `change_signature` (built)
 
+Arguments: `file`, `name` (`Type.method`, with parameter types for an overload) or `line` and
+`column` as `add_parameter` takes them, and at least one of `return_type` (the new type as
+written, or `void`), `add_throws` and `remove_throws` (exception types, separated by commas);
+optional `imports`, `preserve_exceptions`. The change is made in the method, in every override
+and implementation (its family), and in each method of the project that a method reference
+implements it with (`Renamer::moveFile` where a `Move` is wanted makes `moveFile` one more
+declaration) (#342, the user's choices of 2026-11-12).
+
+- `return_type`: each declaration's return type. For `void`, each `return e;` of those bodies
+  and of the block lambdas that implement the method is rewritten: `return;` when `e` does nothing
+  and cannot throw (names, literals, `this.x`, operators on them other than `/`, `%` and a
+  string's `+` of an object), dropped when it ends the body on a line of its own; `e; return;`
+  when `e` is a call, a `new`, an assignment or an increment, in braces where the return had none.
+  An expression lambda that is such a statement stays; one without effects becomes `{}`. Another
+  type is checked as `change_type`'s `return_type` is (the primitive and boxed rule).
+- `add_throws`: appended to each declaration's `throws` that lacks it, imported.
+- `remove_throws`: dropped from each `throws` clause that names it (by simple name, or by the
+  qualified name given), the clause with it when it was alone.
+- Calls are not edited. Result: `changed the signature of Move.apply(Rename) (return type void;
+  throws IOException added) in 2 declarations (<files>)`.
+
+Refusals: none of the three options; a type that does not parse; a constructor's return type, or
+a `[]` written after the parameters; an override of a library's method; a `return e;` whose `e`
+may do or throw something and is not a statement ("Put it in a local first"); a `remove_throws`
+no declaration of the family names; and the gate's, for a call that uses the result or does not
+handle a new exception, a body that still throws a removed one, or a catch of one no longer
+thrown: "Calls are not edited: one that uses the result, or does not handle a new exception,
+changes in the same batch as this step, with check "end"."
+
+## `add_supertype` (built)
 Adds a supertype to a top-level class or interface, in its header. Arguments: `file`, `name`
 (the top-level type), `relation` (`extends` or `implements`, the clause the supertype goes in)
 and `supertype` (as written, such as `Base` or `List<String>`).

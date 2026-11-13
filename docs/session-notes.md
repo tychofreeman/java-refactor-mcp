@@ -155,6 +155,12 @@ Each was chosen from options; the record named beside it has the options it beat
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+- `change_signature` (#342, 2026-11-12, the user asked for it and chose each): a new tool, over
+  `add_throws`/`remove_throws` options on `change_type` (whose `return_type` stays); the
+  implementations follow (overrides, lambdas, method-referenced methods, the returns of a body
+  made void) and calls are left to the same batch, over declarations only and over an option that
+  adds the exception to each caller up the chain; removing a `throws` a body still needs is
+  refused, over removing it only from the declarations that do not.
 - `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
   type (`type`) or the tool declares a nested interface named after the method, over
   java.util.function when it fits and over always an interface; the superclass's old constructors
@@ -282,6 +288,12 @@ Each was chosen from options; the record named beside it has the options it beat
   key it now throws on goes through `Exceptional.change`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop` is the statement forms.
+
+- `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
+  `references` (a method reference is kept in `family.references`, not refused; `family.sources`
+  holds each parsed file, so a referenced method's file is edited once) and
+  `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `pure` and
+  `statement`; the gate judges calls, bodies that still throw and unreachable catches.
 
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
   of the files that name the subclass and the superclass's file, text edits per file, each
