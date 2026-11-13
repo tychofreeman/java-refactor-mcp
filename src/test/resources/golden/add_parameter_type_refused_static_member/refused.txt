@@ -1,1 +1,1 @@
-Box.DEFAULT is static, and a static member cannot use T, the type parameter of its class. Leave it out of members.
+Box.DEFAULT is static, and a static member cannot use T, the type parameter of its class. Leave it out of members; a static method can take a type parameter of its own (add_parameter with type_parameter and name Box.DEFAULT).

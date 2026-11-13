@@ -1,0 +1,1 @@
+would change the types of the call at line 7 of com/example/Use.java: it would infer T as Object, not String.

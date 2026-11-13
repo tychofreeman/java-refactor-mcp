@@ -528,7 +528,9 @@ typed `T` yet.
   hide it. Choose another name."), or already has as a type parameter; a `before` the class
   does not declare; a `value` that is a type parameter of the class; a use of the class's name
   that does not resolve. With `members`: a static member ("Box.DEFAULT is static, and a static
-  member cannot use T, the type parameter of its class. Leave it out of members."); a field
+  member cannot use T, the type parameter of its class. Leave it out of members; a static
+  method can take a type parameter of its own (add_parameter with type_parameter and name
+  Box.DEFAULT)."); a field
   created as an array of `value` ("Box.items is created as new String[8], and an array of T
   cannot be created. Leave items out of members, or make it a List first."); a field declared
   with others in one statement ("Split it into one declaration per field first."); a method that
@@ -539,7 +541,25 @@ typed `T` yet.
 - `parameter` and `type` are no longer required by the schema, since `type_parameter` takes
   their place; without it the handler refuses a call that lacks them: "add_parameter needs
   parameter and type, ...; or type_parameter, to add a type parameter to a class."
-- Not built yet: a method's type parameter, records and interfaces.
+- A method (roadmap #158): with `name` a method (`Lists.first`), the method and every
+  declaration of its family (`MethodFamily`: those it overrides and that override it) declare
+  the type parameter (`static <T> T first(List<T> xs)`; `before` among the method's own), and
+  each `value` in their parameter and return types becomes it. Calls and method references are
+  not edited: after writing, each must have the parameter and return types it had, inferring
+  `value`, and run what it ran (`CallTargets`). Result: `added the type parameter T to
+  Lists.first(List<String>); String became T in its parameter and return types; 2 calls and 1
+  method reference infer String, none changed`. Refused: `members` with it; a constructor; a
+  method of a record, an enum or an anonymous class (not built yet); a family a lambda implements
+  ("... and a lambda cannot implement a generic method. Turn the lambda into an anonymous class
+  first (convert_lambda with to anonymous)."); `value` in the return type only ("T would be in
+  the return type only, so no call could infer it from its arguments. Name a method whose
+  parameters use it."), or nowhere in the signature; a name the family already uses for a type
+  or a type parameter; a call that would infer another type ("would change the types of the call
+  at line 7 of com/example/Use.java: it would infer T as Object, not String. Give it an argument
+  or a target typed with String first, or leave the method as it is."); a method that overrides
+  a library's.
+- Not built yet: records and interfaces as the class, and writing `Lists.<String>first(...)` at a
+  call that would infer another type (issue #375).
 
 ## `type_switch_to_method` (built)
 

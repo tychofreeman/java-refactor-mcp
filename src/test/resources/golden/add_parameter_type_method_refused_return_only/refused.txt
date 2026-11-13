@@ -1,0 +1,1 @@
+Names.empty(int) has String in its return type only: T would be in the return type only, so no call could infer it from its arguments. Name a method whose parameters use it.
