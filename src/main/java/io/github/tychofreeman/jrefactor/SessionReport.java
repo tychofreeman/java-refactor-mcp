@@ -126,6 +126,7 @@ final class SessionReport {
     List<String> noResult = new ArrayList<>();
     Map<String, Integer> reads = new TreeMap<>();
     List<String> pending = new ArrayList<>();
+    Typed typed = new Typed();
     for (Call c : calls.values()) {
       JsonNode e = c.event;
       String tool = e.path("tool_name").asString("");
@@ -146,6 +147,7 @@ final class SessionReport {
         }
         List<Map.Entry<String, JsonNode>> steps = steps(ours, input);
         for (Map.Entry<String, JsonNode> step : steps) {
+          typed.add(step.getKey(), step.getValue());
           Tools.Kind kind = KINDS.get(step.getKey());
           if (kind == Tools.Kind.REFACTORING) {
             refactorings++;
@@ -174,6 +176,7 @@ final class SessionReport {
           continue;
         }
         for (Map.Entry<String, JsonNode> step : viaCli.steps()) {
+          typed.add(step.getKey(), step.getValue());
           Tools.Kind kind = KINDS.get(step.getKey());
           if (kind == Tools.Kind.REFACTORING) {
             refactorings++;
@@ -218,6 +221,19 @@ final class SessionReport {
         .append(", ")
         .append(plural(edits, "edit step"))
         .append("\n");
+    if (!typed.carriers.isEmpty()) {
+      List<String> parts = new ArrayList<>();
+      typed.carriers.forEach((carrier, n) -> parts.add(carrier + " " + n));
+      out.append("- edit steps by what carried the code: ")
+          .append(String.join(", ", parts))
+          .append("\n- Java typed in edits: ")
+          .append(plural(typed.java, "character"))
+          .append(", ")
+          .append(typed.inBuild)
+          .append(" in build strings; names in build: ")
+          .append(plural(typed.names, "character"))
+          .append("\n");
+    }
     if (cliCalls > 0) {
       out.append("- bin/jrefactor calls (in Bash): ").append(cliCalls).append("\n");
     }
@@ -517,6 +533,74 @@ final class SessionReport {
     out.append("- ").append(title).append(": ").append(items.size()).append("\n");
     for (String item : items) {
       out.append("  - ").append(item).append("\n");
+    }
+  }
+
+  /**
+   * What carried the code of the edit steps to Java files (build, surround, constructor, ...,
+   * content, new), the Java typed in them (content, new, declaration, and the strings of build that
+   * are statements), and the characters of the other strings given to build (names, arguments,
+   * conditions).
+   */
+  private static final class Typed {
+    final Map<String, Integer> carriers = new TreeMap<>();
+    int java;
+    int inBuild;
+    int names;
+
+    void add(String tool, JsonNode args) {
+      if (KINDS.get(tool) != Tools.Kind.EDIT || !args.path("file").asString("").endsWith(".java")) {
+        return;
+      }
+      String carrier = "other";
+      for (String key :
+          List.of(
+              "build",
+              "surround",
+              "constructor",
+              "implement",
+              "test_for",
+              "declaration",
+              "content",
+              "new")) {
+        if (args.has(key)) {
+          carrier = key;
+          break;
+        }
+      }
+      count(carriers, carrier);
+      for (String key : List.of("content", "new", "declaration")) {
+        java += args.path(key).asString("").length();
+      }
+      built(args.path("build"));
+    }
+
+    private void built(JsonNode node) {
+      if (node.isString()) {
+        java += node.asString().length();
+        inBuild += node.asString().length();
+      } else if (node.isArray()) {
+        for (JsonNode entry : node.values()) {
+          built(entry);
+        }
+      } else if (node.isObject()) {
+        for (Map.Entry<String, JsonNode> key : node.properties()) {
+          if (key.getKey().equals("body")) {
+            built(key.getValue());
+          } else {
+            named(key.getValue());
+          }
+        }
+      }
+    }
+
+    private void named(JsonNode node) {
+      if (node.isString()) {
+        names += node.asString().length();
+      }
+      for (JsonNode n : node.isArray() ? node.values() : List.<JsonNode>of()) {
+        named(n);
+      }
     }
   }
 }

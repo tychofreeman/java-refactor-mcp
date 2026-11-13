@@ -71,6 +71,8 @@ class SessionReportTest {
         """
         - tool calls: 10
         - through jrefactor: 2 refactoring steps, 1 edit step
+        - edit steps by what carried the code: content 1
+        - Java typed in edits: 219 characters, 0 in build strings; names in build: 0 characters
         - refused by jrefactor: 1
         - by hand: 2
           - Edit docs/a.md
@@ -154,5 +156,37 @@ class SessionReportTest {
     assertTrue(report.contains("bin/jrefactor calls (in Bash): 3"), report);
     assertTrue(report.contains("refused by jrefactor: 1"), report);
     assertTrue(report.contains("- by hand: 0"), report);
+  }
+
+  /** Edit steps to Java by what carried the code, and the Java typed against the names built. */
+  @Test
+  void countsWhatCarriedTheCodeOfEachEdit() {
+    String post = "PostToolUse";
+    call(
+        post,
+        "mcp__jrefactor__insert_statements",
+        "{\"file\": \"src/A.java\", \"line\": 3, \"build\": [{\"call\": \"Money.zero\", \"into\":"
+            + " \"total\"}, \"return total;\"]}",
+        "inserted 2 lines");
+    call(
+        post,
+        "mcp__jrefactor__replace_statements",
+        "{\"file\": \"src/A.java\", \"start_line\": 3, \"end_line\": 3, \"surround\": \"if (ready)\"}",
+        "replaced lines 3-3");
+    call(
+        post,
+        "mcp__jrefactor__insert_statements",
+        "{\"file\": \"src/A.java\", \"line\": 3, \"content\": \"x++;\"}",
+        "inserted 1 line");
+
+    String report = SessionReport.report(log);
+    assertTrue(
+        report.contains("- edit steps by what carried the code: build 1, content 1, surround 1\n"),
+        report);
+    assertTrue(
+        report.contains(
+            "- Java typed in edits: 17 characters, 13 in build strings; names in build: 15"
+                + " characters\n"),
+        report);
   }
 }
