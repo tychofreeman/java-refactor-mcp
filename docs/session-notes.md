@@ -331,7 +331,11 @@ Each was chosen from options; the record named beside it has the options it beat
   parameters: names in the extracted nodes that bind to the class's type variables, closed over
   bounds, each `TypeParameter` copied as text. The class's clause is the names, passed to
   `AddSupertype.run` as the supertype's text. For `kind=class` (#145) the nodes are the whole
-  members and the old superclass's type; `PullUp` needed no change.
+  members and the old superclass's type; `PullUp` needed no change. Since #179 (2026-11-13) the
+  new class is abstract when the old superclass leaves an abstract method no member implements
+  (`Skeleton.leftAbstract`, which `unimplemented` now calls) or a member is abstract, and passes
+  through each old-superclass constructor the class's `super(...)` calls use
+  (`ExtractSupertype.constructors`); the defaults chosen are in the roadmap row.
 
 - A type written into code names a member type of the type around that code, or of one around
   that, by its simple name: `Extract.typeName(b, at)` (#328, 2026-11-10; `extract_function`

@@ -194,14 +194,11 @@ final class MemberMove {
   static TextEdit removal(String text, BodyDeclaration m) {
     int start = Lines.start(text, m.getStartPosition());
     int end = Lines.end(text, Nodes.end(m) - 1);
-    if (end < text.length() && text.charAt(end) == '\n') {
-      end++;
-    }
     int next = text.indexOf('\n', end);
     if (next >= 0 && text.substring(end, next).isBlank()) {
       end = next + 1;
-    } else if (start >= 2 && text.charAt(start - 1) == '\n') {
-      int before = Lines.start(text, start - 2);
+    } else if (start >= 1 && text.charAt(start - 1) == '\n') {
+      int before = Lines.start(text, start - 1);
       if (text.substring(before, start - 1).isBlank()) {
         start = before;
       }
