@@ -146,7 +146,10 @@ Each was chosen from options; the record named beside it has the options it beat
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
   the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
-  file's step (`MemberMove.reindented`, #316); it had written two spaces. A field an edit adds
+  file's step (`MemberMove.reindented`, #316); it had written two spaces. The first member of an
+  enum that has constants only goes through `MemberMove.afterConstants` (#141), which writes the
+  `;` after the last constant: `Declarations.plan` (so stubs too) and `MemberMove.appendTo` ask it
+  before their own end-of-type branch, since an enum's constants are not `bodyDeclarations()`. A field an edit adds
   that an earlier field's initializer reads moves before that field (`FieldOrder`, called in
   `Stubs.declare`, #357), so the repair also sees a reader a later batch step writes.
 - `fold` of an instance method (the user, 2026-11-08, over the same class only and over any
@@ -169,6 +172,12 @@ Each was chosen from options; the record named beside it has the options it beat
   java.util.function when it fits and over always an interface; the superclass's old constructors
   stay, delegating with its own body's function, over adding the parameter to every construction;
   the subclass is deleted and its uses retyped, over keeping it as a holder of the function.
+- Enums (2026-11-13, `docs/sessions/enums-sketch.md`): the user chose the sketch's recommendations.
+  Question 1 is option (a): the fixes and pins of increments 1 to 3, then slice 2 (a field on an
+  enum, `add_parameter` with `values`), then slice 3 (`type_switch_to_method` on an enum), over
+  all three slices now and over only the fixes. Slice 1 (constants to an enum, increments 9 to 11)
+  and increment 12 (old-style switches) are not built: they wait for a friction entry or a task
+  that needs them. Every other open question of the sketch: its Recommended option.
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.

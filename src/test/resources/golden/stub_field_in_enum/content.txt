@@ -1,0 +1,3 @@
+Size largest() {
+  return Size.HUGE;
+}

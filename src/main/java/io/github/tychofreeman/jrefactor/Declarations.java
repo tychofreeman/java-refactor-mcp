@@ -171,12 +171,25 @@ final class Declarations {
               + " to "
               + where;
       BodyDeclaration m = e.getKey().member();
+      TextEdit afterConstants = MemberMove.afterConstants(text, owner.decl(), indent, joined);
       if (m != null && !e.getKey().before()) {
         int at = Lines.end(text, end(m));
         changes.add(new Change(at, at, "\n" + joined + "\n", 1, joined.length(), said));
       } else if (m != null) {
         int at = Lines.start(text, m.getStartPosition());
         changes.add(new Change(at, at, joined + "\n\n", 0, joined.length(), said));
+      } else if (afterConstants != null) {
+        // An enum with no member yet: its constants end with a ; first.
+        String insert = afterConstants.text();
+        int blockAt = insert.length() - joined.length() - 1;
+        changes.add(
+            new Change(
+                afterConstants.start(),
+                afterConstants.end(),
+                insert,
+                blockAt,
+                joined.length(),
+                said));
       } else {
         int close = end(owner.decl());
         int at = Lines.start(text, close);
