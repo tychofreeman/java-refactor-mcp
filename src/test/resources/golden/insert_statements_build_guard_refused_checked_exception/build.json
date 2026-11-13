@@ -1,0 +1,1 @@
+[{"guard": "path.isEmpty()", "exit": "throw", "value": "IOException"}]

@@ -497,7 +497,12 @@ final class Tools {
           "into": "open", "type": "List<Order>"} writes List<Order> open = new ArrayList<>(); \
           and a string entry is a statement as typed. {"loop": "orders", "body": [...]} writes \
           for (Order order : orders) { ... } (a Map walks its entrySet(), form index counts), \
-          the body's entries using the loop's variable. The result names each type it wrote.\
+          the body's entries using the loop's variable. {"guard": "quantity <= 0", "exit": \
+          "throw", "value": "IllegalArgumentException", "message": "\\"bad\\""} writes if \
+          (quantity <= 0) { throw new IllegalArgumentException("bad"); }, and {"guard_null": \
+          "order", "exit": "require"} writes Objects.requireNonNull(order); (exits: return with \
+          value when the method returns one, continue, break, throw with the exception's type). \
+          The result names each type it wrote.\
           """,
           List.of(
               Arg.FILE,

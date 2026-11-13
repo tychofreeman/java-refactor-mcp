@@ -98,7 +98,7 @@ final class Surround {
   }
 
   /** Whether a try within {@code top}, around {@code n}, catches {@code t}. */
-  private static boolean caught(ASTNode n, ASTNode top, ITypeBinding t) {
+  static boolean caught(ASTNode n, ASTNode top, ITypeBinding t) {
     ASTNode child = n;
     for (ASTNode p = n.getParent(); p != null && child != top; p = p.getParent()) {
       if (p instanceof TryStatement ts && ts.getBody() == child) {
@@ -125,7 +125,7 @@ final class Surround {
     return false;
   }
 
-  private static boolean checked(ITypeBinding t) {
+  static boolean checked(ITypeBinding t) {
     for (ITypeBinding s = t; s != null; s = s.getSuperclass()) {
       String q = s.getQualifiedName();
       if (q.equals("java.lang.RuntimeException") || q.equals("java.lang.Error")) {

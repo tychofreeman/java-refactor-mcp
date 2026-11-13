@@ -15,6 +15,7 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -27,6 +28,8 @@ import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -37,6 +40,7 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -73,13 +77,18 @@ final class Build {
       "build is a list of entries, each a typed statement (\"return total;\") or an object that"
           + " names what to write: {\"call\": \"pricing.priceOf\", \"args\": [\"order\"], \"into\":"
           + " \"price\"}, {\"new\": \"ArrayList\", \"into\": \"open\", \"type\":"
-          + " \"List<Order>\"} or {\"loop\": \"orders\", \"body\": [...]}.";
+          + " \"List<Order>\"}, {\"loop\": \"orders\", \"body\": [...]} or {\"guard\":"
+          + " \"quantity <= 0\", \"exit\": \"return\", \"value\": \"0\"}.";
 
   /** A loop variable's name in the first draft, before the walked expression's type is known. */
   private static final String ELEMENT = "element$";
 
   private static final String EACH = "for_each";
   private static final String INDEX = "index";
+
+  private static final String THROW = "throw";
+
+  private static final String REQUIRE = "require";
 
   /** One entry of a build: a typed statement, or a call, construction or loop to write. */
   private static final class Entry {
@@ -109,9 +118,39 @@ final class Build {
     String walked;
     // The index of its first line among the build's lines.
     int line;
+    // A guard's exit (return, continue, break, throw or require), what it returns or throws, and
+    // the message of a throw or require.
+    String exit;
+    String value;
+    String message;
 
     boolean loop() {
       return typed == null && kind.equals("loop");
+    }
+
+    boolean guard() {
+      return typed == null && (kind.equals("guard") || kind.equals("guard_null"));
+    }
+
+    /**
+     * What a guard leaves on: its condition as typed, or what guard_null names compared to null.
+     */
+    String condition() {
+      return kind.equals("guard") ? target : operand(target) + " == null";
+    }
+
+    /** A guard's statement, its exit one {@code step} in: if (cond) { continue; }. */
+    String guarded(String step) {
+      if (exit.equals(REQUIRE)) {
+        return "Objects.requireNonNull(" + target + (message == null ? "" : ", " + message) + ");";
+      }
+      String leave =
+          switch (exit) {
+            case RETURN -> value == null ? "return;" : "return " + value + ";";
+            case THROW -> "throw new " + value + "(" + (message == null ? "" : message) + ");";
+            default -> exit + ";";
+          };
+      return "if (" + condition() + ") {\n" + step + leave + "\n}";
     }
 
     /** A loop's head: for (Order order : orders). */
@@ -277,7 +316,7 @@ final class Build {
   private static boolean scope(List<Entry> entries, Draft draft, Set<String> taken) {
     boolean again = false;
     for (Entry e : entries) {
-      if (e.typed != null) {
+      if (e.typed != null || e.guard()) {
         continue;
       }
       if (e.loop()) {
@@ -333,6 +372,10 @@ final class Build {
       if (e.typed != null) {
         continue;
       }
+      if (e.guard()) {
+        checkGuard(e, draft);
+        continue;
+      }
       if (e.loop()) {
         if (e.form.equals(EACH) && e.declared == null) {
           Expression walked = ((EnhancedForStatement) draft.at(e)).getExpression();
@@ -369,7 +412,7 @@ final class Build {
         lines.add(indent + "}");
         continue;
       }
-      for (String line : e.statement().split("\n", -1)) {
+      for (String line : (e.guard() ? e.guarded(step) : e.statement()).split("\n", -1)) {
         lines.add(line.isBlank() ? "" : indent + line);
       }
     }
@@ -477,7 +520,7 @@ final class Build {
   }
 
   private static String article(String type) {
-    return ("AEIOU".indexOf(type.charAt(0)) >= 0 ? "an " : "a ") + type;
+    return ("AEIOUaeiou".indexOf(type.charAt(0)) >= 0 ? "an " : "a ") + type;
   }
 
   /** The type of the elements a for-each over {@code t} gives. */
@@ -763,14 +806,15 @@ final class Build {
 
   private static void generator(Map<?, ?> map, Entry e) {
     List<String> kinds = new ArrayList<>();
-    for (String kind : List.of("call", "new", "loop")) {
+    for (String kind : List.of("call", "new", "loop", "guard", "guard_null")) {
       if (map.containsKey(kind)) {
         kinds.add(kind);
       }
     }
     if (kinds.size() != 1) {
       throw new Refusal(
-          "a build entry names one thing to write, by the key call, new or loop; this one has "
+          "a build entry names one thing to write, by the key call, new, loop, guard or"
+              + " guard_null; this one has "
               + (map.isEmpty() ? "no keys" : String.join(", ", keys(map)))
               + ".");
     }
@@ -778,7 +822,9 @@ final class Build {
     List<String> takes =
         e.kind.equals("loop")
             ? List.of("loop", "name", "form", "type", "body")
-            : List.of(e.kind, "args", "into", "type");
+            : e.kind.startsWith("guard")
+                ? List.of(e.kind, "exit", "value", "message")
+                : List.of(e.kind, "args", "into", "type");
     for (String key : keys(map)) {
       if (!takes.contains(key)) {
         throw new Refusal(
@@ -803,6 +849,10 @@ final class Build {
     }
     if (e.kind.equals("loop")) {
       loop(map, e);
+      return;
+    }
+    if (e.kind.startsWith("guard")) {
+      exits(map, e);
       return;
     }
     Object args = map.get("args");
@@ -911,5 +961,160 @@ final class Build {
   private static boolean declares(ASTNode body, String name) {
     return Nodes.all(body, VariableDeclaration.class).stream()
         .anyMatch(v -> v.getName().getIdentifier().equals(name));
+  }
+
+  /** Reads a guard's exit, value and message, refusing what the exit does not take. */
+  private static void exits(Map<?, ?> map, Entry e) {
+    List<String> exits = new ArrayList<>(List.of(RETURN, "continue", "break", THROW));
+    if (e.kind.equals("guard_null")) {
+      exits.add(REQUIRE);
+    }
+    String choices =
+        String.join(", ", exits.subList(0, exits.size() - 1))
+            + " or "
+            + exits.get(exits.size() - 1);
+    if (!map.containsKey("exit")) {
+      throw new Refusal("a " + e.kind + " entry needs exit, how it leaves: " + choices + ".");
+    }
+    e.exit = string(map, "exit", e).strip();
+    if (!exits.contains(e.exit)) {
+      throw new Refusal("exit of a " + e.kind + " is " + choices + "; got " + e.exit + ".");
+    }
+    if (map.containsKey("value")) {
+      e.value = string(map, "value", e).strip();
+      if (!e.exit.equals(RETURN) && !e.exit.equals(THROW)) {
+        throw new Refusal(
+            "value is what return returns or what throw throws; " + e.exit + " takes none.");
+      }
+    } else if (e.exit.equals(THROW)) {
+      throw new Refusal(
+          "throw needs value, the type of the exception to throw (IllegalArgumentException).");
+    }
+    if (map.containsKey("message")) {
+      e.message = string(map, "message", e).strip();
+      if (!e.exit.equals(THROW) && !e.exit.equals(REQUIRE)) {
+        throw new Refusal(
+            "message is the exception's message, for throw or require; " + e.exit + " takes none.");
+      }
+    }
+  }
+
+  /**
+   * Refuses a guard that cannot mean what it says where it is: a condition that is not boolean, a
+   * primitive compared to null, a return without the value its method needs or with one it cannot
+   * take, a continue or break with nothing to leave, a checked exception nothing declares.
+   */
+  private static void checkGuard(Entry e, Draft draft) {
+    Statement s = draft.at(e);
+    Expression tested = null;
+    if (s instanceof IfStatement i) {
+      tested = i.getExpression();
+      if (e.kind.equals("guard_null") && tested instanceof InfixExpression n) {
+        tested = n.getLeftOperand();
+      }
+    } else if (s instanceof ExpressionStatement x
+        && x.getExpression() instanceof MethodInvocation m
+        && !m.arguments().isEmpty()) {
+      tested = (Expression) m.arguments().get(0);
+    }
+    if (tested == null) {
+      throw new Refusal(
+          "build's entry for " + e.target + " is not one statement as written: " + e.guarded("  "));
+    }
+    ITypeBinding t = tested.resolveTypeBinding();
+    if (t != null && !t.isRecovered()) {
+      if (e.kind.equals("guard")
+          && !t.getName().equals("boolean")
+          && !t.getQualifiedName().equals("java.lang.Boolean")) {
+        throw new Refusal(e.target + " is " + article(Extract.typeName(t)) + ", not a condition.");
+      }
+      if (e.kind.equals("guard_null") && t.isPrimitive()) {
+        throw new Refusal(e.target + " is " + article(t.getName()) + ", which is never null.");
+      }
+    }
+    ASTNode owner = owner(s);
+    IMethodBinding m =
+        owner instanceof MethodDeclaration d
+            ? d.resolveBinding()
+            : owner instanceof LambdaExpression l ? l.resolveMethodBinding() : null;
+    String label =
+        m == null
+            ? "the code there"
+            : owner instanceof LambdaExpression ? "the lambda" : Signatures.label(m);
+    String when = e.kind.equals("guard") ? e.target : e.target + " is null";
+    if (e.exit.equals(RETURN) && m != null) {
+      ITypeBinding r = m.getReturnType();
+      boolean none = m.isConstructor() || r.getName().equals("void");
+      if (none && e.value != null) {
+        throw new Refusal(label + " returns nothing, so return takes no value. Leave value out.");
+      }
+      if (!none && e.value == null) {
+        throw new Refusal(
+            label
+                + " returns "
+                + Extract.typeName(r, around(s))
+                + ", so return needs a value. Pass value: what to return when "
+                + when
+                + ".");
+      }
+    }
+    if (e.exit.equals("continue") || e.exit.equals("break")) {
+      boolean out = e.exit.equals("break");
+      boolean inSwitch = false;
+      for (ASTNode p = s.getParent(); p != null && p != owner; p = p.getParent()) {
+        inSwitch |= p instanceof SwitchStatement;
+      }
+      if (Effects.loopOf(s, owner) == null && !(out && inSwitch)) {
+        throw new Refusal(
+            "The guard is not inside a loop"
+                + (out ? " or a switch" : "")
+                + " there, so there is nothing to "
+                + e.exit
+                + ". The exits there are return and throw.");
+      }
+    }
+    if (e.exit.equals(THROW)) {
+      ThrowStatement thrown = Nodes.all(s, ThrowStatement.class).get(0);
+      ITypeBinding x = thrown.getExpression().resolveTypeBinding();
+      if (x == null
+          || x.isRecovered()
+          || !Surround.checked(x)
+          || Surround.caught(thrown, owner, x)) {
+        return;
+      }
+      if (m != null && List.of(m.getExceptionTypes()).stream().anyMatch(x::isSubTypeCompatible)) {
+        return;
+      }
+      String name = Extract.typeName(x, around(s));
+      throw new Refusal(
+          label
+              + " does not declare "
+              + name
+              + ". Send change_signature with add_throws "
+              + name
+              + " before this step in the same batch (its callers follow), or throw an unchecked"
+              + " exception.");
+    }
+  }
+
+  /** The method, initializer or lambda whose body {@code s} is in. */
+  private static ASTNode owner(ASTNode s) {
+    ASTNode p = s.getParent();
+    while (p != null && !(p instanceof BodyDeclaration) && !(p instanceof LambdaExpression)) {
+      p = p.getParent();
+    }
+    return p;
+  }
+
+  /**
+   * {@code x} as the operand of a comparison: in parentheses unless it is a name, call or access.
+   */
+  private static String operand(String x) {
+    String outside = x;
+    for (String inner = ""; !inner.equals(outside); ) {
+      inner = outside;
+      outside = outside.replaceAll("\\([^()]*\\)", "_");
+    }
+    return outside.matches("[\\p{L}\\p{N}_$.\\[\\]]+") ? x : "(" + x + ")";
   }
 }

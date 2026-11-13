@@ -1,0 +1,1 @@
+[{"guard": "quantity <= 0", "exit": "throw", "value": "IllegalArgumentException", "message": "\"quantity must be positive: \" + quantity"}]

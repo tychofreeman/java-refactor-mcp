@@ -806,6 +806,27 @@ in the same turn only if it is sent after it.
     4 lines; built for (Order order : orders)`. Refused as a `loop` entry is, and for a key
     other than those four ("surround's loop takes loop, name, form and type: its body is the
     statements from start_line to end_line. To write other statements, send build.").
+  - A `guard` entry (roadmap #164, 2026-11-13): `{"guard": "quantity <= 0", "exit": "throw",
+    "value": "IllegalArgumentException", "message": "\"quantity must be positive\""}` writes
+    `if (quantity <= 0) { throw new IllegalArgumentException("quantity must be positive"); }`,
+    the exit one step in. `guard` is the condition as typed; `guard_null` names an expression
+    and writes `x == null` (in parentheses when it is not a name, call or access). `exit` is
+    `return` (with `value` when the method or lambda returns one), `continue`, `break`, `throw`
+    (`value` the exception's type, `message` its argument), or for `guard_null` `require`,
+    which writes `Objects.requireNonNull(x)` or `Objects.requireNonNull(x, message)`, imported.
+    No return value, exception or message is guessed. The result adds nothing after the usual
+    line (`; imported java.util.Objects` for `require`). Refused: no or another `exit`;
+    `value` with `continue`, `break` or `require`, and `message` with other than `throw` or
+    `require`; `throw` without `value`; a condition that is not boolean ("quantity is an int,
+    not a condition"); `guard_null` of a primitive ("quantity is an int, which is never null");
+    `return` without a value the method needs ("Ledger.totalFor(String) returns Money, so
+    return needs a value. Pass value: what to return when orders.isEmpty()"), or with one in a
+    method that returns nothing; `continue` outside a loop, `break` outside a loop or switch
+    ("The guard is not inside a loop there, so there is nothing to continue. The exits there
+    are return and throw"); a checked exception the method neither declares nor catches
+    around the guard ("Ledger.load(String) does not declare IOException. Send change_signature
+    with add_throws IOException before this step in the same batch (its callers follow), or
+    throw an unchecked exception").
   - `add_case`: `file`, `line` (a switch statement or expression), `content`;
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;

@@ -1,0 +1,1 @@
+inserted 5 lines before the statement at line 15 of shop/Ledger.java; built for (Order o : orders)

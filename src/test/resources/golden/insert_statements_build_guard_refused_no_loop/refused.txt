@@ -1,0 +1,1 @@
+The guard is not inside a loop there, so there is nothing to continue. The exits there are return and throw.

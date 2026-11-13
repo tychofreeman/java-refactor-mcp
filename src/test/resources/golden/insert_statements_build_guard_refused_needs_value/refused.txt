@@ -1,0 +1,1 @@
+Ledger.totalFor(String) returns Money, so return needs a value. Pass value: what to return when orders.isEmpty().

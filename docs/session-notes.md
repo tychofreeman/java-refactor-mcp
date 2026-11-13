@@ -449,6 +449,9 @@ Each was chosen from options; the record named beside it has the options it beat
   passes the list as `build.json`. A loop's body is decided one draft after its head
   (`Build.scope` runs until nothing new is decided), since what an inner loop walks can name the
   outer loop's variable; an entry decided in an earlier draft is not decided again (`decided`).
+  A guard (#164) needs no decision: it is written as typed (`Entry.guarded`) and checked in
+  the last draft (`checkGuard`), as a call is; `surround`'s loop object (#163) is one `loop`
+  entry whose body is the replaced lines (`Build.around`).
 
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
