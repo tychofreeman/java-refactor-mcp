@@ -51,7 +51,7 @@ final class TypeSwitch {
    * implements), its pattern variable (or the selector's name for a default), and its body: the
    * expression it gives, or its statements.
    */
-  private record Case(ITypeBinding type, String variable, ASTNode body) {}
+  record Case(ITypeBinding type, String variable, ASTNode body) {}
 
   /**
    * type_switch_to_method: the switch (expression or statement) or instanceof chain on {@code
@@ -89,7 +89,7 @@ final class TypeSwitch {
             ? sw.getExpression()
             : node instanceof SwitchStatement ss ? ss.getExpression() : null;
     if (over != null && over.resolveTypeBinding() instanceof ITypeBinding e && e.isEnum()) {
-      return EnumSwitch.run(project, opened, node, over, e, name, line);
+      return EnumSwitch.run(project, opened, node, over, e, name, line, args.string("as"));
     }
     Expression selector;
     ITypeBinding result = null;
@@ -146,7 +146,7 @@ final class TypeSwitch {
                 + " "
                 + name
                 + "() {\n"
-                + body(text, fallback, result != null)
+                + body(text, fallback, result != null, "    ")
                 + "\n  }";
     edits
         .computeIfAbsent(sFile, k -> new ArrayList<>())
@@ -168,7 +168,7 @@ final class TypeSwitch {
               + " "
               + name
               + "() {\n"
-              + body(text, c, result != null)
+              + body(text, c, result != null, "    ")
               + "\n  }";
       edits
           .computeIfAbsent(f, k -> new ArrayList<>())
@@ -210,10 +210,11 @@ final class TypeSwitch {
   }
 
   /**
-   * The body of the method a case becomes, indented for a member: {@code return} its expression
-   * (when the switch gives a value), else its statements, the pattern variable as the receiver.
+   * The body of the method a case becomes, indented by {@code indent}: {@code return} its
+   * expression (when the switch gives a value), else its statements, the pattern variable as the
+   * receiver.
    */
-  private static String body(String text, Case c, boolean value) {
+  static String body(String text, Case c, boolean value, String indent) {
     String b = asReceiver(text, c);
     if (c.body() instanceof Expression) {
       b = (value ? "return " : "") + b + ";";
@@ -225,7 +226,7 @@ final class TypeSwitch {
               .replaceFirst("^[ \\t]*\\n", "")
               .stripTrailing();
     }
-    return Primitives.indent(b, "    ");
+    return Primitives.indent(b, indent);
   }
 
   /** The cases of a switch's {@code statements}: arrow cases, each a type pattern or default. */

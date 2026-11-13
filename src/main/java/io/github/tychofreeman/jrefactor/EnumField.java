@@ -170,7 +170,7 @@ final class EnumField {
    * name, or declares or inherits a method of that name without parameters, which the accessor
    * would be.
    */
-  private static void checkName(
+  static void checkName(
       ITypeBinding type, String simple, String parameter, MethodDeclaration constructor) {
     for (IVariableBinding f : type.getDeclaredFields()) {
       if (f.getName().equals(parameter)) {

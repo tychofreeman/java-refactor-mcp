@@ -1046,13 +1046,20 @@ final class Tools {
           null) becomes a field: with name label, case RED -> "r"; case GREEN, BLUE -> "cool"; \
           gives RED("r"), GREEN("cool"), BLUE("cool"), a field set by the enum's constructor and \
           read by label(), and the switch becomes c.label(); a default gives the value of every \
-          constant no case names.\
+          constant no case names. Otherwise each constant a case names overrides the method with \
+          its case's body, in the constant's own body (RED { @Override public String label() \
+          {...} }), the switch's value as this, and the enum declares it abstract, or with the \
+          default's body; as=method or as=field chooses.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("line", "1-based line the switch, or the first if, starts on.")
                   .required(),
-              Arg.string("name", "The new method's name.").required()),
+              Arg.string("name", "The new method's name.").required(),
+              Arg.string(
+                  "as",
+                  "Optional, over an enum: field or method; default a field when every case gives"
+                      + " a constant.")),
           Kind.REFACTORING,
           TypeSwitch::run);
 

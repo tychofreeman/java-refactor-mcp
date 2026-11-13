@@ -1,0 +1,1 @@
+the case of RED gives c.name().toLowerCase(), which is not a constant, so it cannot be a field's value. Leave out as, or pass as method, for a method in each constant.
