@@ -107,7 +107,7 @@ final class TypeSwitch {
       cases = chain(first, text, selector, project);
     }
     ITypeBinding s = selector.resolveTypeBinding();
-    Path sFile = s == null ? null : fileOf(project, s);
+    Path sFile = s == null ? null : fileAround(project, s);
     ITypeBinding r0 = result;
     Precondition.require(
         Precondition.that(
@@ -131,7 +131,7 @@ final class TypeSwitch {
     texts.putIfAbsent(sFile, Files.readString(sFile));
     for (Case c : cases) {
       if (c.type() != null) {
-        Path f = fileOf(project, c.type());
+        Path f = fileAround(project, c.type());
         texts.putIfAbsent(f, Files.readString(f));
       }
     }
@@ -161,7 +161,7 @@ final class TypeSwitch {
           throw new Refusal(c.type().getName() + " already declares " + name + "().");
         }
       }
-      Path f = fileOf(project, c.type());
+      Path f = fileAround(project, c.type());
       String method =
           "@Override\n  public "
               + r
@@ -304,7 +304,7 @@ final class TypeSwitch {
     IVariableBinding variable = p.getPatternVariable2().resolveBinding();
     ITypeBinding bound = variable == null ? null : variable.getType();
     ITypeBinding t = bound == null ? null : bound.getErasure();
-    if (t == null || fileOf(project, t) == null) {
+    if (t == null || fileAround(project, t) == null) {
       throw new Refusal(
           "the case "
               + label
@@ -451,15 +451,23 @@ final class TypeSwitch {
     return TextEdit.apply(text.substring(base, Nodes.end(e)), edits, 0);
   }
 
-  /** The top-level declaration of {@code t} in {@code unit}. */
-  private static AbstractTypeDeclaration declaration(CompilationUnit unit, ITypeBinding t) {
-    for (Object o : unit.types()) {
-      AbstractTypeDeclaration d = (AbstractTypeDeclaration) o;
-      if (d.getName().getIdentifier().equals(t.getErasure().getName())) {
+  /**
+   * The declaration of {@code t}, a top-level or member type, in {@code unit}: found by its name
+   * with its enclosing types, so a unit parsed without bindings serves too.
+   */
+  static AbstractTypeDeclaration declaration(CompilationUnit unit, ITypeBinding t) {
+    String label = Names.typeLabel(t);
+    for (AbstractTypeDeclaration d : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+      String named = d.getName().getIdentifier();
+      ASTNode p = d.getParent();
+      for (; p instanceof AbstractTypeDeclaration outer; p = p.getParent()) {
+        named = outer.getName().getIdentifier() + "." + named;
+      }
+      if (p instanceof CompilationUnit && named.equals(label)) {
         return d;
       }
     }
-    throw new Refusal(t.getName() + " is not a top-level type of its file.");
+    throw new Refusal(t.getName() + " is not a type of its file.");
   }
 
   /** The project file that declares the top-level type {@code t}, or null. */
@@ -489,5 +497,20 @@ final class TypeSwitch {
       p = p.getParent();
     }
     return p == sw;
+  }
+
+  /**
+   * The project file that declares {@code t}, a top-level type or a member type (the file of its
+   * outermost type), or null, as for a local or anonymous class.
+   */
+  static Path fileAround(SourceProject project, ITypeBinding t) throws IOException {
+    ITypeBinding top = t.getErasure();
+    while (top.getDeclaringClass() != null) {
+      if (top.isLocal() || top.isAnonymous()) {
+        return null;
+      }
+      top = top.getDeclaringClass();
+    }
+    return fileOf(project, top);
   }
 }

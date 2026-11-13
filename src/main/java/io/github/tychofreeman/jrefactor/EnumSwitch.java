@@ -91,12 +91,12 @@ final class EnumSwitch {
       int line,
       String as)
       throws Exception {
-    Path eFile = TypeSwitch.fileOf(project, e);
+    Path eFile = TypeSwitch.fileAround(project, e);
     if (eFile == null) {
       throw new Refusal(
           "the switch is over "
               + e.getName()
-              + ", which is not a top-level enum of the project's to declare "
+              + ", which is not an enum of the project's to declare "
               + name
               + " on.");
     }
@@ -495,14 +495,11 @@ final class EnumSwitch {
     }
   }
 
-  /** The declaration of the top-level enum {@code e} in {@code unit}. */
+  /** The declaration of the enum {@code e}, top-level or a member, in {@code unit}. */
   private static EnumDeclaration declaration(CompilationUnit unit, ITypeBinding e) {
-    for (Object o : unit.types()) {
-      if (o instanceof EnumDeclaration d
-          && d.getName().getIdentifier().equals(e.getErasure().getName())) {
-        return d;
-      }
+    if (TypeSwitch.declaration(unit, e) instanceof EnumDeclaration d) {
+      return d;
     }
-    throw new Refusal(e.getName() + " is not a top-level enum of its file.");
+    throw new Refusal(e.getName() + " is not an enum of its file.");
   }
 }

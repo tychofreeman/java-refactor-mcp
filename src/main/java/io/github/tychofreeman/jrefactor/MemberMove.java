@@ -229,7 +229,9 @@ final class MemberMove {
     List<?> members = type.bodyDeclarations();
     if (members.isEmpty()) {
       int open = text.lastIndexOf('{', brace - 1);
-      return List.of(new TextEdit(open + 1, brace, "\n" + member + "\n"));
+      // The closing brace keeps the indentation of the line it was on, a member type's header.
+      return List.of(
+          new TextEdit(open + 1, brace, "\n" + member + "\n" + Lines.indentOf(text, brace)));
     }
     int first = ((ASTNode) members.get(0)).getStartPosition();
     int last = Nodes.end(((ASTNode) members.get(members.size() - 1)));
@@ -239,7 +241,7 @@ final class MemberMove {
       // The members share the line of both braces: start them on a line of their own.
       edits.add(new TextEdit(open + 1, first, "\n" + indent));
     }
-    edits.add(new TextEdit(last, brace, "\n\n" + member + "\n"));
+    edits.add(new TextEdit(last, brace, "\n\n" + member + "\n" + Lines.indentOf(text, brace)));
     return edits;
   }
 
