@@ -383,6 +383,9 @@ Each was chosen from options; the record named beside it has the options it beat
   by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
   constant would overlap a body written after it. `TypeSwitch.body` takes the indentation, and
   `TypeSwitch.Case` is shared.
+  A member type is found by `TypeSwitch.fileAround` (the file of its outermost type; `fileOf`
+  stays top-level only, as `InlineClass`, `SubclassToStrategy` and `ByLine` rely on its null for a
+  member type) and `TypeSwitch.declaration` (by `Names.typeLabel`, without bindings) (#154).
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`. As a parameter (#125, #161) the expression

@@ -634,6 +634,13 @@ method form it becomes the method's body, each `yield` whose target is that swit
 switch a statement inside one) is refused, as before: "the case of RED has yield 5;, which in the
 new method would leave it instead of the code around the switch."
 
+Roadmap #154, 2026-11-13 (increment 8): the enum, the switch's interface or abstract class, and
+each case's type may be member types (`Shelf.Level`, `Shape.Circle`), not only top-level ones:
+each is written in the file of its outermost type. A local or anonymous class is still refused.
+A member type whose body is on one line (`record Circle(double r) implements Shape {}`) is opened
+up with its closing brace at the indentation of its header (`MemberMove.appendTo`, which had put
+it at column 0).
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`
