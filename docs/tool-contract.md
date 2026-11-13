@@ -308,14 +308,17 @@ there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `fi
 - `kind=interface`: `<Supertype>.java` in the class's package declares the
   signatures of the named methods (public instance methods only, with their
   `throws`), and the class gains `implements <Supertype>` (as `add_supertype`).
-- From a generic class (roadmap #144, 2026-11-13; `kind=interface` so far), the new type
-  declares exactly the class's type parameters its signatures name, found by binding, and those
+- From a generic class (roadmap #144 and #145, 2026-11-13), the new type declares exactly the
+  class's type parameters its members name (an interface: the signatures; a class: the whole
+  members and the old superclass's type), found by binding, and those
   their bounds name, in the class's order, each as the class writes it; the class passes their
   names. `Repo<K extends Comparable<K>, V>` with `V find(K key)` gives `interface Finder<K
   extends Comparable<K>, V>` and `implements Finder<K, V>`; with `V first()`, `Source<V>`; with
   `int size()`, `Sized`. Bounds are copied exactly so the interface's methods erase to what the
   class's do, and no bridge method appears. A generic method's own type parameters travel in
-  its signature.
+  its signature. `Repo<K, V> extends Store<V>` with `cache` and `evict` gives `class Cached<K,
+  V> extends Store<V>` and `Repo<K, V> extends Cached<K, V>`; `pull_up` then moves each
+  member's text whole, and the names mean the same because the new class declares them.
 - `kind=class`: `<Supertype>.java` extends the class's old superclass, if any,
   and takes its place in the class's `extends`; each member moves into it as
   `pull_up` moves it (fields and methods), with `pull_up`'s refusals.
@@ -327,8 +330,7 @@ there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `fi
   parameters ("V is a type parameter of Repo: in Repo's header the name would mean it, not the
   new interface. Choose another name."); a bound that names a private type ("the bound of K
   uses the private type Repo.Key, which Finder, in its own file, cannot name. Make Repo.Key
-  package-private or move it to its own file first (move)."); `kind=class` from a generic class,
-  until it is built (the refusal gives the steps: `create_file`, `add_supertype`, `pull_up`).
+  package-private or move it to its own file first (move).").
 
 ## `convert_lambda` (built)
 
@@ -1470,6 +1472,6 @@ actionable. Avoid generic messages such as "unsupported".
 ## Open
 - Overloads and generics have their own refusals in each tool; checked exceptions
   are reported through `preserve_exceptions`. A shared wording for these across
-  tools is not written yet. `extract_supertype` no longer refuses a generic class for an
-  interface (#144); `move` of a member, `subclass_to_strategy`, `inline` of a function and
+  tools is not written yet. `extract_supertype` no longer refuses a generic class (#144,
+  #145); `move` of a member, `subclass_to_strategy`, `inline` of a function and
   `extract_type` still refuse generics (`docs/sessions/generics-sketch.md`, "Risks").
