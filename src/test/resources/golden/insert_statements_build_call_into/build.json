@@ -1,0 +1,1 @@
+[{"call": "pricing.priceOf", "args": ["order", "customer"], "into": "price"}]

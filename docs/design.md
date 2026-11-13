@@ -258,6 +258,50 @@ Manual 8/8 at $0.082 a run; mcp 6/8 at $0.097; skeleton-only 7/8 at $0.117. No r
 the guard and never called a tool. Options inside descriptions are not found; a refusal that
 names them (as skeleton-only names `declaration`) is the mechanism left to try.
 
+## Generators: the `build` argument (2026-11-13)
+
+A statement or an expression built from names, the step after the member-level constructive
+operations above: the model gives a method, its arguments and a name, and the tool writes the
+statement with the types bindings give. The user reviewed a sketch with examples and chose the
+recommended option of each question (2026-11-13):
+
+- **Where they live:** one argument, `build`, on the existing edit tools, in place of `content`
+  on `insert_statements` and `replace_statements` and of `new` on `replace_expression`; a list
+  of generator objects and typed strings that nests (`body`), with gorefactor's names
+  (`create_loop`, `create_call`, `create_guard`, `replace_parameter`) as unpublished aliases.
+  Over one new `build_statements` tool with a `kind` (one name to find, but a union of
+  arguments and no nesting), and over a published tool per generator (names that are the
+  intent, but four tools, a step per statement and about twice the characters of typing the
+  Java).
+- **How a model finds them:** under `JREFACTOR_SKELETON_ONLY`, typed `content` that is one
+  statement a generator writes is refused, naming the `build` to send. Over the description
+  alone (three A/B sets found options in descriptions unused) and over an A/B arm that
+  publishes the aliases.
+- **Types are always written out,** never `var`, as `extract_variable` and `convert_loop`
+  write them. Over `var` where the file uses it, and over an argument.
+- **The loop is a shell with `body`,** no `op` (`sum`, `filter`, ...): `loop_to_stream` turns
+  the shell into those. Over gorefactor's `op` writing the accumulator, and over `op` writing
+  a stream.
+- **A call's arguments are always given in `args`:** nothing guessed. Over filling each
+  parameter from the one variable in scope of its name and type, and over `args` by parameter
+  name.
+- **Order of the slices:** call and construction, then the loop, then the guard (with
+  `replace_parameter`'s query form, `remove_parameter` `value`, built beside them).
+
+How it is built (`Build`): the entries are written into a copy of the file, first with every
+`into` as an assignment, to see by binding which names are variables there already, then with
+`var` for each new local; that copy, with its imports fixed, is parsed and each type is read
+from the `var`'s binding and written with `Extract.typeName`. Checked before building on it
+(2026-11-13): JDT resolves `var` for a local and in an enhanced `for` as javac does; a diamond
+with nothing to infer from gives `ArrayList<Object>`, so that case is refused, naming `type`; a
+call that does not resolve gives a `var` of type `Object` with no recovered flag, so a failed
+call is told by its own type binding being null, not by the local's.
+
+Defaults taken where the sketch was silent, to reopen if they chafe: a constructor's wrong
+argument count is refused only against explicit constructors (a class with none keeps the
+stub that assigns fields); `type` beside an `into` that is already a variable is refused, not
+ignored; a checked exception and a mismatched `into` are left to the gate's wording.
+
 ## Questions (all answered)
 
 No question is open. These were open when the design was written; each says how it
@@ -501,6 +545,7 @@ sections 3 and 4.
 | 137 | 144 | `extract_supertype` from a generic class, `kind=interface`: the new interface declares the class's type parameters its signatures use, and those their bounds need, in the class's order, each as the class writes it; the class implements it with their names | Done 2026-11-13 (`ExtractSupertype.generics`; the owner chose the sketch's recommendations, slice 2 option (a), over all of the class's parameters always and over a `type_parameters` argument); `kind=class` is #145 | `docs/sessions/generics-sketch.md` (increment 1); the first follow-up of `docs/sessions/extract-supertype.md`; the old refusal named no fix |
 | 139 | 146 | Generics, the shared check and wildcards (increment 3 of `docs/sessions/generics-sketch.md`): a change keeps what every call runs, and `change_type` with a wildcard is pinned | Done 2026-11-13 (`CallTargets`: each call, `new`, `this(...)`, `super(...)` and method reference in the checked files runs, after the change, the declaration it ran before, known by its place among its file's methods, not by its key; read before the write and required after it, as `Rename.checkMeanings`, so it also runs in a batch whose gate is deferred, leaving a call that does not resolve to the end check. `change_type` calls it for a field and a method; the gate's fix line names what a wildcard does not allow. The user, 2026-11-13: the model writes the wildcard in `type`, over `wildcard: "auto"` and over a body analysis) | A review found generics a gap; the friction log has no entry asking for it (the sketch says so) |
 | 140 | 147 | `remove_parameter` `value` as an expression of the method's other parameters, fields, constants and literals, without calls: the query form of `replace_parameter` (`docs/sessions/generators-sketch.md`, slice 4, increment 1) | Done 2026-11-13 (`Signatures.removeWithExpression`: the body starts with a local of the parameter's name and type; `ParameterValue` holds the parameter rules `Introduce` had and the matcher of a call's argument against the value, `passes`; refused: a call that passes anything else, an argument the value reads that has effects or another primitive type, an argument with effects between or, for a value that reads a field, after; a value that may throw is reported through `Exceptional`) | The sketch; the user's choice of 2026-11-13; `docs/sessions/remove-parameter-value-expression.md` |
+| 142 | 149 | `build` on `insert_statements` and `replace_statements`: a call or a construction written from names (`call`, `new`, `args`, `into`, `type`), typed strings beside them, the local's type read from bindings | Done 2026-11-13 (`Build`; "Generators" above has the user's choices and the options they beat) | The generators sketch, increment 3 (the coverage review of 2026-11-13: 540 of 560 tool steps typed the Java); `docs/sessions/build-call-new.md` |
 
 ### The 2026-11-04 list
 

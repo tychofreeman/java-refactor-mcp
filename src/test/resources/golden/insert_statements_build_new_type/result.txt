@@ -1,0 +1,1 @@
+inserted 2 lines after the statement at line 13 of shop/Checkout.java; built List<Order> open; Receipt receipt; imported java.util.ArrayList, java.util.List

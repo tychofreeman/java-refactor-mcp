@@ -1,0 +1,1 @@
+[{"call": "total.plus", "args": ["price"], "into": "total"}]

@@ -377,4 +377,38 @@ class ServerTest {
   void versionIsDevelOutsideAReleasedJar() {
     assertEquals("devel", Server.version());
   }
+
+  /** build reaches the tool as the list of objects and strings the client sent. */
+  @Test
+  void buildIsListedAsAnArrayAndWritesStatementsFromNames() throws IOException {
+    List<?> tools = (List<?>) result(request(11, "tools/list", Map.of())).get("tools");
+    Map<?, ?> insert =
+        tools.stream()
+            .map(t -> (Map<?, ?>) t)
+            .filter(t -> "insert_statements".equals(t.get("name")))
+            .findFirst()
+            .orElseThrow();
+    Map<?, ?> properties = (Map<?, ?>) ((Map<?, ?>) insert.get("inputSchema")).get("properties");
+    assertEquals("array", ((Map<?, ?>) properties.get("build")).get("type"));
+    Map<String, Object> result =
+        result(
+            call(
+                12,
+                "insert_statements",
+                Map.of(
+                    "file",
+                    "com/example/Totals.java",
+                    "line",
+                    9,
+                    "build",
+                    List.of(Map.of("call", "label.length", "into", "width"), "total += width;"))));
+    assertEquals(false, result.get("isError"), () -> text(result));
+    assertEquals(
+        "inserted 2 lines after the statement at line 9 of com/example/Totals.java; built int"
+            + " width",
+        text(result));
+    assertTrue(
+        Files.readString(project.resolve("com/example/Totals.java"))
+            .contains("        int width = label.length();\n        total += width;\n"));
+  }
 }

@@ -135,4 +135,9 @@ final class Args {
     out.put(key, value);
     return new Args(tool, out);
   }
+
+  /** The value of {@code key} as it was sent (a list, an object), or null when not given. */
+  Object raw(String key) {
+    return values.get(key);
+  }
 }

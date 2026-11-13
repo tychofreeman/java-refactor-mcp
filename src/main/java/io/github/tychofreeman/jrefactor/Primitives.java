@@ -71,11 +71,17 @@ final class Primitives {
             "statement",
             ", directly in a block",
             "the statement");
-    String block = indent(args.required("content"), Lines.indentOf(text, s.getStartPosition()));
+    String indent = Lines.indentOf(text, s.getStartPosition());
     int at =
         where.equals("before")
             ? Lines.start(text, s.getStartPosition())
             : Lines.end(text, Nodes.end(s) - 1);
+    Build.Built built = built(project, opened, args, at, at, indent);
+    if (built == null && args.string("content") == null) {
+      throw new Refusal(
+          "insert_statements needs content (the statements) or build (what to write, by name).");
+    }
+    String block = indent(built == null ? args.required("content") : built.text(), indent);
     String after =
         text.substring(0, at) + block + "\n" + text.substring(Math.min(at, text.length()));
     if (project.session().skeletonOnly) {
@@ -94,7 +100,8 @@ final class Primitives {
             + " the statement at line "
             + line
             + " of "
-            + rel,
+            + rel
+            + (built == null ? "" : built.said()),
         "inserting statements");
   }
 
@@ -145,11 +152,17 @@ final class Primitives {
     }
     int start = Lines.start(text, first.getStartPosition());
     int end = Lines.end(text, Nodes.end(last) - 1);
-    String content = args.string("content") == null ? "" : args.string("content");
     String surround = args.string("surround");
-    if (args.string("content") == null && surround == null) {
+    Build.Built built =
+        built(project, opened, args, start, end, Lines.indentOf(text, first.getStartPosition()));
+    if (built != null && surround != null) {
+      throw new Refusal("replace_statements takes build or surround, not both.");
+    }
+    String content =
+        built != null ? built.text() : args.string("content") == null ? "" : args.string("content");
+    if (built == null && args.string("content") == null && surround == null) {
       throw new Refusal(
-          "replace_statements needs content (empty deletes the statements) or surround.");
+          "replace_statements needs content (empty deletes the statements), build or surround.");
     }
     if (surround != null) {
       if (!content.isEmpty()) {
@@ -202,7 +215,8 @@ final class Primitives {
               + rel
               + " with "
               + count
-              + (count == 1 ? " line" : " lines");
+              + (count == 1 ? " line" : " lines")
+              + (built == null ? "" : built.said());
     }
     if (project.session().skeletonOnly) {
       Generated.checkChanged(text, after, rel, "replace_statements");
@@ -367,5 +381,22 @@ final class Primitives {
       }
     }
     return out.toString();
+  }
+
+  /**
+   * The statements the {@code build} argument asks for in place of {@code start} to {@code end}, or
+   * null when the call has no build.
+   */
+  private static Build.Built built(
+      SourceProject project, Opened opened, Args args, int start, int end, String indent)
+      throws Exception {
+    if (!args.has("build")) {
+      return null;
+    }
+    if (args.string("content") != null) {
+      throw new Refusal(args.tool() + " takes content or build, not both.");
+    }
+    return Build.statements(
+        project, opened, start, end, args.raw("build"), indent, args.list("imports"));
   }
 }

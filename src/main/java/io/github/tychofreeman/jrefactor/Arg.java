@@ -31,6 +31,23 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
   static final Arg METHOD_COLUMN =
       integer("column", "Optional 1-based column of the call, when the line calls two methods.");
 
+  /** In place of content, on the statement edits: what to write, by name ({@link Build}). */
+  static final Arg BUILD =
+      json(
+          "build",
+          """
+          {
+            "type": "array",
+            "description": "In place of content: the statements to write, in order. Each entry is a statement as typed, or an object: {call, args, into, type} for a call, {new, args, into, type} for a construction.",
+            "items": {
+              "anyOf": [
+                {"type": "string"},
+                {"type": "object"}
+              ]
+            }
+          }
+          """);
+
   static Arg string(String name, String description) {
     return of(name, "string", description);
   }

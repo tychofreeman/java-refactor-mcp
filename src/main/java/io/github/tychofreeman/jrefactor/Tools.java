@@ -488,13 +488,20 @@ final class Tools {
           """
           Insert statements before or after the statement that starts on a line (directly in a \
           block). content is the statements, at any indentation; they are indented as \
-          that statement is.\
+          that statement is.
+          With build in place of content, the statements are written from names and their types \
+          are read from the code: [{"call": "pricing.priceOf", "args": ["order", "customer"], \
+          "into": "price"}] writes Money price = pricing.priceOf(order, customer); (into a \
+          variable that is there assigns it, into return returns it), {"new": "ArrayList", \
+          "into": "open", "type": "List<Order>"} writes List<Order> open = new ArrayList<>(); \
+          and a string entry is a statement as typed. The result names each type it wrote.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("line", "1-based line a statement starts on.").required(),
               Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
-              Arg.string("content", "The statements.").required(),
+              Arg.string("content", "The statements."),
+              Arg.BUILD,
               Arg.IMPORTS),
           Kind.EDIT,
           Primitives::insertStatements);
@@ -507,13 +514,16 @@ final class Tools {
           ending on end_line, with content (statements, re-indented); empty content deletes them.
           With surround in place of content (try, if (ready), for (Item i : items), while (more), \
           synchronized (lock)), the statements go inside that block; a try catches and rethrows \
-          the checked exceptions they throw.\
+          the checked exceptions they throw.
+          With build in place of content, the new statements are written from names, as \
+          insert_statements does.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("start_line", "1-based line the first statement starts on.").required(),
               Arg.integer("end_line", "1-based line the last statement ends on.").required(),
               Arg.string("content", "The new statements; empty to delete."),
+              Arg.BUILD,
               Arg.string(
                   "surround",
                   "In place of content: the head of a block to put them in (try, if (cond), ...)."),

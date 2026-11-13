@@ -1,0 +1,1 @@
+[{"call": "pricing.quote", "args": ["order"], "into": "quote"}]
