@@ -1,6 +1,6 @@
 # Generated names that are keywords
 
-- **Item:** issue #480 from the 2026-11-13 code review (roadmap row 262, order 252)
+- **Item:** issue #480 from the 2026-11-13 code review (roadmap row 264, order 254)
 - **Date:** 2026-11-14
 - **Branch:** fix-generated-keywords
 
