@@ -1367,3 +1367,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   step in the batch was refused for want of `line` (the method's line moved within the batch); it
   was dropped by `retry` with `remove` and run after, with the line from `inspect` `pattern`.
   The probe and goldens were written by heredocs (resources).
+
+## 2026-11-13: fix-convert-to-record-equals
+
+- No Java by hand: two `batch`es (`replace_text`, `add_declaration`) sent from a file
+  (`@file`), since the code held a `' '` that closed the shell's single-quoted argument; then
+  `replace_text` for the class comment. The probe and goldens were written by heredocs.

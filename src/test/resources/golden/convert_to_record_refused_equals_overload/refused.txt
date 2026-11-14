@@ -1,0 +1,1 @@
+equals(Point) does not override Object.equals
