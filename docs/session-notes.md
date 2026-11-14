@@ -721,6 +721,13 @@ Each was chosen from options; the record named beside it has the options it beat
   its neighbours makes Spotless re-indent the block, and `ServerTest`'s
   runs-of-spaces check then fails. Write new lines at the block's indentation
   (twice on 2026-11-04, #151 and #153).
+- A project type `Jdt.parseAll` reads from the source path (not one of its files) is resolved
+  only as far as the batch needs it, and JDT frees its scope when the batch ends: asked later,
+  `getDeclaredMethods()` logs "Could not retrieve declared methods" and answers none (#431).
+  `Jdt.completeMembers` asks, during the batch, each type a unit's names bind to and its
+  supertypes, member types and declaring class; a type reached only through another binding (a
+  method's parameter or return type) is not, so read its members inside `parseAll`'s callback or
+  parse its file with the batch. `Jdt.parse` of one file keeps them.
 - Bindings from two parses (the tool's `Opened` parse and `Holding`'s or
   `parseAll`'s) do not compare: `overrides`, `isSubTypeCompatible` and `isEqualTo`
   return false. Compare keys or qualified names, or take both from one parse (hit
