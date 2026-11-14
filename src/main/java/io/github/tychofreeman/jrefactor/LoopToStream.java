@@ -145,7 +145,7 @@ final class LoopToStream {
             () -> !(loop.getParent() instanceof LabeledStatement),
             () -> "the loop at line " + line + " has a label, which a stream cannot keep."));
     Expression source = loop.getExpression();
-    String from = source(text, source);
+    String from = Nodes.source(text, source);
     ITypeBinding sourceType = source.resolveTypeBinding();
     if (sourceType == null || sourceType.isRecovered()) {
       throw new Refusal("the type of " + from + " does not resolve. Fix the compile errors first.");
@@ -270,7 +270,7 @@ final class LoopToStream {
       if (m.getExpression() == null || !CHANGES.contains(m.getName().getIdentifier())) {
         continue;
       }
-      String receiver = source(text, m.getExpression());
+      String receiver = Nodes.source(text, m.getExpression());
       if (sameVariable(text, m.getExpression(), loop.getExpression())
           || (owner != null && sameVariable(text, m.getExpression(), owner))) {
         throw new Refusal(
@@ -279,7 +279,7 @@ final class LoopToStream {
                 + " changes "
                 + receiver
                 + ", which it walks ("
-                + source(text, m)
+                + Nodes.source(text, m)
                 + "); a stream of it would fail at another point, or not at all.");
       }
     }
@@ -460,7 +460,7 @@ final class LoopToStream {
 
   /** {@code e}'s source, in parentheses unless a method can be called on it as it is. */
   static String primary(String text, Expression e) {
-    String s = source(text, e);
+    String s = Nodes.source(text, e);
     return e instanceof Name
             || e instanceof MethodInvocation
             || e instanceof FieldAccess
@@ -470,10 +470,6 @@ final class LoopToStream {
             || e instanceof ArrayAccess
         ? s
         : "(" + s + ")";
-  }
-
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), Nodes.end(node));
   }
 
   /**
@@ -519,7 +515,7 @@ final class LoopToStream {
                   && tb.statements().size() == 1
                   && tb.statements().get(0) instanceof IfStatement);
       return new Branch(
-          source(text, ifs.getExpression())
+          Nodes.source(text, ifs.getExpression())
               + " ? "
               + (thenIsIf ? "(" + then.stream() + ")" : then.stream())
               + " : "
@@ -544,7 +540,7 @@ final class LoopToStream {
       case "add" ->
           nested && type.isArray()
               ? null
-              : new Branch("Stream.of(" + source(text, argument) + ")", type, false, 1);
+              : new Branch("Stream.of(" + Nodes.source(text, argument) + ")", type, false, 1);
       case "addAll" ->
           collection(type)
               ? new Branch(primary(text, argument) + ".stream()", elementOf(type), false, 1)
@@ -588,7 +584,7 @@ final class LoopToStream {
       if (rest.size() == 1
           && rest.get(0) instanceof IfStatement ifs
           && ifs.getElseStatement() == null) {
-        stages.add(new Stage("filter", param, source(text, ifs.getExpression())));
+        stages.add(new Stage("filter", param, Nodes.source(text, ifs.getExpression())));
         holder = ifs.getThenStatement();
         rest = statementsOf(holder);
         continue;
@@ -607,7 +603,7 @@ final class LoopToStream {
             && initial != null
             && type.isEqualTo(initial)
             && !reads(after, paramBinding)) {
-          stages.add(new Stage("map", param, source(text, f.getInitializer())));
+          stages.add(new Stage("map", param, Nodes.source(text, f.getInitializer())));
           param = f.getName().getIdentifier();
           paramBinding = f.resolveBinding();
           current = type;
@@ -646,7 +642,7 @@ final class LoopToStream {
           && Bindings.same(n.resolveBinding(), read.binding())) {
         last = read.type();
       } else {
-        stages.add(new Stage("map", param, source(text, argument)));
+        stages.add(new Stage("map", param, Nodes.source(text, argument)));
         last = argument.resolveTypeBinding();
       }
     }
@@ -665,7 +661,7 @@ final class LoopToStream {
       imports.add("java.util.stream.Stream");
     }
     String prefix =
-        source(text, list)
+        Nodes.source(text, list)
             .substring(0, out.getInitializer().getStartPosition() - list.getStartPosition());
     List<String> segments = new ArrayList<>();
     segments.add(primary(text, loop.getExpression()) + ".stream()");
@@ -702,7 +698,7 @@ final class LoopToStream {
     String callIndent = wrap ? indent + " ".repeat(2 * step) : indent;
     String forEach;
     if (rest.size() == 1 && rest.get(0) instanceof ExpressionStatement e) {
-      forEach = ".forEach(" + lambda + source(text, e.getExpression()) + ")";
+      forEach = ".forEach(" + lambda + Nodes.source(text, e.getExpression()) + ")";
     } else {
       forEach =
           ".forEach("
@@ -765,7 +761,7 @@ final class LoopToStream {
       int step) {
     VariableDeclarationFragment v = fragment(result);
     IBinding binding = v.resolveBinding();
-    String initial = source(text, v.getInitializer());
+    String initial = Nodes.source(text, v.getInitializer());
     int line = Lines.number(text, loop.getStartPosition());
     List<Assignment> sets = new ArrayList<>();
     for (Assignment a : Nodes.all(loop.getBody(), Assignment.class)) {
@@ -778,7 +774,7 @@ final class LoopToStream {
         Nodes.all(loop.getBody(), SimpleName.class).stream()
             .filter(n -> Bindings.same(n.resolveBinding(), binding))
             .count();
-    String set = sets.isEmpty() ? null : source(text, sets.get(0).getRightHandSide());
+    String set = sets.isEmpty() ? null : Nodes.source(text, sets.get(0).getRightHandSide());
     boolean flag =
         constant(v.getInitializer())
             && !sets.isEmpty()
@@ -787,7 +783,7 @@ final class LoopToStream {
                 .allMatch(a ->
                     a.getOperator() == Assignment.Operator.ASSIGN
                         && constant(a.getRightHandSide())
-                        && source(text, a.getRightHandSide()).equals(set))
+                        && Nodes.source(text, a.getRightHandSide()).equals(set))
             && !set.equals(initial);
     if (!flag) {
       Rewrite total = total(text, loop, result, read, indent, step);
@@ -858,7 +854,7 @@ final class LoopToStream {
     }
     segments.add(".reduce(false, Boolean::logicalOr)" + tail);
     String prefix =
-        source(text, result)
+        Nodes.source(text, result)
             .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
     String one = String.join("", segments);
     boolean wrap =
@@ -936,7 +932,7 @@ final class LoopToStream {
             && Bindings.same(n3.resolveBinding(), binding))) {
       return null;
     }
-    boolean count = added == null || source(text, added).equals("1");
+    boolean count = added == null || Nodes.source(text, added).equals("1");
     ITypeBinding type = result.getType().resolveBinding();
     String kind = type == null ? "" : type.getName();
     if (kind.equals("double") || kind.equals("float")) {
@@ -979,13 +975,13 @@ final class LoopToStream {
           (kind.equals("int") ? ".mapToInt(" : ".mapToLong(")
               + read.param()
               + " -> "
-              + source(text, added)
+              + Nodes.source(text, added)
               + ")");
       terminal = ".sum()";
     }
     segments.add(terminal);
     Expression initial = v.getInitializer();
-    String from = source(text, initial);
+    String from = Nodes.source(text, initial);
     String plus =
         from.equals("0") || from.equalsIgnoreCase("0L")
             ? ""
@@ -995,7 +991,8 @@ final class LoopToStream {
                 + " + ";
     String cast = count && kind.equals("int") ? "(int) " : "";
     String prefix =
-        source(text, result).substring(0, initial.getStartPosition() - result.getStartPosition());
+        Nodes.source(text, result)
+            .substring(0, initial.getStartPosition() - result.getStartPosition());
     String before = prefix + plus + cast;
     return new Rewrite(
         lead(text, result, loop, indent) + before + layout(indent, before, segments, step) + ";",
@@ -1033,7 +1030,7 @@ final class LoopToStream {
       String indent,
       int step) {
     VariableDeclarationFragment v = fragment(result);
-    String initial = source(text, v.getInitializer());
+    String initial = Nodes.source(text, v.getInitializer());
     List<Stage> stages = new ArrayList<>(read.stages());
     if (stages.isEmpty() || !stages.getLast().method().equals("filter")) {
       throw new Refusal(
@@ -1052,8 +1049,8 @@ final class LoopToStream {
       test =
           condition instanceof PrefixExpression p
                   && p.getOperator() == PrefixExpression.Operator.NOT
-              ? source(text, p.getOperand())
-              : "!(" + source(text, condition) + ")";
+              ? Nodes.source(text, p.getOperand())
+              : "!(" + Nodes.source(text, condition) + ")";
     } else {
       test = last.body();
     }
@@ -1065,7 +1062,7 @@ final class LoopToStream {
     String terminal = all ? ".allMatch(" : ".anyMatch(";
     segments.add(terminal + last.param() + " -> " + test + ")" + tail);
     String prefix =
-        source(text, result)
+        Nodes.source(text, result)
             .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
     return new Rewrite(
         lead(text, result, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
@@ -1129,7 +1126,7 @@ final class LoopToStream {
     String lambda;
     if (rest.size() == 1 && rest.get(0) instanceof ExpressionStatement e) {
       Expression x = e.getExpression();
-      lambda = TextEdit.apply(source(text, x), edits, x.getStartPosition());
+      lambda = TextEdit.apply(Nodes.source(text, x), edits, x.getStartPosition());
     } else {
       int[] range = statementsRange(text, read.holder(), rest);
       lambda =
@@ -1248,18 +1245,22 @@ final class LoopToStream {
             && valueType != null
             && valueType.isEqualTo(held[1].getTypeArguments()[0])
             && onlyRead(m.resolveBinding(), groups.getParent(), Nodes.end(loop));
-    String classifier = param + " -> " + source(text, key);
+    String classifier = param + " -> " + Nodes.source(text, key);
     String downstream =
         element
             ? "Collectors.toCollection(ArrayList::new)"
             : "Collectors.mapping("
                 + param
                 + " -> "
-                + source(text, value)
+                + Nodes.source(text, value)
                 + ", Collectors.toCollection(ArrayList::new))";
     if (plain && !element) {
       downstream =
-          "Collectors.mapping(" + param + " -> " + source(text, value) + ", Collectors.toList())";
+          "Collectors.mapping("
+              + param
+              + " -> "
+              + Nodes.source(text, value)
+              + ", Collectors.toList())";
     }
     List<String> arguments =
         plain
@@ -1280,7 +1281,7 @@ final class LoopToStream {
     read.stages().forEach(s -> segments.add(s.text()));
     segments.add(collect);
     String prefix =
-        source(text, groups)
+        Nodes.source(text, groups)
             .substring(0, m.getInitializer().getStartPosition() - groups.getStartPosition());
     String joined = String.join("", segments);
     String pipeline =
@@ -1290,7 +1291,7 @@ final class LoopToStream {
     Exceptional.change(
         project,
         "a null key from "
-            + source(text, key)
+            + Nodes.source(text, key)
             + " now throws a NullPointerException in groupingBy, where computeIfAbsent grouped it",
         "make sure no key is null, or keep the loop");
     List<String> imports = new ArrayList<>(List.of("java.util.stream.Collectors"));
@@ -1315,6 +1316,6 @@ final class LoopToStream {
     if (x != null && y != null) {
       return x.getKey().equals(y.getKey());
     }
-    return source(text, a).equals(source(text, b));
+    return Nodes.source(text, a).equals(Nodes.source(text, b));
   }
 }

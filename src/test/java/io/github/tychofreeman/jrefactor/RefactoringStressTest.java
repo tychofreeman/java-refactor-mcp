@@ -336,7 +336,7 @@ class RefactoringStressTest {
         Statement a = (Statement) statements.get(from);
         Statement b = (Statement) statements.get(to);
         args.put("start_line", unit.getLineNumber(a.getStartPosition()));
-        args.put("end_line", unit.getLineNumber(b.getStartPosition() + b.getLength() - 1));
+        args.put("end_line", unit.getLineNumber(Nodes.end(b) - 1));
         args.put("name", "extractedZq");
       }
       case "extract_variable" -> {

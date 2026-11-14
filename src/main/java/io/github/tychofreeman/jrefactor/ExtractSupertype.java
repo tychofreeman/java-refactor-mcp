@@ -124,13 +124,7 @@ final class ExtractSupertype {
     }
 
     Type superclass = type.getSuperclassType();
-    String extending =
-        superclass == null
-            ? ""
-            : " extends "
-                + text.substring(
-                    superclass.getStartPosition(),
-                    superclass.getStartPosition() + superclass.getLength());
+    String extending = superclass == null ? "" : " extends " + Nodes.source(text, superclass);
     List<ASTNode> uses = new ArrayList<>();
     for (String member : members) {
       uses.add(MemberMove.member(type, name, member, rel, "extract_supertype"));
@@ -165,7 +159,7 @@ final class ExtractSupertype {
           text.substring(0, superclass.getStartPosition())
               + supertype
               + generics.named()
-              + text.substring(superclass.getStartPosition() + superclass.getLength());
+              + text.substring(Nodes.end(superclass));
       Gate.applyOrRefuse(
           project,
           Map.of(opened.file(), changed),
@@ -269,7 +263,7 @@ final class ExtractSupertype {
           }
         }
       }
-      declared.add(text.substring(p.getStartPosition(), Nodes.end(p)));
+      declared.add(Nodes.source(text, p));
       named.add(p.getName().getIdentifier());
     }
     return declared.isEmpty()

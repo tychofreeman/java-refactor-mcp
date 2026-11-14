@@ -1702,6 +1702,18 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `replace_text`s in `substituted`. An "array to record" refactoring (name each index, rewrite each
   `a[i]` read and each `new T[] {...}`) would have been one call.
 
+## 2026-11-14: node-text
+
+- All through the tools: `move` of `Generated.source` to `Nodes`, `fold` of `Nodes.end` and of
+  `Nodes.source` over the project, then `inline` of each of the eleven private copies, which
+  `fold` had turned into delegates. One call per copy, in a shell loop: a batch would have done
+  it in one, but each copy's file had to be named.
+- `rename` of `Nodes.source` to `text` was refused: its parameter is named `text`. Kept `source`.
+- `fold` left ten sites where the node expression is a getter called twice (`d.getJavadoc()`):
+  "a call would evaluate it once". A getter of an AST node has no effect; a way to tell `fold`
+  that a getter is pure would have taken them.
+- `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.
+
 ## 2026-11-14: extract-type-sibling
 
 - `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`

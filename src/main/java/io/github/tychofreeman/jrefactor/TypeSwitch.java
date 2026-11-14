@@ -174,7 +174,7 @@ final class TypeSwitch {
           .addAll(MemberMove.appendTo(texts.get(f), declaration(parsed.get(f), c.type()), method));
       types.add(c.type().getName());
     }
-    String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+    String sel = Nodes.source(text, selector);
     String call =
         (selector instanceof Name ? sel : "(" + sel + ")")
             + "."
@@ -268,7 +268,7 @@ final class TypeSwitch {
   private static List<Case> chain(
       IfStatement first, String text, Expression selector, SourceProject project)
       throws IOException {
-    String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+    String sel = Nodes.source(text, selector);
     // Each if of the chain evaluates the selector again; the call that replaces them, once.
     if (first.getElseStatement() instanceof IfStatement && Names.variable(selector) == null) {
       throw new Refusal(

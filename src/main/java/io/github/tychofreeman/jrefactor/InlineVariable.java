@@ -66,7 +66,7 @@ final class InlineVariable {
       throw new Refusal(
           "the declaration of " + name + " is not directly in a block. Put it in braces first.");
     }
-    int after = stmt.getStartPosition() + stmt.getLength();
+    int after = Nodes.end(stmt);
     if (Effects.of(block).writes(variable, after)) {
       throw new Refusal(
           name
@@ -83,15 +83,14 @@ final class InlineVariable {
               + ", not its initializer's, so each use would change type. Keep the variable.");
     }
 
-    String source =
-        text.substring(init.getStartPosition(), init.getStartPosition() + init.getLength());
+    String source = Nodes.source(text, init);
     boolean array = init instanceof ArrayInitializer;
     if (array) {
       // An initializer alone is an expression only in a declaration; elsewhere new and the type.
       Type type = stmt.getType();
       source =
           "new "
-              + text.substring(type.getStartPosition(), Nodes.end(type))
+              + Nodes.source(text, type)
               + "[]".repeat(fragment.getExtraDimensions())
               + " "
               + source;
@@ -105,7 +104,7 @@ final class InlineVariable {
       edits.add(
           new TextEdit(
               use.getStartPosition(),
-              use.getStartPosition() + use.getLength(),
+              Nodes.end(use),
               array && indexed ? "(" + source + ")" : inlined));
       uses++;
     }
