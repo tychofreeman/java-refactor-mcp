@@ -18,6 +18,10 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FileASTRequestor;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.SimpleName;
 
 /**
  * Headless JDT Core parsing with bindings resolved. No workspace, no OSGi runtime. Validated by
@@ -103,6 +107,7 @@ final class Jdt {
     String[] encodings = new String[paths.length];
     java.util.Arrays.fill(encodings, "UTF-8");
     RuntimeException[] fromEach = new RuntimeException[1];
+    Set<String> completed = new HashSet<>();
     try {
       parser(project)
           .createASTs(
@@ -116,6 +121,7 @@ final class Jdt {
                     return;
                   }
                   ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
+                  completeMembers(ast, completed);
                   try {
                     each.accept(Path.of(sourceFilePath), ast);
                   } catch (RuntimeException e) {
@@ -230,5 +236,51 @@ final class Jdt {
       }
     }
     return out;
+  }
+
+  /**
+   * Asks each project type {@code unit} names, and the types around, above and inside it, for its
+   * members while the batch is running. JDT resolves a type it reads from the source path only as
+   * far as the batch needs it and frees its scope when the batch ends; asked after that, the type
+   * answers no methods (#431). {@code completed} holds the keys of the types already asked.
+   */
+  private static void completeMembers(CompilationUnit unit, Set<String> completed) {
+    for (SimpleName name : Nodes.all(unit, SimpleName.class)) {
+      switch (name.resolveBinding()) {
+        case ITypeBinding t -> completeMembers(t, completed);
+        case IMethodBinding m -> completeMembers(m.getDeclaringClass(), completed);
+        case IVariableBinding v -> {
+          completeMembers(v.getDeclaringClass(), completed);
+          completeMembers(v.getType(), completed);
+        }
+        case null, default -> {}
+      }
+    }
+  }
+
+  /** {@link #completeMembers(CompilationUnit, Set)} of one type and the types it leads to. */
+  private static void completeMembers(ITypeBinding type, Set<String> completed) {
+    if (type == null) {
+      return;
+    }
+    ITypeBinding t = type.isArray() ? type.getElementType() : type;
+    t = t.getTypeDeclaration();
+    if (!t.isFromSource()
+        || t.isTypeVariable()
+        || t.isCapture()
+        || t.isWildcardType()
+        || !completed.add(t.getKey())) {
+      return;
+    }
+    t.getDeclaredFields();
+    t.getDeclaredMethods();
+    for (ITypeBinding member : t.getDeclaredTypes()) {
+      completeMembers(member, completed);
+    }
+    completeMembers(t.getSuperclass(), completed);
+    for (ITypeBinding i : t.getInterfaces()) {
+      completeMembers(i, completed);
+    }
+    completeMembers(t.getDeclaringClass(), completed);
   }
 }

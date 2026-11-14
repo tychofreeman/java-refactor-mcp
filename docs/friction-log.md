@@ -1257,3 +1257,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   JDT reads it as an ordinary unit. Met while writing a golden case; the case became a unit test
   (`TypeCheckTest.aModuleInfoAddedOrRemovedRecountsEveryFile`), written by `add_declaration`.
   No hand edit of Java.
+
+## 2026-11-13: fix-declared-methods
+
+- `batch` refused a first send with each step's arguments beside `tool` again ("replace_text
+  needs file"), the second time today (see stress-enum-switch above): evidence for a refusal that
+  says they go under `args`.
+- `extract_variable` `as=constant` of a string a test wrote twice replaced the first only; the
+  second went through `replace_expression` (`new` the constant). `all_occurrences` was not tried.
+  Nothing by hand.
