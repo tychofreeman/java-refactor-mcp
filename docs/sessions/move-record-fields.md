@@ -38,4 +38,4 @@ did not show.
 
 ## Follow-ups
 
-- The gate's fix line for `move` ("Rename one of the clashing types") still fits only a clash; #441's PR.
+- The gate's fix line for `move` ("Rename one of the clashing types") fitted only a clash: replaced in #441's branch, `move-sealed-permits`.

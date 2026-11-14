@@ -303,13 +303,21 @@ package:
 - a read of a record's field across the new boundary (`r.length`, where a
   nested record's fields were visible to the whole top-level type) becomes a
   call of its accessor (`r.length()`), when the accessor is the generated one
-  or only returns the field (roadmap #184, issue #440).
+  or only returns the field (roadmap #184, issue #440);
+- a sealed type with no `permits` clause permits the subtypes of its own file;
+  when the move puts the sealed type and some of those in different files, it
+  gets an explicit clause listing all of them in their file's order, each
+  named from the package as after the move (`permits Options.Debug,
+  Options.Level`, `permits Shapes.Circle, Square`), and a private subtype the
+  clause names from the other file becomes package-private (roadmap #190,
+  issue #441).
 
 Result: `moved Shop.Line to com/example/Line.java (18 lines), with 3 references
 in 3 files: com/example/Receipt.java line 4; com/example/Shop.java line 7;
 com/example/report/Report.java line 3; widened Shop.label(String) and
 Line.price to package-private`; then `; reads of Range.array and Range.length
-became accessor calls` when there were such reads. Lines are those of the files
+became accessor calls` when there were such reads, and `; wrote a permits
+clause on Option, as the move put permitted subtypes in another file`. Lines are those of the files
 before the move.
 
 Refusals: a top-level type ("Shop is a top-level type already ... name it as
@@ -320,7 +328,9 @@ field across the boundary whose accessor does more than return it ("Helper reads
 the field Range.length, which is private once Range is top-level, and
 Range.length() does more than return it. Replace each read with a call of
 Range.length() if that is what it should mean, then move it again."); a move
-that adds compile errors, with them.
+that adds compile errors, with them ("Fix what the errors name, then move it
+again; when the moved type's name clashes with another type's, rename one of
+them first."; until 2026-11-13 it said only to rename a clashing type).
 
 With `package` (roadmap #80, 2026-11-04), `name` is the file's only top-level
 type, and it moves to that package in the same source root: the file moves
