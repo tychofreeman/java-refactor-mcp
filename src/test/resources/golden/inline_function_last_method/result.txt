@@ -1,0 +1,1 @@
+inlined Price.tax into 1 call and deleted the method in com/example/Price.java

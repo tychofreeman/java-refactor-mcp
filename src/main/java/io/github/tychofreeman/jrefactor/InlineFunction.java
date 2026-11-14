@@ -264,7 +264,9 @@ final class InlineFunction {
               + String.join(", ", nullable),
           "keep the method");
     }
-    edits.computeIfAbsent(declaringFile, k -> new ArrayList<>()).add(removal(declaringText, m));
+    edits
+        .computeIfAbsent(declaringFile, k -> new ArrayList<>())
+        .add(MemberMove.removal(declaringText, m));
 
     NameCheck.require(project, texts, edits, NameCheck.meanings(fragments), "inlining " + name);
     Edits.WrittenFiles written =
@@ -1151,21 +1153,6 @@ final class InlineFunction {
               }
             });
     return found[0];
-  }
-
-  /**
-   * The edit that deletes {@code m} with its lines, and the blank line after it when there is one.
-   */
-  private static TextEdit removal(String text, MethodDeclaration m) {
-    int start = text.lastIndexOf('\n', m.getStartPosition() - 1) + 1;
-    int last = m.getStartPosition() + m.getLength() - 1;
-    int end = text.indexOf('\n', last);
-    end = end < 0 ? text.length() : end + 1;
-    int nl = text.indexOf('\n', end);
-    if (nl >= 0 && text.substring(end, nl).isBlank()) {
-      end = nl + 1;
-    }
-    return new TextEdit(start, end, "");
   }
 
   /**
