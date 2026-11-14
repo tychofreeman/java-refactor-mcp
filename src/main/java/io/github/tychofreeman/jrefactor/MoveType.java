@@ -87,6 +87,7 @@ final class MoveType {
     String outerKey = type.getDeclaringClass().getTypeDeclaration().getKey();
     int start = decl.getStartPosition();
     int end = start + decl.getLength();
+    MovedType nested = new MovedType(start, end, pkg, name, simple, key, outerKey, outerLabel);
 
     Map<Path, String> changed = new LinkedHashMap<>();
     Map<String, List<Integer>> lines = new TreeMap<>();
@@ -136,33 +137,8 @@ final class MoveType {
         continue;
       }
       Set<String> qualifiers = new HashSet<>();
-      qualifyAndWiden(
-          u,
-          text,
-          decl,
-          type,
-          key,
-          outerKey,
-          outerLabel,
-          simple,
-          edits,
-          widened,
-          accessed,
-          qualifiers);
-      permits(
-          u,
-          text,
-          start,
-          end,
-          pkg,
-          name,
-          simple,
-          key,
-          outerKey,
-          outerLabel,
-          edits,
-          widened,
-          sealed);
+      qualifyAndWiden(u, text, decl, type, nested, edits, widened, accessed, qualifiers);
+      permits(u, text, nested, edits, widened, sealed);
       for (Object o : decl.modifiers()) {
         if (o instanceof Modifier m && (m.isStatic() || m.isPrivate() || m.isProtected())) {
           edits.add(dropModifier(text, m));
@@ -179,14 +155,14 @@ final class MoveType {
       List<TextEdit> inside = new ArrayList<>();
       List<TextEdit> outside = new ArrayList<>();
       for (TextEdit edit : edits) {
-        (edit.start() >= start && edit.start() < end ? inside : outside).add(edit);
+        (nested.inside(edit.start()) ? inside : outside).add(edit);
       }
       int lineStart = Lines.start(text, start);
       String moved =
           dedent(TextEdit.apply(text.substring(lineStart, end), inside, lineStart), text, start);
       Set<String> usedInside = new HashSet<>();
       Set<String> usedOutside = new HashSet<>();
-      identifiers(u, start, end, usedInside, usedOutside);
+      identifiers(u, nested, usedInside, usedOutside);
       usedInside.addAll(qualifiers);
       StringBuilder kept = new StringBuilder();
       Boolean lastStatic = null;
@@ -386,16 +362,11 @@ final class MoveType {
       String text,
       AbstractTypeDeclaration decl,
       ITypeBinding type,
-      String key,
-      String outerKey,
-      String outerLabel,
-      String simple,
+      MovedType moved,
       List<TextEdit> edits,
       Map<Integer, String> widened,
       Set<String> accessed,
       Set<String> qualifiers) {
-    int start = decl.getStartPosition();
-    int end = start + decl.getLength();
     u.accept(
         new ASTVisitor() {
           @Override
@@ -404,8 +375,8 @@ final class MoveType {
             if (b == null || n.isDeclaration()) {
               return true;
             }
-            boolean inside = n.getStartPosition() >= start && n.getStartPosition() < end;
-            String q = inside && unqualified(n) ? qualifier(b, type, outerLabel) : null;
+            boolean inside = moved.inside(n.getStartPosition());
+            String q = inside && unqualified(n) ? qualifier(b, type, moved.outerLabel()) : null;
             if (q != null) {
               edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), q + "."));
               qualifiers.add(q.contains(".") ? q.substring(0, q.indexOf('.')) : q);
@@ -432,19 +403,17 @@ final class MoveType {
             }
             ITypeBinding r = v.getDeclaringClass().getTypeDeclaration();
             ASTNode record = u.findDeclaringNode(r.getKey());
-            if (record == null
-                || (record.getStartPosition() >= start && record.getStartPosition() < end)
-                    == inside) {
+            if (record == null || (moved.inside(record.getStartPosition())) == inside) {
               return false;
             }
-            String field = label(v.getVariableDeclaration(), key, outerKey, outerLabel, simple);
+            String field = moved.label(v.getVariableDeclaration());
             if (!returnsField(u, r, v.getName())) {
               throw new Refusal(
-                  (inside ? simple : outerLabel)
+                  (inside ? moved.simple() : moved.outerLabel())
                       + " reads the field "
                       + field
                       + ", which is private once "
-                      + simple
+                      + moved.simple()
                       + " is top-level, and "
                       + field
                       + "() does more than return it. Replace each read with a call of "
@@ -461,7 +430,7 @@ final class MoveType {
           public boolean visit(ClassInstanceCreation c) {
             IMethodBinding b = c.resolveConstructorBinding();
             if (b != null) {
-              widen(b, c.getStartPosition() >= start && c.getStartPosition() < end);
+              widen(b, moved.inside(c.getStartPosition()));
             }
             return true;
           }
@@ -485,8 +454,7 @@ final class MoveType {
             if (body == null || body == decl || widened.containsKey(body.getStartPosition())) {
               return;
             }
-            boolean declaredInside =
-                body.getStartPosition() >= start && body.getStartPosition() < end;
+            boolean declaredInside = moved.inside(body.getStartPosition());
             if (declaredInside == inside) {
               return;
             }
@@ -495,7 +463,7 @@ final class MoveType {
                 edits.add(dropModifier(text, m));
               }
             }
-            widened.put(body.getStartPosition(), label(d, key, outerKey, outerLabel, simple));
+            widened.put(body.getStartPosition(), moved.label(d));
           }
         });
   }
@@ -554,37 +522,13 @@ final class MoveType {
     return null;
   }
 
-  private static boolean declaredBy(ITypeBinding type, String key) {
+  static boolean declaredBy(ITypeBinding type, String key) {
     return type != null && type.getTypeDeclaration().getKey().equals(key);
   }
 
-  /** "Shop.label(String)", "Line.price": a widened member, its type named as after the move. */
-  private static String label(
-      IBinding d, String key, String outerKey, String outerLabel, String simple) {
-    ITypeBinding owner =
-        d instanceof IMethodBinding m
-            ? m.getDeclaringClass()
-            : d instanceof IVariableBinding v
-                ? v.getDeclaringClass()
-                : ((ITypeBinding) d).getDeclaringClass();
-    String in =
-        declaredBy(owner, key)
-            ? simple
-            : declaredBy(owner, outerKey) ? outerLabel : owner.getName();
-    if (d instanceof IMethodBinding m) {
-      List<String> types = new ArrayList<>();
-      for (ITypeBinding t : m.getParameterTypes()) {
-        types.add(t.getErasure().getName());
-      }
-      String params = "(" + String.join(", ", types) + ")";
-      return m.isConstructor() ? in + params : in + "." + m.getName() + params;
-    }
-    return in + "." + d.getName();
-  }
-
-  /** The names used in {@code u} inside and outside {@code start}-{@code end}, imports left out. */
+  /** The names used in {@code u} inside and outside the moved type, imports left out. */
   private static void identifiers(
-      CompilationUnit u, int start, int end, Set<String> inside, Set<String> outside) {
+      CompilationUnit u, MovedType moved, Set<String> inside, Set<String> outside) {
     u.accept(
         new ASTVisitor(true) {
           @Override
@@ -599,7 +543,7 @@ final class MoveType {
 
           @Override
           public boolean visit(SimpleName n) {
-            boolean in = n.getStartPosition() >= start && n.getStartPosition() < end;
+            boolean in = moved.inside(n.getStartPosition());
             (in ? inside : outside).add(n.getIdentifier());
             return true;
           }
@@ -684,14 +628,7 @@ final class MoveType {
   private static void permits(
       CompilationUnit u,
       String text,
-      int start,
-      int end,
-      String pkg,
-      String name,
-      String simple,
-      String key,
-      String outerKey,
-      String outerLabel,
+      MovedType moved,
       List<TextEdit> edits,
       Map<Integer, String> widened,
       List<String> sealed) {
@@ -704,14 +641,14 @@ final class MoveType {
           || t == null) {
         continue;
       }
-      boolean in = a.getStartPosition() >= start && a.getStartPosition() < end;
+      boolean in = moved.inside(a.getStartPosition());
       List<AbstractTypeDeclaration> subtypes = new ArrayList<>();
       boolean split = false;
       for (AbstractTypeDeclaration s : types) {
         ITypeBinding b = s.resolveBinding();
         if (b != null && extendsDirectly(b, t.getTypeDeclaration().getKey())) {
           subtypes.add(s);
-          split |= (s.getStartPosition() >= start && s.getStartPosition() < end) != in;
+          split |= (moved.inside(s.getStartPosition())) != in;
         }
       }
       if (!split) {
@@ -720,22 +657,22 @@ final class MoveType {
       List<String> names = new ArrayList<>();
       for (AbstractTypeDeclaration s : subtypes) {
         ITypeBinding b = s.resolveBinding().getTypeDeclaration();
-        names.add(movedName(b, pkg, name, simple));
-        boolean sIn = s.getStartPosition() >= start && s.getStartPosition() < end;
+        names.add(moved.movedName(b));
+        boolean sIn = moved.inside(s.getStartPosition());
         if (sIn != in
-            && s.getStartPosition() != start
+            && s.getStartPosition() != moved.start()
             && !widened.containsKey(s.getStartPosition())) {
           for (Object o : s.modifiers()) {
             if (o instanceof Modifier m && m.isPrivate()) {
               edits.add(dropModifier(text, m));
-              widened.put(s.getStartPosition(), label(b, key, outerKey, outerLabel, simple));
+              widened.put(s.getStartPosition(), moved.label(b));
             }
           }
         }
       }
       int at = headerEnd(text, td);
       edits.add(new TextEdit(at, at, " permits " + String.join(", ", names)));
-      sealed.add(movedName(t.getTypeDeclaration(), pkg, name, simple));
+      sealed.add(moved.movedName(t.getTypeDeclaration()));
     }
   }
 
@@ -750,18 +687,6 @@ final class MoveType {
       }
     }
     return false;
-  }
-
-  /**
-   * {@code b}'s name from its package once the type {@code name} ("Outer.Inner") is top-level as
-   * {@code simple}: "Outer.Other", "Inner", "Inner.Nested".
-   */
-  private static String movedName(ITypeBinding b, String pkg, String name, String simple) {
-    String q = b.getQualifiedName();
-    String rel = pkg.isEmpty() ? q : q.substring(pkg.length() + 1);
-    return rel.equals(name) || rel.startsWith(name + ".")
-        ? simple + rel.substring(name.length())
-        : rel;
   }
 
   /** Where {@code t}'s header ends: after its last supertype, type parameters or name. */

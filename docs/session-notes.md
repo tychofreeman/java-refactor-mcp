@@ -421,6 +421,10 @@ Each was chosen from options; the record named beside it has the options it beat
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
 
+- `move` of a member type carries what it moves as a `MovedType` (#528): its range in the outer
+  file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
+  `MoveType` that needs them takes it, not the fields one by one.
+
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call
   (#192, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
