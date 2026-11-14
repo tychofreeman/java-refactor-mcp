@@ -31,9 +31,6 @@ final class Extract {
     String name = args.required("name");
     Integer startArg = args.integer("start_line");
     Integer endArg = args.integer("end_line");
-    if (startArg == null || endArg == null) {
-      throw new Refusal("extract_function needs start_line and end_line.");
-    }
     Precondition.require(Precondition.identifier(name, "the new method"));
     String visibility = args.string("visibility");
     if (visibility != null

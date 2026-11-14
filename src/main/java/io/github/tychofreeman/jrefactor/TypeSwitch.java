@@ -61,10 +61,7 @@ final class TypeSwitch {
     String rel = args.required("file");
     String name = args.required("name");
     Integer line = args.integer("line");
-    Precondition.require(
-        Precondition.that(
-            () -> line != null, () -> "type_switch_to_method needs line, where the switch starts."),
-        Precondition.identifier(name, "the new method"));
+    Precondition.require(Precondition.identifier(name, "the new method"));
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     ASTNode node =

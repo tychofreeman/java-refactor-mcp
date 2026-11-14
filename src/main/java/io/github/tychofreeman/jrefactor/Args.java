@@ -18,8 +18,15 @@ final class Args {
     this.values = values == null ? Map.of() : values;
   }
 
-  /** Refuses an argument the tool does not take, naming the ones it does. */
-  void check(Set<String> known) {
+  /**
+   * Refuses an argument the tool does not take, naming the ones it does, and a required one not
+   * given, in the words of {@link Arg#missing}.
+   */
+  void check(List<Arg> arguments) {
+    Set<String> known = new TreeSet<>();
+    for (Arg a : arguments) {
+      known.add(a.name());
+    }
     Set<String> unknown = new TreeSet<>(values.keySet());
     unknown.removeAll(known);
     if (!unknown.isEmpty()) {
@@ -28,8 +35,17 @@ final class Args {
               + " does not take "
               + String.join(", ", unknown)
               + ". Its arguments are "
-              + String.join(", ", new TreeSet<>(known))
+              + String.join(", ", known)
               + ".");
+    }
+    List<String> missing = new ArrayList<>();
+    for (Arg a : arguments) {
+      if (a.mandatory() && values.get(a.name()) == null) {
+        missing.add(a.missing(tool));
+      }
+    }
+    if (!missing.isEmpty()) {
+      throw new Refusal(String.join(" ", missing));
     }
   }
 

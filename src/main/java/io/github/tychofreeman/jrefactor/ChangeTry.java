@@ -48,7 +48,7 @@ final class ChangeTry {
 
   static Outcome run(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int line = Primitives.line(args, "line");
+    int line = args.integer("line");
     List<String> given = new ArrayList<>();
     for (String change : CHANGES) {
       if (args.has(change) && !Boolean.FALSE.equals(args.raw(change))) {

@@ -1,7 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +22,7 @@ final class Tools {
   }
 
   /**
-   * One tool. {@code args} are the argument names it takes; the schema leaves out {@code
+   * One tool. {@code arguments} are the arguments it takes; the schema leaves out {@code
    * "additionalProperties": false}, since with it the SDK refuses an unknown argument before the
    * tool can name the ones to use.
    */
@@ -31,7 +30,7 @@ final class Tools {
       String name,
       String description,
       String schema,
-      Set<String> args,
+      List<Arg> arguments,
       Kind kind,
       Handler handler) {
 
@@ -39,32 +38,31 @@ final class Tools {
 
     /** Every refactoring takes preserve_exceptions: its schema and its arguments gain it here. */
     Def {
-      if (kind == Kind.REFACTORING) {
+      if (kind == Kind.REFACTORING
+          && arguments.stream().noneMatch(a -> a.name().equals(Exceptional.FLAG))) {
+        Arg flag =
+            Arg.bool(
+                Exceptional.FLAG,
+                "Optional: true to refuse a change to where or whether an exception is thrown.");
         ObjectNode root = (ObjectNode) JSON.readTree(schema);
         ObjectNode properties =
             root.get("properties") instanceof ObjectNode p ? p : root.putObject("properties");
-        properties
-            .putObject(Exceptional.FLAG)
-            .put("type", "boolean")
-            .put(
-                "description",
-                "Optional: true to refuse a change to where or whether an exception is thrown.");
+        properties.set(flag.name(), flag.schema());
         schema = root.toString();
-        Set<String> all = new HashSet<>(args);
-        all.add(Exceptional.FLAG);
-        args = Set.copyOf(all);
+        List<Arg> all = new ArrayList<>(arguments);
+        all.add(flag);
+        arguments = List.copyOf(all);
       }
     }
 
-    /** A tool whose schema and argument names are built from {@code args}. */
+    /** A tool whose schema is built from {@code args}. */
     Def(String name, String description, List<Arg> args, Kind kind, Handler handler) {
-      this(
-          name,
-          description,
-          Arg.schemaOf(args),
-          args.stream().map(Arg::name).collect(Collectors.toSet()),
-          kind,
-          handler);
+      this(name, description, Arg.schemaOf(args), args, kind, handler);
+    }
+
+    /** The names of the arguments it takes. */
+    Set<String> args() {
+      return arguments.stream().map(Arg::name).collect(Collectors.toSet());
     }
 
     /** Whether the tool changes nothing. */
@@ -1685,9 +1683,6 @@ final class Tools {
     String name = args.required("name");
     String newName = args.required("new_name");
     Integer line = args.integer("line");
-    if (line == null) {
-      throw new Refusal("rename needs line: the 1-based line of a use or declaration.");
-    }
     return Rename.run(project, file, line, name, args.integer("column"), newName);
   }
 
@@ -1701,9 +1696,6 @@ final class Tools {
 
   private static Outcome extractVariable(SourceProject project, Args args) throws Exception {
     Integer line = args.integer("line");
-    if (line == null) {
-      throw new Refusal("extract_variable needs line, the 1-based line the expression starts on.");
-    }
     return ExtractVariable.run(
         project,
         args.required("file"),
@@ -1717,9 +1709,6 @@ final class Tools {
 
   private static Outcome inlineVariable(SourceProject project, Args args) throws Exception {
     Integer line = args.integer("line");
-    if (line == null) {
-      throw new Refusal("inline of a variable needs line, a line on which it is declared or used.");
-    }
     return InlineVariable.run(
         project, args.required("file"), line, args.required("name"), args.integer("column"));
   }
@@ -1841,7 +1830,7 @@ final class Tools {
         new Args(def.name(), values)
             .renamed(ARG_ALIASES.getOrDefault(def.name(), Map.of()))
             .without(RETIRED_ARGS.getOrDefault(def.name(), Set.of()));
-    args.check(def.args());
+    args.check(def.arguments());
     Journal.begin(project, def.name());
     try (Session.Scope scope =
         project

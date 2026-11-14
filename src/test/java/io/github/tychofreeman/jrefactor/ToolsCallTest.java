@@ -41,7 +41,7 @@ class ToolsCallTest {
         "writer",
         "test",
         "{\"type\": \"object\"}",
-        java.util.Set.of(),
+        java.util.List.of(),
         kind,
         (project, args) -> {
           Path shop = project.root().resolve("com/example/Shop.java");

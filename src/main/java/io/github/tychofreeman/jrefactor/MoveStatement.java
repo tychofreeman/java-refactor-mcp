@@ -36,9 +36,6 @@ final class MoveStatement {
       throws Exception {
     Precondition.require(
         Precondition.that(
-            () -> line != null,
-            () -> "move_statement needs line, the 1-based line the statement starts on."),
-        Precondition.that(
             () -> "up".equals(direction) || "down".equals(direction),
             () -> "direction is up or down, the way the statement moves."));
     Opened opened = Opened.of(project, rel);

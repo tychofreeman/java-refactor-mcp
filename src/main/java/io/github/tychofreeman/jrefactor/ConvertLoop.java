@@ -57,9 +57,6 @@ final class ConvertLoop {
   static Outcome run(SourceProject project, String rel, Integer line, String to) throws Exception {
     Precondition.require(
         Precondition.that(
-            () -> line != null,
-            () -> "convert_loop needs line, the 1-based line the loop starts on."),
-        Precondition.that(
             () -> List.of("for_each", "iterator", "for", "while", "do_while").contains(to),
             () ->
                 "convert_loop takes to=for_each, iterator, for, while or do_while; to="

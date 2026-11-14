@@ -189,6 +189,21 @@ its simple name where source qualified it (`Set<String>` for `java.util.Set<Stri
 takes either, comparing with qualifiers dropped when nothing matches as written or erased. Every
 label a tool prints is taken back as `name` by every tool that takes a method's name.
 
+A call without an argument its tool's schema marks required is refused before the tool runs,
+in one wording built from the argument's description (`Args.check`, `Arg.missing`; the owner,
+2026-11-14, issue #521): "<tool> needs <argument>: <its description> Pass <argument>.", as
+"invert_if needs line: The 1-based line the if starts on. Pass line." With several missing, one
+such sentence each, in the schema's order: "rename needs name: The current name; ... Pass name.
+rename needs new_name: The new name; a valid Java name. Pass new_name." Inside a `batch` the
+step's refusal carries it after the batch's prefix ("step 2 of 3 (invert_if) refused: invert_if
+needs line: ..."). Only a missing argument (absent or null) is refused here; an empty string is
+the tool's to judge (`content` may be empty to delete). It replaced the hand-written refusals, each in
+its own wording ("invert_if needs line, the 1-based line the if starts on.", "extract_function
+needs start_line and end_line.", "replace_parameter needs value.", ...). A tool whose required
+arguments depend on its route (`move`, `inline`, `add_parameter`, `change_signature`, the edits
+that take `content` or `build`) marks only what every route needs, and refuses the rest in its
+own words.
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:
@@ -198,7 +213,7 @@ Tools keep gorefactor's names where the Java tool does the same thing:
 `replace_text`, `batch` and `undo`, and (roadmap #120, 2026-11-06) `extract_function`, which
 was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI but not
 published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
-`move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value."); the query form only, as the generators sketch decided. gorefactor's `create_loop`, `create_call` and `create_guard` (roadmap #166, 2026-11-13) are `insert_statements` with one `build` entry, unpublished: `file`, `line` and `where` place it, and the rest are the entry's keys (`over` is the loop's `loop`; `create_call` takes `call` or `new`, `args`, `into`, `type`; `create_guard` takes `guard` or `guard_null`, `exit`, `value`, `message`). Results and refusals are `insert_statements`'s; there is no `op` (the loop is a shell, as decided).
+`move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value: What every call passes for it, as the method can compute it. Pass value."); the query form only, as the generators sketch decided. gorefactor's `create_loop`, `create_call` and `create_guard` (roadmap #166, 2026-11-13) are `insert_statements` with one `build` entry, unpublished: `file`, `line` and `where` place it, and the rest are the entry's keys (`over` is the loop's `loop`; `create_call` takes `call` or `new`, `args`, `into`, `type`; `create_guard` takes `guard` or `guard_null`, `exit`, `value`, `message`). Results and refusals are `insert_statements`'s; there is no `op` (the loop is a shell, as decided).
 
 One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the

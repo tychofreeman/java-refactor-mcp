@@ -26,7 +26,7 @@ final class Primitives {
   /** replace_expression: the expression on {@code line} whose text is {@code expression}. */
   static Outcome replaceExpression(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int line = line(args, "line");
+    int line = args.integer("line");
     String expression = args.required("expression").strip();
     if (args.has("build") == (args.string("new") != null)) {
       throw new Refusal(
@@ -66,7 +66,7 @@ final class Primitives {
   /** insert_statements: {@code content} before or after the statement on {@code line}. */
   static Outcome insertStatements(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int line = line(args, "line");
+    int line = args.integer("line");
     String where = args.string("where") == null ? "after" : args.string("where");
     Precondition.require(
         Precondition.that(
@@ -125,8 +125,8 @@ final class Primitives {
    */
   static Outcome replaceStatements(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int startLine = line(args, "start_line");
-    int endLine = line(args, "end_line");
+    int startLine = args.integer("start_line");
+    int endLine = args.integer("end_line");
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     Statement first =
@@ -260,7 +260,7 @@ final class Primitives {
   /** add_case: {@code content} as a case of the switch on {@code line}, before its default. */
   static Outcome addCase(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int line = line(args, "line");
+    int line = args.integer("line");
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     ASTNode sw =
@@ -316,7 +316,7 @@ final class Primitives {
    */
   static Outcome addElement(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
-    int line = line(args, "line");
+    int line = args.integer("line");
     String content = args.required("content").strip();
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
@@ -376,14 +376,6 @@ final class Primitives {
             what,
             "Nothing was changed; write it so that it compiles there.");
     return new Outcome(said + written.fixed().said(), written.declared());
-  }
-
-  static int line(Args args, String key) {
-    Integer line = args.integer(key);
-    if (line == null) {
-      throw new Refusal(args.tool() + " needs " + key + ", a 1-based line.");
-    }
-    return line;
   }
 
   private static int lineStart(CompilationUnit unit, int line, String rel) {

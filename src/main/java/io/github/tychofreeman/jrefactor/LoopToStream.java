@@ -114,10 +114,6 @@ final class LoopToStream {
           "getOrDefault");
 
   static Outcome run(SourceProject project, String rel, Integer line) throws Exception {
-    Precondition.require(
-        Precondition.that(
-            () -> line != null,
-            () -> "loop_to_stream needs line, the 1-based line the loop starts on."));
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     Statement found =
