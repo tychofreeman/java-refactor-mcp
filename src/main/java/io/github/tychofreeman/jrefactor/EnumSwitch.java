@@ -14,6 +14,7 @@ import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -459,8 +460,8 @@ final class EnumSwitch {
   }
 
   /**
-   * Refuses a static field or method {@code body} names bare that {@code e} does not declare: in
-   * the enum that name would mean something else, or nothing.
+   * Refuses a static field or method {@code body} names bare that {@code e} does not see by that
+   * name ({@link #sees}): in the enum that name would mean something else, or nothing.
    */
   private static void checkStatics(ASTNode body, String label, ITypeBinding e) {
     for (SimpleName n : Nodes.all(body, SimpleName.class)) {
@@ -477,7 +478,7 @@ final class EnumSwitch {
                       && call.getExpression() == null
                   ? m.getDeclaringClass()
                   : null;
-      if (owner == null || owner.getErasure().getKey().equals(e.getErasure().getKey())) {
+      if (owner == null || sees(e, owner, n)) {
         continue;
       }
       String called = n.resolveBinding() instanceof IMethodBinding ? "(...)" : "";
@@ -506,5 +507,26 @@ final class EnumSwitch {
       return d;
     }
     throw new Refusal(e.getName() + " is not an enum of its file.");
+  }
+
+  /**
+   * Whether {@code e} sees the static {@code n} of {@code owner} by its simple name: {@code owner}
+   * is {@code e} or a type around it, and no type before it on the way out declares a member of
+   * that name. A member a type inherits is left to {@code NameCheck}.
+   */
+  private static boolean sees(ITypeBinding e, ITypeBinding owner, SimpleName n) {
+    String key = owner.getErasure().getKey();
+    boolean method = n.resolveBinding() instanceof IMethodBinding;
+    for (ITypeBinding t = e; t != null; t = t.getDeclaringClass()) {
+      if (t.getErasure().getKey().equals(key)) {
+        return true;
+      }
+      for (IBinding m : method ? t.getDeclaredMethods() : t.getDeclaredFields()) {
+        if (m.getName().equals(n.getIdentifier())) {
+          return false;
+        }
+      }
+    }
+    return false;
   }
 }
