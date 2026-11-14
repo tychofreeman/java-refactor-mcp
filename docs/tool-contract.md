@@ -1627,7 +1627,9 @@ declaration) (#342, the user's choices of 2026-11-12).
     `e3`. A call in the try block or the resources of a try gets one more catch clause on that
     try, after its last one. Another gets a new try around its statement, through the end of its
     block when the statement declares a local that later statements use; an expression lambda
-    becomes a block lambda around the try. Tries that would nest or overlap are written as one.
+    becomes a block lambda around the try. Tries that would nest, overlap or go around adjacent
+    statements of one block are written as one (#478: two calls in a row had got an empty try
+    between them).
   - An unchecked exception (a `RuntimeException` or an `Error`) needs none of this.
 - Calls are not edited otherwise. Result: `changed the signature of Move.apply(Rename) (return
   type void; throws IOException added; its callers now declare it: Service.put(String); caught
