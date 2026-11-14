@@ -21,8 +21,7 @@ class BatchRetryTest {
           Map.of("file", "com/example/A.java", "content", "int a() {\n  return 1;\n}\n"));
 
   private static SourceProject project(Path root) throws Exception {
-    Files.createDirectories(root.resolve("com/example"));
-    Files.writeString(root.resolve("com/example/A.java"), "package com.example;\n\nclass A {}\n");
+    TestProjects.write(root, "com/example/A.java", "package com.example;\n\nclass A {}\n");
     return SourceProject.of(root);
   }
 

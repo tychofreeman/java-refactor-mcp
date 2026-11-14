@@ -68,9 +68,8 @@ class TypeCheckTest {
   }
 
   private static void write(Path root, String name, String body) throws Exception {
-    Path file = root.resolve("com/example/" + name + ".java");
-    Files.createDirectories(file.getParent());
-    Files.writeString(file, "package com.example;\n\n" + body + "\n");
+    TestProjects.write(
+        root, "com/example/" + name + ".java", "package com.example;\n\n" + body + "\n");
   }
 
   private static Set<String> lastParsed(SourceProject project) {

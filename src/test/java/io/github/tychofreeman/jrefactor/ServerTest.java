@@ -78,13 +78,7 @@ class ServerTest {
   @BeforeEach
   void start() throws IOException {
     for (Path input : INPUTS) {
-      try (Stream<Path> files = Files.walk(input)) {
-        for (Path src : files.filter(Files::isRegularFile).toList()) {
-          Path dst = project.resolve(input.relativize(src).toString());
-          Files.createDirectories(dst.getParent());
-          Files.copy(src, dst);
-        }
-      }
+      TestProjects.copyTree(input, project);
     }
     PipedOutputStream clientOut = new PipedOutputStream();
     PipedInputStream serverIn = new PipedInputStream(clientOut, 1 << 16);
