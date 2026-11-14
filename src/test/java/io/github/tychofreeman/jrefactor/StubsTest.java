@@ -16,13 +16,9 @@ class StubsTest {
 
   @Test
   void aClassUsedOnlyFromATestDeclaredInTheTestRoot(@TempDir Path root) throws Exception {
+    SourceProject project = TestProjects.maven(root, true);
     Path main = root.resolve("src/main/java");
     Path test = root.resolve("src/test/java");
-    Files.createDirectories(main);
-    Files.createDirectories(test);
-    Session session = new Session();
-    session.editing = true;
-    SourceProject project = new SourceProject(root, List.of(main, test), List.of(), null, session);
     Path file = test.resolve("com/example/ShopTest.java");
 
     Edits.gated(project, file, "", TEST_CLASS, List.of(), "creating ShopTest", "Fix it.");
@@ -33,13 +29,9 @@ class StubsTest {
 
   @Test
   void aProductionClassATestUsesFirstDeclaredInTheMainRoot(@TempDir Path root) throws Exception {
+    SourceProject project = TestProjects.maven(root, true);
     Path main = root.resolve("src/main/java");
     Path test = root.resolve("src/test/java");
-    Files.createDirectories(main);
-    Files.createDirectories(test);
-    Session session = new Session();
-    session.editing = true;
-    SourceProject project = new SourceProject(root, List.of(main, test), List.of(), null, session);
     Path file = test.resolve("com/example/CartTest.java");
 
     Edits.gated(

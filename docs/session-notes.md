@@ -720,6 +720,8 @@ Each was chosen from options; the record named beside it has the options it beat
   the description or its arguments' text, rather than raise the limit (ask the user first).
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
+- A test that needs files on disk writes them with `TestProjects` (#531): `write(root, rel,
+  text)`, `maven(root, editing)` for a Maven-layout project, `copyTree`.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
   cached type count must equal `TypeCheck.uncached`.
 - One golden case, or a few (#195, 2026-11-13): `flock /tmp/jr-heavy.lock ./mvnw -q -o test
