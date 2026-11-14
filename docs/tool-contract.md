@@ -1948,7 +1948,7 @@ field, an instance getter or setter that would override a method of the class's 
   With `"end"` the gate runs once after the last step.
 - Result: `batch of n steps:` then each step's result, numbered; with `"end"`, a
   last line `checked at the end: no new compile errors`.
-- `batch` and `undo` cannot be steps.
+- `batch` and `undo` cannot be steps, under a client's name too (`mcp__jrefactor__undo`; #473).
 
 ## `undo` (built)
 
