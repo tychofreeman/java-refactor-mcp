@@ -88,9 +88,7 @@ final class Behavior {
       }
       if (!throwing.isEmpty()) {
         Exceptional.change(
-            project,
-            m.label() + " may throw (" + throwing.get(0) + "), and " + m.verb() + " drops it",
-            "keep it");
+            project, mayThrow(m.label(), throwing) + ", and " + m.verb() + " drops it", "keep it");
       }
       return;
     }
@@ -172,7 +170,7 @@ final class Behavior {
                   + " calls, assigns or changes a variable, and "
                   + m.verb()
                   + " moves it past "
-                  + e.node()
+                  + Nodes.show(e.node())
                   + " ("
                   + where
                   + "), so they would run in another order.");
@@ -195,7 +193,7 @@ final class Behavior {
           throw new Refusal(
               m.label()
                   + " reads state that "
-                  + e.node()
+                  + Nodes.show(e.node())
                   + " ("
                   + where
                   + ") could change, and "
@@ -206,10 +204,8 @@ final class Behavior {
           reported = true;
           Exceptional.change(
               project,
-              m.label()
-                  + " may throw ("
-                  + throwing.get(0)
-                  + "), and "
+              mayThrow(m.label(), throwing)
+                  + ", and "
                   + m.verb()
                   + " moves it past "
                   + where
@@ -223,7 +219,7 @@ final class Behavior {
           reported = true;
           Exceptional.change(
               project,
-              e.node()
+              Nodes.show(e.node())
                   + " ("
                   + where
                   + ") may throw, and "
@@ -243,7 +239,7 @@ final class Behavior {
                 + " assigns "
                 + e.variable().getName()
                 + ", which "
-                + e.node()
+                + Nodes.show(e.node())
                 + " ("
                 + where
                 + ") reads, and "
@@ -257,7 +253,7 @@ final class Behavior {
         throw new Refusal(
             m.label()
                 + " calls code or writes an array element that could change "
-                + e.node()
+                + Nodes.show(e.node())
                 + ", which is read at "
                 + where
                 + ", and "
@@ -321,10 +317,8 @@ final class Behavior {
           List<Guards.Operand> operands = Guards.operands(throwing);
           if (operands == null || Guards.tests(List.of(s), operands)) {
             throw new Refusal(
-                m.label()
-                    + " may throw ("
-                    + throwing.get(0)
-                    + "), and "
+                mayThrow(m.label(), throwing)
+                    + ", and "
                     + exit
                     + ", which may leave the block early, guards it; "
                     + m.verb()
@@ -332,10 +326,8 @@ final class Behavior {
           }
           Exceptional.change(
               project,
-              m.label()
-                  + " may throw ("
-                  + throwing.get(0)
-                  + "), and "
+              mayThrow(m.label(), throwing)
+                  + ", and "
                   + m.verb()
                   + " moves it above "
                   + exit
@@ -359,10 +351,8 @@ final class Behavior {
           List<Guards.Operand> operands = Guards.operands(its);
           if (operands == null || Guards.tests(List.of(m.code()), operands)) {
             throw new Refusal(
-                exit
-                    + " may throw ("
-                    + its.get(0)
-                    + "), and "
+                mayThrow(exit, its)
+                    + ", and "
                     + m.label()
                     + ", which may leave the block early, guards it; "
                     + m.verb()
@@ -370,10 +360,8 @@ final class Behavior {
           }
           Exceptional.change(
               project,
-              exit
-                  + " may throw ("
-                  + its.get(0)
-                  + "), and "
+              mayThrow(exit, its)
+                  + ", and "
                   + m.verb()
                   + " moves "
                   + m.label()
@@ -423,10 +411,8 @@ final class Behavior {
         if (operands != null && left != null && !Guards.tests(left, operands)) {
           Exceptional.change(
               project,
-              m.label()
-                  + " may throw ("
-                  + throwing.get(0)
-                  + ") and runs only sometimes where it is ("
+              mayThrow(m.label(), throwing)
+                  + " and runs only sometimes where it is ("
                   + was
                   + "), under a condition that "
                   + Guards.UNTESTED
@@ -437,10 +423,8 @@ final class Behavior {
               "leave it where it is");
         } else if (was != null) {
           throw new Refusal(
-              m.label()
-                  + " may throw ("
-                  + throwing.get(0)
-                  + ") and runs only sometimes where it is ("
+              mayThrow(m.label(), throwing)
+                  + " and runs only sometimes where it is ("
                   + was
                   + "), under the guard that keeps it from throwing; "
                   + m.verb()
@@ -455,10 +439,8 @@ final class Behavior {
     if (!throwing.isEmpty() && !Objects.equals(wasCaught, nowCaught)) {
       if (wasCaught != null) {
         throw new Refusal(
-            m.label()
-                + " may throw ("
-                + throwing.get(0)
-                + ") "
+            mayThrow(m.label(), throwing)
+                + " "
                 + wasCaught
                 + ", which catches it or runs its finally; "
                 + m.verb()
@@ -472,10 +454,8 @@ final class Behavior {
   private static void report(SourceProject project, Move m, List<ASTNode> throwing, String now) {
     Exceptional.change(
         project,
-        m.label()
-            + " may throw ("
-            + throwing.get(0)
-            + "), and "
+        mayThrow(m.label(), throwing)
+            + ", and "
             + m.verb()
             + " moves it where it runs only sometimes, later or under a catch ("
             + now
@@ -508,5 +488,10 @@ final class Behavior {
     return n.getRoot() instanceof CompilationUnit u
         ? "line " + u.getLineNumber(n.getStartPosition())
         : "offset " + n.getStartPosition();
+  }
+
+  /** "{@code who} may throw (a.get(0))": the first of {@code throwing}, as the source writes it. */
+  private static String mayThrow(String who, List<ASTNode> throwing) {
+    return who + " may throw (" + Nodes.show(throwing.get(0)) + ")";
   }
 }

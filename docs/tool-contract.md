@@ -2046,6 +2046,11 @@ Refusals are part of the model's experience. Keep them specific ("this selection
 starts inside a statement; select whole statements, lines 12 to 15") and
 actionable. Avoid generic messages such as "unsupported".
 
+Code a refusal or a report quotes is its source text, on one line and cut to 60 characters with
+"..." (`Nodes.show`, issue #526, 2026-11-14): "the initializer of v reads state that
+names.forEach(n -> { count++; }) (line 10) could change". It had been JDT's reformatting of the
+node, over several lines for a lambda or an anonymous class.
+
 ## Tools that changed for the better (gorefactor evidence)
 
 - Argument checks up front, suggested ranges, and retry with check `"end"` cut

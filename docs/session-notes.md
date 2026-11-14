@@ -353,6 +353,9 @@ Each was chosen from options; the record named beside it has the options it beat
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
   Goldens pin the separate part of the result in `exceptional.txt`; a case
   without that file must report nothing.
+- Code quoted in a refusal or a report goes through `Nodes.show(node)` (its source text on one
+  line, cut to 60 characters), never `node.toString()`, which is JDT's reformatting (#526). A unit
+  knows its text through `Jdt.sourceOf`.
 - A tool's result is an `Outcome`; `render()` gives the text the model reads,
   with the stubs named after it.
 - Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a

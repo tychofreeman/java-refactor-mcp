@@ -1531,6 +1531,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand: `replace_declaration`, `add_declaration`, `replace_statements` for each copy,
   `replace_text` for the callers and `inspect`'s loop head, `create_file` for `HoldingTest`.
 
+## 2026-11-14: ast-text-refusals
+
+- `replace_text` with `all_occurrences` and an `old` of four lines (`m.label()`, `+ " may throw ("`,
+  `+ throwing.get(0)`, `+ ")`) replaced 4 of the 7 places in `Behavior`: the other three were at
+  another indentation, and a multi-line `old` matches with one shift for every line. The result
+  said "replaced 4 occurrences" and nothing of the near misses, so a grep found them; a second batch
+  with each at its own indentation did them. Tried first: one step per indentation would have
+  worked, had I known them. A match per line's own indentation, or a note naming the near misses,
+  would make it one call.
+
 ## 2026-11-14: indent-utility
 
 - `move` of `MemberMove.reindented` and `Declarations.step` into the new `Indent` (one member,

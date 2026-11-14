@@ -226,7 +226,7 @@ final class InlineFunction {
             && receiver != null
             && !(receiver instanceof ThisExpression)
             && !(receiver instanceof ClassInstanceCreation)) {
-          nullable.add(receiver + " in " + project.relative(p));
+          nullable.add(Nodes.show(receiver) + " in " + project.relative(p));
         }
         list.addAll(
             replacementFor(
