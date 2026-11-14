@@ -282,8 +282,10 @@ Each was chosen from options; the record named beside it has the options it beat
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
-  `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
-- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
+  `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98). The node around one:
+  `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
+  a lambda or an anonymous class), `Nodes.typeAround(n)` (the binding of the named or anonymous
+  class whose body holds `n`), and `Nodes.unparenthesized(e)` (#508), not a new parent loop.- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
   where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
   `restep` for a member moved between files (each step becomes the target's) and `member` for the
   indentation of a type's members. Not a new helper in a tool, and not a written `"  "`.

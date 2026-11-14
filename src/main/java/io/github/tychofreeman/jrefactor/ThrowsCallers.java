@@ -214,11 +214,8 @@ final class ThrowsCallers {
       String name,
       List<String> chosen)
       throws Exception {
-    ASTNode type = at.getParent();
-    while (!(type instanceof AbstractTypeDeclaration)) {
-      type = type.getParent();
-    }
-    int open = text.indexOf('{', Nodes.end(((AbstractTypeDeclaration) type).getName())) + 1;
+    AbstractTypeDeclaration type = Nodes.ancestor(at, AbstractTypeDeclaration.class);
+    int open = text.indexOf('{', Nodes.end(type.getName())) + 1;
     String probe =
         text.substring(0, open) + "\n" + name + " jrefactorProbe;" + text.substring(open);
     String fixed = Imports.fix(project, file, text, probe, chosen).text();

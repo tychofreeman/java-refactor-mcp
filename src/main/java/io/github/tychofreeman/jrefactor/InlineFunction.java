@@ -477,10 +477,7 @@ final class InlineFunction {
     } catch (Refusal r) {
       throw inPlace;
     }
-    ASTNode decl = site;
-    while (!(decl instanceof BodyDeclaration)) {
-      decl = decl.getParent();
-    }
+    ASTNode decl = Nodes.ancestorOrSelf(site, BodyDeclaration.class);
     Set<String> taken = new HashSet<>();
     for (SimpleName n : Nodes.all(decl, SimpleName.class)) {
       taken.add(n.getIdentifier());
@@ -653,10 +650,7 @@ final class InlineFunction {
    */
   private static List<TextEdit> shadowEdits(
       MethodInvocation site, Block body, List<TextEdit> done, String typeName) {
-    ASTNode member = site;
-    while (member != null && !(member instanceof BodyDeclaration)) {
-      member = member.getParent();
-    }
+    ASTNode member = Nodes.ancestorOrSelf(site, BodyDeclaration.class);
     if (member == null) {
       return List.of();
     }
@@ -835,15 +829,12 @@ final class InlineFunction {
    * declared before it.
    */
   private static Statement blockStatement(MethodInvocation site) {
-    ASTNode n = site;
-    while (!(n instanceof Statement)) {
-      n = n.getParent();
-    }
+    Statement n = Nodes.ancestorOrSelf(site, Statement.class);
     if (!(n.getParent() instanceof Block)) {
       throw new Refusal(
           "the statement that holds the call is not directly in a block. Put it in braces first.");
     }
-    return (Statement) n;
+    return n;
   }
 
   /** Refuses a local of the body whose name the member around the call also uses. */
@@ -851,10 +842,7 @@ final class InlineFunction {
     if (bodyLocals.isEmpty()) {
       return;
     }
-    ASTNode n = site;
-    while (n != null && !(n instanceof BodyDeclaration)) {
-      n = n.getParent();
-    }
+    ASTNode n = Nodes.ancestorOrSelf(site, BodyDeclaration.class);
     if (n == null) {
       return;
     }

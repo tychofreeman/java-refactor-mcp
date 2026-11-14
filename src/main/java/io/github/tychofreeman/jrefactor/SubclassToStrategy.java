@@ -340,7 +340,7 @@ final class SubclassToStrategy {
         }
         int line = e.getValue().getLineNumber(n.getStartPosition());
         String where = project.relative(e.getKey()) + " line " + line;
-        ImportDeclaration imp = ancestor(n, ImportDeclaration.class);
+        ImportDeclaration imp = Nodes.ancestor(n, ImportDeclaration.class);
         if (imp != null) {
           es.add(
               new TextEdit(
@@ -358,14 +358,14 @@ final class SubclassToStrategy {
                   + " qualifier), which would have nothing to name.");
         }
         String kind =
-            ancestor(st, InstanceofExpression.class) != null
-                    || ancestor(st, PatternInstanceofExpression.class) != null
+            Nodes.ancestor(st, InstanceofExpression.class) != null
+                    || Nodes.ancestor(st, PatternInstanceofExpression.class) != null
                 ? "an instanceof"
                 : st.getParent() instanceof CastExpression
                     ? "a cast"
                     : st.getParent() instanceof TypeLiteral
                         ? "a class literal"
-                        : ancestor(st, MethodReference.class) != null
+                        : Nodes.ancestor(st, MethodReference.class) != null
                             ? "a method reference"
                             : st.getParent() instanceof SingleVariableDeclaration v
                                     && v.getParent() instanceof CatchClause
@@ -642,15 +642,6 @@ final class SubclassToStrategy {
       at++;
     }
     return at;
-  }
-
-  private static <T extends ASTNode> T ancestor(ASTNode n, Class<T> type) {
-    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
-      if (type.isInstance(p)) {
-        return type.cast(p);
-      }
-    }
-    return null;
   }
 
   private static String src(String text, ASTNode n) {

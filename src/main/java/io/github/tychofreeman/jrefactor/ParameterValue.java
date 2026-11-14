@@ -84,7 +84,7 @@ final class ParameterValue {
    * with its own arguments in place of the parameters.
    */
   static boolean byParameters(Expression e) {
-    MethodDeclaration m = Introduce.enclosing(e, MethodDeclaration.class);
+    MethodDeclaration m = Nodes.enclosing(e, MethodDeclaration.class);
     if (m == null) {
       return false;
     }
@@ -416,15 +416,15 @@ final class ParameterValue {
             project,
             d.file().file(),
             text.substring(0, where) + before + value + ";" + text.substring(where));
-    ASTNode found = org.eclipse.jdt.core.dom.NodeFinder.perform(unit, where + before.length(), 0);
-    while (found != null && !(found instanceof VariableDeclarationFragment)) {
-      found = found.getParent();
-    }
+    ASTNode found =
+        Nodes.ancestorOrSelf(
+            org.eclipse.jdt.core.dom.NodeFinder.perform(unit, where + before.length(), 0),
+            VariableDeclarationFragment.class);
     if (!(found instanceof VariableDeclarationFragment f)
         || f.getInitializer() == null
         || f.getInitializer().getStartPosition() != where + before.length()
         || f.getInitializer().getLength() != value.length()
-        || !(Introduce.enclosing(f, MethodDeclaration.class) instanceof MethodDeclaration probe)) {
+        || !(Nodes.enclosing(f, MethodDeclaration.class) instanceof MethodDeclaration probe)) {
       throw new Refusal("value " + value + " does not parse as an expression.");
     }
     boolean isStatic = Modifier.isStatic(m.getModifiers());
