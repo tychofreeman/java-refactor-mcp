@@ -276,6 +276,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- Java's primitive types as tools write them are `JavaTypes` (#530): `BOXED`, `isPrimitive`, `isBox`,
+  `zero` (a variable's start value) and `placeholder` (a typed test argument). A member's kind for
+  layout is `Placement.Rank`, not an int. `TypeDecidedUses` (was `PrimitiveUses`) is the
+  primitive-use rule of `change_type`; `Primitives` stays the edit primitives.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
@@ -548,8 +552,10 @@ Each was chosen from options; the record named beside it has the options it beat
   statement (`Behavior.flow`). A call on the method's own object or a static method named alone
   (#169) is written per call by `InMethod.written` (`at` for the extraction; `inPlace`, without
   receivers, for `remove_parameter`'s messages) and checked by `ParameterValue.sameTargets`,
-  which parses the calling file with the argument in place and compares each call's binding
-  (by key, or an override) and the probe's not-visible problems.
+  which compares each call's binding (by key, or an override) and the not-visible problems in a
+  parse of the calling file with the argument in place: `ParameterValue.probe` writes every call
+  of a file in and parses it once (#529; `PerCall.probe`, from `Introduce`'s `more`, before the
+  per-call checks, whose order of refusals it keeps); a call not probed first is parsed alone.
 
 - `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
   needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:
@@ -693,7 +699,7 @@ Each was chosen from options; the record named beside it has the options it beat
   A method (#158) is `TypeParameters.toMethod`, routed by a syntax-only `Declarations.find` before
   the `Holding` parse: `MethodFamily.of` with references kept; each call's and reference's types
   (`types`: return and parameters by qualified name) are read before the write and compared after
-  by its kind and number in its file (`ordinal`), since the declarations' edits move offsets.
+  by its kind and number in its file (`ordinals`, one walk per file, #529), since the declarations' edits move offsets.
   `change_type` with `type_parameter` (#159) is `TypeParameters.bound`, which `Tools.changeType`
   routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
   declaration (one for a class, the family's for a method); casts to the parameter are found by
@@ -815,7 +821,8 @@ Each was chosen from options; the record named beside it has the options it beat
   solution). The skeleton arm is a second run with `-arms mcp` and
   `-mcp <this repo>/eval-tasks/jrefactor-ab-server-skeleton` (`JREFACTOR_SKELETON_ONLY=1`).
 - Measure call costs with `GateCostTest` (`-Djrefactor.cost.root`,
-  `-Djrefactor.cost.call`), not from old figures.
+  `-Djrefactor.cost.call`), not from old figures. It prints the gate's project parses and every
+  binding parse (`Session.bindingParses`: each `Jdt.parse`, and each `parseAll` batch; #529).
 
 ## Traps
 

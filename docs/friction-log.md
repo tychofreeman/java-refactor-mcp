@@ -1648,6 +1648,41 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   (a visitor) were rewritten with `replace_declaration`: no tool turns a visitor of three node
   kinds into a filter over `Nodes.all`.
 - No Java by hand.
+
+## 2026-11-14: signature-naming
+
+- `Placement.rank` from `int` to an enum `Rank`: `change_type` of the return type was refused at
+  `Comparator.comparingInt(Placement::rank)` ("a method reference ... whose functional interface
+  fixes its parameters": it is the return type that changes, and `comparing(Placement::rank)` would
+  fit). With that call changed first, it was refused by the primitive-use rule at
+  `Placement.place(owner, Placement.rank(d))` (the overload chosen could change); the parameter it
+  is passed to was the next step, and `change_type` of that parameter refused the same way the other
+  way round. Tried: return type first, parameter first, `change_signature` (runs the same rule).
+  Done as one batch of edits. The rule could skip a change from a primitive to a type that is
+  neither primitive nor boxed (no widening or unboxing can pick another overload), or check the
+  calls' targets (`CallTargets`) in place of refusing.
+- `move` of `TypeParameters.BOXED` (`Map.of(...)`) to `JavaTypes` was refused: the initializer
+  calls a method, so it would run when the other class is initialized. `Map.of` of literals has no
+  effect to reorder. Moved by hand: `add_declaration` in `JavaTypes`, `replace_text` of the uses,
+  `replace_declaration` deleting the field (after the uses: in a batch, deletion still refuses
+  while a use is left).
+- `TestFor`'s placeholder switch to a method of `String`: `extract_variable` (`t.getName()`, then
+  the switch), `extract_function`, `inline` of the two locals, `move` to `JavaTypes`. `inline` of
+  the switch into `return` wrote `return (switch ... );`; the parentheses could not go by two
+  `replace_text`s (each step must parse), so `replace_declaration` rewrote the method.
+
+## 2026-11-14: fewer-parses
+
+- `extract_function` of lines 959-1020 of `ParameterValue` (the tail of `sameTargets`, the range
+  ending on the method's closing brace) was refused as "lines 959-1020 cut the statement at line
+  959": the cut was at line 1020, the brace, and the list that followed named every statement, so
+  959-1019 passed. The refusal should name the line that cuts (or drop a closing brace at the end).
+- `add_parameter` with `value=null` wrote `null` at the call inside `passed`, which had to pass
+  its own new parameter: a second `replace_text`. A `value` naming a parameter of the caller
+  where it has one of that name (`probed`) would have saved it.
+- No Java by hand: `replace_text`, `replace_declaration`, `add_declaration`, `extract_function`
+  and `add_parameter`, in five batches.
+
 ## 2026-11-14: test-projects
 
 - `create_file` of `TestProjectsTest`, which calls `TestProjects` before it exists, declared the

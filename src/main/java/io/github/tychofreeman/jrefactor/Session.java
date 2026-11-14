@@ -75,4 +75,10 @@ final class Session {
    * issue #376): set by {@code JREFACTOR_PUBLISH_ALIASES=1}.
    */
   boolean publishAliases = "1".equals(System.getenv("JREFACTOR_PUBLISH_ALIASES"));
+
+  /**
+   * How many binding parses have run (each {@link Jdt#parse}, and each {@link Jdt#parseAll} batch),
+   * for {@code GateCostTest}.
+   */
+  int bindingParses;
 }

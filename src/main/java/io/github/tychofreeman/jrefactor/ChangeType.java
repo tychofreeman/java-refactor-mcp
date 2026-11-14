@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +59,9 @@ final class ChangeType {
     if (!((VariableDeclarationFragment) decl.fragments().get(0)).extraDimensions().isEmpty()) {
       throw new Refusal(name + " writes its [] after its name. Write it after the type first.");
     }
-    checkUses(project, file, decl, field, type);
-    CallTargets targets = CallTargets.of(Holding.of(project, field, file).units().values());
+    Holding holding = Holding.of(project, field, file);
+    checkUses(project, holding, decl, field, type);
+    CallTargets targets = CallTargets.of(holding.units().values());
     Type old = decl.getType();
     int start = old.getStartPosition();
     int end = start + old.getLength();
@@ -97,27 +97,26 @@ final class ChangeType {
 
   /**
    * Refuses a change of or to a primitive or boxed type when a use of the field in the project is
-   * one whose result the type decides ({@link PrimitiveUses}).
+   * one whose result the type decides ({@link TypeDecidedUses}); {@code holding} holds the files
+   * that name the field.
    */
   private static void checkUses(
-      SourceProject project, Path file, FieldDeclaration decl, String field, String type)
-      throws IOException {
+      SourceProject project, Holding holding, FieldDeclaration decl, String field, String type) {
     ITypeBinding before = decl.getType().resolveBinding();
     IVariableBinding binding =
         ((VariableDeclarationFragment) decl.fragments().get(0)).resolveBinding();
-    if (binding == null || !PrimitiveUses.applies(before, type)) {
+    if (binding == null || !TypeDecidedUses.applies(before, type)) {
       return;
     }
-    boolean boxed = PrimitiveUses.anyBoxed(before, type);
+    boolean boxed = TypeDecidedUses.anyBoxed(before, type);
     String key = binding.getVariableDeclaration().getKey();
-    Holding holding = Holding.of(project, field, file);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
         if (!n.isDeclaration()
             && n.resolveBinding() instanceof IVariableBinding v
             && v.getVariableDeclaration().getKey().equals(key)) {
-          PrimitiveUses.check(
-              PrimitiveUses.value(n),
+          TypeDecidedUses.check(
+              TypeDecidedUses.value(n),
               field,
               before.getName(),
               type,

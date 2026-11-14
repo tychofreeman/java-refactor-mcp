@@ -1,0 +1,1 @@
+where rate calls Outlet.rate(Rush), not Shop.rate(Order) or an override of it

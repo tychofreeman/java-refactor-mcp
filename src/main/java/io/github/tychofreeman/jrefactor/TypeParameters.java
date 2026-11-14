@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,18 +61,6 @@ final class TypeParameters {
 
   private TypeParameters() {}
 
-  /** Each primitive type's boxed type, which can be a type argument. */
-  private static final Map<String, String> BOXED =
-      Map.of(
-          "int", "Integer",
-          "long", "Long",
-          "boolean", "Boolean",
-          "double", "Double",
-          "float", "Float",
-          "char", "Character",
-          "short", "Short",
-          "byte", "Byte");
-
   static Outcome add(SourceProject project, Args args) throws Exception {
     String written = args.required("type_parameter").strip();
     String value = args.required("value").strip();
@@ -88,15 +77,15 @@ final class TypeParameters {
                 "add_parameter with type_parameter needs name, the class that gets the type"
                     + " parameter."),
         Precondition.that(
-            () -> !BOXED.containsKey(value),
+            () -> !JavaTypes.BOXED.containsKey(value),
             () ->
                 value
                     + " is a primitive, which cannot be a type argument. Pass value "
-                    + BOXED.get(value)
+                    + JavaTypes.BOXED.get(value)
                     + "; where a member's type is "
                     + value
                     + ", change it to "
-                    + BOXED.get(value)
+                    + JavaTypes.BOXED.get(value)
                     + " first (change_type, which checks the uses a boxed type changes)."));
     Signatures.parsesAs("type_parameter", written, "class X<" + written + "> {}");
     Signatures.parsesAs("value", value, "class X { " + value + " x; }");
@@ -930,9 +919,9 @@ final class TypeParameters {
     int calls = 0;
     int references = 0;
     for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
-      CompilationUnit unit = after.get(e.getKey());
+      Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
       for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
-        ASTNode n = byOrdinal(unit, c.getKey());
+        ASTNode n = nodes.get(c.getKey());
         IMethodBinding b = n == null ? null : Calls.binding(n);
         String was = c.getValue().get(0);
         String now = b == null ? "nothing" : types(b);
@@ -996,7 +985,7 @@ final class TypeParameters {
 
   /**
    * The types of each call and method reference of {@code family}'s methods ({@link #types}), with
-   * its line, by its file and its kind and number in that file ({@link #ordinal}).
+   * its line, by its file and its kind and number in that file ({@link #ordinals}).
    */
   private static Map<Path, Map<String, List<String>>> callTypes(MethodFamily family) {
     Map<Path, Map<String, List<String>>> before = new LinkedHashMap<>();
@@ -1016,13 +1005,16 @@ final class TypeParameters {
         }
       }
     }
+    Map<ASTNode, Map<ASTNode, String>> ordinals = new LinkedHashMap<>();
     for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
       IMethodBinding b = Calls.binding(u.getKey());
       if (b != null) {
         before
             .computeIfAbsent(u.getValue().file(), k -> new LinkedHashMap<>())
             .put(
-                ordinal(u.getKey()),
+                ordinals
+                    .computeIfAbsent(u.getKey().getRoot(), TypeParameters::ordinals)
+                    .get(u.getKey()),
                 List.of(types(b), Integer.toString(u.getValue().line(u.getKey()))));
       }
     }
@@ -1039,21 +1031,26 @@ final class TypeParameters {
     return String.join(" ", out);
   }
 
-  /** Where {@code n} stands in its file: its kind and its number among the nodes of that kind. */
-  private static String ordinal(ASTNode n) {
-    return n.getClass().getSimpleName() + " " + Nodes.all(n.getRoot(), n.getClass()).indexOf(n);
+  /**
+   * Where each node of {@code root} stands in its file: its kind and its number among the nodes of
+   * that kind, as {@code "MethodInvocation 3"}.
+   */
+  private static Map<ASTNode, String> ordinals(ASTNode root) {
+    Map<ASTNode, String> out = new HashMap<>();
+    Map<String, Integer> seen = new HashMap<>();
+    for (ASTNode n : Nodes.all(root, ASTNode.class)) {
+      String kind = n.getClass().getSimpleName();
+      int k = seen.merge(kind, 1, Integer::sum) - 1;
+      out.put(n, kind + " " + k);
+    }
+    return out;
   }
 
-  /** The node of {@code unit} that {@link #ordinal} names; null when there is none. */
-  private static ASTNode byOrdinal(CompilationUnit unit, String ordinal) {
-    String kind = ordinal.substring(0, ordinal.indexOf(' '));
-    int k = Integer.parseInt(ordinal.substring(ordinal.indexOf(' ') + 1));
-    for (ASTNode n : Nodes.all(unit, ASTNode.class)) {
-      if (n.getClass().getSimpleName().equals(kind) && k-- == 0) {
-        return n;
-      }
-    }
-    return null;
+  /** The nodes of {@code unit} by what {@link #ordinals} names them. */
+  private static Map<String, ASTNode> byOrdinal(CompilationUnit unit) {
+    Map<String, ASTNode> out = new HashMap<>();
+    ordinals(unit).forEach((n, ordinal) -> out.put(ordinal, n));
+    return out;
   }
 
   /** The type a call infers for the type parameter at {@code index}, as the result names it. */
@@ -1191,8 +1188,9 @@ final class TypeParameters {
     int kept = 0;
     if (calls != null) {
       for (Map.Entry<Path, Map<String, List<String>>> e : calls.entrySet()) {
+        Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
         for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
-          ASTNode n = byOrdinal(after.get(e.getKey()), c.getKey());
+          ASTNode n = nodes.get(c.getKey());
           IMethodBinding b = n == null ? null : Calls.binding(n);
           String now = b == null ? "nothing" : types(b);
           if (!c.getValue().get(0).equals(now)) {

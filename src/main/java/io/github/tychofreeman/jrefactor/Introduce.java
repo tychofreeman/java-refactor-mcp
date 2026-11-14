@@ -90,7 +90,8 @@ final class Introduce {
             + source
             + ";";
     String text = opened.text();
-    List<TextEdit> edits = new ArrayList<>(MemberMove.addTo(text, owner, decl, 0));
+    List<TextEdit> edits =
+        new ArrayList<>(MemberMove.addTo(text, owner, decl, Placement.Rank.FIELD));
     edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
     String after = TextEdit.apply(text, edits, 0);
     Edits.Written written =
@@ -192,11 +193,12 @@ final class Introduce {
             new Behavior.Move(x, m.getBody(), List.of(first), source, "making it a parameter"));
       }
     }
+    ParameterValue.PerCall passing = ParameterValue.perCall(project, v);
     Outcome added =
         Signatures.addParameter(
             project,
             new Args("add_parameter", request),
-            ParameterValue.perCall(project, v),
+            passing,
             (family, change) -> {
               if (v.acts() && (family.decls.size() != 1 || !family.lambdas.isEmpty())) {
                 throw new Refusal(
@@ -226,6 +228,7 @@ final class Introduce {
                         + " arguments, before the method runs",
                     "extract it as a variable instead.");
               }
+              passing.probe(family.calls);
             });
     List<Integer> lines = new ArrayList<>();
     for (Expression x : found) {
