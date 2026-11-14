@@ -216,8 +216,7 @@ final class ThrowsCallers {
       throws Exception {
     AbstractTypeDeclaration type = Nodes.ancestor(at, AbstractTypeDeclaration.class);
     List<String> out = new ArrayList<>();
-    for (ITypeBinding t =
-            Jdt.probeType(project, file, text, type, name, chosen);
+    for (ITypeBinding t = Jdt.probeType(project, file, text, type, name, chosen);
         t != null;
         t = t.getSuperclass()) {
       if (!t.isRecovered()) {
