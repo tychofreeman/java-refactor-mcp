@@ -188,6 +188,12 @@ final class TypeSwitch {
     edits
         .computeIfAbsent(opened.file(), k -> new ArrayList<>())
         .add(new TextEdit(node.getStartPosition(), Nodes.end(node), call));
+    NameCheck.require(
+        project,
+        texts,
+        edits,
+        NameCheck.meanings(cases.stream().map(Case::body).toList()),
+        "moving the cases into their types");
     Stubs.Declared declared =
         MemberMove.gate(
             project,
@@ -343,14 +349,17 @@ final class TypeSwitch {
    * method instead.
    */
   static void usesOnly(ASTNode e, String v, String typeName, String variable) {
+    // By binding: a field read named as a local of another scope in the body is no local.
     java.util.Set<String> own = new java.util.HashSet<>();
     for (VariableDeclaration d : Nodes.all(e, VariableDeclaration.class)) {
-      own.add(d.getName().getIdentifier());
+      if (d.resolveBinding() != null) {
+        own.add(d.resolveBinding().getKey());
+      }
     }
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
       if (n.resolveBinding() instanceof IVariableBinding b
           && !(v != null && isVariable(n, v))
-          && !own.contains(n.getIdentifier())
+          && !own.contains(b.getKey())
           && !Modifier.isStatic(b.getModifiers())
           && !qualifiedByOther(n)) {
         throw new Refusal(
@@ -445,6 +454,10 @@ final class TypeSwitch {
     ASTNode e = c.body();
     int base = e.getStartPosition();
     List<TextEdit> edits = new ArrayList<>();
+    java.util.Set<String> locals = new java.util.HashSet<>();
+    for (VariableDeclaration d : Nodes.all(e, VariableDeclaration.class)) {
+      locals.add(d.getName().getIdentifier());
+    }
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
       if (c.variable() == null || !isVariable(n, c.variable())) {
         continue;
@@ -455,8 +468,12 @@ final class TypeSwitch {
               || (p instanceof FieldAccess f && f.getExpression() == n)
               || (p instanceof QualifiedName q && q.getQualifier() == n);
       int s = n.getStartPosition() - base;
+      // c.x is this.x where the body declares a local x, which a bare x would mean.
+      boolean field =
+          (p instanceof FieldAccess f && locals.contains(f.getName().getIdentifier()))
+              || (p instanceof QualifiedName q && locals.contains(q.getName().getIdentifier()));
       edits.add(
-          receiver
+          receiver && !field
               ? new TextEdit(s, s + n.getLength() + 1, "")
               : new TextEdit(s, s + n.getLength(), "this"));
     }

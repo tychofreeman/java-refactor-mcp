@@ -555,7 +555,7 @@ Each was chosen from options; the record named beside it has the options it beat
   moves code should call it (`meanings` of the source fragments, `require` with the
   edits, and the call sites' arguments when the tool rewrites calls); `inline_function`,
   `inline_variable`, `convert_lambda`, `pull_up`, `push_down`, `move_member`,
-  `extract_method` and `move_type` do. It skips qualified names, recovered bindings
+  `extract_method`, `move_type` and `type_switch_to_method` (#223; `EnumSwitch` too) do. It skips qualified names, recovered bindings
   and type variables, and compares a method's name only with methods' (`NameCheck.spaced`, #344:
   `skipped(skipped)` was taken for a capture).
 
