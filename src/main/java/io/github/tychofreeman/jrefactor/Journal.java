@@ -41,7 +41,7 @@ final class Journal {
                 + ", and undoing would lose that change. Nothing was undone.");
       }
     }
-    restore(last.before(), last.modes());
+    restore(project, last.before(), last.modes());
     done.pop();
     List<String> restored = new ArrayList<>();
     List<String> removed = new ArrayList<>();
@@ -187,18 +187,19 @@ final class Journal {
       return;
     }
     session.open = null;
-    restore(open.before, open.modes);
+    restore(project, open.before, open.modes);
   }
 
   /** The only writer of project files: each path gets its text, or is deleted for null. */
-  static void restore(Map<Path, String> texts) throws IOException {
-    restore(texts, Map.of());
+  static void restore(SourceProject project, Map<Path, String> texts) throws IOException {
+    restore(project, texts, Map.of());
   }
 
   /** {@link #restore(Map)}, and each file written gets back its mode in {@code modes}, if any. */
-  static void restore(Map<Path, String> texts, Map<Path, String> modes) throws IOException {
+  static void restore(SourceProject project, Map<Path, String> texts, Map<Path, String> modes)
+      throws IOException {
     for (Map.Entry<Path, String> file : texts.entrySet()) {
-      put(file.getKey(), file.getValue());
+      put(project, file.getKey(), file.getValue());
       if (file.getValue() != null && modes.containsKey(file.getKey())) {
         setMode(file.getKey(), modes.get(file.getKey()));
       }
@@ -207,13 +208,13 @@ final class Journal {
 
   /**
    * Writes {@code text} to {@code file}, creating its directories; null deletes the file, and the
-   * directories its deletion leaves empty, up to the first that is not: a refused or undone call
-   * leaves no empty directories behind.
+   * directories its deletion leaves empty, up to the first that is not, a source root or the
+   * project's root: a refused or undone call leaves no empty directories behind.
    */
-  static void put(Path file, String text) throws IOException {
+  static void put(SourceProject project, Path file, String text) throws IOException {
     if (text == null) {
       Files.deleteIfExists(file);
-      for (Path d = file.getParent(); d != null && empty(d); d = d.getParent()) {
+      for (Path d = file.getParent(); d != null && removable(project, d); d = d.getParent()) {
         Files.delete(d);
       }
     } else {
@@ -268,5 +269,14 @@ final class Journal {
 
   private static String read(Path file) throws IOException {
     return Files.exists(file) ? Files.readString(file) : null;
+  }
+
+  /** Whether {@code dir} is empty and inside the project, neither its root nor a source root. */
+  private static boolean removable(SourceProject project, Path dir) throws IOException {
+    Path d = dir.toAbsolutePath().normalize();
+    return d.startsWith(project.root())
+        && !d.equals(project.root())
+        && !project.sourceRoots().contains(d)
+        && empty(d);
   }
 }

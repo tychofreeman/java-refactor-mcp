@@ -965,7 +965,8 @@ in the same turn only if it is sent after it.
 - `move_file` (roadmap #81, 2026-11-04, gorefactor's name): `file` (a file or
   directory), `to`, `copy`, `delete` (instead of `to`). Text files that are not
   Java under a source root; each goes through the journal, so `undo` puts it
-  back, and directories a move or delete empties are removed. A moved or copied
+  back, and directories a move or delete empties are removed, up to a source root or the
+  project's root, which stay (#479). A moved or copied
   file keeps its mode (`mvnw` stays executable), and `undo` gives a file it puts
   back the mode it had (2026-11-05). Result: `moved
   docs/a.md to notes/a.md`, `copied ...`, `deleted cases/one (2 files)` (a
