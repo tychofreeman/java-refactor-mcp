@@ -17,10 +17,8 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CatchClause;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
-import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -28,12 +26,10 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.Type;
@@ -177,24 +173,9 @@ final class ThrowsCallers {
     for (Signatures.Source s : family.sources.values()) {
       units.add(s.unit());
       for (ASTNode n : Nodes.all(s.unit(), ASTNode.class)) {
-        IMethodBinding b = null;
-        boolean reference = false;
-        if (n instanceof MethodInvocation m) {
-          b = m.resolveMethodBinding();
-        } else if (n instanceof SuperMethodInvocation m) {
-          b = m.resolveMethodBinding();
-        } else if (n instanceof ClassInstanceCreation m) {
-          b = m.resolveConstructorBinding();
-        } else if (n instanceof ConstructorInvocation m) {
-          b = m.resolveConstructorBinding();
-        } else if (n instanceof SuperConstructorInvocation m) {
-          b = m.resolveConstructorBinding();
-        } else if (n instanceof EnumConstantDeclaration m) {
-          b = m.resolveConstructorBinding();
-        } else if (n instanceof MethodReference m) {
-          b = m.resolveMethodBinding();
-          reference = true;
-        } else if (n instanceof MethodDeclaration m && m.resolveBinding() != null) {
+        IMethodBinding b = Calls.binding(n);
+        boolean reference = n instanceof MethodReference;
+        if (n instanceof MethodDeclaration m && m.resolveBinding() != null) {
           declared.put(
               Signatures.key(m.resolveBinding()),
               new Signatures.Decl(
