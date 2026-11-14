@@ -1407,23 +1407,11 @@ final class LoopToStream {
    * this.f} ({@code this.items} and {@code items}), else by their text.
    */
   static boolean sameVariable(String text, Expression a, Expression b) {
-    IVariableBinding x = variable(a);
-    IVariableBinding y = variable(b);
+    IVariableBinding x = Names.variable(a);
+    IVariableBinding y = Names.variable(b);
     if (x != null && y != null) {
       return x.getKey().equals(y.getKey());
     }
     return source(text, a).equals(source(text, b));
-  }
-
-  private static IVariableBinding variable(Expression e) {
-    if (e instanceof SimpleName n && n.resolveBinding() instanceof IVariableBinding v) {
-      return v;
-    }
-    if (e instanceof FieldAccess f
-        && f.getExpression() instanceof ThisExpression t
-        && t.getQualifier() == null) {
-      return f.resolveFieldBinding();
-    }
-    return null;
   }
 }

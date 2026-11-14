@@ -688,6 +688,11 @@ case: a case whose type is a subtype of an earlier case's type is refused (roadm
 Polygon, one of its supertypes, so the earlier case matches first; as an override on Square it
 would run instead. Delete that case, then call again." A switch cannot hold such a case (Java
 refuses a dominated pattern).
+An `if` chain of more than one test reads its selector once in each `if`, where the new call
+reads it once: a selector that is not a variable (a name or `this.f`) is refused (roadmap #225,
+issue #489, 2026-11-14): "the chain evaluates it.next() once in each if, and the call that
+replaces it would evaluate it once. Put it in a local before the if first (extract_variable), then
+call again." The tests compare the selector by variable binding (`s` and `this.s` are one).
 Each case's body passes `NameCheck` (roadmap #223, issue #468, 2026-11-13): a name that its case's
 type would resolve to another declaration is refused ("moving the cases into their types would
 make K at line 8 of com/example/Circle.java mean the field K of Circle, not what it meant where it
