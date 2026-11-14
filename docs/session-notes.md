@@ -333,6 +333,9 @@ Each was chosen from options; the record named beside it has the options it beat
   fixed, all through the gate; a null edit list deletes the file, an empty one leaves it alone. It
   returns `WrittenFiles` (the fixed texts, the import notes as "rel: imported a.B", the stubs);
   a tool's result appends `said()`, so every multi-file tool names the imports it changed.
+- `Imports.fix` is `render(after, plan(...))` (#522): `plan` finds and chooses (a `Plan` of the
+  imports to add and remove), `render` lays them out; a caller that needs only what would change
+  calls `plan`. It parses `before` once, with bindings; read names and imports from that unit.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
