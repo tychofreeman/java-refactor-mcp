@@ -106,6 +106,15 @@ Each was chosen from options; the record named beside it has the options it beat
   names a method (erased only when another of its type is written alike): use it, not
   `Declarations.writtenLabel` (a key, as `Generated` uses it), for a name a tool or a refusal hands
   back. A dotted path to a type in one file is `Declarations.typePath` (syntax only).
+- Labels from bindings and declarations are in `Names` (#501, 2026-11-14): `typeLabel(ITypeBinding)`
+  (`Outer.Inner`), `typeLabelAt(ASTNode)` (the type declarations around a node, local and anonymous
+  classes passed through), `methodLabel(IMethodBinding)` (`Outer.Cart.add(List, int)`, erased; was
+  `Signatures.label`), `signature` (`add(List<String>, int)`, as source writes the types) and
+  `sourceLabel` (`Cart.add(List<String>, int)`, which `implement` and `create_file`'s stubs list).
+  Erased against written types, and the owner with or without its enclosing types, still differ
+  between `methodLabel` and `sourceLabel`: the owner's question, open (the PR of #501 sets out the
+  options). `TypeSwitch.declaration` and `FromFields.path` keep their own walk: they want member
+  types only, not a local class.
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".

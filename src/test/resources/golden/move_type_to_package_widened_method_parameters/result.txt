@@ -1,0 +1,1 @@
+moved Shop to package b (b/Shop.java), with 1 reference in 1 file: a/Cart.java line 4; widened Shop.price(int, String) to public
