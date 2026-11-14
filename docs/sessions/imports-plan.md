@@ -27,6 +27,8 @@ behavior change, so no failing golden; `ImportsTest` for `plan` and `render`.
   of `Plan`, `Evidence`, `plan`, `render`, `importsOf(CompilationUnit)`; `replace_text`s for
   `chosen` and `Edits.write`), one batch of two `replace_text`s, `create_file` for `ImportsTest`.
   One `replace_text` step sent the same old and new text (a no-op in the batch). No Java by hand.
+- hand: merging origin/main (#604, `Names.simpleName` and `Nodes.end`) conflicted in `fix`; kept
+  this branch's `fix` and applied #604's two changes to `plan` and `render` with a script.
 - measure: a scratch test (not committed) ran `Imports.fix` 80 times after 10 warm-up on
   `Lines.java` of a copy of this project, with an edit that needs two imports and drops one; three
   runs before and after, interleaved. Minimums: before 131.6, 97.9, 98.5 ms; after 88.5, 108.8,
@@ -36,7 +38,7 @@ behavior change, so no failing golden; `ImportsTest` for `plan` and `render`.
 
 ## Measured
 
-Not measured by the session log (the hook is not loaded here). 0 hand edits of Java.
+Not measured by the session log (the hook is not loaded here). 0 hand edits of Java but the merge resolution above.
 
 ## Assessment
 
