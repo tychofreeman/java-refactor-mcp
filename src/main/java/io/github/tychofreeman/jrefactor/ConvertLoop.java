@@ -1,7 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -55,9 +54,6 @@ final class ConvertLoop {
 
   private ConvertLoop() {}
 
-  /** A text edit: {@code [start, end)} of the file becomes {@code text}. */
-  private record Edit(int start, int end, String text) {}
-
   /** An index for: its index, what it walks, and whether that is an array. */
   private record Indexed(ForStatement loop, IVariableBinding index, Expression of, boolean array) {}
 
@@ -86,7 +82,7 @@ final class ConvertLoop {
             "loop",
             "",
             "the loop");
-    List<Edit> edits = new ArrayList<>();
+    List<TextEdit> edits = new ArrayList<>();
     List<String> imports = new ArrayList<>();
     String said;
     if (loop instanceof EnhancedForStatement each) {
@@ -134,17 +130,13 @@ final class ConvertLoop {
                       : form.equals("while") ? "for" : "while")
                   + ".");
     }
-    edits.sort(Comparator.comparingInt(Edit::start).reversed());
-    StringBuilder updated = new StringBuilder(text);
-    for (Edit e : edits) {
-      updated.replace(e.start(), e.end(), e.text());
-    }
+    String updated = TextEdit.apply(text, edits, 0);
     Edits.Written written =
         Edits.gated(
             project,
             opened.file(),
             text,
-            updated.toString(),
+            updated,
             imports,
             "rewriting the loop at line " + line,
             "Undo, and check the loop's types.");
@@ -228,7 +220,7 @@ final class ConvertLoop {
   }
 
   /** An index for to an enhanced for: each {@code x.get(i)} or {@code x[i]} becomes the element. */
-  private static String indexToEach(String text, Indexed indexed, List<Edit> edits) {
+  private static String indexToEach(String text, Indexed indexed, List<TextEdit> edits) {
     ForStatement loop = indexed.loop();
     int line = Lines.number(text, loop.getStartPosition());
     String of = source(text, indexed.of());
@@ -278,7 +270,7 @@ final class ConvertLoop {
         type = text.substring(first.getStartPosition(), f.getStartPosition()).strip();
         reads.remove(f.getInitializer());
         edits.add(
-            new Edit(
+            new TextEdit(
                 Lines.start(text, first.getStartPosition()),
                 Lines.end(text, Nodes.end(first) - 1),
                 ""));
@@ -288,10 +280,10 @@ final class ConvertLoop {
       name = Names.fresh(Names.elementName(indexed.of()), loop);
     }
     for (Expression read : reads) {
-      edits.add(new Edit(read.getStartPosition(), Nodes.end(read), name));
+      edits.add(new TextEdit(read.getStartPosition(), Nodes.end(read), name));
     }
     edits.add(
-        new Edit(
+        new TextEdit(
             loop.getStartPosition(),
             body.getStartPosition(),
             "for (" + type + " " + name + " : " + of + ") "));
@@ -409,7 +401,8 @@ final class ConvertLoop {
    * A for over an iterator, {@code for (Iterator<T> it = x.iterator(); it.hasNext(); ) { T e =
    * it.next(); ... }}, to {@code for (T e : x)}.
    */
-  private static String iteratorToEach(String text, ForStatement loop, int line, List<Edit> edits) {
+  private static String iteratorToEach(
+      String text, ForStatement loop, int line, List<TextEdit> edits) {
     String shape =
         " is not an index for (for (int i = 0; i < x.size(); i++)) or a for over an iterator (for"
             + " (Iterator<T> it = x.iterator(); it.hasNext(); ) { T e = it.next(); ... }).";
@@ -456,17 +449,17 @@ final class ConvertLoop {
     String of = source(text, start.getExpression());
     String header = "for (" + type + " " + element.getName() + " : " + of + ")";
     edits.add(
-        new Edit(
+        new TextEdit(
             Lines.start(text, first.getStartPosition()),
             Lines.end(text, Nodes.end(first) - 1),
             ""));
-    edits.add(new Edit(loop.getStartPosition(), body.getStartPosition(), header + " "));
+    edits.add(new TextEdit(loop.getStartPosition(), body.getStartPosition(), header + " "));
     return "a " + header + ".";
   }
 
   /** An enhanced for to {@code for (Iterator<T> it = x.iterator(); it.hasNext(); )}. */
   private static String toIterator(
-      String text, EnhancedForStatement loop, List<Edit> edits, List<String> imports) {
+      String text, EnhancedForStatement loop, List<TextEdit> edits, List<String> imports) {
     int line = Lines.number(text, loop.getStartPosition());
     ITypeBinding sourceType = loop.getExpression().resolveTypeBinding();
     if (sourceType == null || sourceType.isArray()) {
@@ -501,12 +494,13 @@ final class ConvertLoop {
         loop.getBody(),
         source(text, loop.getParameter()) + " = " + it + ".next();",
         edits);
-    edits.add(new Edit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
+    edits.add(
+        new TextEdit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
     return "a " + header + ".";
   }
 
   /** An enhanced for over a list or an array to {@code for (int i = 0; i < x.size(); i++)}. */
-  private static String toIndex(String text, EnhancedForStatement loop, List<Edit> edits) {
+  private static String toIndex(String text, EnhancedForStatement loop, List<TextEdit> edits) {
     int line = Lines.number(text, loop.getStartPosition());
     Expression of = loop.getExpression();
     ITypeBinding t = of.resolveTypeBinding();
@@ -540,7 +534,7 @@ final class ConvertLoop {
             + "++)";
     String read = array ? primary + "[" + i + "]" : primary + ".get(" + i + ")";
     first(text, loop, body, source(text, loop.getParameter()) + " = " + read + ";", edits);
-    edits.add(new Edit(loop.getStartPosition(), body.getStartPosition(), header + " "));
+    edits.add(new TextEdit(loop.getStartPosition(), body.getStartPosition(), header + " "));
     String note =
         !array && !Hierarchy.isA(t, "java.util.RandomAccess")
             ? " " + from + " is not a RandomAccess list, so get(i) may walk it (a LinkedList)."
@@ -553,7 +547,7 @@ final class ConvertLoop {
    * a block, or with a one-statement body in a new block.
    */
   private static void first(
-      String text, Statement loop, Statement body, String statement, List<Edit> edits) {
+      String text, Statement loop, Statement body, String statement, List<TextEdit> edits) {
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
     String inner = indent + " ".repeat(step);
@@ -567,7 +561,7 @@ final class ConvertLoop {
               ? inner
               : Lines.indentOf(text, ((Statement) block.statements().get(0)).getStartPosition());
       int after = Lines.end(text, block.getStartPosition());
-      edits.add(new Edit(after, after, at + statement + "\n"));
+      edits.add(new TextEdit(after, after, at + statement + "\n"));
       return;
     }
     List<String> lines = new ArrayList<>();
@@ -576,7 +570,7 @@ final class ConvertLoop {
     }
     String rest = String.join("\n", lines);
     edits.add(
-        new Edit(
+        new TextEdit(
             body.getStartPosition(),
             Nodes.end(body),
             "{\n" + inner + statement + (rest.isEmpty() ? "" : "\n" + rest) + "\n" + indent + "}"));
@@ -592,7 +586,7 @@ final class ConvertLoop {
    * #133). The two go in a block when a statement after the loop names a variable the init
    * declares, or the loop is not a statement of a block.
    */
-  private static String forToWhile(String text, ForStatement loop, List<Edit> edits) {
+  private static String forToWhile(String text, ForStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
     String indent = Lines.indentOf(text, whole.getStartPosition());
     int step = step(text);
@@ -620,7 +614,7 @@ final class ConvertLoop {
               + Lines.number(text, loop.getStartPosition())
               + " must go in a block, and it holds a text block, which indenting would change.");
     }
-    List<Edit> inBody = new ArrayList<>();
+    List<TextEdit> inBody = new ArrayList<>();
     if (!updates.isEmpty()) {
       for (ContinueStatement c : continues(body, loop)) {
         before(text, c, updates, step, inBody);
@@ -628,7 +622,9 @@ final class ConvertLoop {
     }
     String cond = loop.getExpression() == null ? "true" : source(text, loop.getExpression());
     String bodyText =
-        ends(body) ? within(text, body, inBody) : last(text, whole, body, updates, step, inBody);
+        ends(body)
+            ? TextEdit.apply(source(text, body), inBody, body.getStartPosition())
+            : last(text, whole, body, updates, step, inBody);
     String label =
         whole instanceof LabeledStatement l
             ? text.substring(l.getStartPosition(), loop.getStartPosition())
@@ -640,7 +636,7 @@ final class ConvertLoop {
     if (wrap) {
       written = braced(step, indent, written);
     }
-    edits.add(new Edit(whole.getStartPosition(), Nodes.end(whole), written));
+    edits.add(new TextEdit(whole.getStartPosition(), Nodes.end(whole), written));
     return "a while (" + cond + ")" + (wrap ? ", in a block." : ".");
   }
 
@@ -661,7 +657,7 @@ final class ConvertLoop {
    * after the loop names, becomes the init; the last statement of the body, when it is an
    * assignment or an increment and no {@code continue} of the loop skips it, the update.
    */
-  private static String whileToFor(String text, WhileStatement loop, List<Edit> edits) {
+  private static String whileToFor(String text, WhileStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
     String cond = source(text, loop.getExpression());
     String init = "";
@@ -680,7 +676,7 @@ final class ConvertLoop {
           String s = source(text, before);
           init = s.substring(0, s.length() - 1).strip();
           edits.add(
-              new Edit(
+              new TextEdit(
                   Lines.start(text, before.getStartPosition()),
                   Lines.start(text, whole.getStartPosition()),
                   ""));
@@ -700,7 +696,7 @@ final class ConvertLoop {
         if (continues(body, loop).isEmpty()) {
           update = source(text, e.getExpression());
           edits.add(
-              new Edit(
+              new TextEdit(
                   Lines.start(text, e.getStartPosition()), Lines.end(text, Nodes.end(e) - 1), ""));
         } else {
           kept =
@@ -711,7 +707,8 @@ final class ConvertLoop {
     }
     String header =
         "for (" + init + "; " + cond + ";" + (update.isEmpty() ? " " : " " + update) + ")";
-    edits.add(new Edit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
+    edits.add(
+        new TextEdit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
     return "a " + header + "." + kept;
   }
 
@@ -764,14 +761,14 @@ final class ConvertLoop {
 
   /** Edits that run {@code statements} just before {@code c}, in braces when it has none. */
   private static void before(
-      String text, ContinueStatement c, List<String> statements, int step, List<Edit> edits) {
+      String text, ContinueStatement c, List<String> statements, int step, List<TextEdit> edits) {
     if (c.getParent() instanceof Block) {
       String indent = Lines.indentOf(text, c.getStartPosition());
       StringBuilder b = new StringBuilder();
       for (String s : statements) {
         b.append(s).append('\n').append(indent);
       }
-      edits.add(new Edit(c.getStartPosition(), c.getStartPosition(), b.toString()));
+      edits.add(new TextEdit(c.getStartPosition(), c.getStartPosition(), b.toString()));
       return;
     }
     String outer = Lines.indentOf(text, c.getParent().getStartPosition());
@@ -781,7 +778,7 @@ final class ConvertLoop {
       b.append(inner).append(s).append('\n');
     }
     b.append(inner).append(source(text, c)).append('\n').append(outer).append('}');
-    edits.add(new Edit(c.getStartPosition(), Nodes.end(c), b.toString()));
+    edits.add(new TextEdit(c.getStartPosition(), Nodes.end(c), b.toString()));
   }
 
   /**
@@ -802,17 +799,6 @@ final class ConvertLoop {
         || last instanceof ContinueStatement;
   }
 
-  /** {@code body}'s source with {@code edits}, which all fall inside it, applied. */
-  private static String within(String text, Statement body, List<Edit> edits) {
-    List<Edit> sorted = new ArrayList<>(edits);
-    sorted.sort(Comparator.comparingInt(Edit::start).reversed());
-    StringBuilder b = new StringBuilder(source(text, body));
-    for (Edit e : sorted) {
-      b.replace(e.start() - body.getStartPosition(), e.end() - body.getStartPosition(), e.text());
-    }
-    return b.toString();
-  }
-
   /**
    * {@code body}'s source with {@code edits} applied and {@code statements} last: before the
    * closing brace of a block that has it on a line of its own, else in a new block.
@@ -823,10 +809,10 @@ final class ConvertLoop {
       Statement body,
       List<String> statements,
       int step,
-      List<Edit> edits) {
+      List<TextEdit> edits) {
     String indent = Lines.indentOf(text, whole.getStartPosition());
     String inner = indent + " ".repeat(step);
-    String applied = within(text, body, edits);
+    String applied = TextEdit.apply(source(text, body), edits, body.getStartPosition());
     StringBuilder add = new StringBuilder();
     if (body instanceof Block block
         && !block.statements().isEmpty()
@@ -868,7 +854,7 @@ final class ConvertLoop {
    * of 2026-11-11 over copying the body before a while). A {@code continue} goes to a do-while's
    * condition and would skip it in the while, so it is refused.
    */
-  private static String doToWhile(String text, DoStatement loop, List<Edit> edits) {
+  private static String doToWhile(String text, DoStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
     int line = Lines.number(text, loop.getStartPosition());
     Statement body = loop.getBody();
@@ -891,9 +877,9 @@ final class ConvertLoop {
     String exit = "if (" + negated + ") break;";
     String bodyText =
         ends(body)
-            ? within(text, body, List.of())
+            ? source(text, body)
             : last(text, whole, body, List.of(exit), step(text), List.of());
-    edits.add(new Edit(loop.getStartPosition(), Nodes.end(loop), "while (true) " + bodyText));
+    edits.add(new TextEdit(loop.getStartPosition(), Nodes.end(loop), "while (true) " + bodyText));
     return "a while (true) that ends in " + exit;
   }
 
@@ -901,7 +887,7 @@ final class ConvertLoop {
    * A while to {@code if (cond) { do body while (cond); }}: the condition is read twice on the
    * first pass, so it may only read locals, with literals and operators.
    */
-  private static String whileToDo(String text, WhileStatement loop, List<Edit> edits) {
+  private static String whileToDo(String text, WhileStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
     int line = Lines.number(text, loop.getStartPosition());
     String cond = source(text, loop.getExpression());
@@ -931,7 +917,7 @@ final class ConvertLoop {
             + cond
             + ") "
             + braced(step(text), indent, label + "do " + bodyText + " while (" + cond + ");");
-    edits.add(new Edit(whole.getStartPosition(), Nodes.end(whole), written));
+    edits.add(new TextEdit(whole.getStartPosition(), Nodes.end(whole), written));
     return "a do-while under if (" + cond + ").";
   }
 

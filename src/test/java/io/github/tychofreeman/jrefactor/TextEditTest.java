@@ -12,15 +12,13 @@ class TextEditTest {
   void editsApplyFromTheEndInAnyOrder() {
     assertEquals(
         "a-X-cY",
-        TextEdit.apply(
-            "a-b-c", List.of(new TextEdit(5, 5, "Y"), new TextEdit(2, 3, "X")), 0));
+        TextEdit.apply("a-b-c", List.of(new TextEdit(5, 5, "Y"), new TextEdit(2, 3, "X")), 0));
   }
 
   @Test
   void anInsertAtAReplacementsStartGoesBeforeIt() {
     assertEquals(
-        "aIX",
-        TextEdit.apply("abc", List.of(new TextEdit(1, 1, "I"), new TextEdit(1, 3, "X")), 0));
+        "aIX", TextEdit.apply("abc", List.of(new TextEdit(1, 1, "I"), new TextEdit(1, 3, "X")), 0));
   }
 
   @Test
@@ -33,12 +31,10 @@ class TextEditTest {
     assertThrows(
         IllegalStateException.class,
         () ->
-            TextEdit.apply(
-                "abcdef", List.of(new TextEdit(1, 4, "X"), new TextEdit(3, 5, "Y")), 0));
+            TextEdit.apply("abcdef", List.of(new TextEdit(1, 4, "X"), new TextEdit(3, 5, "Y")), 0));
     assertThrows(
         IllegalStateException.class,
         () ->
-            TextEdit.apply(
-                "abcdef", List.of(new TextEdit(1, 4, "X"), new TextEdit(2, 2, "Y")), 0));
+            TextEdit.apply("abcdef", List.of(new TextEdit(1, 4, "X"), new TextEdit(2, 2, "Y")), 0));
   }
 }

@@ -243,12 +243,7 @@ final class MoveMember {
     int ms = m.getStartPosition();
     int me = ms + m.getLength();
     List<TextEdit> inner = movedEdits(text, m, typeName, isStatic, crosses);
-    List<TextEdit> shifted = new ArrayList<>();
-    for (TextEdit e : inner) {
-      shifted.add(new TextEdit(e.start() - ms, e.end() - ms, e.text()));
-    }
-    shifted.sort((a, b) -> b.start() - a.start());
-    String moved = TextEdit.apply(text.substring(ms, me), shifted, 0);
+    String moved = TextEdit.apply(text.substring(ms, me), inner, ms);
 
     int start = Lines.start(text, ms);
     int end = Lines.end(text, me - 1);
@@ -425,7 +420,6 @@ final class MoveMember {
     if (crosses && !Modifier.isPublic(fd.getModifiers())) {
       inner.add(new TextEdit(at - fs, at - fs, "public "));
     }
-    inner.sort((a, b) -> b.start() - a.start());
     String moved = TextEdit.apply(text.substring(fs, Nodes.end(fd)), inner, 0);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, fd));
     edits

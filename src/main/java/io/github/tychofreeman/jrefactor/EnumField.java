@@ -55,7 +55,6 @@ final class EnumField {
     Field fieldResult = field(target, parameter, before, passed, text, type);
     List<TextEdit> edits = fieldResult.edits();
     String members = fieldResult.members();
-    edits.sort((a, b) -> b.start() - a.start());
     String withValues = TextEdit.apply(text, edits, 0);
     String out = Declarations.plan(withValues, opened.rel(), name, members).text();
 

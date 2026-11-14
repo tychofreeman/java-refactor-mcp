@@ -250,9 +250,9 @@ final class ParameterValue {
       List<int[]> uses,
       String source,
       Signatures.Call c,
-      List<Swap> more,
+      List<TextEdit> more,
       MethodDeclaration casts) {
-    List<Swap> swaps = new ArrayList<>(more);
+    List<TextEdit> swaps = new ArrayList<>(more);
     for (int[] u : uses) {
       Expression arg = (Expression) c.arguments().get(u[2]);
       String text = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
@@ -273,14 +273,9 @@ final class ParameterValue {
           passed = "(" + passed + ")";
         }
       }
-      swaps.add(new Swap(u[0], u[1], passed));
+      swaps.add(new TextEdit(u[0], u[0] + u[1], passed));
     }
-    swaps.sort((a, b) -> b.offset() - a.offset());
-    StringBuilder out = new StringBuilder(source);
-    for (Swap s : swaps) {
-      out.replace(s.offset(), s.offset() + s.length(), s.text());
-    }
-    return out.toString();
+    return TextEdit.apply(source, swaps, 0);
   }
 
   /**
@@ -353,7 +348,7 @@ final class ParameterValue {
      * which needs no import.
      */
     String written(Signatures.Call c, boolean probe) {
-      List<Swap> swaps = new ArrayList<>();
+      List<TextEdit> swaps = new ArrayList<>();
       for (MethodInvocation call : Nodes.all(expression, MethodInvocation.class)) {
         IMethodBinding b = call.resolveMethodBinding();
         Expression on = call.getExpression();
@@ -386,9 +381,9 @@ final class ParameterValue {
         }
         if (before != null) {
           swaps.add(
-              new Swap(
+              new TextEdit(
                   call.getStartPosition() - expression.getStartPosition(),
-                  call.getName().getStartPosition() - call.getStartPosition(),
+                  call.getName().getStartPosition() - expression.getStartPosition(),
                   before + "."));
         }
       }
@@ -773,9 +768,6 @@ final class ParameterValue {
     }
     return out;
   }
-
-  /** Text written in place of {@code length} characters at {@code offset} within a value. */
-  private record Swap(int offset, int length, String text) {}
 
   /**
    * Whether each call of {@code m} can write {@code call}, a call in its body: on a receiver it

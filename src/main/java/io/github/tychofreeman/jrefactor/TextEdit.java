@@ -20,7 +20,8 @@ record TextEdit(int start, int end, String text) {
     int limit = Integer.MAX_VALUE;
     for (TextEdit e : sorted) {
       if (e.end() > limit) {
-        throw new IllegalStateException("overlapping edits: " + e + " and one starting at " + limit);
+        throw new IllegalStateException(
+            "overlapping edits: " + e + " and one starting at " + limit);
       }
       limit = e.start();
       out.replace(e.start() - offset, e.end() - offset, e.text());
