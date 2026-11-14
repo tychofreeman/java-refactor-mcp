@@ -1844,6 +1844,13 @@ field, and the gate's "would add compile errors".
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server
   name; roadmap #100).
+- A step with keys beside `tool` that are arguments of its tool (by their names, old names or
+  retired ones) is refused before any step runs (roadmap #196, 2026-11-13): `step k (tool) has
+  its arguments file, old and new beside "tool"; a step's arguments go under "args": {"tool":
+  "replace_text", "id": ..., "args": {"file": ..., "old": ..., "new": ...}}.`, then the other
+  steps sent that way by number. Such a step is not read as if its arguments were under `args`
+  (the smallest choice; the options are in `docs/design.md`, Decisions). Other keys beside `tool`
+  are ignored, as before.
 - Line arguments (`line`, `start_line`, `end_line`) are as read before the
   batch; the batch moves them past earlier steps' edits. A line an earlier step
   rewrote with a different line count is refused, naming the step; a line between

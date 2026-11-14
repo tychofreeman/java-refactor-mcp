@@ -1,0 +1,24 @@
+[
+  {
+    "tool": "replace_text",
+    "args": {
+      "file": "com/example/A.java",
+      "old": "return x;",
+      "new": "return x + 1;"
+    }
+  },
+  {
+    "tool": "replace_text",
+    "id": "total",
+    "file": "com/example/A.java",
+    "old": "int total = b(1);",
+    "new": "int total = b(2);"
+  },
+  {
+    "tool": "rename",
+    "file": "com/example/A.java",
+    "line": 9,
+    "name": "total",
+    "new_name": "sum"
+  }
+]

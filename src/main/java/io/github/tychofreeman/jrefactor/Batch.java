@@ -40,6 +40,7 @@ final class Batch {
     }
     List<Map<String, Object>> run = steps;
     try {
+      argumentsUnderArgs(run, session);
       Outcome outcome;
       if (mode.equals("end")) {
         Gate.Checked<String> checked =
@@ -159,6 +160,9 @@ final class Batch {
   private static final long DIFF_LIMIT = 4_000_000L;
 
   private static final ObjectMapper JSON = new ObjectMapper();
+
+  /** The keys a step takes itself; its tool's arguments go under {@code args}. */
+  private static final Set<String> STEP_KEYS = Set.of("tool", "args", "id");
 
   private static String steps(SourceProject project, List<Map<String, Object>> steps, boolean atEnd)
       throws Exception {
@@ -439,5 +443,85 @@ final class Batch {
     Refused refused = JSON.readValue(Files.readString(file), Refused.class);
     project.session().refusedBatch = refused.steps();
     project.session().refusedCheck = refused.check();
+  }
+
+  /**
+   * Refuses steps that put their tool's arguments beside {@code tool} rather than under {@code
+   * args}, before any step runs, showing the first one's shape. A step whose tool is unknown is
+   * left to the run, whose refusal lists the tools.
+   */
+  private static void argumentsUnderArgs(List<Map<String, Object>> steps, Session session) {
+    String first = null;
+    List<String> others = new ArrayList<>();
+    for (int i = 0; i < steps.size(); i++) {
+      Map<String, Object> step = steps.get(i);
+      if (!(step.get("tool") instanceof String name)) {
+        continue;
+      }
+      Tools.Def def;
+      try {
+        def = Tools.named(name, session);
+      } catch (Refusal unknown) {
+        continue;
+      }
+      List<String> beside =
+          step.keySet().stream().filter(k -> !STEP_KEYS.contains(k) && takes(def, k)).toList();
+      if (beside.isEmpty()) {
+        continue;
+      }
+      if (first != null) {
+        others.add(String.valueOf(i + 1));
+        continue;
+      }
+      List<String> args = new ArrayList<>();
+      if (step.get("args") instanceof Map<?, ?> given) {
+        given.keySet().forEach(k -> args.add(String.valueOf(k)));
+      }
+      args.addAll(beside);
+      StringBuilder shape = new StringBuilder("{\"tool\": \"" + name + "\"");
+      for (String key : step.keySet()) {
+        if (STEP_KEYS.contains(key) && !key.equals("tool") && !key.equals("args")) {
+          shape.append(", \"").append(key).append("\": ...");
+        }
+      }
+      shape.append(", \"args\": {");
+      shape.append(String.join(", ", args.stream().map(k -> "\"" + k + "\": ...").toList()));
+      shape.append("}}");
+      first =
+          "step "
+              + (i + 1)
+              + " ("
+              + name
+              + ") has its arguments "
+              + listed(beside)
+              + " beside \"tool\"; a step's arguments go under \"args\": "
+              + shape
+              + ".";
+    }
+    if (first == null) {
+      return;
+    }
+    String rest =
+        others.isEmpty()
+            ? ""
+            : others.size() == 1
+                ? " Step " + others.get(0) + " has its arguments beside \"tool\" too."
+                : " Steps " + listed(others) + " have their arguments beside \"tool\" too.";
+    throw new Refusal(first + rest + " Nothing was changed.");
+  }
+
+  /** Whether {@code def} takes an argument named {@code key}, by its name or an old one. */
+  private static boolean takes(Tools.Def def, String key) {
+    return def.args().contains(key)
+        || Tools.ARG_ALIASES.getOrDefault(def.name(), Map.of()).containsKey(key)
+        || Tools.RETIRED_ARGS.getOrDefault(def.name(), Set.of()).contains(key);
+  }
+
+  /** "a", "a and b", "a, b and c". */
+  private static String listed(List<String> items) {
+    int last = items.size() - 1;
+    return last == 0
+        ? items.get(0)
+        : String.join(", ", items.subList(0, last)) + " and " + items.get(last);
   }
 }

@@ -303,6 +303,17 @@ qualified `Outer.this` in the body stays refused, and at `super.m(...)` the tool
 `rate(a')` in place of `super.rate(a')` (which would also keep behavior, since a method with
 one declaration runs the same body either way), as the decision names `super.rate`.
 
+**Decided (default to reopen, 2026-11-13): a `batch` step with its arguments beside `tool` is
+refused, not read.** A step `{"tool": "replace_text", "file": ..., "old": ...}` was refused by the
+step's tool ("replace_text needs file"), which does not say where the arguments go; four friction
+entries (2026-11-10, three on 2026-11-13). Options: (a) refuse before any step runs, naming the
+keys and showing the step with them under `args` (chosen: the smallest, and the model learns the
+shape once); (b) read such a step's keys as its arguments when it has no `args` (no turn lost, but
+two shapes for one thing, and a key that is both a step key and an argument would be ambiguous);
+(c) read them and say so in the result (as (b), with the note costing tokens on every step). The
+owner asked for the smallest choice; reopen (b) if the refusal still costs a turn each session.
+`Batch.argumentsUnderArgs` (roadmap #196).
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -740,6 +751,7 @@ sections 3 and 4.
 | 186 | 193 | Skeleton-only refuses content of several statements when one is a statement `build` writes from names, suggesting one `build` with the others as typed strings | Done 2026-11-13 (`Generated.checkBuild` over `Generated.statements`, an entry each by `Generated.built`; content that does not parse is not checked) | The user's choice of 2026-11-13, after `docs/sessions/ab-generators.md`; `docs/sessions/skeleton-build-blocks.md` |
 | 187 | 194 | `batch` `retry` from the command line: each `bin/jrefactor` run is a new process, so the refused batch a refusal offered to retry was gone in the next run | Done (2026-11-13): `Batch.save` and `Batch.load` keep it in the cache directory beside the undo stack (`CliTest.aRefusedBatchIsRetriedByALaterRun`); record in `docs/sessions/cli-batch-retry.md` | Friction log: move-recursive-static and skeleton-build-blocks (2026-11-13), resent whole each time |
 | 188 | 195 | Run one golden case or probe, or a few: `GoldenTest` and `ProbeTest` ran every case, so sessions wrote scratch scripts to run one through the CLI and diff it | Done 2026-11-13 (`-Djrefactor.golden=<names>` and `-Djrefactor.probe=<names>`, comma-separated directory names or globs with `*` and `?`, read by `Cases.select` in both factories; a pattern that matches no case fails the run, naming it. Surefire's `-Dtest=GoldenTest#<case>` was tried first and selects nothing: its method filter sees the factory method `cases`, not the dynamic tests' names. Defaults to reopen (the owner said take the smallest): one property per test class over one shared, and failing on any pattern that matches nothing over failing only when none matches) | The owner's follow-up of `docs/sessions/move-record-fields.md`; `docs/sessions/golden-one-case.md` |
+| 189 | 196 | A `batch` step with its tool's arguments beside `tool` rather than under `args` was refused by the step's tool ("replace_text needs file"), which does not say where they go (four friction entries, 2026-11-10 and 2026-11-13) | Done 2026-11-13 (`Batch.argumentsUnderArgs`, before any step runs: a key beside `tool` that the tool takes, by its name, an old one or a retired one, is refused naming the keys and showing the first such step with them under `args`, then the other such steps by number; other keys stay ignored. Default to reopen: refuse over reading them as arguments, in Decisions) | `docs/friction-log.md`; `docs/sessions/batch-args-beside-tool.md` |
 
 ### The 2026-11-04 list
 
