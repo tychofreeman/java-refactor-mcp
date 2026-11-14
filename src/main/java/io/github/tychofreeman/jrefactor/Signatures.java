@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -686,17 +685,7 @@ final class Signatures {
     if (type.getErasure().isFromSource()) {
       return true;
     }
-    ITypeBinding top = type.getErasure();
-    while (top.getDeclaringClass() != null) {
-      top = top.getDeclaringClass();
-    }
-    String path = top.getQualifiedName().replace('.', '/') + ".java";
-    for (Path root : project.sourceRoots()) {
-      if (Files.isRegularFile(root.resolve(path))) {
-        return true;
-      }
-    }
-    return false;
+    return project.fileOf(type) != null;
   }
 
   /** The key that names {@code b}'s declaration in every file's bindings. */

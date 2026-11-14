@@ -10,7 +10,6 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
@@ -72,7 +71,7 @@ final class ByLine {
       if (h.method() == null
           || unit.getLineNumber(start) != line
           || (column != null && start - lineStart + 1 != column)
-          || TypeSwitch.fileOf(project, topLevel(h.method().getDeclaringClass())) == null) {
+          || TypeSwitch.fileOf(project, Names.outermost(h.method().getDeclaringClass())) == null) {
         continue;
       }
       if (h.declaration()) {
@@ -110,7 +109,7 @@ final class ByLine {
         (declared != null ? declared : methods.values().iterator().next().get(0))
             .method()
             .getMethodDeclaration();
-    Path file = TypeSwitch.fileOf(project, topLevel(method.getDeclaringClass()));
+    Path file = TypeSwitch.fileOf(project, Names.outermost(method.getDeclaringClass()));
     String home = project.relative(file);
     for (MethodDeclaration d :
         Nodes.all(Opened.of(project, home).unit(), MethodDeclaration.class)) {
@@ -127,13 +126,5 @@ final class ByLine {
             + " is not written in "
             + home
             + " (a default constructor): declare it first.");
-  }
-
-  private static ITypeBinding topLevel(ITypeBinding t) {
-    ITypeBinding top = t.getErasure();
-    while (top.getDeclaringClass() != null) {
-      top = top.getDeclaringClass();
-    }
-    return top;
   }
 }

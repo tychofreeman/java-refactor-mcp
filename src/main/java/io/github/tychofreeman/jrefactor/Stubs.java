@@ -251,7 +251,7 @@ final class Stubs {
       }
       supertypes.addAll(List.of(type.getInterfaces()));
       for (ITypeBinding s : supertypes) {
-        Path file = sourceOf(s);
+        Path file = project.fileOf(s);
         if (file != null && removed(file, Names.typeLabel(s.getErasure()), name, false)) {
           return true;
         }
@@ -346,7 +346,7 @@ final class Stubs {
         owner = receiver.resolveTypeBinding();
         isStatic = false;
       }
-      Path target = sourceOf(owner);
+      Path target = project.fileOf(owner);
       String name = call.getName().getIdentifier();
       if (target == null || owner.isInterface() || removedAround(call, owner, target, name)) {
         return;
@@ -376,7 +376,7 @@ final class Stubs {
     private void field(CompilationUnit unit, QualifiedName read) throws IOException {
       uses.clear();
       ITypeBinding owner = (ITypeBinding) read.getQualifier().resolveBinding();
-      Path target = sourceOf(owner);
+      Path target = project.fileOf(owner);
       if (target == null || owner.isInterface()) {
         return;
       }
@@ -393,7 +393,7 @@ final class Stubs {
         throws IOException {
       uses.clear();
       ITypeBinding owner = creation.getType().resolveBinding();
-      Path target = sourceOf(owner);
+      Path target = project.fileOf(owner);
       if (target == null
           || owner.isInterface()
           || creation.getAnonymousClassDeclaration() != null) {
@@ -590,29 +590,6 @@ final class Stubs {
       Files.writeString(file, text);
     }
 
-    /** The project file that declares {@code type}, or null when it is not the project's. */
-    private Path sourceOf(ITypeBinding type) {
-      if (type == null
-          || type.isRecovered()
-          || type.isAnonymous()
-          || type.isLocal()
-          || type.isArray()
-          || type.isPrimitive()) {
-        return null;
-      }
-      ITypeBinding top = type.getErasure();
-      while (top.getDeclaringClass() != null) {
-        top = top.getDeclaringClass();
-      }
-      String path = top.getQualifiedName().replace('.', '/') + ".java";
-      for (Path root : project.sourceRoots()) {
-        if (Files.isRegularFile(root.resolve(path))) {
-          return root.resolve(path);
-        }
-      }
-      return null;
-    }
-
     /**
      * A functional interface that a lambda with as many parameters as {@code lambda} has can be
      * passed as, with Object for each type. Object for more than two.
@@ -788,9 +765,7 @@ final class Stubs {
       }
       ITypeBinding top = b.getErasure();
       String name = Names.typeLabel(top);
-      while (top.getDeclaringClass() != null) {
-        top = top.getDeclaringClass();
-      }
+      top = Names.outermost(top);
       if (!top.getPackage().isUnnamed() && !top.getPackage().getName().equals("java.lang")) {
         uses.add(top.getQualifiedName());
       }
@@ -810,7 +785,7 @@ final class Stubs {
       uses.clear();
       AbstractTypeDeclaration enclosing = ancestorOrSelf(use, AbstractTypeDeclaration.class);
       ITypeBinding owner = enclosing == null ? null : enclosing.resolveBinding();
-      Path target = sourceOf(owner);
+      Path target = project.fileOf(owner);
       String name = use.getIdentifier();
       if (target == null
           || owner.isInterface()
