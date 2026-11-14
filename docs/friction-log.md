@@ -1285,3 +1285,7 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - A `batch` with `retry: true` in a second `bin/jrefactor` run was refused ("there is no refused
   batch since the last one passed"), though the run before was refused: the CLI does not keep the
   refused batch between runs, while the refusal offered `retry`. Resent whole.
+## 2026-11-13: cli-batch-retry
+
+- No hand edit of Java; the fix for the CLI `retry` entries above (roadmap #194). The docs went
+  through a Python script, not `replace_text`.
