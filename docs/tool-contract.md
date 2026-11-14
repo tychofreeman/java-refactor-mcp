@@ -445,7 +445,9 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
   #344, 2026-11-11; it had been refused).
 - Refused: `this`, or a bare call of a method of the interface, of its supertypes (an
   inherited default, roadmap #94) or of `Object`, in
-  the code that moves (it would mean another object); an anonymous class with
+  the code that moves (it would mean another object); `super.m()`, `super.f` or `super::m`
+  without a qualifier there (roadmap #240, issue #472, 2026-11-13: "the anonymous class uses
+  super, which in a lambda would mean another class's superclass. Keep it."); an anonymous class with
   fields or other methods; a form that does not compile
   there (the gate). Result: `converted the lambda at line 7 of <file> to
   String::length`.
@@ -465,9 +467,17 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
   the class does not define, which changes behavior: refused without
   `value_semantics=true` ("Pass value_semantics=true if that is wanted, or
   define them first").
+- An `equals` whose parameter is not `Object` (`equals(Point)`) is an overload,
+  not the record's `equals(Object)`: it does not count as defining it, and the
+  refusal says so. A field's annotations go onto its component (where their
+  targets allow, a record also puts them on the accessor and the constructor's
+  parameter).
 - Refused also: a superclass; a class of the project that extends it; an
-  abstract class; a field that is not final or has an initializer; an instance
-  initializer; other constructors. Result: `converted Point to a record (x, y)
+  abstract class; a field that is not final or has an initializer; a transient
+  field (a record serializes every component); an instance initializer; other
+  constructors; a constructor less visible than the class (a record's canonical
+  constructor is as visible as the record, so a factory-only class would get a
+  public constructor). Result: `converted Point to a record (x, y)
   in <file>; it now has the record's equals, hashCode and toString; made x()
   public`.
 
@@ -680,7 +690,9 @@ refuses a dominated pattern).
 Each case's body passes `NameCheck` (roadmap #223, issue #468, 2026-11-13): a name that its case's
 type would resolve to another declaration is refused ("moving the cases into their types would
 make K at line 8 of com/example/Circle.java mean the field K of Circle, not what it meant where it
-was written: ..."). A field read through the pattern variable (`c.radius`) becomes `this.radius`
+was written: ..."). A case that uses `super` (a call, a field or a method reference) is refused,
+for an enum's case too (roadmap #240, issue #472): "the case of Circle uses super, which on Circle
+would mean its own superclass. Keep the switch as it is." A field read through the pattern variable (`c.radius`) becomes `this.radius`
 where the body declares a variable of that name, else `radius`. A body's own locals are told by
 binding, so a field of the method's class named as a local of another scope is refused as a field.
 
@@ -1837,7 +1849,9 @@ the if, at its indentation. Arguments: `file`, `line` (the line the if starts on
 Result: `removed the else of the if at line L in file`, with `; imported ...` when an import is added.
 Refusals: no if on the line, several on it, an if with no else, an if not directly in a block, a
 then-branch that can finish normally (it does not end in return, throw, break, continue or yield),
-and the gate's "would add compile errors".
+a local or class the else block declares that a statement after the if names (it would take the
+place of a field of that name there; rename the local first), and the gate's "would add compile
+errors".
 
 ## `move_member` (built)
 
