@@ -3,7 +3,6 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.Assignment;
@@ -264,25 +263,19 @@ final class ConvertToRecord {
       SourceProject project, Path file, ITypeBinding type, String name) throws Exception {
     Holding holding = Holding.of(project, name, file);
     String key = type.getTypeDeclaration().getKey();
-    for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-      e.getValue()
-          .accept(
-              new org.eclipse.jdt.core.dom.ASTVisitor() {
-                @Override
-                public boolean visit(TypeDeclaration t) {
-                  ITypeBinding b = t.resolveBinding();
-                  if (b != null
-                      && b.getSuperclass() != null
-                      && b.getSuperclass().getTypeDeclaration().getKey().equals(key)) {
-                    throw new Refusal(
-                        t.getName().getIdentifier()
-                            + " extends "
-                            + name
-                            + ", and a record cannot be extended. Change that class first.");
-                  }
-                  return true;
-                }
-              });
+    for (CompilationUnit unit : holding.units().values()) {
+      for (TypeDeclaration t : Nodes.all(unit, TypeDeclaration.class)) {
+        ITypeBinding b = t.resolveBinding();
+        if (b != null
+            && b.getSuperclass() != null
+            && b.getSuperclass().getTypeDeclaration().getKey().equals(key)) {
+          throw new Refusal(
+              t.getName().getIdentifier()
+                  + " extends "
+                  + name
+                  + ", and a record cannot be extended. Change that class first.");
+        }
+      }
     }
   }
 

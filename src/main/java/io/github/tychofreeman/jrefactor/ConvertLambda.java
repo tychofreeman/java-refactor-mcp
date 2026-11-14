@@ -64,47 +64,18 @@ final class ConvertLambda {
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    List<ASTNode> found = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public void preVisit(ASTNode n) {
-            boolean kind =
+    ASTNode node =
+        opened.startingOn(
+            line,
+            column,
+            ASTNode.class,
+            n ->
                 n instanceof LambdaExpression
                     || n instanceof MethodReference
                     || (n instanceof ClassInstanceCreation c
-                        && c.getAnonymousClassDeclaration() != null);
-            if (kind
-                && unit.getLineNumber(n.getStartPosition()) == line
-                && (column == null || unit.getColumnNumber(n.getStartPosition()) + 1 == column)) {
-              found.add(n);
-            }
-          }
-        });
-    if (found.isEmpty()) {
-      throw new Refusal(
-          "no lambda, method reference or anonymous class starts on line "
-              + line
-              + (column == null ? "" : " at column " + column)
-              + " of "
-              + rel
-              + ". Pass the line (and column) where it starts.");
-    }
-    if (found.size() > 1) {
-      List<String> columns = new ArrayList<>();
-      for (ASTNode n : found) {
-        columns.add(String.valueOf(unit.getColumnNumber(n.getStartPosition()) + 1));
-      }
-      throw new Refusal(
-          "several start on line "
-              + line
-              + " of "
-              + rel
-              + ", at columns "
-              + String.join(", ", columns)
-              + ". Pass column.");
-    }
-    ASTNode node = found.get(0);
+                        && c.getAnonymousClassDeclaration() != null),
+            "lambda, method reference or anonymous class",
+            "lambdas, method references or anonymous classes");
     String what =
         node instanceof LambdaExpression
             ? "lambda"

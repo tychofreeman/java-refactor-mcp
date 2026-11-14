@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
@@ -47,18 +46,11 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
   <T extends ASTNode> T startingOn(
       int line, Class<T> type, Predicate<T> where, String noun, String place, String start) {
     List<T> found = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean preVisit2(ASTNode node) {
-            if (type.isInstance(node)
-                && where.test(type.cast(node))
-                && Lines.number(text, node.getStartPosition()) == line) {
-              found.add(type.cast(node));
-            }
-            return true;
-          }
-        });
+    for (T node : onLine(line, type)) {
+      if (where.test(node)) {
+        found.add(node);
+      }
+    }
     if (found.isEmpty()) {
       throw new Refusal(
           "no "
@@ -123,5 +115,92 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
       }
     }
     return topLevel(name);
+  }
+
+  /**
+   * The one node of {@code type} that starts on {@code line}, at {@code column} when it is not
+   * null, and passes {@code where}. {@code noun} names one in a refusal ("lambda"), {@code nouns}
+   * several ("lambdas").
+   */
+  <T extends ASTNode> T startingOn(
+      int line, Integer column, Class<T> type, Predicate<T> where, String noun, String nouns) {
+    List<T> found = new ArrayList<>();
+    for (T node : onLine(line, type)) {
+      if (where.test(node)) {
+        found.add(node);
+      }
+    }
+    if (found.isEmpty()) {
+      throw new Refusal(
+          "no "
+              + noun
+              + " starts on line "
+              + line
+              + " of "
+              + rel
+              + ". Pass the line where it starts.");
+    }
+    found = atColumn(found, line, column, "the " + noun);
+    if (found.size() > 1) {
+      throw several(found, line, nouns);
+    }
+    return found.get(0);
+  }
+
+  /** The nodes of {@code type} that start on {@code line}, in source order. */
+  <T extends ASTNode> List<T> onLine(int line, Class<T> type) {
+    List<T> out = new ArrayList<>();
+    for (T node : Nodes.all(unit, type)) {
+      if (unit.getLineNumber(node.getStartPosition()) == line) {
+        out.add(node);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Those of {@code found}, nodes that start on {@code line}, that start at {@code column}: all of
+   * them when it is null. Refuses when none does, naming the columns where they start; {@code one}
+   * names them in the refusal ("subtotal").
+   */
+  <T extends ASTNode> List<T> atColumn(List<T> found, int line, Integer column, String one) {
+    if (column == null) {
+      return found;
+    }
+    int lineStart = unit.getPosition(line, 0);
+    List<T> at = new ArrayList<>();
+    for (T node : found) {
+      if (node.getStartPosition() - lineStart + 1 == column) {
+        at.add(node);
+      }
+    }
+    if (at.isEmpty()) {
+      throw new Refusal(
+          one
+              + (found.size() == 1 ? " starts at column " : " starts at columns ")
+              + Nodes.columns(found, lineStart)
+              + " of line "
+              + line
+              + ", not "
+              + column
+              + ". Pass one of them.");
+    }
+    return at;
+  }
+
+  /**
+   * The refusal for {@code found}, several nodes on {@code line} where one is meant: it names the
+   * columns where they start. {@code nouns} names them ("variables named x").
+   */
+  Refusal several(List<? extends ASTNode> found, int line, String nouns) {
+    return new Refusal(
+        found.size()
+            + " "
+            + nouns
+            + " start on line "
+            + line
+            + ", at columns "
+            + Nodes.columns(found, unit.getPosition(line, 0))
+            + ". Pass column, the one where the one you mean starts.");
   }
 }

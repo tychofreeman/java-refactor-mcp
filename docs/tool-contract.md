@@ -144,6 +144,15 @@ digits, '_' or '$', not starting with a digit, and not a keyword." (`Preconditio
 parameter took a dotted name, which then failed to parse or compile). A package name (`move`'s
 `package`) takes dots.
 
+A node named by `line` and `column` (`convert_lambda`, `extract_variable`, `replace_expression`,
+`inline_variable`) is refused in one wording when a column is wrong or wanted (`Opened.atColumn`,
+`Opened.several`, issue #520, 2026-11-14): a column where none starts, "x starts at columns 13 and
+23 of line 6, not 5. Pass one of them."; several and no column, "2 variables named x start on line
+6, at columns 13 and 23. Pass column, the one where the one you mean starts." (`occurrences of
+price * qty`, `lambdas, method references or anonymous classes`). `inline_variable` lists the
+first column of each variable, where it had listed every use's ("pass column, the one of the one
+you mean"); `convert_lambda` with a column where none starts names the columns where they do.
+
 A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
 follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
 that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by

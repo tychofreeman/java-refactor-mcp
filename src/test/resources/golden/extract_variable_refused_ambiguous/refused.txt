@@ -1,1 +1,1 @@
-occurs 2 times on line 5, at columns 12 and 26
+2 occurrences of price * qty start on line 5, at columns 12 and 26. Pass column
