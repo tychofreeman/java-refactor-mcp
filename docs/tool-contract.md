@@ -1103,7 +1103,8 @@ in the same turn only if it is sent after it.
   8`), as gorefactor's does. `append=true` in place of `old`
   adds `new` at the end of the file, after a line break when the file does not end in
   one (gorefactor's `append`, 2026-11-05): `appended <n> line(s) to <file>, line(s) ...`;
-  refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused.
+  refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused. An empty
+  `old` is refused (it matched at every offset, and the call never ended; #462).
   gorefactor's `files` and `function` are not built.
 - `add_declaration` with `test_for` (`Cart.total`) in place of `content`: the member is a
   red test of that method, as `create_file`'s, named after it (`total2` when taken), with

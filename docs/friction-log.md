@@ -1351,3 +1351,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   either order in one `batch` (each refused). Done as one `replace_text` of both methods' text.
 - `rename` with `name=ChangeSignature.pure` alone refused ("rename needs line"); `inspect` gave the
   line. A `Type.member` name could find the declaration as `replace_declaration` does.
+
+## 2026-11-13: fix-replace-text-empty-old
+
+- No Java by hand: one `replace_text`. The golden case is resources.
+- CLI: a JSON argument (`bin/jrefactor '{"...","old":"@old"}'`) with the `@@old` sections on stdin
+  took `@old` as the literal text and refused "old is not in ..."; the sections are read only when
+  the JSON comes from stdin too (`bin/jrefactor -`, JSON first). Either form could say so.
+- CLI: an empty heredoc for `old_file=-` sent an empty `old`, which hit this bug (an
+  OutOfMemoryError, files restored); now a refusal.

@@ -176,7 +176,12 @@ final class Edits {
             () -> append || old != null,
             () ->
                 "replace_text needs old, the text to replace, or append=true to add new at the end"
-                    + " of the file."));
+                    + " of the file."),
+        Precondition.that(
+            () -> old == null || !old.isEmpty(),
+            () ->
+                "old is empty: give the text to replace, or append=true to add new at the end of"
+                    + " the file."));
     String replacement = args.string("new");
     if (replacement == null) {
       throw new Refusal("replace_text needs new (it may be empty, to delete old).");
