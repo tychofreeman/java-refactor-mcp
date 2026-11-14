@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CastExpression;
@@ -31,15 +30,9 @@ import org.eclipse.jdt.core.dom.SwitchStatement;
  * where the type decides the result; a plain copy (an assignment, an initializer, a return) and an
  * ordering comparison keep it, and a narrowing copy is a compile error the gate refuses.
  */
-final class PrimitiveUses {
+final class TypeDecidedUses {
 
-  private PrimitiveUses() {}
-
-  private static final Set<String> PRIMITIVES =
-      Set.of("byte", "short", "char", "int", "long", "float", "double", "boolean");
-
-  private static final Set<String> BOXES =
-      Set.of("Byte", "Short", "Character", "Integer", "Long", "Float", "Double", "Boolean");
+  private TypeDecidedUses() {}
 
   /** Whether a change from {@code old} to the type written {@code type} needs the check. */
   static boolean applies(ITypeBinding old, String type) {
@@ -49,7 +42,7 @@ final class PrimitiveUses {
   /** Whether {@code old} or the type written {@code type} is a boxed type. */
   static boolean anyBoxed(ITypeBinding old, String type) {
     String simple = type.strip().substring(type.strip().lastIndexOf('.') + 1);
-    return (old != null && boxed(old)) || BOXES.contains(simple);
+    return (old != null && boxed(old)) || JavaTypes.isBox(simple);
   }
 
   /**
@@ -140,11 +133,11 @@ final class PrimitiveUses {
   private static boolean boxed(ITypeBinding t) {
     return t.getPackage() != null
         && t.getPackage().getName().equals("java.lang")
-        && BOXES.contains(t.getName());
+        && JavaTypes.isBox(t.getName());
   }
 
   private static boolean named(String type) {
     String simple = type.strip().substring(type.strip().lastIndexOf('.') + 1);
-    return PRIMITIVES.contains(simple) || BOXES.contains(simple);
+    return JavaTypes.isPrimitive(simple) || JavaTypes.isBox(simple);
   }
 }

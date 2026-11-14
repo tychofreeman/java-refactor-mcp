@@ -15,25 +15,25 @@ final class Placement {
 
   private Placement() {}
 
-  /** 0 for a field or initializer, 1 for a constructor, 2 for any other member. */
-  static int rank(BodyDeclaration d) {
+  /** A member's rank in layout: a field or initializer, a constructor, or any other member. */
+  static Rank rank(BodyDeclaration d) {
     if (d instanceof FieldDeclaration || d instanceof Initializer) {
-      return 0;
+      return Rank.FIELD;
     }
-    return d instanceof MethodDeclaration m && m.isConstructor() ? 1 : 2;
+    return d instanceof MethodDeclaration m && m.isConstructor() ? Rank.CONSTRUCTOR : Rank.OTHER;
   }
 
   /**
    * Where a member of {@code rank} goes in {@code type}: after its last member of that rank or
    * lower; for a field or constructor with none, before its first member; otherwise its end.
    */
-  static Place place(AbstractTypeDeclaration type, int rank) {
-    if (rank == 2) {
+  static Place place(AbstractTypeDeclaration type, Rank rank) {
+    if (rank == Rank.OTHER) {
       return new Place(null, false);
     }
     BodyDeclaration last = null;
     for (Object o : type.bodyDeclarations()) {
-      if (Placement.rank((BodyDeclaration) o) <= rank) {
+      if (Placement.rank((BodyDeclaration) o).compareTo(rank) <= 0) {
         last = (BodyDeclaration) o;
       }
     }
@@ -43,5 +43,14 @@ final class Placement {
     return type.bodyDeclarations().isEmpty()
         ? new Place(null, false)
         : new Place((BodyDeclaration) type.bodyDeclarations().get(0), true);
+  }
+
+  /**
+   * A member's kind as layout orders it: fields and initializers, then constructors, then the rest.
+   */
+  enum Rank {
+    FIELD,
+    CONSTRUCTOR,
+    OTHER
   }
 }
