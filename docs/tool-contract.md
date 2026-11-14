@@ -736,6 +736,15 @@ the enum of that name still refuses it ("the case of ARRAY uses ARRAY, a static 
 does not see by that name. Qualify it first (Path.ARRAY), with replace_expression."). A static the
 enclosing class inherits is still refused; `NameCheck` judges a name an enum inherits.
 
+Issue #437, 2026-11-13: the selector's type is checked before the cases are read, so a switch over
+a primitive, a `String` or another type that is not an enum, interface or abstract class of the
+project is refused for that, not for its cases ("each case must be a type pattern", "an arrow
+case giving an expression"): "the switch is over int, which is not an enum, interface or abstract
+class of the project, so there is no type to declare size() on. Leave the switch as it is, or
+extract_function it to name it as a method here." (It had said "which is not an interface or
+abstract class of the project to declare size on.") An enum outside the project keeps its own
+wording.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`

@@ -1,0 +1,1 @@
+the switch is over String, which is not an enum, interface or abstract class of the project, so there is no type to declare run() on.
