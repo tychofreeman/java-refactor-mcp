@@ -163,12 +163,7 @@ final class ExtractType {
                       || grouped.stream().noneMatch(g -> g != null && g.isEqualTo(v))) {
                     return true;
                   }
-                  ASTNode p = n.getParent();
-                  if ((p instanceof Assignment a && a.getLeftHandSide() == n)
-                      || p instanceof PostfixExpression
-                      || (p instanceof PrefixExpression pre
-                          && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                              || pre.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+                  if (Nodes.written(n)) {
                     throw new Refusal(
                         "the body of "
                             + family.label

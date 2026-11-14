@@ -873,12 +873,7 @@ final class InlineFunction {
       String name) {
     for (ParamUse u : uses) {
       ASTNode n = NodeFinder.perform(unit, u.start(), u.end() - u.start());
-      ASTNode p = n.getParent();
-      if ((p instanceof Assignment a && a.getLeftHandSide() == n)
-          || p instanceof PostfixExpression
-          || (p instanceof PrefixExpression pre
-              && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                  || pre.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+      if (n instanceof Expression x && Nodes.written(x)) {
         throw new Refusal(
             name
                 + " assigns its parameter "
