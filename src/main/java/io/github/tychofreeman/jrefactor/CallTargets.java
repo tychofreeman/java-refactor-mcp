@@ -87,7 +87,7 @@ final class CallTargets {
         if (kind == null) {
           continue;
         }
-        IMethodBinding b = binding(n);
+        IMethodBinding b = Calls.binding(n);
         int line = unit.getLineNumber(n.getStartPosition());
         if (b == null || b.isRecovered()) {
           calls.add(new Target(null, null, line, kind, List.of()));
@@ -160,19 +160,6 @@ final class CallTargets {
       case ConstructorInvocation c -> "new this";
       case SuperConstructorInvocation c -> "new super";
       case MethodReference r -> "reference";
-      default -> null;
-    };
-  }
-
-  private static IMethodBinding binding(ASTNode n) {
-    return switch (n) {
-      case MethodInvocation m -> m.resolveMethodBinding();
-      case SuperMethodInvocation m -> m.resolveMethodBinding();
-      case ClassInstanceCreation c -> c.resolveConstructorBinding();
-      case EnumConstantDeclaration c -> c.resolveConstructorBinding();
-      case ConstructorInvocation c -> c.resolveConstructorBinding();
-      case SuperConstructorInvocation c -> c.resolveConstructorBinding();
-      case MethodReference r -> r.resolveMethodBinding();
       default -> null;
     };
   }

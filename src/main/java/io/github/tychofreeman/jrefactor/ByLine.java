@@ -56,7 +56,7 @@ final class ByLine {
       hits.add(new Hit(c.getName(), c.resolveMethodBinding(), false));
     }
     for (ClassInstanceCreation c : Nodes.all(unit, ClassInstanceCreation.class)) {
-      hits.add(new Hit(c.getType(), c.resolveConstructorBinding(), false));
+      hits.add(new Hit(c.getType(), Calls.binding(c), false));
     }
     for (ConstructorInvocation c : Nodes.all(unit, ConstructorInvocation.class)) {
       hits.add(new Hit(c, c.resolveConstructorBinding(), false));

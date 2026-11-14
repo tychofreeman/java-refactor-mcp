@@ -216,7 +216,7 @@ final class MethodFamily {
 
               @Override
               public boolean visit(ClassInstanceCreation n) {
-                if (ours(Signatures.constructed(n.resolveConstructorBinding()))) {
+                if (ours(Calls.binding(n))) {
                   calls.add(
                       new Signatures.Call(
                           s, n, n.arguments(), Signatures.open(text, n.getType()), -1));
@@ -249,7 +249,7 @@ final class MethodFamily {
 
               @Override
               public boolean visit(EnumConstantDeclaration n) {
-                if (ours(Signatures.constructed(n.resolveConstructorBinding()))) {
+                if (ours(Calls.binding(n))) {
                   int end = n.getName().getStartPosition() + n.getName().getLength();
                   int i = end;
                   while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
