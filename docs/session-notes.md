@@ -290,6 +290,9 @@ Each was chosen from options; the record named beside it has the options it beat
   a single static import of its method threw (#411), so `parseAll` adds the files those imports
   name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
   declared methods" and returns none.
+- A count's key is `TypeCheck.Problem` (the file relative to the project, and the message), and
+  `introduced` gives `TypeCheck.Added` (a problem and how many more times); only `Gate.refusal`
+  writes them as `rel | message (xN)` (#523). Do not parse a path back out of a message.
 - What the gate counts is `TypeCheck.counts` (every JDT error but those a named module would not
   have, #438); both the full and the narrowed count go through it, and a change to what it drops
   bumps `TypeCheck.FORMAT`, so saved counts are made again. A count depends on whether a source

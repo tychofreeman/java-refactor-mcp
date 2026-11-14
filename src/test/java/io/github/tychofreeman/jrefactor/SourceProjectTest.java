@@ -64,7 +64,7 @@ class SourceProjectTest {
     assertTrue(
         project.classpath().stream().anyMatch(p -> p.contains("org.eclipse.jdt.core")),
         () -> "classpath: " + project.classpath());
-    Map<String, Integer> errors = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> errors = TypeCheck.errors(project);
     assertEquals(Map.of(), errors);
   }
 
