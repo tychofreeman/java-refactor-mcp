@@ -319,7 +319,6 @@ final class InlineFunction {
     // One the gate refuses there is bound to a local before the call's statement instead.
     boolean[] bind = new boolean[args.size()];
     Refusal inPlace = null;
-    List<String> reports = project.session().exceptional;
     for (int i = 0; i < args.size(); i++) {
       List<ASTNode> at = new ArrayList<>();
       for (ParamUse u : uses) {
@@ -327,14 +326,11 @@ final class InlineFunction {
           at.add(NodeFinder.perform(whole.getRoot(), u.start(), u.end() - u.start()));
         }
       }
-      int mark = reports.size();
-      try {
-        Behavior.flow(
-            project,
-            new Behavior.Move(
-                args.get(i), whole, at, label(args, params, i, siteText), "inlining " + name));
-      } catch (Refusal r) {
-        reports.subList(mark, reports.size()).clear();
+      Behavior.Move move =
+          new Behavior.Move(
+              args.get(i), whole, at, label(args, params, i, siteText), "inlining " + name);
+      Refusal r = Exceptional.trial(project, () -> Behavior.flow(project, move));
+      if (r != null) {
         bind[i] = true;
         inPlace = inPlace != null ? inPlace : r;
       }

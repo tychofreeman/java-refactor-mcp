@@ -43,7 +43,10 @@ final class Session {
    */
   boolean skeletonOnly = "1".equals(System.getenv("JREFACTOR_SKELETON_ONLY"));
 
-  /** The changes to exceptional behavior the running call made and reports, in order. */
+  /**
+   * The changes to exceptional behavior the running call made and reports, in order: written by
+   * {@link Exceptional} only, and kept or dropped by the call's {@link Scope}.
+   */
   List<String> exceptional = new ArrayList<>();
 
   /** The library classes by simple name, built on first use; null until then. */
@@ -81,4 +84,76 @@ final class Session {
    * for {@code GateCostTest}.
    */
   int bindingParses;
+
+  /** How many calls are running, one inside another (a batch's steps inside the batch). */
+  private int depth;
+
+  /** What {@link #deferring} and the like return: closing it puts back what it changed. */
+  interface Restore extends AutoCloseable {
+    @Override
+    void close();
+  }
+
+  /**
+   * Sets {@link #deferred} until the returned {@link Restore} closes, then puts back what it was.
+   */
+  Restore deferring() {
+    boolean outer = deferred;
+    deferred = true;
+    return () -> deferred = outer;
+  }
+
+  /**
+   * Opens one call's scope: {@code edit} and {@code preserve} hold while it runs, with a list of
+   * its own for its changes to exceptional behavior. Closing it puts back the outer call's flags.
+   */
+  Scope scope(boolean edit, boolean preserve) {
+    return new Scope(edit, preserve);
+  }
+
+  /** The flags of one running call ({@link #scope}), put back when it closes. */
+  final class Scope implements AutoCloseable {
+    private final boolean edit;
+    private final boolean outerEditing;
+    private final boolean outerPreserve;
+    private final List<String> outerExceptional;
+    private final List<String> reports = new ArrayList<>();
+    private boolean kept;
+
+    private Scope(boolean edit, boolean preserve) {
+      this.edit = edit;
+      outerEditing = editing;
+      outerPreserve = preserveExceptions;
+      outerExceptional = exceptional;
+      editing = edit;
+      preserveExceptions = preserve;
+      exceptional = reports;
+      depth++;
+    }
+
+    /** The changes to exceptional behavior the call has reported. */
+    List<String> reports() {
+      return reports;
+    }
+
+    /** Keeps the call's reports, which become the outer call's too (a batch's, for its steps). */
+    void keep() {
+      kept = true;
+    }
+
+    /**
+     * Puts back the outer call's flags. Inside a batch, a step that was an edit leaves the batch
+     * editing, for its check at the end; after a call at the top, nothing is.
+     */
+    @Override
+    public void close() {
+      depth--;
+      if (kept) {
+        outerExceptional.addAll(reports);
+      }
+      editing = outerEditing || depth > 0 && edit;
+      preserveExceptions = outerPreserve;
+      exceptional = outerExceptional;
+    }
+  }
 }
