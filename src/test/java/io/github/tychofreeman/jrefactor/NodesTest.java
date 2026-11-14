@@ -95,6 +95,20 @@ class NodesTest {
   private static final String NAMES =
       "class A {\n  void f(java.util.List<String> names) {\n    names.forEach(\n        n -> {\n          System.out.println(n);\n        });\n    names\n        .stream()\n        .count();\n    String.join(\", \", \"aaaaaaaaaaaaaaaaaaaa\", \"bbbbbbbbbbbbbbbbbbbbbbbb\", \"cccccccccc\");\n  }\n}\n";
 
+  private static final String OVERRIDES =
+      """
+      package p;
+
+      class C {
+        @Override public String toString() { return ""; }
+        @java.lang.Override public int hashCode() { return 0; }
+        @MyOverride void mine() {}
+        @Deprecated void none() {}
+      }
+
+      @interface MyOverride {}
+      """;
+
   @Test
   void showsANodeAsItsSourceOnOneLine() {
     CompilationUnit unit = Jdt.parseSyntax(NAMES);
@@ -110,5 +124,24 @@ class NodesTest {
     assertEquals(60, shown.length());
     assertTrue(shown.startsWith("String.join(\", \", \"aaaa"), shown);
     assertTrue(shown.endsWith("..."), shown);
+  }
+
+  /** Each method of {@link #OVERRIDES} that has {@code @Override}, by name, in order. */
+  private static List<String> overriding(CompilationUnit unit) {
+    return Nodes.all(unit, MethodDeclaration.class).stream()
+        .filter(m -> Nodes.overrideAnnotation(m) != null)
+        .map(m -> m.getName().getIdentifier())
+        .toList();
+  }
+
+  @Test
+  void overrideIsJavaLangOverrideWrittenEitherWayAndNotAnotherAnnotation(@TempDir Path root)
+      throws Exception {
+    assertEquals(List.of("toString", "hashCode"), overriding(Jdt.parseSyntax(OVERRIDES)));
+    Path file = root.resolve("p/C.java");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, OVERRIDES);
+    CompilationUnit resolved = Jdt.parse(SourceProject.of(root), file, OVERRIDES);
+    assertEquals(List.of("toString", "hashCode"), overriding(resolved));
   }
 }

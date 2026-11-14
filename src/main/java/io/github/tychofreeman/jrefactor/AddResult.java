@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -64,12 +63,9 @@ final class AddResult {
     MethodDeclaration m = (MethodDeclaration) declared;
     IMethodBinding method = m.resolveBinding();
     String key = method.getKey();
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a
-          && a.getTypeName().getFullyQualifiedName().endsWith("Override")) {
-        throw new Refusal(
-            q.type() + "." + member + " overrides a method, whose result its supertype fixes.");
-      }
+    if (Nodes.overrideAnnotation(m) != null) {
+      throw new Refusal(
+          q.type() + "." + member + " overrides a method, whose result its supertype fixes.");
     }
     boolean isVoid = m.getReturnType2().toString().equals("void");
     String recordName = Character.toUpperCase(base.charAt(0)) + base.substring(1) + "Result";

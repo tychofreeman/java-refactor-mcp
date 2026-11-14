@@ -5,10 +5,13 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
@@ -150,5 +153,27 @@ final class Nodes {
       e = p.getExpression();
     }
     return e;
+  }
+
+  /**
+   * {@code d}'s {@code @Override}, or null: by the annotation's type when it resolves, else by its
+   * name, {@code Override} or {@code java.lang.Override} ({@code @MyOverride} is not one).
+   */
+  static Annotation overrideAnnotation(BodyDeclaration d) {
+    for (Object o : d.modifiers()) {
+      if (o instanceof Annotation a) {
+        IAnnotationBinding b = a.resolveAnnotationBinding();
+        boolean resolved =
+            b != null && b.getAnnotationType() != null && !b.getAnnotationType().isRecovered();
+        String name =
+            resolved
+                ? b.getAnnotationType().getQualifiedName()
+                : a.getTypeName().getFullyQualifiedName();
+        if (name.equals("java.lang.Override") || (!resolved && name.equals("Override"))) {
+          return a;
+        }
+      }
+    }
+    return null;
   }
 }

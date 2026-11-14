@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
@@ -71,7 +70,7 @@ final class Generated {
                 + "]"
                 + instead);
       }
-      if (overrides(m) && (throwsNotImplemented(m) || onlyCallsSuper(m))) {
+      if (Nodes.overrideAnnotation(m) != null && (throwsNotImplemented(m) || onlyCallsSuper(m))) {
         throw new Refusal(
             ON
                 + "an override that only calls the supertype's method, or only throws not"
@@ -128,16 +127,6 @@ final class Generated {
   /** {@code text} without its spacing, for comparing code written at other indentations. */
   private static String squeezed(String text) {
     return text.replaceAll("\\s+", "");
-  }
-
-  private static boolean overrides(MethodDeclaration m) {
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a
-          && a.getTypeName().getFullyQualifiedName().endsWith("Override")) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /** Whether each statement of the constructor assigns a parameter to the field of its name. */

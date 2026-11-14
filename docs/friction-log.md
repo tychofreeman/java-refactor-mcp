@@ -1639,3 +1639,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   starts its line (the space is indentation there) and the batch's delete then refused; `old`
   without the space fixed it.
 - No Java by hand but the rebase's merge of `Nodes` and `NodesTest` with #526's `Nodes.show`.
+
+## 2026-11-14: override-annotation
+
+- No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
+  `replace_statements`, three private helpers made delegates by `replace_declaration` and
+  `inline`d. `inline` wrote `overrides(m)` as `(Nodes.overrideAnnotation(m) != null)` and `!overrides(m)`
+  as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
+  dropped needless parentheses and negated a comparison would have saved them.
+- `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.

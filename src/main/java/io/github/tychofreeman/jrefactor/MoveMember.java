@@ -11,7 +11,6 @@ import java.util.Objects;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -97,7 +96,7 @@ final class MoveMember {
                     + " is generic. The receiver parameter is typed by the class's name, so a"
                     + " method of a generic class is not moved yet."),
         Precondition.that(
-            () -> !overrides(m),
+            () -> Nodes.overrideAnnotation(m) == null,
             () ->
                 name
                     + " overrides a method of a supertype. Moving it would change which method"
@@ -476,16 +475,6 @@ final class MoveMember {
               + ".");
     }
     return found.get(0);
-  }
-
-  /** Whether {@code m} is marked {@code @Override}. */
-  private static boolean overrides(MethodDeclaration m) {
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a && a.getTypeName().getFullyQualifiedName().equals("Override")) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /** The refusals about the body: what its names would mean in the target. */
