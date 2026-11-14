@@ -1,0 +1,1 @@
+Tally.counts writes its [] after its name. Write it after the type first

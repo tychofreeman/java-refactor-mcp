@@ -98,10 +98,7 @@ final class Signatures {
       throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
-    if (!SourceVersion.isName(parameter)) {
-      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
-    }
-    parsesAs("type", type, "class X { " + type + " x; }");
+    checkNewParameter(parameter, type);
     MethodFamily family = MethodFamily.of(project, args);
     int at = family.index(args.string("before"), "before", true);
     family.refuseHiding(parameter);
@@ -120,6 +117,16 @@ final class Signatures {
     }
     return change.apply(
         project, "added " + type + " " + parameter + " to " + family.label, args.list("imports"));
+  }
+
+  /**
+   * Refuses a new parameter's name {@code parameter} or its {@code type} when it does not parse.
+   */
+  static void checkNewParameter(String parameter, String type) {
+    if (!SourceVersion.isName(parameter)) {
+      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
+    }
+    parsesAs("type", type, "class X { " + type + " x; }");
   }
 
   static Outcome removeParameter(SourceProject project, Args args) throws Exception {
@@ -295,16 +302,7 @@ final class Signatures {
     checkPrimitiveUses(family, args, type, returns);
     if (returns) {
       for (Decl d : family.decls) {
-        Precondition.require(
-            Precondition.that(
-                () -> !d.m().isConstructor(),
-                () -> family.label + " is a constructor, which has no return type."),
-            Precondition.that(
-                () -> d.m().extraDimensions().isEmpty(),
-                () ->
-                    family.label
-                        + " writes its return type's [] after its parameters. Write it before the"
-                        + " name first."));
+        requireReturnType(d, family);
         change.replace(d.file(), d.m().getReturnType2(), type);
       }
       return checked(
@@ -362,6 +360,23 @@ final class Signatures {
             parameter,
             SignatureChange.FIX),
         args.list("imports"));
+  }
+
+  /**
+   * Refuses a change of the return type of {@code d}, a declaration of {@code family}: a
+   * constructor, or a return type with [] after the parameters.
+   */
+  static void requireReturnType(Decl d, MethodFamily family) {
+    Precondition.require(
+        Precondition.that(
+            () -> !d.m().isConstructor(),
+            () -> family.label + " is a constructor, which has no return type."),
+        Precondition.that(
+            () -> d.m().extraDimensions().isEmpty(),
+            () ->
+                family.label
+                    + " writes its return type's [] after its parameters. Write it before the"
+                    + " name first."));
   }
 
   /**
@@ -429,10 +444,7 @@ final class Signatures {
       throws Exception {
     String parameter = args.required("parameter");
     String type = args.required("type");
-    if (!SourceVersion.isName(parameter)) {
-      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
-    }
-    parsesAs("type", type, "class X { " + type + " x; }");
+    checkNewParameter(parameter, type);
     String name = r.getName().getIdentifier();
     List<?> components = r.recordComponents();
     int at = components.size();
