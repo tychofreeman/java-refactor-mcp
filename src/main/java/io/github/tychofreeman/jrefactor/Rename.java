@@ -139,7 +139,7 @@ public final class Rename {
   /** The name {@code name} that starts at {@code line}, {@code column}. */
   private static SimpleName atColumn(
       CompilationUnit cu, String source, int line, String name, int column) {
-    ASTNode covering = NodeFinder.perform(cu, Positions.offset(source, line, column), 0);
+    ASTNode covering = NodeFinder.perform(cu, Lines.offsetOf(source, line, column), 0);
     if (!(covering instanceof SimpleName at) || !at.getIdentifier().equals(name)) {
       throw new Refusal(
           "line "

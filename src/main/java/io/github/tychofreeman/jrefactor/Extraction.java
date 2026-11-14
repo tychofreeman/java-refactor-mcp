@@ -93,8 +93,8 @@ final class Extraction {
     Call c = callOf(p, invocation, recordName());
     String method = methodText(p, c);
 
-    int insertAt = Extract.lineEndOffset(unit, text, line(Nodes.end(member) - 1));
-    String callIndent = indentOf(lineStartOffset(sel.statements().get(0).getStartPosition()));
+    int insertAt = Lines.end(text, Nodes.end(member) - 1);
+    String callIndent = Lines.indentOf(text, sel.statements().get(0).getStartPosition());
     String callLine = callIndent + c.call().replace("\n", "\n" + callIndent) + "\n";
     List<TextEdit> edits =
         List.of(
@@ -310,9 +310,9 @@ final class Extraction {
             + (thrown.isEmpty() ? "" : " throws " + String.join(", ", thrown))
             + " {";
 
-    String memberIndent = indentOf(lineStartOffset(member.getStartPosition()));
+    String memberIndent = Lines.indentOf(text, member.getStartPosition());
     int firstStatement = sel.statements().get(0).getStartPosition();
-    String statementIndent = indentOf(lineStartOffset(firstStatement));
+    String statementIndent = Lines.indentOf(text, firstStatement);
     int step = Indent.step(text);
     String bodyIndent = memberIndent + " ".repeat(step > 0 ? step : 4);
 
@@ -751,18 +751,6 @@ final class Extraction {
       out.append(indent).append(l.isBlank() ? " *" : " * " + l.strip()).append("\n");
     }
     return out.append(indent).append(" */\n").toString();
-  }
-
-  private String indentOf(int lineStart) {
-    int i = lineStart;
-    while (i < text.length() && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) {
-      i++;
-    }
-    return text.substring(lineStart, i);
-  }
-
-  private int lineStartOffset(int offset) {
-    return text.lastIndexOf('\n', offset - 1) + 1;
   }
 
   private int line(ASTNode n) {

@@ -298,7 +298,7 @@ Each was chosen from options; the record named beside it has the options it beat
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.source(text, node)` (its text as
   written, #507), `Nodes.within`, `Lines`
-  (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
+  (`number`, `start`, `end`, `offsetOf` of a line or of a line and column (#512), `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98). The node around one:
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
   a lambda or an anonymous class), `Nodes.typeAround(n)` (the binding of the named or anonymous
