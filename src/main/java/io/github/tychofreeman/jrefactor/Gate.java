@@ -41,7 +41,7 @@ final class Gate {
   static <T> Checked<T> checkedAtEnd(
       SourceProject project, java.util.concurrent.Callable<T> body, String what, String fix)
       throws Exception {
-    Map<String, Integer> before = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> before = TypeCheck.errors(project);
     T result = deferred(project, body);
     Map<Path, String> old = Journal.written(project);
     Stubs.Check declaring;
@@ -68,8 +68,9 @@ final class Gate {
    * {@code fix}, or before it when other errors come with them.
    */
   private static Refusal refusal(
-      SourceProject project, List<String> introduced, String what, String fix) {
-    boolean unresolved = introduced.stream().anyMatch(e -> e.contains("cannot be resolved"));
+      SourceProject project, List<TypeCheck.Added> introduced, String what, String fix) {
+    boolean unresolved =
+        introduced.stream().anyMatch(e -> e.problem().message().contains("cannot be resolved"));
     String missing =
         unresolved && project.classpathProblem() != null
             ? "\nMaven gave no classpath, so library types do not resolve: "
@@ -77,7 +78,8 @@ final class Gate {
             : "";
     List<String> unset = new ArrayList<>();
     Map<String, List<String>> overriding = new LinkedHashMap<>();
-    for (String error : introduced) {
+    for (TypeCheck.Added added : introduced) {
+      String error = added.problem().message();
       Matcher m = BLANK_FINAL.matcher(error);
       if (m.find() && !unset.contains(m.group(1))) {
         unset.add(m.group(1));
@@ -107,13 +109,14 @@ final class Gate {
     if (!hints.isEmpty()) {
       boolean only =
           introduced.stream()
+              .map(e -> e.problem().message())
               .allMatch(e -> BLANK_FINAL.matcher(e).find() || NO_SUPERTYPE.matcher(e).find());
       next = String.join("\n", hints) + (only ? "" : "\n" + fix);
     }
     return new Refusal(
         what
             + " would add compile errors, so nothing was changed:\n  "
-            + String.join("\n  ", introduced)
+            + String.join("\n  ", introduced.stream().map(Gate::text).toList())
             + missing
             + "\n"
             + next);
@@ -144,7 +147,7 @@ final class Gate {
       }
       return new Stubs.Check(List.of(), Stubs.Declared.NONE);
     }
-    Map<String, Integer> before = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> before = TypeCheck.errors(project);
     Map<Path, String> old = new LinkedHashMap<>();
     for (Path file : texts.keySet()) {
       old.put(file, Files.exists(file) ? Files.readString(file) : null);
@@ -194,5 +197,16 @@ final class Gate {
       Path f = file.getKey();
       Journal.wrote(project, f, file.getValue(), Files.exists(f) ? Files.readString(f) : null);
     }
+  }
+
+  /**
+   * An added problem as a refusal lists it: "<file> | <message>", and " (xN)" when it was added N
+   * times.
+   */
+  private static String text(TypeCheck.Added added) {
+    return added.problem().rel()
+        + " | "
+        + added.problem().message()
+        + (added.extra() > 1 ? " (x" + added.extra() + ")" : "");
   }
 }

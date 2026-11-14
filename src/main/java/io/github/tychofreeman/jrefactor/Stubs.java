@@ -80,16 +80,17 @@ final class Stubs {
   }
 
   /** The compile errors a change left beyond the ones before it, and the stubs it declared. */
-  record Check(List<String> introduced, Declared declared) {}
+  record Check(List<TypeCheck.Added> introduced, Declared declared) {}
 
   /**
    * Declares stubs until the project has no compile errors beyond {@code before}, or none can be
    * declared. Writes each file it changes, first putting its old text (null for a new file) in
    * {@code old} when it is not there yet. Returns the errors left.
    */
-  static Check declare(SourceProject project, Map<String, Integer> before, Map<Path, String> old)
+  static Check declare(
+      SourceProject project, Map<TypeCheck.Problem, Integer> before, Map<Path, String> old)
       throws IOException {
-    List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
+    List<TypeCheck.Added> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
     if (!project.session().editing) {
       return new Check(introduced, Declared.NONE);
     }
@@ -138,10 +139,10 @@ final class Stubs {
   private record Setting(String code, List<String> fields) {}
 
   /** The project's files with errors in {@code introduced}, in order. */
-  private static Set<Path> files(SourceProject project, List<String> introduced) {
+  private static Set<Path> files(SourceProject project, List<TypeCheck.Added> introduced) {
     Set<Path> files = new LinkedHashSet<>();
-    for (String error : introduced) {
-      Path file = project.file(error.substring(0, error.indexOf(" | ")));
+    for (TypeCheck.Added error : introduced) {
+      Path file = project.file(error.problem().rel());
       if (file.toString().endsWith(".java") && Files.isRegularFile(file)) {
         files.add(file);
       }

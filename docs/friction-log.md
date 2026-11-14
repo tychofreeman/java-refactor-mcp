@@ -1745,3 +1745,10 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - The `new MovedType(...)` `extract_type` wrote into a call inside a loop, hoisted to before the
   loop: `extract_variable` declares it just before the call's statement, inside the loop, and
   `move_statement` stops at the block. Done with `insert_statements` and `replace_expression`.
+
+## 2026-11-14: problem-record
+
+- Changing the key of the type check's map (`Map<String, Integer>` to `Map<Problem, Integer>`)
+  across five classes and five tests took one `batch` of `replace_text` steps: `change_type` with
+  `return_type` changes the declarations but not the locals and parameters that receive the
+  result, which a "follow the type" option would have carried.

@@ -21,6 +21,7 @@ import java.util.TreeSet;
 import org.eclipse.jdt.core.compiler.IProblem;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -39,17 +40,17 @@ final class TypeCheck {
       SourceProject project,
       Map<Path, String> hashes,
       Map<Path, Map<String, Headers.Decl>> headers,
-      Map<String, Integer> counts) {}
+      Map<Problem, Integer> counts) {}
 
   /**
-   * Compile errors in the project as it is on disk, counted per file and message. Keys are {@code
-   * "<file> | <message>"}; line numbers are left out on purpose, so an edit that only moves code
-   * does not count as a new error. When every file's text is what the last count saw, that count is
-   * returned without parsing: an edit's count after is the next edit's count before. When some
-   * changed, only the files whose errors can have changed are parsed: the changed ones, and those
-   * that mention a name whose {@link Headers header} changed.
+   * Compile errors in the project as it is on disk, counted per file and message ({@link Problem});
+   * line numbers are left out on purpose, so an edit that only moves code does not count as a new
+   * error. When every file's text is what the last count saw, that count is returned without
+   * parsing: an edit's count after is the next edit's count before. When some changed, only the
+   * files whose errors can have changed are parsed: the changed ones, and those that mention a name
+   * whose {@link Headers header} changed.
    */
-  static Map<String, Integer> errors(SourceProject project) throws IOException {
+  static Map<Problem, Integer> errors(SourceProject project) throws IOException {
     List<Path> files = project.javaFiles();
     Map<Path, String> hashes = hashes(files);
     Session session = project.session();
@@ -65,7 +66,7 @@ final class TypeCheck {
       return new TreeMap<>(session.lastCount.counts());
     }
     Map<Path, Map<String, Headers.Decl>> headers = new HashMap<>();
-    Map<String, Integer> counts = count(project, files, headers);
+    Map<Problem, Integer> counts = count(project, files, headers);
     session.lastParsed = files;
     session.lastCount = new Counted(project, hashes, headers, new TreeMap<>(counts));
     return counts;
@@ -143,8 +144,8 @@ final class TypeCheck {
     for (Path f : recheck) {
       rels.add(project.relative(f));
     }
-    Map<String, Integer> counts = new TreeMap<>(last.counts());
-    counts.keySet().removeIf(k -> rels.contains(k.substring(0, k.indexOf(" | "))));
+    Map<Problem, Integer> counts = new TreeMap<>(last.counts());
+    counts.keySet().removeIf(k -> rels.contains(k.rel()));
     List<Path> parsed = new ArrayList<>(recheck);
     counts.putAll(count(project, parsed, null));
     project.session().lastParsed = parsed;
@@ -166,7 +167,7 @@ final class TypeCheck {
   }
 
   /** {@link #errors} counted from scratch, never from the last count: what a fresh load gives. */
-  static Map<String, Integer> uncached(SourceProject project) throws IOException {
+  static Map<Problem, Integer> uncached(SourceProject project) throws IOException {
     return count(project, project.javaFiles(), null);
   }
 
@@ -174,9 +175,9 @@ final class TypeCheck {
    * The errors of {@code files}, parsed together; each file's {@link Headers} put in {@code
    * headers}, unless it is null.
    */
-  private static Map<String, Integer> count(
+  private static Map<Problem, Integer> count(
       SourceProject project, List<Path> files, Map<Path, Map<String, Headers.Decl>> headers) {
-    Map<String, Integer> counts = new TreeMap<>();
+    Map<Problem, Integer> counts = new TreeMap<>();
     boolean namedModule = project.namedModule();
     project.session().parses++;
     Jdt.parseAll(
@@ -193,20 +194,22 @@ final class TypeCheck {
           String rel = project.relative(file);
           for (IProblem problem : cu.getProblems()) {
             if (counts(problem, namedModule)) {
-              counts.merge(rel + " | " + problem.getMessage(), 1, Integer::sum);
+              counts.merge(new Problem(rel, problem.getMessage()), 1, Integer::sum);
             }
           }
         });
     return counts;
   }
 
-  /** Entries of {@code after} that have more occurrences than in {@code before}. */
-  static List<String> introduced(Map<String, Integer> before, Map<String, Integer> after) {
-    List<String> out = new ArrayList<>();
-    for (Map.Entry<String, Integer> e : after.entrySet()) {
+  /**
+   * The problems of {@code after} that occur more often than in {@code before}, and how many more.
+   */
+  static List<Added> introduced(Map<Problem, Integer> before, Map<Problem, Integer> after) {
+    List<Added> out = new ArrayList<>();
+    for (Map.Entry<Problem, Integer> e : after.entrySet()) {
       int extra = e.getValue() - before.getOrDefault(e.getKey(), 0);
       if (extra > 0) {
-        out.add(e.getKey() + (extra > 1 ? " (x" + extra + ")" : ""));
+        out.add(new Added(e.getKey(), extra));
       }
     }
     return out;
@@ -243,8 +246,10 @@ final class TypeCheck {
                 d.types().forEach(decl.putArray("types")::add);
               });
         });
-    ObjectNode counts = out.putObject("counts");
-    last.counts().forEach(counts::put);
+    ArrayNode counts = out.putArray("counts");
+    last.counts()
+        .forEach((p, n) ->
+            counts.addObject().put("file", p.rel()).put("message", p.message()).put("count", n));
     Files.createDirectories(file.getParent());
     Files.writeString(file, JSON.writeValueAsString(out));
   }
@@ -277,9 +282,11 @@ final class TypeCheck {
       }
       headers.put(path, names);
     }
-    Map<String, Integer> counts = new TreeMap<>();
-    for (Map.Entry<String, JsonNode> c : in.path("counts").properties()) {
-      counts.put(c.getKey(), c.getValue().asInt());
+    Map<Problem, Integer> counts = new TreeMap<>();
+    for (JsonNode c : in.path("counts").values()) {
+      counts.put(
+          new Problem(c.path("file").asString(), c.path("message").asString()),
+          c.path("count").asInt());
     }
     project.session().lastCount = new Counted(project, hashes, headers, counts);
   }
@@ -287,7 +294,7 @@ final class TypeCheck {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   /** The version of what {@link #save} writes; a file of another version is not loaded. */
-  private static final int FORMAT = 4;
+  private static final int FORMAT = 5;
 
   /** What a count depends on besides the files: the source roots and the classpath. */
   private static String build(SourceProject project) {
@@ -320,4 +327,16 @@ final class TypeCheck {
             f.getFileName().toString().equals("module-info.java")
                 && project.sourceRoots().contains(f.getParent()));
   }
+
+  /** A compile error as the gate counts it: the file, relative to the project, and the message. */
+  record Problem(String rel, String message) implements Comparable<Problem> {
+    @Override
+    public int compareTo(Problem other) {
+      int byFile = rel.compareTo(other.rel);
+      return byFile != 0 ? byFile : message.compareTo(other.message);
+    }
+  }
+
+  /** A problem an edit added, {@code extra} more times than it was there before. */
+  record Added(Problem problem, int extra) {}
 }

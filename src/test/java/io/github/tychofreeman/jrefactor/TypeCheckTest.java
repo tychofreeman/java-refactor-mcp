@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,7 +26,10 @@ class TypeCheckTest {
     assertEquals(Map.of(), TypeCheck.errors(project));
     Files.writeString(file, good.replace("1", "\"one\""));
     assertEquals(
-        Map.of("com/example/A.java | Type mismatch: cannot convert from String to int", 1),
+        Map.of(
+            new TypeCheck.Problem(
+                "com/example/A.java", "Type mismatch: cannot convert from String to int"),
+            1),
         TypeCheck.errors(project));
     Files.writeString(file, good);
     assertEquals(Map.of(), TypeCheck.errors(project));
@@ -51,7 +55,7 @@ class TypeCheckTest {
     Files.createDirectories(file.getParent());
     Files.writeString(file, "package com.example;\n\nclass A {\n  int x = \"one\";\n}\n");
     SourceProject first = SourceProject.of(root);
-    Map<String, Integer> counted = TypeCheck.errors(first);
+    Map<TypeCheck.Problem, Integer> counted = TypeCheck.errors(first);
     Path saved = cache.resolve("count.json");
     TypeCheck.save(first, saved);
 
@@ -109,7 +113,7 @@ class TypeCheckTest {
     SourceProject project = fourFiles(root);
     write(root, "A", "class A {\n  int k() {\n    return 1;\n  }\n}");
 
-    Map<String, Integer> errors = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> errors = TypeCheck.errors(project);
     assertEquals(Set.of("A.java", "B.java", "D.java"), lastParsed(project));
     assertEquals(TypeCheck.uncached(project), errors);
     assertEquals(2, errors.size(), errors.toString());
@@ -181,5 +185,29 @@ class TypeCheckTest {
 
     Files.delete(root.resolve("module-info.java"));
     assertEquals(1, TypeCheck.errors(project).size());
+  }
+
+  /** A file whose path holds " | " is counted again when it changes, as any other file. */
+  @Test
+  void aPathWithTheSeparatorIsCountedAgain(@TempDir Path root) throws Exception {
+    Path file = root.resolve("odd | dir/A.java");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, "class A {\n  int x = \"one\";\n}\n");
+    SourceProject project = SourceProject.of(root);
+    assertEquals(1, TypeCheck.errors(project).size());
+
+    Files.writeString(file, "class A {\n  int x = 1;\n}\n");
+    assertEquals(Map.of(), TypeCheck.errors(project));
+  }
+
+  /** introduced names each problem that occurs more often after, with how many more times. */
+  @Test
+  void introducedNamesTheProblemAndHowManyMore() {
+    TypeCheck.Problem a = new TypeCheck.Problem("p/A.java", "x cannot be resolved");
+    TypeCheck.Problem b = new TypeCheck.Problem("p/B.java", "y cannot be resolved");
+    assertEquals(
+        List.of(new TypeCheck.Added(a, 2), new TypeCheck.Added(b, 1)),
+        TypeCheck.introduced(Map.of(a, 1, b, 3), new TreeMap<>(Map.of(b, 4, a, 3))));
+    assertEquals(List.of(), TypeCheck.introduced(Map.of(a, 2), Map.of(a, 1)));
   }
 }
