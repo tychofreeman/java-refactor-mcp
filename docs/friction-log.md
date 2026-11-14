@@ -1683,6 +1683,25 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand: `replace_text`, `replace_declaration`, `add_declaration`, `extract_function`
   and `add_parameter`, in five batches.
 
+## 2026-11-14: test-projects
+
+- `create_file` of `TestProjectsTest`, which calls `TestProjects` before it exists, declared the
+  class stub in `src/main/java`: `TestProjects` does not read as a test double or helper
+  (`Stubs.TEST_DOUBLE`), so it went to the main root. A test-only helper named `Test*` would want
+  the test root. Undone; the class was created first in the test root.
+- `move` of `GoldenTest.copyTree` onto the stub of the same name was not possible: deleting the
+  stub first is refused while the test uses it (a `move` onto the stub itself was not tried).
+  Worked instead: replace the stub with the body, make the old method a delegate, `inline` it.
+
+## 2026-11-14: occurrences-record
+
+- `ParameterValue.occurrences` returned `List<int[]>` read by index (`u[0]`..`u[3]`); a record in
+  its place is no tool's operation (`extract_type` groups parameters or fields, not an array's
+  slots; `add_result` adds a value to a return, it does not give its parts names). Done as one batch
+  of edits: `add_declaration` of `Occurrence`, `replace_declaration` of `occurrences`, five
+  `replace_text`s in `substituted`. An "array to record" refactoring (name each index, rewrite each
+  `a[i]` read and each `new T[] {...}`) would have been one call.
+
 ## 2026-11-14: override-annotation
 
 - No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
