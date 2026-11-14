@@ -1,0 +1,1 @@
+2 variables named x start on line 6, at columns 13 and 23. Pass column

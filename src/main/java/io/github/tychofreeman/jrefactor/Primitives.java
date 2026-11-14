@@ -37,11 +37,8 @@ final class Primitives {
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    int lineStart = lineStart(unit, line, rel);
-    int lineEnd = text.indexOf('\n', lineStart) < 0 ? text.length() : text.indexOf('\n', lineStart);
-    Expression e =
-        ExtractVariable.find(
-            unit, text, expression, lineStart, lineEnd, line, args.integer("column"));
+    lineStart(unit, line, rel);
+    Expression e = ExtractVariable.find(opened, expression, line, args.integer("column"));
     String replacement =
         args.has("build")
             ? Build.expression(
