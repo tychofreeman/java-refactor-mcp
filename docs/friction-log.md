@@ -1764,6 +1764,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - `create_file` of `Json` with `com.fasterxml.jackson` was refused: the project uses Jackson 3
   (`tools.jackson`). The refusal named the import; the second call passed.
 
+## 2026-11-14: loop-stream-scaffolding
+
+- `fold` of `LoopToStream.uses(scope, binding)` and `beforeInitializer(text, d, init)` left most
+  copies: an argument such as `out.resolveBinding()` or `v.getInitializer()` "calls", so folding
+  it would move it past another call. Both are getters. Tried `fold`, then `remove_parameter`
+  with `value` (refused: one call passed a local holding the value); did the rest with
+  `replace_statements`.
+- `fold` of a method that builds a list in statements and returns it is refused (one return or a
+  void method only): the four `segments` sites went through `replace_statements`.
+
 ## 2026-11-14: lines-helpers
 
 - No Java by hand: one batch of 13 steps (`add_declaration` of `Lines.offsetOf` with a column,
