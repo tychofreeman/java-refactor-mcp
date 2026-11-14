@@ -110,7 +110,7 @@ final class EnumField {
       if (open == 0 || !text.substring(end, open - 1).isBlank()) {
         edits.add(new TextEdit(end, end, "(" + value + ")"));
       } else {
-        edits.add(Signatures.insertAt(text, c.arguments(), open - 1, at, value));
+        edits.add(SignatureChange.insertAt(c.arguments(), open, at, value));
       }
     }
     int step = Indent.step(text, 2);
@@ -121,10 +121,9 @@ final class EnumField {
       members += simple + "(" + type + " " + parameter + ") {\n" + in + assign + "\n}\n\n";
     } else {
       edits.add(
-          Signatures.insertAt(
-              text,
+          SignatureChange.insertAt(
               constructor.parameters(),
-              Signatures.open(text, constructor.getName()) - 1,
+              Signatures.open(text, constructor.getName()),
               at,
               type + " " + parameter));
       edits.add(assignment(text, constructor.getBody(), assign, in));

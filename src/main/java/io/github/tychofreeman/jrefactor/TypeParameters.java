@@ -26,7 +26,6 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
-import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -269,7 +268,7 @@ final class TypeParameters {
           if (p.typeArguments().isEmpty()) {
             continue; // a diamond infers it
           }
-          list.add(inserted(p.typeArguments(), at, argument));
+          list.add(SignatureChange.insertAt(p.typeArguments(), at, argument));
         } else if (!declared.isEmpty()) {
           raw += exempt(t) ? 0 : 1;
           continue; // a raw use stays raw
@@ -406,23 +405,13 @@ final class TypeParameters {
       int end = Nodes.end(target.getName());
       return new TextEdit(end, end, "<" + written + ">");
     }
-    return inserted(target.typeParameters(), at, written);
-  }
-
-  /** The edit that puts {@code text} at {@code at} of {@code list}, which is not empty. */
-  private static TextEdit inserted(List<?> list, int at, String text) {
-    if (at >= list.size()) {
-      int end = Nodes.end((ASTNode) list.get(list.size() - 1));
-      return new TextEdit(end, end, ", " + text);
-    }
-    int start = ((ASTNode) list.get(at)).getStartPosition();
-    return new TextEdit(start, start, text + ", ");
+    return SignatureChange.insertAt(target.typeParameters(), at, written);
   }
 
   /**
    * {@code value} as every file can write it: resolved once, as a field of {@code target} in its
-   * file would be, and named by its simple names with a member type's outer types; as written when
-   * it does not resolve there, which the gate then judges in each file.
+   * file would be ({@link Jdt#probeType}), and named by its simple names with a member type's outer
+   * types; as written when it does not resolve there, which the gate then judges in each file.
    */
   private static Value value(
       SourceProject project,
@@ -432,48 +421,18 @@ final class TypeParameters {
       String value,
       List<String> chosen)
       throws IOException {
-    int open = text.indexOf('{', headerEnd(target)) + 1;
-    String probe =
-        text.substring(0, open) + " " + value + " jrefactorProbe; " + text.substring(open);
-    String fixed = Imports.fix(project, file, text, probe, chosen).text();
-    for (VariableDeclarationFragment f :
-        Nodes.all(Jdt.parse(project, file, fixed), VariableDeclarationFragment.class)) {
-      IVariableBinding b = f.resolveBinding();
-      if (f.getName().getIdentifier().equals("jrefactorProbe")
-          && b != null
-          && b.getType() != null
-          && !b.getType().isRecovered()) {
-        ITypeBinding t = b.getType();
-        if (t.isTypeVariable()) {
-          throw new Refusal(
-              value
-                  + " is a type parameter of "
-                  + target.getName().getIdentifier()
-                  + ", which a use outside it cannot name. Pass a type every use can name.");
-        }
-        return new Value(Extract.typeName(t), t.getQualifiedName());
-      }
+    ITypeBinding t = Jdt.probeType(project, file, text, target, value, chosen);
+    if (t == null || t.isRecovered()) {
+      return new Value(value, null);
     }
-    return new Value(value, null);
-  }
-
-  /** The offset past the last part of {@code target}'s header before its body. */
-  private static int headerEnd(TypeDeclaration target) {
-    List<ASTNode> parts = new ArrayList<>();
-    for (List<?> list :
-        List.of(target.typeParameters(), target.superInterfaceTypes(), target.permittedTypes())) {
-      for (Object o : list) {
-        parts.add((ASTNode) o);
-      }
+    if (t.isTypeVariable()) {
+      throw new Refusal(
+          value
+              + " is a type parameter of "
+              + target.getName().getIdentifier()
+              + ", which a use outside it cannot name. Pass a type every use can name.");
     }
-    if (target.getSuperclassType() != null) {
-      parts.add(target.getSuperclassType());
-    }
-    int end = Nodes.end(target.getName());
-    for (ASTNode part : parts) {
-      end = Math.max(end, Nodes.end(part));
-    }
-    return end;
+    return new Value(Extract.typeName(t), t.getQualifiedName());
   }
 
   /**
@@ -938,7 +897,7 @@ final class TypeParameters {
         int start = m.getReturnType2().getStartPosition();
         list.add(new TextEdit(start, start, "<" + written + "> "));
       } else {
-        list.add(inserted(declared, at, written));
+        list.add(SignatureChange.insertAt(declared, at, written));
       }
       List<Type> roots = new ArrayList<>();
       roots.add(m.getReturnType2());

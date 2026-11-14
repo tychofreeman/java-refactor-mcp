@@ -1568,6 +1568,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Otherwise through the tools: `replace_text` (format strings, `all_occurrences` for the two
   `before` calls), `replace_declaration`, `create_file`, `add_declaration`. Goldens are resources.
 
+## 2026-11-14: one-member-removal
+
+- No Java by hand. `replace_statements` with an end line one short left a statement whose locals
+  it had deleted; the edit tools then declared stubs for them (fields and a constructor of
+  `TextEdit`, a record), and the batch was refused for that constructor, not for the missing
+  locals. A refusal that named the cut statement would have pointed at the range.
+
 ## 2026-11-14: one-label
 
 - `rename` of `Names.chain` to `typeLabel` was refused: `Names.typeLabel(ITypeBinding)` has one
@@ -1580,3 +1587,37 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   the moved method's line cannot be named before it lands. Sent as separate calls.
 - Otherwise through the tools: `move` (four), `rename` (two), `replace_declaration`, `inline`,
   `replace_text`, `create_file` for `NamesTest`. Goldens are resources.
+
+## 2026-11-14: list-insert
+
+- No Java by hand. Three copies onto one helper: the new `SignatureChange.insertAt` by
+  `add_declaration`, each copy made a delegate by `replace_declaration` in one batch, then `inline`
+  of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
+  two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.
+
+## 2026-11-14: switch-arms
+
+- `At.placeCall` from the block written twice in `EnumSwitch`: `extract_function` of the first copy
+  worked (a static `placeCall(Path eFile, At at, List<TextEdit> eEdits)`). Then:
+  - `remove_parameter` `eFile` with `value=at.eFile()` was refused: the call passes the local
+    `eFile`, which holds `at.eFile()`; the tool compares the argument's text, not what a local
+    initialized to it holds. Followed its fix (`replace_expression` of the argument first), in a batch.
+  - `function_to_method` was refused (the first parameter, `At`, is not of the method's class), and
+    its fix, `move` to `EnumSwitch.At`, was refused too: `move` takes a top-level class only, and
+    `At` is a nested record. The method was moved by hand: `add_declaration` of the instance form
+    to `EnumSwitch.At`, `replace_text` of the call, `replace_declaration` deleting the static one.
+    A `move` to a member type (or a record), or `function_to_method` onto a parameter's nested type,
+    would be one step.
+  - `fold` of `At.placeCall` over the second copy was refused: it folds only a method that is one
+    return or a void method's statements, and this one builds a map and returns it. Replaced by
+    `replace_text`. A fold of "statements, then return a local they built" into `T x = m(...)`
+    would have done it.
+
+## 2026-11-14: probe-type
+
+- `add_declaration` of the `Jdt.probeType` tests before the method existed was refused: the stub
+  it would declare is typed from the use, and `probeType(...).getQualifiedName()` gives no return
+  type to type it by (`Object`). Added the helper first, then the tests (a refactoring first, as
+  CLAUDE.md allows when the change is not yet easy).
+- No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
+  one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.

@@ -295,6 +295,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
+- A name as a type's members would resolve it is `Jdt.probeType` (#493): a probe field declared
+  as a member (`Jdt.withProbe`: before the first member, or after an enum's constants), imports
+  fixed, parsed. Not a new copy that inserts the field itself.
 - Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
   where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
   `restep` for a member moved between files (each step becomes the target's) and `member` for the
@@ -349,6 +352,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `remove_parameter` and `move_parameter` judge an argument by `Signatures.acts` (`Effects`'s
   changes, a new array, and a string's `+` of an object, whose `toString` `Effects` does not see) and
   `Signatures.mayThrow` (#475); the old syntax-only `Signatures.pure` is gone.
+- Whether a jump leaves some code is `Effects.exits(jump, root)` (labels, loops, switches, and
+  lambdas and classes declared inside), and whether a statement can complete normally is
+  `Effects.completesNormally` (#515): a tool asks them, not its own parent walk or last-statement test.
 - A refactoring that moves code declares it to `Behavior.check` (a `Move`: the code,
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
   the gate runs the effect, place, copy, exceptional and `NameCheck` rules (#96,
@@ -415,6 +421,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `Signatures.changeType`: the family's declarations and typed lambdas, by
   `SignatureChange.replace`; calls are left to the gate.
 
+- An item put into a comma-separated list (arguments, parameters, components, type arguments or
+  parameters) is `SignatureChange.insertAt` (#514, 2026-11-14): `open` is the offset just past the
+  opening bracket, used only for an empty list; the overload without it takes a non-empty one.
+
 - `replace_declaration` with empty content is a safe delete (#83, 2026-11-04):
   `SafeDelete.check` names the uses by binding before the gate, and refuses an
   override of a concrete method unless it only calls super or has the same body
@@ -424,7 +434,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `extract_supertype` (#85, 2026-11-04) is `ExtractSupertype`, composed in one call
   from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member
   `pull_up` or `push_down` removes now takes one blank line beside it with it
-  (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
+  (`MemberMove.removal`); three goldens that pinned the leftover blank line changed. Since #504
+  every member removal goes through it (`replace_declaration`'s delete, `move` of a method,
+  `inline` of a method): the blank line after (a line of only spaces counts), else, for the last
+  member, the one before.
   From a generic class (#144, 2026-11-13), `ExtractSupertype.generics` picks the type
   parameters: names in the extracted nodes that bind to the class's type variables, closed over
   bounds, each `TypeParameter` copied as text. The class's clause is the names, passed to
@@ -466,13 +479,13 @@ Each was chosen from options; the record named beside it has the options it beat
   indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either
   handled already (`catches`, `allows`), declared further (`declare`, by `Signatures.family`) or
   caught (`catchAt`); `write` emits the clauses and the tries as inserts, so they do not overlap
-  other edits. The exception's supertypes come from a probe field parsed in the target's file.
+  other edits. The exception's supertypes come from `Jdt.probeType` in the target's file.
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
   of the files that name the subclass and the superclass's file, text edits per file, each
   through `Imports.fix` (the subclass's imports as the chosen ones) and all through
   `Gate.applyOrRefuse`, the subclass's file as null. `usesInstance` refuses a body that needs the
   instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
-  `samOf` finds a named type's method by parsing the superclass with a probe field.
+  `samOf` finds a named type's method through `Jdt.probeType` on the superclass.
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
@@ -507,7 +520,8 @@ Each was chosen from options; the record named beside it has the options it beat
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
   name its refusal gives the case's variable ("the switch's value" for an enum). A bare `throw`
   after the arrow is a body as a block is (`EnumSwitch.arms`, #435); `TypeSwitch.switchCases`
-  still refuses one. A bare static in a case is refused unless `EnumSwitch.sees` it from the enum
+  still refuses one. Both read a case's body through `TypeSwitch.armBody` (`blockOrThrow` true for
+  the enum), and both forms place the switch's call through `At.placeCall` (#517). A bare static in a case is refused unless `EnumSwitch.sees` it from the enum
   (its own, or an enclosing type's that nothing on the way out hides; #436).
   The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
   enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added
