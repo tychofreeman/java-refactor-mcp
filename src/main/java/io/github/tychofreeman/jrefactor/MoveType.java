@@ -195,10 +195,7 @@ final class MoveType {
       outside.add(new TextEdit(cutStart, Lines.end(text, end), ""));
       changed.put(f, TextEdit.apply(text, outside, 0));
       String created =
-          (pkg.isEmpty() ? "" : "package " + pkg + ";\n\n")
-              + (kept.isEmpty() ? "" : kept + "\n")
-              + moved
-              + "\n";
+          Opened.packageHeader(pkg) + (kept.isEmpty() ? "" : kept + "\n") + moved + "\n";
       changed.put(target, created);
     }
 
