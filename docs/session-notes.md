@@ -276,6 +276,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- A tool that creates a new type's file writes it with `Edits.newFile` (imports fixed, through the
+  gate, the caller's last sentence for a refusal) and starts it with `Opened.packageHeader()` (#518).
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);

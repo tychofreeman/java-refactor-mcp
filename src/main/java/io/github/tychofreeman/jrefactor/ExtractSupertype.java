@@ -67,10 +67,7 @@ final class ExtractSupertype {
         Precondition.that(
             () -> !Files.exists(target),
             () -> project.relative(target) + " already exists. Choose another name."));
-    String pkg =
-        opened.unit().getPackage() == null
-            ? ""
-            : "package " + opened.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    String pkg = opened.packageHeader();
     String text = opened.text();
     if (kind.equals("interface")) {
       List<String> signatures = new ArrayList<>();
@@ -103,7 +100,13 @@ final class ExtractSupertype {
         body.append("  ").append(s).append(";\n");
       }
       body.append("}\n");
-      create(project, target, body.toString(), supertype, List.of());
+      Edits.newFile(
+          project,
+          target,
+          body.toString(),
+          supertype,
+          List.of(),
+          "Nothing was changed; name the types its members use in their file first.");
       AddSupertype.run(project, rel, name, "implements", supertype + generics.named());
       return Outcome.of(
           "extracted interface "
@@ -139,7 +142,7 @@ final class ExtractSupertype {
     boolean isAbstract = leavesAbstract(type, uses);
     List<String> chosen = new ArrayList<>();
     String constructors = constructors(type, supertype, chosen);
-    create(
+    Edits.newFile(
         project,
         target,
         pkg
@@ -153,7 +156,8 @@ final class ExtractSupertype {
             + constructors
             + "}\n",
         supertype,
-        chosen);
+        chosen,
+        "Nothing was changed; name the types its members use in their file first.");
     if (superclass == null) {
       AddSupertype.run(project, rel, name, "extends", supertype + generics.named());
     } else {
@@ -185,18 +189,6 @@ final class ExtractSupertype {
             + "; "
             + name
             + " extends it");
-  }
-
-  /** Writes the new type's file, its imports fixed, through the gate. */
-  private static void create(
-      SourceProject project, Path target, String text, String supertype, List<String> chosen)
-      throws Exception {
-    String fixed = Imports.fix(project, target, "", text, chosen).text();
-    Gate.applyOrRefuse(
-        project,
-        Map.of(target, fixed),
-        "creating " + supertype,
-        "Nothing was changed; name the types its members use in their file first.");
   }
 
   /** {@code m}'s signature as written: from after its modifiers to its body, without them. */

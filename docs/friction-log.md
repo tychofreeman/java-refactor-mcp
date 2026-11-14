@@ -1639,3 +1639,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   starts its line (the space is indentation there) and the batch's delete then refused; `old`
   without the space fixed it.
 - No Java by hand but the rebase's merge of `Nodes` and `NodesTest` with #526's `Nodes.show`.
+
+## 2026-11-14: extract-type-sibling
+
+- `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`
+  inline where the method names it as a local; `extract_variable` at each copy, then `fold`, in one
+  batch, folded all three. A `fold` that matched an inlined local of the body would save the step.
+- `fold` of `Opened.packageHeader(String pkg)` (with a null test) did not reach `Stubs` and
+  `MoveType`, which test only `isEmpty()`: `replace_expression` at each.
+- Otherwise through the tools: `move`, `rename`, `add_parameter` (three), `replace_statements`,
+  `replace_declaration`, `add_declaration`, `extract_variable`. The roadmap row went in by hand.
