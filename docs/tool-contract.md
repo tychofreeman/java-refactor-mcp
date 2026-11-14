@@ -36,10 +36,13 @@ default (`docs/design.md`, Decisions).
   that changes state (refused); `move_statement`, a statement that may throw
   swapped with one that changes state (refused). "May throw" is a dereference
   of a variable or expression, an array element, an integer `/` or `%`, a
-  reference cast, a call or a new object.
+  reference cast, a call or a new object; since #474 (2026-11-13) also a `throw`, an
+  `assert`, an integer `/=` or `%=`, and an unboxing.
 - Also detected (roadmap #75, 2026-11-05): `move_statement`, a statement that
   may throw swapped with a guard (a statement that may return, or break,
-  continue or yield out of itself); `extract_variable`, an expression that may
+  continue or yield out of itself, or, since #474, throw what no try in it catches:
+  `if (n == 0) throw err;` is an early exit, so `count++` moved past it is refused as past
+  a `return`); `extract_variable`, an expression that may
   throw taken out of a try's resources, out of its `catch` and `finally`.
 - Also detected (roadmap #75, 2026-11-04): `inline_function`, an argument that
   may throw whose parameter the body does not use, or uses only in a branch, a

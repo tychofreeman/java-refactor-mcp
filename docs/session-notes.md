@@ -274,7 +274,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `Declarations` and the signature tools keep their own resolvers (roadmap #74).
 - What code reads, writes and calls comes from `Effects.of(node)`
   (`docs/sessions/one-effects-analysis.md`); a new effect kind goes in
-  `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw";
+  `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw" (a `throw`, an `assert`, an
+  integer `/=` or `%=` and an unboxing too, #474); `Effects.leaves` with `throwing` counts a `throw` no try
+  inside the statement catches as an exit, as a `return` (`Behavior` passes true, `LoopToStream` false);
   `Effects.later(node, root)` and `Effects.sometimes(node, root)` say where code
   runs later, or only sometimes or more than once, than the code that holds it
   (#76; the branches of statements too). A record's own accessor (`isSyntheticRecordMethod`) is no

@@ -327,6 +327,18 @@ parse of the file and a new entry point in `NameCheck`); (c) only the shapes the
 not checked: a local of an enclosing method that the new local, in an anonymous or local class's
 method, would hide, and a static import of the name. Reopen (b) if the refusals cost turns.
 
+**Default to reopen (2026-11-13, issue #474; the owner said take the smallest fix):** a `throw`
+that no try inside the statement catches makes `Effects.leaves` true, so a guard that throws is an
+early exit, as one that returns: an effect moved past `if (n == 0) throw err;` is refused, and code
+that may throw moved above it is refused when the guard tests its operand, reported otherwise.
+Options: (a) that (chosen: one rule for every exit, and `throw new X()` was already refused, as
+the new object counts as a change); (b) report the effect's move as a change to exceptional
+behavior, refused only under `preserve_exceptions` (the effect would then run on the throwing path,
+which the policy keeps for normal flow); (c) refuse only a throw of a variable. A catch is matched
+by the thrown expression's static type against each catch clause's type (a union's alternatives
+too); a throw a catch takes only by its runtime type counts as leaving. `Effects` also marks an
+`assert`, an integer `/=` or `%=` and an unboxing as may-throw; no golden case or probe changed.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -782,6 +794,7 @@ sections 3 and 4.
 | 200 | 208 | `push_down`'s override check missed what the moved method overrides when `name` had parentheses (`Sub.hello()`, compared with the bare method name), in a superclass's superclass, and in an interface's default method: the move type-checked and the class then ran the inherited method (issue #465, code review) | Done 2026-11-13 (`PushDown.refuseOverride` asks `CallTargets.overridden` of the method's binding: every supertype, transitively, abstract methods and `Object`'s included, which the old check skipped; probe `push_down_grandparent_override`, goldens `push_down_refused_override_parens` and `_default`) | Issue #465; `docs/sessions/fix-push-down-override.md` |
 | 201 | 209 | `extract_function` and `extract_variable` checked a new name only against the type and its supertypes: a method of an enclosing type, or a field of an enclosing type, an enum, a record or an interface, was captured silently (issue #469, code review) | Done 2026-11-13 (`Extraction.refuseEnclosing`, from `refuseClash` and `checkOverride`; `ExtractVariable.checkFieldName` walks every `AbstractTypeDeclaration` and anonymous class around the expression, superclasses and interfaces; probes `extract_*_hides_*`, goldens `extract_function_refused_outer_method`, `extract_variable_refused_hides_enum_field`. Default to reopen in Decisions: the walk over a meaning check) | Issue #469; `docs/sessions/fix-extract-name-clash.md` |
 | 203 | 211 | `invert_if` whose else branch is unbraced and ends in an if without an else (`else for (...) if (d) z();`): the swapped `else` attached to that inner if, which type-checked and ran the old then branch per element | Done 2026-11-13: `InvertIf.thenText` puts such a branch in braces (`endsInOpenIf` follows `for`, enhanced `for`, `while`, a label and an if's else). Default to reopen (the owner said take the smallest): braces only where needed, over braces always (it would change every unbraced else) and over refusing (the model would add the braces by hand) | Issue #470 (code review); probe `invert_if_dangling_else` |
+| 206 | 214 | `Effects` had no effect for `throw <variable>` or `assert`, and `Effects.leaves` ignored `throw`: `count++` moved above `if (n == 0) throw err;` (or below it) was neither refused nor reported, and a division moved above such a guard changed which exception came (issue #474, code review) | Done 2026-11-13 (`Effects`: `MAY_THROW` for a `throw`, an `assert`, an integer `/=` or `%=` and an unboxing; `Effects.leaves` true for a throw no try inside catches, by `Effects.caught`, when `throwing` (`LoopToStream` passes false: a lambda may throw). Probes `move_statement_past_throw_guard{,_down}`, `move_statement_division_past_throw_guard`; golden `move_statement_refused_throw_guard`; `EffectsTest`. Every golden case and probe kept its output. Default to reopen in Decisions: refusing as an early exit over reporting) | Issue #474; `docs/sessions/fix-effects-throw.md` |
 
 ### The 2026-11-04 list
 

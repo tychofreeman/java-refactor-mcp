@@ -302,7 +302,7 @@ final class Behavior {
         continue;
       }
       String exit = "the statement at " + line(s);
-      if (Effects.leaves(s)) {
+      if (Effects.leaves(s, true)) {
         if (code.changesNow()) {
           throw new Refusal(
               exit
@@ -344,7 +344,7 @@ final class Behavior {
                   + ": it would now throw where that exit came first",
               "leave it where it is");
         }
-      } else if (m.code() instanceof Statement own && Effects.leaves(own)) {
+      } else if (m.code() instanceof Statement own && Effects.leaves(own, true)) {
         if (Effects.of(s).changes()) {
           throw new Refusal(
               m.label()

@@ -243,7 +243,7 @@ final class LoopToStream {
       IBinding result,
       boolean search) {
     int line = Lines.number(text, loop.getStartPosition());
-    if (!search && Effects.leaves(body)) {
+    if (!search && Effects.leaves(body, false)) {
       throw new Refusal(
           "the body of the loop at line "
               + line
