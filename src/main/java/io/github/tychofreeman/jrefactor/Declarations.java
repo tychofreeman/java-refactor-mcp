@@ -702,7 +702,7 @@ final class Declarations {
 
   /** The offset of the last character of {@code node}. */
   private static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength() - 1;
+    return Nodes.end(node) - 1;
   }
 
   /**

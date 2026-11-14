@@ -1671,6 +1671,58 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   the switch into `return` wrote `return (switch ... );`; the parentheses could not go by two
   `replace_text`s (each step must parse), so `replace_declaration` rewrote the method.
 
+## 2026-11-14: fewer-parses
+
+- `extract_function` of lines 959-1020 of `ParameterValue` (the tail of `sameTargets`, the range
+  ending on the method's closing brace) was refused as "lines 959-1020 cut the statement at line
+  959": the cut was at line 1020, the brace, and the list that followed named every statement, so
+  959-1019 passed. The refusal should name the line that cuts (or drop a closing brace at the end).
+- `add_parameter` with `value=null` wrote `null` at the call inside `passed`, which had to pass
+  its own new parameter: a second `replace_text`. A `value` naming a parameter of the caller
+  where it has one of that name (`probed`) would have saved it.
+- No Java by hand: `replace_text`, `replace_declaration`, `add_declaration`, `extract_function`
+  and `add_parameter`, in five batches.
+
+## 2026-11-14: test-projects
+
+- `create_file` of `TestProjectsTest`, which calls `TestProjects` before it exists, declared the
+  class stub in `src/main/java`: `TestProjects` does not read as a test double or helper
+  (`Stubs.TEST_DOUBLE`), so it went to the main root. A test-only helper named `Test*` would want
+  the test root. Undone; the class was created first in the test root.
+- `move` of `GoldenTest.copyTree` onto the stub of the same name was not possible: deleting the
+  stub first is refused while the test uses it (a `move` onto the stub itself was not tried).
+  Worked instead: replace the stub with the body, make the old method a delegate, `inline` it.
+
+## 2026-11-14: occurrences-record
+
+- `ParameterValue.occurrences` returned `List<int[]>` read by index (`u[0]`..`u[3]`); a record in
+  its place is no tool's operation (`extract_type` groups parameters or fields, not an array's
+  slots; `add_result` adds a value to a return, it does not give its parts names). Done as one batch
+  of edits: `add_declaration` of `Occurrence`, `replace_declaration` of `occurrences`, five
+  `replace_text`s in `substituted`. An "array to record" refactoring (name each index, rewrite each
+  `a[i]` read and each `new T[] {...}`) would have been one call.
+
+## 2026-11-14: node-text
+
+- All through the tools: `move` of `Generated.source` to `Nodes`, `fold` of `Nodes.end` and of
+  `Nodes.source` over the project, then `inline` of each of the eleven private copies, which
+  `fold` had turned into delegates. One call per copy, in a shell loop: a batch would have done
+  it in one, but each copy's file had to be named.
+- `rename` of `Nodes.source` to `text` was refused: its parameter is named `text`. Kept `source`.
+- `fold` left ten sites where the node expression is a getter called twice (`d.getJavadoc()`):
+  "a call would evaluate it once". A getter of an AST node has no effect; a way to tell `fold`
+  that a getter is pure would have taken them.
+- `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.
+
+## 2026-11-14: override-annotation
+
+- No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
+  `replace_statements`, three private helpers made delegates by `replace_declaration` and
+  `inline`d. `inline` wrote `overrides(m)` as `(Nodes.overrideAnnotation(m) != null)` and `!overrides(m)`
+  as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
+  dropped needless parentheses and negated a comparison would have saved them.
+- `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.
+
 ## 2026-11-14: moved-type-context
 
 - `move` of the static `MoveType.label` (whose first parameter was by then the new record

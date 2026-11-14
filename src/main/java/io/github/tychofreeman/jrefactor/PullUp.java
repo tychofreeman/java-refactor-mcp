@@ -97,7 +97,7 @@ final class PullUp {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Map<Path, String> texts = holding.texts();
-    String movedText = MemberMove.textOf(text, moved);
+    String movedText = Nodes.source(text, moved);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
     String targetText = Edits.textOf(texts, target);
     if (twin != null) {
@@ -220,23 +220,13 @@ final class PullUp {
       // From the declaration's start, so that the method declared is written by this edit.
       written.append(targetText, twin.getStartPosition(), after(targetText, twin.getJavadoc()));
     }
-    if (override(twin) == null && override(moved) instanceof Annotation a) {
+    if (Nodes.overrideAnnotation(twin) == null
+        && Nodes.overrideAnnotation(moved) instanceof Annotation a) {
       written.append(text, at, a.getStartPosition());
       at = after(text, a);
     }
     written.append(text, at, Nodes.end(moved));
     return new TextEdit(twin.getStartPosition(), Nodes.end(twin), written.toString());
-  }
-
-  /** {@code m}'s {@code @Override}, or null. */
-  private static Annotation override(MethodDeclaration m) {
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a
-          && a.getTypeName().getFullyQualifiedName().endsWith("Override")) {
-        return a;
-      }
-    }
-    return null;
   }
 
   /** The offset of the first character after {@code node} that is not white space. */

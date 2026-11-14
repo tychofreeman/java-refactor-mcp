@@ -170,6 +170,7 @@ final class Jdt {
    * A parser for Java 21 that resolves bindings against the project's source path and classpath.
    */
   private static ASTParser parser(SourceProject project) {
+    project.session().bindingParses++;
     ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
     parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);

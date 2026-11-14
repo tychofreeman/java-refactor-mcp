@@ -392,7 +392,7 @@ final class ExtractType {
     for (int i = 0; i < moved.size(); i++) {
       FieldDeclaration fd = moved.get(i);
       int start = Lines.start(text, fd.getStartPosition());
-      String fieldText = text.substring(fd.getStartPosition(), Nodes.end(fd));
+      String fieldText = Nodes.source(text, fd);
       for (Object o : fd.modifiers()) {
         if (o instanceof Modifier m && m.isPrivate()) {
           int from = m.getStartPosition() - fd.getStartPosition();
@@ -575,7 +575,7 @@ final class ExtractType {
                       + " "
                       + unusable
                       + ", which the new record in its own file cannot name. Leave it out."));
-      components.add(text.substring(c.getStartPosition(), Nodes.end(c)));
+      components.add(Nodes.source(text, c));
     }
 
     Holding holding =
@@ -633,11 +633,7 @@ final class ExtractType {
             && b.getDeclaringClass().getErasure().getKey().equals(key)
             && (b.isConstructor() || chosen.contains(b.getName()))) {
           refused.add(
-              t.substring(r.getStartPosition(), Nodes.end(r))
-                  + " ("
-                  + where
-                  + u.getLineNumber(r.getStartPosition())
-                  + ")");
+              Nodes.source(t, r) + " (" + where + u.getLineNumber(r.getStartPosition()) + ")");
         }
       }
       for (RecordPattern p : Nodes.all(u, RecordPattern.class)) {
@@ -645,7 +641,7 @@ final class ExtractType {
         if (b != null && b.getErasure().getKey().equals(key)) {
           refused.add(
               "the pattern "
-                  + t.substring(p.getStartPosition(), Nodes.end(p))
+                  + Nodes.source(t, p)
                   + " ("
                   + where
                   + u.getLineNumber(p.getStartPosition())
@@ -805,7 +801,7 @@ final class ExtractType {
                   + f
                   + " out.");
         }
-        args.add(text.substring(value.getStartPosition(), Nodes.end(value)));
+        args.add(Nodes.source(text, value));
         int at = statements.indexOf(es);
         first = Math.min(first, at);
         last = Math.max(last, at);

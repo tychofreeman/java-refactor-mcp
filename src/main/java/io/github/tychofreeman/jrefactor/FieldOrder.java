@@ -59,7 +59,7 @@ final class FieldOrder {
       if (from > 0 && text.substring(Lines.start(text, from - 1), from).isBlank()) {
         from = Lines.start(text, from - 1);
       }
-      int to = Lines.end(text, moved.getStartPosition() + moved.getLength());
+      int to = Lines.end(text, Nodes.end(moved));
       int at = Lines.start(text, reader.getStartPosition());
       String field = text.substring(Lines.start(text, moved.getStartPosition()), to);
       String without = text.substring(0, from) + text.substring(to);

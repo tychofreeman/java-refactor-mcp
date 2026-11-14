@@ -454,7 +454,7 @@ final class ThrowsCallers {
               + step
               + step
               + (returns ? "return " : "")
-              + text.substring(body.getStartPosition(), Nodes.end(body))
+              + Nodes.source(text, body)
               + ";\n"
               + indent
               + step

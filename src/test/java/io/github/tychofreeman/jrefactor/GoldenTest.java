@@ -50,7 +50,7 @@ class GoldenTest {
   private static void runCase(Path caseDir) throws Exception {
     Path work = WORK.resolve(caseDir.getFileName().toString());
     deleteTree(work);
-    copyTree(caseDir.resolve("in"), work);
+    TestProjects.copyTree(caseDir.resolve("in"), work);
 
     Properties args = new Properties();
     try (Reader reader = Files.newBufferedReader(caseDir.resolve("args.properties"))) {
@@ -174,16 +174,6 @@ class GoldenTest {
           .filter(Files::isRegularFile)
           .map(p -> root.relativize(p).toString().replace('\\', '/'))
           .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
-    }
-  }
-
-  static void copyTree(Path from, Path to) throws IOException {
-    try (Stream<Path> files = Files.walk(from)) {
-      for (Path src : files.filter(Files::isRegularFile).toList()) {
-        Path dst = to.resolve(from.relativize(src).toString());
-        Files.createDirectories(dst.getParent());
-        Files.copy(src, dst);
-      }
     }
   }
 

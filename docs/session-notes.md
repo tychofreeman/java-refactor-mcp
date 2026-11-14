@@ -296,7 +296,8 @@ Each was chosen from options; the record named beside it has the options it beat
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
-- Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
+- Offsets and lines: `Nodes.end` (just past a node), `Nodes.source(text, node)` (its text as
+  written, #507), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98). The node around one:
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
@@ -556,8 +557,10 @@ Each was chosen from options; the record named beside it has the options it beat
   statement (`Behavior.flow`). A call on the method's own object or a static method named alone
   (#169) is written per call by `InMethod.written` (`at` for the extraction; `inPlace`, without
   receivers, for `remove_parameter`'s messages) and checked by `ParameterValue.sameTargets`,
-  which parses the calling file with the argument in place and compares each call's binding
-  (by key, or an override) and the probe's not-visible problems.
+  which compares each call's binding (by key, or an override) and the not-visible problems in a
+  parse of the calling file with the argument in place: `ParameterValue.probe` writes every call
+  of a file in and parses it once (#529; `PerCall.probe`, from `Introduce`'s `more`, before the
+  per-call checks, whose order of refusals it keeps); a call not probed first is parsed alone.
 
 - `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
   needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:
@@ -647,6 +650,9 @@ Each was chosen from options; the record named beside it has the options it beat
   On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
   expression and finds it again by offset (the import fix changes only lines above it).
 
+- A member's `@Override` is `Nodes.overrideAnnotation` (#506, 2026-11-14): `java.lang.Override` by
+  binding, or by name when the annotation does not resolve; not a name ending in `Override`.
+
 - `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
   2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
@@ -701,7 +707,7 @@ Each was chosen from options; the record named beside it has the options it beat
   A method (#158) is `TypeParameters.toMethod`, routed by a syntax-only `Declarations.find` before
   the `Holding` parse: `MethodFamily.of` with references kept; each call's and reference's types
   (`types`: return and parameters by qualified name) are read before the write and compared after
-  by its kind and number in its file (`ordinal`), since the declarations' edits move offsets.
+  by its kind and number in its file (`ordinals`, one walk per file, #529), since the declarations' edits move offsets.
   `change_type` with `type_parameter` (#159) is `TypeParameters.bound`, which `Tools.changeType`
   routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
   declaration (one for a class, the family's for a method); casts to the parameter are found by
@@ -721,6 +727,8 @@ Each was chosen from options; the record named beside it has the options it beat
   the description or its arguments' text, rather than raise the limit (ask the user first).
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
+- A test that needs files on disk writes them with `TestProjects` (#531): `write(root, rel,
+  text)`, `maven(root, editing)` for a Maven-layout project, `copyTree`.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
   cached type count must equal `TypeCheck.uncached`.
 - One golden case, or a few (#195, 2026-11-13): `flock /tmp/jr-heavy.lock ./mvnw -q -o test
@@ -821,7 +829,8 @@ Each was chosen from options; the record named beside it has the options it beat
   solution). The skeleton arm is a second run with `-arms mcp` and
   `-mcp <this repo>/eval-tasks/jrefactor-ab-server-skeleton` (`JREFACTOR_SKELETON_ONLY=1`).
 - Measure call costs with `GateCostTest` (`-Djrefactor.cost.root`,
-  `-Djrefactor.cost.call`), not from old figures.
+  `-Djrefactor.cost.call`), not from old figures. It prints the gate's project parses and every
+  binding parse (`Session.bindingParses`: each `Jdt.parse`, and each `parseAll` batch; #529).
 
 ## Traps
 

@@ -89,7 +89,7 @@ final class ExtractVariable {
     } else {
       edits.add(new TextEdit(stmtStart, stmtStart, decl + " "));
     }
-    edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
+    edits.add(new TextEdit(e.getStartPosition(), Nodes.end(e), name));
     Behavior.check(
         project,
         new Behavior.Move(e, statement, List.of(statement), source, "extracting " + source),
@@ -124,7 +124,7 @@ final class ExtractVariable {
     String text = opened.text();
     List<Expression> found = new ArrayList<>();
     for (Expression x : opened.onLine(line, Expression.class)) {
-      if (text.substring(x.getStartPosition(), Nodes.end(x)).equals(source)) {
+      if (Nodes.source(text, x).equals(source)) {
         found.add(x);
       }
     }
