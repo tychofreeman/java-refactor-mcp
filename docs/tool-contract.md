@@ -135,6 +135,15 @@ declaring them ("The method price() of type Cart must override or implement a su
 it names `add_supertype` for that type, before the methods in one batch (2026-11-06). Other errors
 with these keep the edit's own advice after the hints.
 
+A new name a tool is given for one declaration (`rename`'s `new_name`, `extract_function`'s and
+`type_switch_to_method`'s `name`, `extract_variable`'s `name`, `add_parameter`'s `parameter`,
+`extract_type`'s and `extract_supertype`'s type and field, `add_result`'s `result`) must be one
+Java identifier, not a keyword: "a.b is not a valid Java name for the new method: use letters,
+digits, '_' or '$', not starting with a digit, and not a keyword." (`Precondition.identifier`,
+2026-11-13, issue #494: `extract_function`, `add_parameter` and an enum's or record's new
+parameter took a dotted name, which then failed to parse or compile). A package name (`move`'s
+`package`) takes dots.
+
 A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
 follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
 that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by

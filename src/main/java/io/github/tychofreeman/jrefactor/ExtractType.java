@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -74,12 +73,8 @@ final class ExtractType {
     String parameter = args.required("parameter");
     List<String> chosen = args.list("parameters");
     Precondition.require(
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(struct) && !SourceVersion.isKeyword(struct),
-            () -> struct + " is not a valid name for the record."),
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(parameter) && !SourceVersion.isKeyword(parameter),
-            () -> parameter + " is not a valid name for the new parameter."),
+        Precondition.identifier(struct, "the record"),
+        Precondition.identifier(parameter, "the new parameter"),
         Precondition.that(
             () -> !chosen.isEmpty(), () -> "parameters names the parameters to group."));
     String rel = args.required("file");
@@ -271,12 +266,8 @@ final class ExtractType {
     String holder = args.required("field");
     List<String> chosen = args.list("fields");
     Precondition.require(
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(struct) && !SourceVersion.isKeyword(struct),
-            () -> struct + " is not a valid name for the class."),
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(holder) && !SourceVersion.isKeyword(holder),
-            () -> holder + " is not a valid name for the field that holds it."),
+        Precondition.identifier(struct, "the class"),
+        Precondition.identifier(holder, "the field that holds it"),
         Precondition.that(() -> !chosen.isEmpty(), () -> "fields names the fields to move."));
     Opened opened = Opened.of(project, rel);
     for (Object t : opened.unit().types()) {

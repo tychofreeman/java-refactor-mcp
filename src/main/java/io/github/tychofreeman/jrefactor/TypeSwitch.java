@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
@@ -69,9 +68,7 @@ final class TypeSwitch {
     Precondition.require(
         Precondition.that(
             () -> line != null, () -> "type_switch_to_method needs line, where the switch starts."),
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
-            () -> name + " is not a valid method name."));
+        Precondition.identifier(name, "the new method"));
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     ASTNode node =

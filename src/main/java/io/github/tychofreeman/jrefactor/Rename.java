@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -75,13 +74,7 @@ public final class Rename {
               + relFile
               + "' is not a Java file in this project. Pass a path relative to the project root.");
     }
-    if (!SourceVersion.isIdentifier(newName) || SourceVersion.isKeyword(newName)) {
-      throw new Refusal(
-          "'"
-              + newName
-              + "' is not a valid Java name. Use letters, digits, '_' or '$', "
-              + "starting with a letter, '_' or '$', and not a keyword.");
-    }
+    Precondition.require(Precondition.identifier(newName, "the new name"));
 
     Query query = Query.of(name);
     String source = Files.readString(file);

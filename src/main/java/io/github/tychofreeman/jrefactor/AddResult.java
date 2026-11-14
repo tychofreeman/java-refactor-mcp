@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
@@ -38,9 +37,7 @@ final class AddResult {
     String result = args.required("result");
     Qualified q = Qualified.of(args.required("name"), "Type.method, the class and the method");
     Precondition.require(
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(result) && !SourceVersion.isKeyword(result),
-            () -> result + " is not a valid name for the result."),
+        Precondition.identifier(result, "the result"),
         Precondition.that(
             () -> !result.equals("value"),
             () ->

@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
@@ -43,9 +42,7 @@ final class ExtractSupertype {
         Precondition.that(
             () -> "interface".equals(kind) || "class".equals(kind),
             () -> "kind is interface or class, the supertype to extract."),
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(supertype) && !SourceVersion.isKeyword(supertype),
-            () -> supertype + " is not a valid name for a type."),
+        Precondition.identifier(supertype, "the new type"),
         Precondition.that(
             () -> !members.isEmpty(),
             () -> "members names the methods (and, for a class, fields) to extract."));
