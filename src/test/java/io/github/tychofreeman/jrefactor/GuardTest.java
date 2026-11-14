@@ -120,4 +120,13 @@ class GuardTest {
             "/home/u/p",
             false));
   }
+
+  /** A quoted > is text, not a redirection: the operand after it is still the file read. */
+  @Test
+  void aQuotedAngleBracketIsNoRedirection() {
+    assertNotEquals("", Guard.refusal(false, bash("grep -n 'List<Path> x' Plant.java")));
+    assertNotEquals("", Guard.refusal(false, bash("grep -n \"a > b\" " + MAIN)));
+    assertEquals("", Guard.refusal(false, bash("grep -n 'a > b' docs/a.md > Plant.java")));
+    assertNotEquals("", Guard.refusal(true, bash("grep -n 'a > b' docs/a.md > Plant.java")));
+  }
 }
