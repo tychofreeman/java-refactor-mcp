@@ -212,11 +212,7 @@ final class ConvertLoop {
   }
 
   private static boolean is(Expression e, IBinding v) {
-    return e instanceof SimpleName n && same(n.resolveBinding(), v);
-  }
-
-  private static boolean same(IBinding a, IBinding b) {
-    return a != null && b != null && a.getKey().equals(b.getKey());
+    return e instanceof SimpleName n && Bindings.same(n.resolveBinding(), v);
   }
 
   /** An index for to an enhanced for: each {@code x.get(i)} or {@code x[i]} becomes the element. */
@@ -231,7 +227,7 @@ final class ConvertLoop {
     }
     List<Expression> reads = new ArrayList<>();
     for (SimpleName n : Nodes.all(body, SimpleName.class)) {
-      if (!same(n.resolveBinding(), indexed.index())) {
+      if (!Bindings.same(n.resolveBinding(), indexed.index())) {
         continue;
       }
       Expression read = elementRead(text, n, indexed.of(), indexed.array());
@@ -390,7 +386,7 @@ final class ConvertLoop {
 
   private static boolean written(Statement body, IBinding v) {
     for (Effects.Effect e : Effects.of(body).all()) {
-      if (e.kind() == Effects.Kind.WRITE && same(e.variable(), v)) {
+      if (e.kind() == Effects.Kind.WRITE && Bindings.same(e.variable(), v)) {
         return true;
       }
     }
@@ -433,7 +429,7 @@ final class ConvertLoop {
       throw new Refusal("the loop at line " + line + shape);
     }
     for (SimpleName n : Nodes.all(body, SimpleName.class)) {
-      if (same(n.resolveBinding(), iterator) && n != next.getExpression()) {
+      if (Bindings.same(n.resolveBinding(), iterator) && n != next.getExpression()) {
         throw new Refusal(
             "the loop at line "
                 + line
@@ -670,7 +666,7 @@ final class ConvertLoop {
         String name = f.getName().getIdentifier();
         boolean read = false;
         for (SimpleName n : Nodes.all(loop.getExpression(), SimpleName.class)) {
-          read |= same(n.resolveBinding(), f.resolveBinding());
+          read |= Bindings.same(n.resolveBinding(), f.resolveBinding());
         }
         if (read && f.getInitializer() != null && !namedAfter(whole, List.of(name))) {
           String s = source(text, before);

@@ -47,7 +47,7 @@ final class NameCheck {
             @Override
             public boolean visit(SimpleName n) {
               IBinding b = n.resolveBinding();
-              String key = key(b);
+              String key = Bindings.declarationKey(b);
               if (key != null) {
                 out.computeIfAbsent(spaced(n, b), k -> new HashSet<>()).add(key);
               }
@@ -112,7 +112,7 @@ final class NameCheck {
                 return true;
               }
               IBinding b = n.resolveBinding();
-              String key = key(b);
+              String key = Bindings.declarationKey(b);
               Set<String> was = before.get(spaced(n, b));
               // A recovered binding is a name the edit's file has not imported yet (the import fix
               // runs after), and a type variable belongs to its class: the gate judges both. A
@@ -194,16 +194,6 @@ final class NameCheck {
         || p instanceof SuperMethodInvocation
         || p instanceof SuperFieldAccess
         || p instanceof MethodReference;
-  }
-
-  private static String key(IBinding b) {
-    return switch (b) {
-      case null -> null;
-      case ITypeBinding t -> t.getTypeDeclaration().getKey();
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      default -> b.getKey();
-    };
   }
 
   private static String describe(IBinding b) {

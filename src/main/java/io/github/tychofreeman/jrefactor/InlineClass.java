@@ -146,12 +146,12 @@ final class InlineClass {
     }
 
     refuseOverride(project, opened.file(), h, c);
-    String fieldKey = frag.resolveBinding().getKey();
+    String fieldKey = Bindings.declarationKey(frag.resolveBinding());
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
       if (n.isDeclaration()
           || !(n.resolveBinding() instanceof IVariableBinding v)
-          || !v.getKey().equals(fieldKey)) {
+          || !fieldKey.equals(Bindings.declarationKey(v))) {
         continue;
       }
       ASTNode p = n.getParent();

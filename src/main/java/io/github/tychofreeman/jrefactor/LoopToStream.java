@@ -252,8 +252,8 @@ final class LoopToStream {
           && e.variable() != null
           && !e.variable().isField()
           && !declaredIn(opened, e.variable(), body)
-          && !same(e.variable(), loop.getParameter().resolveBinding())
-          && !same(e.variable(), result)) {
+          && !Bindings.same(e.variable(), loop.getParameter().resolveBinding())
+          && !Bindings.same(e.variable(), result)) {
         throw new Refusal(
             e.variable().getName()
                 + " is assigned in the loop at line "
@@ -333,7 +333,7 @@ final class LoopToStream {
     }
     long uses =
         Nodes.all(loop, SimpleName.class).stream()
-            .filter(n -> same(n.resolveBinding(), out.resolveBinding()))
+            .filter(n -> Bindings.same(n.resolveBinding(), out.resolveBinding()))
             .count();
     return uses == b.adds() ? list : null;
   }
@@ -344,7 +344,7 @@ final class LoopToStream {
    */
   private static boolean onlyRead(IVariableBinding list, ASTNode scope, int from) {
     for (SimpleName n : Nodes.all(scope, SimpleName.class)) {
-      if (n.getStartPosition() < from || !same(n.resolveBinding(), list)) {
+      if (n.getStartPosition() < from || !Bindings.same(n.resolveBinding(), list)) {
         continue;
       }
       boolean read =
@@ -460,16 +460,12 @@ final class LoopToStream {
   private static boolean reads(List<Statement> statements, IBinding variable) {
     for (Statement s : statements) {
       for (SimpleName n : Nodes.all(s, SimpleName.class)) {
-        if (same(n.resolveBinding(), variable)) {
+        if (Bindings.same(n.resolveBinding(), variable)) {
           return true;
         }
       }
     }
     return false;
-  }
-
-  private static boolean same(IBinding a, IBinding b) {
-    return a != null && b != null && a.getKey().equals(b.getKey());
   }
 
   private static List<Statement> statementsOf(Statement s) {
@@ -613,7 +609,7 @@ final class LoopToStream {
     if (!(s instanceof ExpressionStatement e)
         || !(e.getExpression() instanceof MethodInvocation add)
         || !(add.getExpression() instanceof SimpleName receiver)
-        || !same(receiver.resolveBinding(), out)
+        || !Bindings.same(receiver.resolveBinding(), out)
         || add.arguments().size() != 1) {
       return null;
     }
@@ -724,7 +720,8 @@ final class LoopToStream {
       if (add.getName().getIdentifier().equals("addAll")) {
         stages.add(new Stage("flatMap", param, primary(text, argument) + ".stream()"));
         last = elementOf(argument.resolveTypeBinding());
-      } else if (argument instanceof SimpleName n && same(n.resolveBinding(), read.binding())) {
+      } else if (argument instanceof SimpleName n
+          && Bindings.same(n.resolveBinding(), read.binding())) {
         last = read.type();
       } else {
         stages.add(new Stage("map", param, source(text, argument)));
@@ -818,7 +815,7 @@ final class LoopToStream {
     }
     IBinding v = fragment(d).resolveBinding();
     for (Effects.Effect e : Effects.of(loop.getBody()).all()) {
-      if (e.kind() == Effects.Kind.WRITE && same(e.variable(), v)) {
+      if (e.kind() == Effects.Kind.WRITE && Bindings.same(e.variable(), v)) {
         return d;
       }
     }
@@ -849,13 +846,14 @@ final class LoopToStream {
     int line = Lines.number(text, loop.getStartPosition());
     List<Assignment> sets = new ArrayList<>();
     for (Assignment a : Nodes.all(loop.getBody(), Assignment.class)) {
-      if (a.getLeftHandSide() instanceof SimpleName n && same(n.resolveBinding(), binding)) {
+      if (a.getLeftHandSide() instanceof SimpleName n
+          && Bindings.same(n.resolveBinding(), binding)) {
         sets.add(a);
       }
     }
     long uses =
         Nodes.all(loop.getBody(), SimpleName.class).stream()
-            .filter(n -> same(n.resolveBinding(), binding))
+            .filter(n -> Bindings.same(n.resolveBinding(), binding))
             .count();
     String set = sets.isEmpty() ? null : source(text, sets.get(0).getRightHandSide());
     boolean flag =
@@ -992,7 +990,7 @@ final class LoopToStream {
     List<Statement> rest = read.rest();
     long uses =
         Nodes.all(loop.getBody(), SimpleName.class).stream()
-            .filter(n -> same(n.resolveBinding(), binding))
+            .filter(n -> Bindings.same(n.resolveBinding(), binding))
             .count();
     if (rest.size() != 1 || !(rest.get(0) instanceof ExpressionStatement e) || uses != 1) {
       return null;
@@ -1002,16 +1000,16 @@ final class LoopToStream {
     if (update instanceof Assignment a
         && a.getOperator() == Assignment.Operator.PLUS_ASSIGN
         && a.getLeftHandSide() instanceof SimpleName n
-        && same(n.resolveBinding(), binding)) {
+        && Bindings.same(n.resolveBinding(), binding)) {
       added = a.getRightHandSide();
     } else if (!(update instanceof PostfixExpression p
             && p.getOperator() == PostfixExpression.Operator.INCREMENT
             && p.getOperand() instanceof SimpleName n2
-            && same(n2.resolveBinding(), binding))
+            && Bindings.same(n2.resolveBinding(), binding))
         && !(update instanceof PrefixExpression q
             && q.getOperator() == PrefixExpression.Operator.INCREMENT
             && q.getOperand() instanceof SimpleName n3
-            && same(n3.resolveBinding(), binding))) {
+            && Bindings.same(n3.resolveBinding(), binding))) {
       return null;
     }
     boolean count = added == null || source(text, added).equals("1");
@@ -1092,7 +1090,7 @@ final class LoopToStream {
         && rest.get(0) instanceof ExpressionStatement e
         && e.getExpression() instanceof Assignment a
         && a.getLeftHandSide() instanceof SimpleName n
-        && same(n.resolveBinding(), result)
+        && Bindings.same(n.resolveBinding(), result)
         && rest.get(1) instanceof BreakStatement b
         && b.getLabel() == null;
   }
@@ -1187,7 +1185,7 @@ final class LoopToStream {
     String value = Names.fresh("value", loop);
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(loop.getBody(), SimpleName.class)) {
-      if (!same(n.resolveBinding(), entry)) {
+      if (!Bindings.same(n.resolveBinding(), entry)) {
         continue;
       }
       if (!(n.getParent() instanceof MethodInvocation m)
@@ -1254,7 +1252,9 @@ final class LoopToStream {
     IBinding m = fragment(d).resolveBinding();
     MethodInvocation add = groupAdd(rest, m);
     long uses =
-        Nodes.all(loop, SimpleName.class).stream().filter(n -> same(n.resolveBinding(), m)).count();
+        Nodes.all(loop, SimpleName.class).stream()
+            .filter(n -> Bindings.same(n.resolveBinding(), m))
+            .count();
     return add != null && uses == 1 ? d : null;
   }
 
@@ -1270,7 +1270,7 @@ final class LoopToStream {
         || !(add.getExpression() instanceof MethodInvocation compute)
         || !compute.getName().getIdentifier().equals("computeIfAbsent")
         || !(compute.getExpression() instanceof SimpleName map)
-        || !same(map.resolveBinding(), m)
+        || !Bindings.same(map.resolveBinding(), m)
         || compute.arguments().size() != 2
         || !(compute.arguments().get(1) instanceof LambdaExpression make)
         || make.parameters().size() != 1
@@ -1287,7 +1287,7 @@ final class LoopToStream {
     IBinding ignored = ((VariableDeclaration) make.parameters().get(0)).resolveBinding();
     boolean used =
         Nodes.all(make.getBody(), SimpleName.class).stream()
-            .anyMatch(n -> same(n.resolveBinding(), ignored));
+            .anyMatch(n -> Bindings.same(n.resolveBinding(), ignored));
     return used ? null : add;
   }
 
@@ -1312,7 +1312,8 @@ final class LoopToStream {
     Expression key = (Expression) compute.arguments().get(0);
     Expression value = (Expression) add.arguments().get(0);
     String param = read.param();
-    boolean element = value instanceof SimpleName n && same(n.resolveBinding(), read.binding());
+    boolean element =
+        value instanceof SimpleName n && Bindings.same(n.resolveBinding(), read.binding());
     ITypeBinding[] held = groups.getType().resolveBinding().getTypeArguments();
     ITypeBinding valueType = element ? read.type() : value.resolveTypeBinding();
     boolean plain =

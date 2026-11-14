@@ -187,7 +187,7 @@ final class InlineFunction {
             @Override
             public boolean visit(MethodInvocation node) {
               IMethodBinding b = node.resolveMethodBinding();
-              if (b != null && b.getKey().equals(method.getKey())) {
+              if (b != null && Bindings.same(b, method)) {
                 sites.add(node);
               }
               return true;
@@ -197,7 +197,7 @@ final class InlineFunction {
             public boolean preVisit2(ASTNode node) {
               if (node instanceof MethodReference r) {
                 IMethodBinding b = r.resolveMethodBinding();
-                if (b != null && b.getKey().equals(method.getKey())) {
+                if (b != null && Bindings.same(b, method)) {
                   refs.add(r);
                 }
               }
@@ -792,7 +792,7 @@ final class InlineFunction {
             @Override
             public boolean visit(MethodDeclaration d) {
               IMethodBinding b = d.resolveBinding();
-              if (b != null && !b.getKey().equals(target.getKey()) && b.overrides(target)) {
+              if (b != null && !Bindings.same(b, target) && b.overrides(target)) {
                 throw new Refusal(
                     name
                         + " is overridden by "
@@ -1154,7 +1154,7 @@ final class InlineFunction {
               @Override
               public boolean visit(MethodInvocation node) {
                 IMethodBinding b = node.resolveMethodBinding();
-                if (b != null && b.getKey().equals(method.getKey())) {
+                if (b != null && Bindings.same(b, method)) {
                   found[0] = true;
                 }
                 return true;
