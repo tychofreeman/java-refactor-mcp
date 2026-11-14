@@ -45,63 +45,53 @@ final class TestFor {
    * overloads; found anywhere in the project.
    */
   static Target target(SourceProject project, String name) throws IOException {
-    int paren = name.indexOf('(');
-    String path = paren < 0 ? name : name.substring(0, paren);
-    String params =
-        paren < 0 ? null : name.substring(paren + 1, name.lastIndexOf(')')).replace(" ", "");
-    int dot = path.lastIndexOf('.');
-    String type =
-        dot > 0 && paren >= 0 || dot > 0 && Character.isLowerCase(path.charAt(dot + 1))
-            ? path.substring(0, dot)
-            : path;
-    String member = type.equals(path) ? null : path.substring(dot + 1);
-    String simple = Names.simpleName(type);
-    Holding holding = Holding.of(project, simple);
-    for (CompilationUnit unit : holding.units().values()) {
-      for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
-        ITypeBinding b = t.resolveBinding();
-        String chain = b == null ? "" : b.getQualifiedName();
-        if (b == null || !(chain.equals(type) || chain.endsWith("." + type))) {
-          continue;
-        }
-        if (member == null) {
-          return new Target(b, null);
-        }
-        List<IMethodBinding> found = new ArrayList<>();
-        for (IMethodBinding m : b.getDeclaredMethods()) {
-          if (m.getName().equals(member)
-              && !m.isConstructor()
-              && (params == null || params.equals(String.join(",", types(m)).replace(" ", "")))) {
-            found.add(m);
-          }
-        }
-        if (found.isEmpty()) {
-          throw new Refusal(
-              type + " has no method " + member + (params == null ? "" : "(" + params + ")") + ".");
-        }
-        if (found.size() > 1) {
-          List<String> each = new ArrayList<>();
-          for (IMethodBinding m : found) {
-            each.add(b.getName() + "." + Names.signature(m));
-          }
-          throw new Refusal(
-              type
-                  + "."
-                  + member
-                  + " has "
-                  + found.size()
-                  + " overloads; name one: "
-                  + String.join(", ", each)
-                  + ".");
-        }
-        return new Target(b, found.get(0));
+    Qualified q = Qualified.parse(name);
+    String params = q.params() == null ? null : String.join(",", q.params());
+    if (params == null) {
+      ITypeBinding whole =
+          typeNamed(project, q.type() == null ? q.name() : q.type() + "." + q.name());
+      if (whole != null) {
+        return new Target(whole, null);
       }
     }
-    throw new Refusal(
-        "no type "
-            + type
-            + " in the project. Name the target as Type, Type.method, or"
-            + " Type.method(int) for one overload.");
+    String type = q.type() == null ? q.name() : q.type();
+    ITypeBinding b = q.type() == null ? null : typeNamed(project, type);
+    if (b == null) {
+      throw new Refusal(
+          "no type "
+              + type
+              + " in the project. Name the target as Type, Type.method, or"
+              + " Type.method(int) for one overload.");
+    }
+    String member = q.name();
+    List<IMethodBinding> found = new ArrayList<>();
+    for (IMethodBinding m : b.getDeclaredMethods()) {
+      if (m.getName().equals(member)
+          && !m.isConstructor()
+          && (params == null || params.equals(String.join(",", types(m)).replace(" ", "")))) {
+        found.add(m);
+      }
+    }
+    if (found.isEmpty()) {
+      throw new Refusal(
+          type + " has no method " + member + (params == null ? "" : "(" + params + ")") + ".");
+    }
+    if (found.size() > 1) {
+      List<String> each = new ArrayList<>();
+      for (IMethodBinding m : found) {
+        each.add(b.getName() + "." + Names.signature(m));
+      }
+      throw new Refusal(
+          type
+              + "."
+              + member
+              + " has "
+              + found.size()
+              + " overloads; name one: "
+              + String.join(", ", each)
+              + ".");
+    }
+    return new Target(b, found.get(0));
   }
 
   /**
@@ -240,5 +230,19 @@ final class TestFor {
 
   private static String decapitalize(String name) {
     return Character.toLowerCase(name.charAt(0)) + name.substring(1);
+  }
+
+  /** The type {@code type} names (Cart, Cart.Item or a qualified name) in the project, or null. */
+  private static ITypeBinding typeNamed(SourceProject project, String type) throws IOException {
+    Holding holding = Holding.of(project, Names.simpleName(type));
+    for (CompilationUnit unit : holding.units().values()) {
+      for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+        ITypeBinding b = t.resolveBinding();
+        if (b != null && ("." + b.getQualifiedName()).endsWith("." + type)) {
+          return b;
+        }
+      }
+    }
+    return null;
   }
 }

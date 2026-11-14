@@ -40,26 +40,18 @@ final class Implement {
       }
       return String.join("\n", out);
     }
-    String name = what;
-    String owner = null;
-    String params = null;
-    int paren = name.indexOf('(');
-    if (paren >= 0) {
-      params =
-          name.substring(paren + 1, Math.max(paren + 1, name.lastIndexOf(')'))).replace(" ", "");
-      name = name.substring(0, paren);
-    }
-    int dot = name.lastIndexOf('.');
-    if (dot >= 0) {
-      owner = name.substring(0, dot);
-      name = name.substring(dot + 1);
-    }
+    Qualified q = Qualified.parse(what);
+    String name = q.name();
+    String owner = q.type();
+    String params = q.params() == null ? null : String.join(",", q.params());
     List<IMethodBinding> found = new ArrayList<>();
     Set<String> labels = new TreeSet<>();
     for (IMethodBinding m : inherited(t)) {
       labels.add(Names.sourceLabel(m));
       if (m.getName().equals(name)
-          && (owner == null || m.getDeclaringClass().getErasure().getName().equals(owner))
+          && (owner == null
+              || ("." + m.getDeclaringClass().getErasure().getQualifiedName())
+                  .endsWith("." + owner))
           && (params == null || types(m).equals(params))) {
         found.add(m);
       }

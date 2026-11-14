@@ -66,14 +66,13 @@ final class Fold {
 
   static Outcome run(SourceProject project, String rel, String name, Integer line, String in)
       throws Exception {
-    String base = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
-    int dot = base.lastIndexOf('.');
+    Qualified q = Qualified.parse(name);
     Precondition.require(
         Precondition.that(
-            () -> dot > 0,
+            () -> q.type() != null,
             () -> "name the method as Type.method: " + name + " has no type before it."));
-    String typeName = base.substring(base.lastIndexOf('.', dot - 1) + 1, dot);
-    String methodName = base.substring(dot + 1);
+    String typeName = q.type();
+    String methodName = q.name();
     Path file = project.javaFile(rel);
     MethodDeclaration first = method(Opened.of(project, rel).unit(), name, rel);
     Holding holding = Holding.of(project, anchor(first), file);
@@ -227,7 +226,10 @@ final class Fold {
         }
       }
       String qualifier =
-          instance || sameType(c.root(), mb.getDeclaringClass()) ? "" : typeName + ".";
+          instance || sameType(c.root(), mb.getDeclaringClass())
+              ? ""
+              : Extract.typeName(mb.getDeclaringClass().getErasure(), Nodes.typeAround(c.root()))
+                  + ".";
       String replacement =
           qualifier
               + methodName
