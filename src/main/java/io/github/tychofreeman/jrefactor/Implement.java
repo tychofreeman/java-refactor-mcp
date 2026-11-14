@@ -57,7 +57,7 @@ final class Implement {
     List<IMethodBinding> found = new ArrayList<>();
     Set<String> labels = new TreeSet<>();
     for (IMethodBinding m : inherited(t)) {
-      labels.add(label(m));
+      labels.add(Names.sourceLabel(m));
       if (m.getName().equals(name)
           && (owner == null || m.getDeclaringClass().getErasure().getName().equals(owner))
           && (params == null || types(m).equals(params))) {
@@ -77,7 +77,7 @@ final class Implement {
     if (found.size() > 1) {
       List<String> each = new ArrayList<>();
       for (IMethodBinding m : found) {
-        each.add(label(m));
+        each.add(Names.sourceLabel(m));
       }
       throw new Refusal(
           what + " is several methods: " + String.join(", ", each) + ". Name one of them.");
@@ -128,11 +128,6 @@ final class Implement {
         type == null
             ? "the file has several top-level types; name one with type."
             : "no type " + type + " in the file that resolves.");
-  }
-
-  /** "Base.describe(int)" for a refusal. */
-  private static String label(IMethodBinding m) {
-    return m.getDeclaringClass().getErasure().getName() + "." + m.getName() + "(" + types(m) + ")";
   }
 
   /** The parameter types of {@code m} as source names them, joined by commas, no spaces. */

@@ -630,7 +630,7 @@ final class Signatures {
       IMethodBinding over = library.get(k);
       if (over != null) {
         throw new Refusal(
-            label(declared.get(k))
+            Names.methodLabel(declared.get(k))
                 + " overrides "
                 + over.getName()
                 + " in "
@@ -657,23 +657,6 @@ final class Signatures {
   /** The key that names {@code b}'s declaration in every file's bindings. */
   static String key(IMethodBinding b) {
     return b.getMethodDeclaration().getKey();
-  }
-
-  /**
-   * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
-   * types.
-   */
-  static String label(IMethodBinding b) {
-    List<String> types = new ArrayList<>();
-    for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
-      types.add(t.getErasure().getName());
-    }
-    return Names.typeLabel(b.getDeclaringClass())
-        + "."
-        + b.getName()
-        + "("
-        + String.join(", ", types)
-        + ")";
   }
 
   /** The offset just after the first "(" following {@code node}. */

@@ -303,11 +303,11 @@ final class MoveToPackage {
     return at;
   }
 
-  /** "Helper", "Helper.TAX", "Shop.price()": a widened declaration, as the result names it. */
+  /** "Helper", "Helper.TAX", "Shop.price(int)": a widened declaration, as the result names it. */
   private static String label(IBinding b) {
     return switch (b) {
       case ITypeBinding t -> Names.typeLabel(t);
-      case IMethodBinding m -> Names.typeLabel(m.getDeclaringClass()) + "." + m.getName() + "()";
+      case IMethodBinding m -> Names.methodLabel(m);
       default -> Names.typeLabel(declaringType(b)) + "." + b.getName();
     };
   }

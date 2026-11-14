@@ -99,7 +99,7 @@ final class CallTargets {
               overrides.add(place(o.getMethodDeclaration(), places));
             }
           }
-          calls.add(new Target(place(d, places), Signatures.label(d), line, kind, overrides));
+          calls.add(new Target(place(d, places), Names.methodLabel(d), line, kind, overrides));
         }
       }
       out.put(Jdt.fileOf(unit), calls);
@@ -250,8 +250,8 @@ final class CallTargets {
           out.put(
               places.get(b.getKey()) + " > " + place(d, places),
               new Overriding(
-                  Signatures.label(b),
-                  Signatures.label(d),
+                  Names.methodLabel(b),
+                  Names.methodLabel(d),
                   Jdt.fileOf(unit),
                   unit.getLineNumber(m.getName().getStartPosition())));
         }
