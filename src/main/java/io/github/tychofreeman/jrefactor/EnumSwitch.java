@@ -259,7 +259,7 @@ final class EnumSwitch {
     }
     Path eFile = at.eFile();
     String eText = texts.get(eFile);
-    String step = " ".repeat(Declarations.step(eText) > 0 ? Declarations.step(eText) : 2);
+    String step = " ".repeat(Indent.step(eText, 2));
     List<TextEdit> eEdits = new ArrayList<>();
     List<String> overridden = new ArrayList<>();
     boolean covered = true;

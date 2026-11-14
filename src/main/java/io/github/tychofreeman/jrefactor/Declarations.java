@@ -138,7 +138,7 @@ final class Declarations {
     CompilationUnit unit = Edits.parses(text, rel);
     Owner owner = owner(unit, type, rel);
     List<BodyDeclaration> added = members(content);
-    String indent = memberIndent(text, owner.decl(), content);
+    String indent = Indent.member(text, owner.decl(), Indent.step(content, 2));
 
     String where = owner.label() + " in " + rel;
     List<Change> changes = new ArrayList<>();
@@ -675,10 +675,10 @@ final class Declarations {
     int common = Integer.MAX_VALUE;
     for (int i = 1; i < lines.length; i++) {
       if (!lines[i].isBlank()) {
-        common = Math.min(common, leadingSpaces(lines[i]));
+        common = Math.min(common, Indent.width(lines[i]));
       }
     }
-    int first = leadingSpaces(lines[0]);
+    int first = Indent.width(lines[0]);
     if (common == Integer.MAX_VALUE) {
       common = first;
     }
@@ -691,58 +691,10 @@ final class Declarations {
       if (i == 0 && first < common) {
         out.append(indent).append(lines[0].stripLeading());
       } else {
-        out.append(indent).append(lines[i].substring(Math.min(common, leadingSpaces(lines[i]))));
+        out.append(indent).append(lines[i].substring(Math.min(common, Indent.width(lines[i]))));
       }
     }
     return out.toString();
-  }
-
-  private static int leadingSpaces(String line) {
-    return line.length() - line.stripLeading().length();
-  }
-
-  /**
-   * The indentation of {@code type}'s members: that of its first member, else one step in. The step
-   * is the file's, else that of the {@code content} being added, else 2 (as the tools that move
-   * members write them).
-   */
-  private static String memberIndent(String text, AbstractTypeDeclaration type, String content) {
-    if (!type.bodyDeclarations().isEmpty()) {
-      BodyDeclaration first = (BodyDeclaration) type.bodyDeclarations().get(0);
-      int at = Lines.start(text, first.getStartPosition());
-      String lead = text.substring(at, first.getStartPosition());
-      if (lead.isBlank()) {
-        return lead;
-      }
-    }
-    int at = Lines.start(text, type.getStartPosition());
-    String typeIndent = text.substring(at, at + leading(text, at));
-    int step = step(text) > 0 ? step(text) : step(content) > 0 ? step(content) : 2;
-    return typeIndent + " ".repeat(step);
-  }
-
-  private static int leading(String text, int at) {
-    int n = 0;
-    while (at + n < text.length() && (text.charAt(at + n) == ' ' || text.charAt(at + n) == '\t')) {
-      n++;
-    }
-    return n;
-  }
-
-  /**
-   * The smallest nonzero indentation of a code line in {@code text}, or 0 when nothing is indented.
-   * A comment's continuation line ({@code " * text"}) is aligned to its star, not to a step.
-   */
-  static int step(String text) {
-    int step = Integer.MAX_VALUE;
-    for (String line : text.split("\n")) {
-      String code = line.stripLeading();
-      int n = line.length() - code.length();
-      if (n > 0 && !code.isEmpty() && !code.startsWith("*")) {
-        step = Math.min(step, n);
-      }
-    }
-    return step == Integer.MAX_VALUE ? 0 : step;
   }
 
   /**

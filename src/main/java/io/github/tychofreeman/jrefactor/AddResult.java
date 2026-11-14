@@ -164,7 +164,7 @@ final class AddResult {
                 || statements.get(statements.size() - 1) instanceof ThrowStatement))) {
       String inner =
           statements.isEmpty()
-              ? indent + "  "
+              ? indent + " ".repeat(Indent.step(text, 2))
               : Lines.indentOf(text, ((ASTNode) statements.get(0)).getStartPosition());
       int close = Lines.start(text, Nodes.end(m.getBody()) - 1);
       own.add(new TextEdit(close, close, inner + "return " + zero + ";\n"));

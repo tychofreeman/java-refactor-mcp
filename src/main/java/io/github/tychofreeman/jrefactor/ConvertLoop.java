@@ -545,7 +545,7 @@ final class ConvertLoop {
   private static void first(
       String text, Statement loop, Statement body, String statement, List<TextEdit> edits) {
     String indent = Lines.indentOf(text, loop.getStartPosition());
-    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
+    int step = Indent.step(text, 2);
     String inner = indent + " ".repeat(step);
     if (body instanceof Block block
         && Lines.number(text, block.getStartPosition()) != Lines.number(text, Nodes.end(block) - 1)
@@ -562,7 +562,7 @@ final class ConvertLoop {
     }
     List<String> lines = new ArrayList<>();
     for (Object s : body instanceof Block block ? block.statements() : List.of(body)) {
-      lines.add(LoopToStream.reindent(source(text, (ASTNode) s), inner));
+      lines.add(Indent.reindent(source(text, (ASTNode) s), inner));
     }
     String rest = String.join("\n", lines);
     edits.add(
@@ -833,7 +833,7 @@ final class ConvertLoop {
             : applied.strip();
     add.append("{\n");
     if (!rest.isEmpty()) {
-      add.append(LoopToStream.reindent(rest, inner)).append('\n');
+      add.append(Indent.reindent(rest, inner)).append('\n');
     }
     for (String s : statements) {
       add.append(inner).append(s).append('\n');
@@ -842,7 +842,7 @@ final class ConvertLoop {
   }
 
   private static int step(String text) {
-    return Declarations.step(text) > 0 ? Declarations.step(text) : 4;
+    return Indent.step(text, 2);
   }
 
   /**
