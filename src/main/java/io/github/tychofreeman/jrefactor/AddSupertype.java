@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -52,8 +53,8 @@ final class AddSupertype {
     }
 
     // The new text goes into the list the type already has, after its last name; else it starts a
-    // clause, before the body's brace (for extends with implements already there, before that
-    // keyword, since a class's superclass comes first).
+    // clause, before the body's brace or a permits clause (for extends with implements already
+    // there, before that keyword, since a class's superclass comes first).
     int at;
     String insert;
     if (!interfaces.isEmpty() && (isInterface || "implements".equals(relation))) {
@@ -66,7 +67,11 @@ final class AddSupertype {
     } else {
       SimpleName nameNode = owner.getName();
       int brace = text.indexOf('{', nameNode.getStartPosition() + nameNode.getLength());
-      at = brace;
+      at =
+          owner.permittedTypes().isEmpty()
+              ? brace
+              : text.lastIndexOf(
+                  "permits", ((ASTNode) owner.permittedTypes().get(0)).getStartPosition());
       while (at > 0 && Character.isWhitespace(text.charAt(at - 1))) {
         at--;
       }
