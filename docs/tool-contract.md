@@ -806,8 +806,9 @@ subclass where `add_declaration` would put it (a field after its fields, a metho
 2026-11-07); imports are fixed in every file touched.
 
 - Refused: no direct subclass in the project; a subclass that already declares
-  the member; a method that overrides a method of a supertype (`@Override`, or a
-  superclass that declares the same signature); a bare name that matches several
+  the member; a method that overrides a method of a supertype (`@Override`, or any
+  supertype, transitively, that declares a method it overrides: a superclass's superclass, an
+  interface's default method, `Object`'s; issue #465); a bare name that matches several
   overloads, which are listed (name one with its parameter types); a class that is
   not top-level.
 - Type-checks the project: a caller that uses the method through `Sub` (say
