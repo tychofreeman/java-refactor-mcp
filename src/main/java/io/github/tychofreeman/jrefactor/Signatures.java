@@ -889,17 +889,20 @@ final class Signatures {
   }
 
   /**
-   * How the body of {@code m} reads {@code field}: by its name unless the body declares that name.
+   * How the body of {@code m} reads {@code field}: by its name when that name finds it there (the
+   * body declares no such name, and the field is the first of that name in the method's class or a
+   * superclass), else as {@code Type.NAME} or {@code this.name}.
    */
   private static String readOf(MethodDeclaration m, IVariableBinding field, String value) {
     boolean hidden =
         Nodes.all(m.getBody(), VariableDeclaration.class).stream()
             .anyMatch(v -> v.getName().getIdentifier().equals(field.getName()));
-    if (!hidden) {
+    ITypeBinding at = m.resolveBinding().getDeclaringClass();
+    if (!hidden && field.getKey().equals(firstNamed(at, field.getName()))) {
       return field.getName();
     }
     return Modifier.isStatic(field.getModifiers())
-        ? field.getDeclaringClass().getName() + "." + field.getName()
+        ? Extract.typeName(field.getDeclaringClass(), at) + "." + field.getName()
         : "this." + field.getName();
   }
 
@@ -1262,5 +1265,17 @@ final class Signatures {
       }
     }
     return !family.calls.isEmpty();
+  }
+
+  /** The key of the first field named {@code name} in {@code t} or a superclass; null when none. */
+  private static String firstNamed(ITypeBinding t, String name) {
+    for (; t != null; t = t.getSuperclass()) {
+      for (IVariableBinding f : t.getDeclaredFields()) {
+        if (f.getName().equals(name)) {
+          return f.getKey();
+        }
+      }
+    }
+    return null;
   }
 }
