@@ -180,4 +180,24 @@ class CliTest {
       assertTrue(out().contains(def.name()), def.name() + " in:\n" + out());
     }
   }
+
+  /** A batch refused in one run is fixed by retry in the next, as within one server. */
+  @Test
+  void aRefusedBatchIsRetriedByALaterRun() throws Exception {
+    String refused =
+        "{\"steps\": [{\"tool\": \"rename\", \"args\": {\"file\": \"com/example/Counter.java\","
+            + " \"line\": 4, \"name\": \"nope\", \"new_name\": \"by\"}}]}";
+    assertEquals(2, run("batch", refused), out());
+    assertTrue(out().contains("retry"), out());
+
+    String retry =
+        "{\"retry\": true, \"steps\": [{\"step\": 1, \"args\": {\"file\":"
+            + " \"com/example/Counter.java\", \"line\": 4, \"name\": \"step\", \"new_name\":"
+            + " \"by\"}}]}";
+    assertEquals(0, run("batch", retry), out());
+    assertTrue(Files.readString(file).contains("return by + 1;"), Files.readString(file));
+
+    assertEquals(2, run("batch", retry), out());
+    assertTrue(out().contains("no refused batch"), out());
+  }
 }

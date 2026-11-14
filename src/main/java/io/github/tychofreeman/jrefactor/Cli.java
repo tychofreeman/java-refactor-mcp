@@ -97,8 +97,10 @@ final class Cli {
       SourceProject project = SourceProject.load(at, classpathCache(cacheDir, at));
       Path stack = cacheDir.resolve(cached + ".json");
       Path count = cacheDir.resolve(cached + "-count.json");
+      Path refused = cacheDir.resolve(cached + "-batch.json");
       Journal.load(project, stack);
       TypeCheck.load(project, count);
+      Batch.load(project, refused);
       try {
         Outcome outcome = Tools.call(def, project, values);
         Journal.save(project, stack);
@@ -110,6 +112,7 @@ final class Cli {
         return 0;
       } finally {
         TypeCheck.save(project, count);
+        Batch.save(project, refused);
       }
     } catch (Refusal refusal) {
       out.println(Refusal.PREFIX + refusal.getMessage());

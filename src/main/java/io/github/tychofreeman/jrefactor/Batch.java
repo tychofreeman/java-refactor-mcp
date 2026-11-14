@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import tools.jackson.databind.ObjectMapper;
 
 /** Several tool calls run in order as one change: all of them, or none. */
 final class Batch {
@@ -155,6 +157,8 @@ final class Batch {
 
   /** Above this many line pairs, a region's middle is one hunk rather than diffed. */
   private static final long DIFF_LIMIT = 4_000_000L;
+
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   private static String steps(SourceProject project, List<Map<String, Object>> steps, boolean atEnd)
       throws Exception {
@@ -406,5 +410,34 @@ final class Batch {
       out.add(new Hunk(from + openI + 1, from + m, from + openJ + 1, from + n));
     }
     return out;
+  }
+
+  /** A refused batch as {@link #save} writes it: its steps and the check it ran with. */
+  record Refused(String check, List<Map<String, Object>> steps) {}
+
+  /**
+   * Writes {@code project}'s refused batch to {@code file}, or deletes the file when there is none,
+   * so {@code retry} in a later process can {@link #load} it: the command line runs one call per
+   * process.
+   */
+  static void save(SourceProject project, Path file) throws IOException {
+    Session session = project.session();
+    if (session.refusedBatch == null) {
+      Files.deleteIfExists(file);
+      return;
+    }
+    Files.createDirectories(file.getParent());
+    Files.writeString(
+        file, JSON.writeValueAsString(new Refused(session.refusedCheck, session.refusedBatch)));
+  }
+
+  /** Makes the batch {@link #save} wrote to {@code file} {@code project}'s refused batch. */
+  static void load(SourceProject project, Path file) throws IOException {
+    if (!Files.isRegularFile(file)) {
+      return;
+    }
+    Refused refused = JSON.readValue(Files.readString(file), Refused.class);
+    project.session().refusedBatch = refused.steps();
+    project.session().refusedCheck = refused.check();
   }
 }

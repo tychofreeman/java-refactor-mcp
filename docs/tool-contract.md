@@ -1836,7 +1836,8 @@ field, and the gate's "would add compile errors".
   runs the refused batch with those changes, its check kept unless given; numbers are
   the refused batch's, and `step` one past the last adds a new last step (2026-11-06). Nothing
   applies unless every step passes; a batch that passes forgets
-  the refused one, and every refused batch ends by saying how to retry. Refused: a retry with no
+  the refused one, and every refused batch ends by saying how to retry. From the command line,
+  the refused batch is kept between runs, beside the undo stack (#194, 2026-11-13). Refused: a retry with no
   refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
   it. The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes

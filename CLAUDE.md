@@ -123,7 +123,8 @@ file=... line=7 name=t new_name=total`, a JSON object (`'{...}'`, `@file`, or
 object (a `batch`) goes after it, unescaped, in sections: a line `@@name` starts
 one, and the JSON string `"@name"` is its text, its last newline dropped.
 Exit status 0 done, 2 refused, 1 error. `bin/jrefactor undo` reverts the last
-call, also one from an earlier run. Send several steps as one `batch`. The jar
+call, also one from an earlier run, and a `batch` `retry` fixes one refused in an
+earlier run. Send several steps as one `batch`. The jar
 is rebuilt when a commit changes `pom.xml` or `src/main`, not for uncommitted
 edits; `bin/jrefactor --rebuild ...` (or `JREFACTOR_REBUILD=1`) builds from the
 working tree first, to probe server code before a commit.
