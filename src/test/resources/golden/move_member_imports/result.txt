@@ -1,0 +1,1 @@
+moved Shop.make to Factory in com/example/Shop.java; 0 calls rewritten in 0 files; com/example/Shop.java: removed import com.example.a.Order; com/example/Factory.java: imported com.example.a.Order

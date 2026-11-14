@@ -187,13 +187,15 @@ final class AddResult {
                   + result
                   + ") {}\n"));
     }
-    Stubs.Declared stubs =
-        MemberMove.gate(
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
             project,
             holding.texts(),
             edits,
+            List.of(),
             "adding the result " + result + " to " + q.type() + "." + member,
             "Check that " + type + " resolves where the method is.");
+    Stubs.Declared stubs = written.declared();
     return new Outcome(
         "added the result "
             + result
@@ -209,7 +211,8 @@ final class AddResult {
             + zero
             + (isVoid
                 ? ""
-                : "; " + calls + (calls == 1 ? " call reads" : " calls read") + " .value()"),
+                : "; " + calls + (calls == 1 ? " call reads" : " calls read") + " .value()")
+            + written.said(),
         stubs);
   }
 

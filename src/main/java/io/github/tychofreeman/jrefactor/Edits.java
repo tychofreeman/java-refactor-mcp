@@ -1,9 +1,11 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -437,5 +439,58 @@ final class Edits {
               + rel
               + " is unchanged. Make this change with an edit instead.");
     }
+  }
+
+  /**
+   * Files as written: each one's text with its imports fixed (null for a file deleted), each file's
+   * import notes, as "{@code rel}: imported a.B", and the stubs the gate declared.
+   */
+  record WrittenFiles(Map<Path, String> texts, List<String> notes, Stubs.Declared declared) {
+
+    /** "; a/B.java: imported c.D", or nothing. */
+    String said() {
+      return notes.isEmpty() ? "" : "; " + String.join("; ", notes);
+    }
+  }
+
+  /**
+   * Applies {@code edits} to each file's text, from {@code texts} or else read from disk, fixes
+   * each changed file's imports ({@code chosen} the classes to import where a name is ambiguous),
+   * and writes them all under the gate, refusing as {@link Gate#applyOrRefuse} does. A file with no
+   * edits is left alone; a null list deletes the file.
+   */
+  static WrittenFiles gatedFiles(
+      SourceProject project,
+      Map<Path, String> texts,
+      Map<Path, List<TextEdit>> edits,
+      List<String> chosen,
+      String what,
+      String fix)
+      throws IOException {
+    Map<Path, String> changed = new LinkedHashMap<>();
+    List<String> notes = new ArrayList<>();
+    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
+      Path file = e.getKey();
+      if (e.getValue() == null) {
+        changed.put(file, null);
+        continue;
+      }
+      if (e.getValue().isEmpty()) {
+        continue;
+      }
+      String before = textOf(texts, file);
+      String after = TextEdit.apply(before, e.getValue(), 0);
+      Imports.Fixed fixed = Imports.fix(project, file, before, after, chosen);
+      changed.put(file, fixed.text());
+      if (!fixed.notes().isEmpty()) {
+        notes.add(project.relative(file) + ": " + String.join("; ", fixed.notes()));
+      }
+    }
+    return new WrittenFiles(changed, notes, Gate.applyOrRefuse(project, changed, what, fix));
+  }
+
+  /** {@code file}'s text in {@code texts}, or else as on disk. */
+  static String textOf(Map<Path, String> texts, Path file) throws IOException {
+    return texts.containsKey(file) ? texts.get(file) : Files.readString(file);
   }
 }

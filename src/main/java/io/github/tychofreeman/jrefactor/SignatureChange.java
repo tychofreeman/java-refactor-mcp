@@ -131,8 +131,8 @@ final class SignatureChange {
       SourceProject project, String what, List<String> chosen, String fix, int declarations)
       throws Exception {
     Map<Path, String> texts = new LinkedHashMap<>();
+    Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
-    List<String> notes = new ArrayList<>();
     for (Map.Entry<Signatures.Source, List<TextEdit>> e : edits.entrySet()) {
       Signatures.Source s = e.getKey();
       List<TextEdit> list = new ArrayList<>(e.getValue());
@@ -151,15 +151,12 @@ final class SignatureChange {
         }
         limit = edit.start();
       }
-      String edited = TextEdit.apply(s.text(), list, 0);
-      Imports.Fixed fixed = Imports.fix(project, s.file(), s.text(), edited, chosen);
-      texts.put(s.file(), fixed.text());
+      texts.put(s.file(), s.text());
+      byFile.put(s.file(), list);
       files.add(s.rel());
-      if (!fixed.notes().isEmpty()) {
-        notes.add(s.rel() + ": " + String.join("; ", fixed.notes()));
-      }
     }
-    Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
+    Edits.WrittenFiles written = Edits.gatedFiles(project, texts, byFile, chosen, what, fix);
+    Stubs.Declared stubs = written.declared();
     int d = declarations < 0 ? family.decls.size() : declarations;
     int c = family.calls.size();
     return new Outcome(
@@ -171,7 +168,7 @@ final class SignatureChange {
             + " ("
             + String.join(", ", files)
             + ")"
-            + (notes.isEmpty() ? "" : "; " + String.join("; ", notes)),
+            + written.said(),
         stubs);
   }
 }

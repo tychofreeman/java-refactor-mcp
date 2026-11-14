@@ -295,20 +295,6 @@ final class TypeParameters {
       }
     }
 
-    Map<Path, String> texts = new LinkedHashMap<>();
-    List<String> notes = new ArrayList<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      if (e.getValue().isEmpty()) {
-        continue;
-      }
-      String old = holding.texts().get(e.getKey());
-      Imports.Fixed fixed =
-          Imports.fix(project, e.getKey(), old, TextEdit.apply(old, e.getValue(), 0), chosen);
-      texts.put(e.getKey(), fixed.text());
-      if (!fixed.notes().isEmpty()) {
-        notes.add(project.relative(e.getKey()) + ": " + String.join("; ", fixed.notes()));
-      }
-    }
     CallTargets targets = CallTargets.of(holding.units().values());
     String fix =
         "Change the uses that do not compile with "
@@ -325,7 +311,9 @@ final class TypeParameters {
                     + " a bound that has what it uses (type_parameter \""
                     + parameter
                     + " extends ...\"), or leave that member out of members.");
-    Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
+    Edits.WrittenFiles gated = Edits.gatedFiles(project, holding.texts(), edits, chosen, what, fix);
+    Map<Path, String> texts = gated.texts();
+    Stubs.Declared stubs = gated.declared();
     List<Path> parsed = new ArrayList<>(holding.units().keySet());
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, parsed);
     Map<Path, String> full = fullDiamonds(after, texts, qualified, at, parameter, v.text());
@@ -367,7 +355,7 @@ final class TypeParameters {
                 ? ""
                 : "; a cast to it is now unchecked at " + String.join(", ", casts))
             + (hasParamTags(target) ? "; its Javadoc has no @param <" + parameter + "> yet" : "")
-            + (notes.isEmpty() ? "" : "; " + String.join("; ", notes)),
+            + gated.said(),
         stubs);
   }
 
@@ -960,12 +948,8 @@ final class TypeParameters {
       retype(roots, list, v, parameter);
     }
     Map<Path, String> texts = new LinkedHashMap<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String old = family.sources.get(e.getKey()).text();
-      texts.put(
-          e.getKey(),
-          Imports.fix(project, e.getKey(), old, TextEdit.apply(old, e.getValue(), 0), chosen)
-              .text());
+    for (Map.Entry<Path, Signatures.Source> e : family.sources.entrySet()) {
+      texts.put(e.getKey(), e.getValue().text());
     }
     List<CompilationUnit> units = new ArrayList<>();
     for (Signatures.Source s : family.sources.values()) {
@@ -980,7 +964,8 @@ final class TypeParameters {
             + " a bound that has what it uses (type_parameter \""
             + parameter
             + " extends ...\"), or choose another value.";
-    Stubs.Declared stubs = Gate.applyOrRefuse(project, texts, what, fix);
+    Edits.WrittenFiles gated = Edits.gatedFiles(project, texts, edits, chosen, what, fix);
+    Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after =
         Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
     int calls = 0;
@@ -1045,7 +1030,8 @@ final class TypeParameters {
                     + (references == 1 ? " method reference" : " method references"))
             + (calls + references == 1 ? " infers " : " infer ")
             + v.text()
-            + ", none changed",
+            + ", none changed"
+            + gated.said(),
         stubs);
   }
 
@@ -1220,24 +1206,28 @@ final class TypeParameters {
       }
     }
 
-    Map<Path, String> texts = new LinkedHashMap<>();
+    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     String old = "";
     for (Map.Entry<Path, List<TypeParameter>> e : declared.entrySet()) {
       String text = sources.get(e.getKey());
-      List<TextEdit> edits = new ArrayList<>();
+      List<TextEdit> list = new ArrayList<>();
       for (TypeParameter tp : e.getValue()) {
         int from = Nodes.end(tp.getName());
         old = text.substring(from, Nodes.end(tp)).strip();
-        edits.add(new TextEdit(from, Nodes.end(tp), none ? "" : " extends " + type));
+        list.add(new TextEdit(from, Nodes.end(tp), none ? "" : " extends " + type));
       }
-      String updated = TextEdit.apply(text, edits, 0);
-      texts.put(
-          e.getKey(), Imports.fix(project, e.getKey(), text, updated, args.list("imports")).text());
+      edits.put(e.getKey(), list);
     }
     CallTargets targets = CallTargets.of(units.values());
-    Stubs.Declared stubs =
-        Gate.applyOrRefuse(
-            project, texts, what, "Change that use first, or choose a bound it meets.");
+    Edits.WrittenFiles gated =
+        Edits.gatedFiles(
+            project,
+            sources,
+            edits,
+            args.list("imports"),
+            what,
+            "Change that use first, or choose a bound it meets.");
+    Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(units.keySet()));
     int kept = 0;
     if (calls != null) {
@@ -1305,7 +1295,8 @@ final class TypeParameters {
             + (none ? " (was " + old.replaceFirst("^extends\\s+", "") + ")" : " to " + type)
             + (calls == null
                 ? ""
-                : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types")),
+                : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types"))
+            + gated.said(),
         stubs);
   }
 
