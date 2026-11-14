@@ -16,12 +16,15 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.IPackageBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 
@@ -51,9 +54,7 @@ final class NameCheck {
               // Keys of what an anonymous or local class declares hold source positions, which an
               // edit earlier in the file shifts; where the declaration stands does not change.
               ASTNode declared =
-                  b != null && n.getRoot() instanceof CompilationUnit u
-                      ? u.findDeclaringNode(b)
-                      : null;
+                  b != null && n.getRoot() instanceof CompilationUnit u ? declaration(u, b) : null;
               if (declared != null) {
                 out.computeIfAbsent(spaced(n, b), k -> new HashSet<>())
                     .add(
@@ -114,15 +115,17 @@ final class NameCheck {
               String key = key(b);
               Set<String> was = before.get(spaced(n, b));
               // A recovered binding is a name the edit's file has not imported yet (the import fix
-              // runs after), and a type variable belongs to its class: the gate judges both.
+              // runs after), and a type variable belongs to its class: the gate judges both. A
+              // package's name (package p;) is no name a declaration in code can capture.
               if (key == null
                   || was == null
                   || was.contains(key)
                   || b.isRecovered()
+                  || b instanceof IPackageBinding
                   || (b instanceof ITypeBinding t && t.isTypeVariable())) {
                 return true;
               }
-              ASTNode declared = unit.findDeclaringNode(b);
+              ASTNode declared = declaration(unit, b);
               if (declared != null
                   && (inside(written, declared.getStartPosition())
                       || was.contains(
@@ -225,5 +228,27 @@ final class NameCheck {
    */
   private static String spaced(SimpleName n, IBinding b) {
     return b instanceof IMethodBinding ? n.getIdentifier() + "()" : n.getIdentifier();
+  }
+
+  /**
+   * The node in {@code u} that declares {@code b}: for a record's field, which JDT finds no node
+   * for, the record's component of that name.
+   */
+  private static ASTNode declaration(CompilationUnit u, IBinding b) {
+    ASTNode found = u.findDeclaringNode(b);
+    if (found == null
+        && b instanceof IVariableBinding v
+        && v.isField()
+        && v.getDeclaringClass() != null
+        && v.getDeclaringClass().isRecord()
+        && u.findDeclaringNode(v.getDeclaringClass().getTypeDeclaration().getKey())
+            instanceof RecordDeclaration r) {
+      for (Object c : r.recordComponents()) {
+        if (((SingleVariableDeclaration) c).getName().getIdentifier().equals(v.getName())) {
+          return (ASTNode) c;
+        }
+      }
+    }
+    return found;
   }
 }

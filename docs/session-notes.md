@@ -204,6 +204,11 @@ Each was chosen from options; the record named beside it has the options it beat
   "Generators"): one `build` argument on the edit tools over new tools, a refusal under
   `JREFACTOR_SKELETON_ONLY` as the way it is found, explicit types never `var`, a loop shell
   with `body` and no `op`, a call's arguments always in `args`.
+- Tool definitions' size (#420, 2026-11-13, the user): `ServerTest.definitionsStaySmall` holds
+  each tool's JSON, as `tools/list` sends it, to 1,700 characters, gorefactor's limit; the tools
+  over it then are listed in `DEFINITION_OVER` at their size, a ratchet (lower the number when
+  one shrinks), over one looser limit and over trimming them all first
+  (`docs/sessions/descriptions-length-review.md`).
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.
@@ -308,6 +313,12 @@ Each was chosen from options; the record named beside it has the options it beat
   top-level type to another package of its source root; package-private
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
+
+- `move` of a member type writes a read of a record's field that crosses the new boundary (a
+  nested record's private fields are visible to the whole top-level type) as an accessor call
+  (#184, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
+  the field (`returnsField`). JDT's `findDeclaringNode` gives null for a record's field:
+  `NameCheck.declaration` takes the component of that name.
 
 - `move_file` (#81, 2026-11-04) is `MoveFile`: each file through `Gate.write` (a null
   text deletes), so a move, copy or delete is one undo. Text only; Java under a
@@ -568,6 +579,8 @@ Each was chosen from options; the record named beside it has the options it beat
   into that shape (`Generated.checkChanged`, 2026-11-07); a member already in it is left alone.
   And (#167, 2026-11-13) statement content that is one statement `build` writes from names
   (`Generated.checkBuild`, the generators' discoverability mechanism the user chose).
+- A tool's definition that grows past its limit fails `ServerTest.definitionsStaySmall`: shorten
+  the description or its arguments' text, rather than raise the limit (ask the user first).
 - A golden case with `classpath=junit` in `args.properties` gets the JUnit jars of the test
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the

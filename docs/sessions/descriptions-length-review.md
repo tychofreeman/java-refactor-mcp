@@ -46,8 +46,60 @@ It is still the longest description: five targets share one tool by the user's c
 
 No A/B run: the change is to what a fresh model reads, so the baselines shift with it.
 
+## #418: `inline`, `pull_up`, `push_down`
+
+- `inline` said "every call of the static method". Instance methods are inlined too (roadmap
+  #84; the golden `inline_function_instance`), so it says "the method", the call's receiver
+  taking the place of `this`; the `name` argument no longer says "static". #368 rewrites this
+  description again when one call can be inlined.
+- `pull_up` and `push_down` named Sub and Base without saying what they were, and in
+  `push_down` Sub was the class the member leaves. Each has one example now (Circle, Square and
+  their superclass Shape), and `name` is described as `Class.member`, since a field may be
+  named. Where the member lands is no longer said: placement is the tool's (2026-11-07).
+
+## #419: `convert_loop`, `move_statement`, `fold`, `extract_variable`, `create_file`
+
+- `convert_loop` (910 to 886): a list by `to` value.
+- `move_statement` (934 to 635): the paragraph of what never moves is gone.
+- `fold` (1,485 to 1,167): the list of why a match is left, and the `String.format` rule.
+- `extract_variable` (843 to 668): `as` once; its argument keeps the rule.
+- `create_file` (915 to 748): the skeleton-only sentence is gone. The issue asked to show it
+  only under skeleton-only; that needs descriptions built from session state, and the refusal
+  in `Edits.createFile` already says what to send, so it was dropped instead (said in the PR).
+
+Everything dropped is in `docs/tool-contract.md` and said by the refusal or result that applies.
+
+## #420: the size test
+
+`ServerTest.definitionsStaySmall` measures each tool as `tools/list` sends it (its JSON:
+description and input schema), as gorefactor's `TestLoadedToolsStaySmall` does. After the three
+trims, 15 of 40 were over gorefactor's 1,700, since the schema adds 300 to 1,000 characters.
+The user chose (2026-11-13) a ratchet: 1,700 for every tool, and the 15 listed in
+`DEFINITION_OVER` at their size then, so each may shrink and not grow. Over: one limit at 2,600
+(a 500-character tool could have grown fivefold), and trimming all 15 first.
+
+| Over 1,700 | Characters |
+|---|---|
+| add_parameter | 3,374 |
+| change_signature | 2,596 |
+| insert_statements | 2,518 |
+| remove_parameter | 2,349 |
+| change_type | 2,257 |
+| type_switch_to_method | 2,154 |
+| replace_statements | 2,114 |
+| extract_type | 2,048 |
+| extract_variable | 2,029 |
+| move | 1,976 |
+| fold | 1,897 |
+| extract_function | 1,852 |
+| batch | 1,801 |
+| add_declaration | 1,776 |
+| inline | 1,760 |
+
 ## Notes
 
+- The three trims were opened as independent PRs off `main` (#421, #425, #427), since merging
+  from this session was refused; this one contains their commits until they are merged.
 - A cloud session with no MCP server: every change to `Tools.java` went through
   `bin/jrefactor batch` as `replace_text` on the description's text block and on argument
   strings. `Arg.java` was read once with grep where `inspect` with `pattern` would have served.

@@ -292,18 +292,28 @@ package:
   through its own supertypes is left alone;
 - a private member that the moved type uses from the outer file, or that the
   outer file uses from the moved type, becomes package-private (the user's
-  choice, 2026-11-03, over refusing with their names).
+  choice, 2026-11-03, over refusing with their names);
+- a read of a record's field across the new boundary (`r.length`, where a
+  nested record's fields were visible to the whole top-level type) becomes a
+  call of its accessor (`r.length()`), when the accessor is the generated one
+  or only returns the field (roadmap #184, issue #440).
 
 Result: `moved Shop.Line to com/example/Line.java (18 lines), with 3 references
 in 3 files: com/example/Receipt.java line 4; com/example/Shop.java line 7;
 com/example/report/Report.java line 3; widened Shop.label(String) and
-Line.price to package-private`. Lines are those of the files before the move.
+Line.price to package-private`; then `; reads of Range.array and Range.length
+became accessor calls` when there were such reads. Lines are those of the files
+before the move.
 
 Refusals: a top-level type ("Shop is a top-level type already ... name it as
 Shop.Line"); a type not found; an inner (non-static) class ("Make it static
 first, passing what it uses from Shop, then move it"); a file of the new name
-that exists ("Rename Shop.Line first, then move it"); a move that adds compile
-errors, with them.
+that exists ("Rename Shop.Line first, then move it"); a read of a record's
+field across the boundary whose accessor does more than return it ("Helper reads
+the field Range.length, which is private once Range is top-level, and
+Range.length() does more than return it. Replace each read with a call of
+Range.length() if that is what it should mean, then move it again."); a move
+that adds compile errors, with them.
 
 With `package` (roadmap #80, 2026-11-04), `name` is the file's only top-level
 type, and it moves to that package in the same source root: the file moves
