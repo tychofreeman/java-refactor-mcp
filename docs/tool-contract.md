@@ -1188,7 +1188,9 @@ else from the one project method the line's calls call (`m(...)`, `super.m(...)`
 `this(...)`, `super(...)`), declared in any file; `column` keeps the call starting there. A line
 calling two methods is refused with each one's columns ("line 6 of com/example/Use.java calls 2
 methods: Pricing.price(int) at columns 14 and 27; Use.size(Pricing) at column 38. Pass column, or
-name."), and so is a line with neither. `change_type` with `parameter` or `return_type` takes it
+name."), and so is a line with neither, and one declaring two methods without `column` (#485:
+the last was taken): "line 4 of com/example/Use.java declares 2 methods: Use.a() at column 7;
+Use.b() at column 29. Pass column, or name." `change_type` with `parameter` or `return_type` takes it
 too (`ByLine.named`).
 - `add_parameter`: `type`, `value` (a Java expression each call passes),
   optional `before` (default last), optional `imports`; `values` (constant to expression) with
