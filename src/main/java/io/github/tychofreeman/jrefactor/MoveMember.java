@@ -267,15 +267,15 @@ final class MoveMember {
     }
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(fragments), "moving " + name + " to " + to);
-    Stubs.Declared declared2 =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                texts,
-                edits,
-                imports,
-                "moving " + name + " to " + to,
-                "Check that the moved method's names resolve in " + to + ", where it now lives.")
-            .declared();
+            project,
+            texts,
+            edits,
+            imports,
+            "moving " + name + " to " + to,
+            "Check that the moved method's names resolve in " + to + ", where it now lives.");
+    Stubs.Declared declared2 = written.declared();
     return new Outcome(
         "moved "
             + typeName
@@ -293,7 +293,8 @@ final class MoveMember {
             + callFiles
             + " file"
             + (callFiles == 1 ? "" : "s")
-            + (widened ? "; private widened to package access" : ""),
+            + (widened ? "; private widened to package access" : "")
+            + written.said(),
         declared2);
   }
 
@@ -426,15 +427,15 @@ final class MoveMember {
     edits
         .computeIfAbsent(targetFile, k -> new ArrayList<>())
         .addAll(MemberMove.addTo(texts.get(targetFile), target, moved, Placement.rank(fd)));
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                texts,
-                edits,
-                imports,
-                "moving " + typeName + "." + member + " to " + toName,
-                "Check that what the field's initializer names resolves in " + toName + ".")
-            .declared();
+            project,
+            texts,
+            edits,
+            imports,
+            "moving " + typeName + "." + member + " to " + toName,
+            "Check that what the field's initializer names resolves in " + toName + ".");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "moved "
             + typeName
@@ -448,7 +449,8 @@ final class MoveMember {
             + uses
             + (uses == 1 ? " use" : " uses")
             + " now name "
-            + toName,
+            + toName
+            + written.said(),
         declared);
   }
 

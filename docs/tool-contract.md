@@ -936,7 +936,9 @@ then the only one in a package the file imports from; then the only candidate in
 own sources is taken and named (`chose shop.order.Order over
 org.junit.jupiter.api.Order: it is the project's`, roadmap #131); a refusal suggests the
 project's class first, then `java.*`. Results end with
-`; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
+`; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. A tool
+that changes several files (the moves, `pull_up`, `push_down`, `inline`, `fold`, the signature tools, ...)
+names each file: `; a/B.java: imported c.D; e/F.java: removed import c.D` (#497, 2026-11-14). `create_file`
 content is a whole file and keeps its own imports.
 
 The server runs one call at a time: calls sent together in one turn run in the

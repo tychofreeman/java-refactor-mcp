@@ -199,15 +199,15 @@ final class InlineClass {
     Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
     byFile.put(opened.file(), edits);
     byFile.put(classFile, null);
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                Map.of(opened.file(), text),
-                byFile,
-                List.of(),
-                "folding " + cls + " into " + holderName,
-                "Nothing was changed.")
-            .declared();
+            project,
+            Map.of(opened.file(), text),
+            byFile,
+            List.of(),
+            "folding " + cls + " into " + holderName,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "folded "
             + cls
@@ -217,7 +217,8 @@ final class InlineClass {
             + field
             + " ("
             + project.relative(classFile)
-            + " deleted)",
+            + " deleted)"
+            + written.said(),
         declared);
   }
 

@@ -313,7 +313,6 @@ final class TypeParameters {
                     + " extends ...\"), or leave that member out of members.");
     Edits.WrittenFiles gated = Edits.gatedFiles(project, holding.texts(), edits, chosen, what, fix);
     Map<Path, String> texts = gated.texts();
-    List<String> notes = gated.notes();
     Stubs.Declared stubs = gated.declared();
     List<Path> parsed = new ArrayList<>(holding.units().keySet());
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, parsed);
@@ -356,7 +355,7 @@ final class TypeParameters {
                 ? ""
                 : "; a cast to it is now unchecked at " + String.join(", ", casts))
             + (hasParamTags(target) ? "; its Javadoc has no @param <" + parameter + "> yet" : "")
-            + (notes.isEmpty() ? "" : "; " + String.join("; ", notes)),
+            + gated.said(),
         stubs);
   }
 
@@ -965,7 +964,8 @@ final class TypeParameters {
             + " a bound that has what it uses (type_parameter \""
             + parameter
             + " extends ...\"), or choose another value.";
-    Stubs.Declared stubs = Edits.gatedFiles(project, texts, edits, chosen, what, fix).declared();
+    Edits.WrittenFiles gated = Edits.gatedFiles(project, texts, edits, chosen, what, fix);
+    Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after =
         Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
     int calls = 0;
@@ -1030,7 +1030,8 @@ final class TypeParameters {
                     + (references == 1 ? " method reference" : " method references"))
             + (calls + references == 1 ? " infers " : " infer ")
             + v.text()
-            + ", none changed",
+            + ", none changed"
+            + gated.said(),
         stubs);
   }
 
@@ -1218,15 +1219,15 @@ final class TypeParameters {
       edits.put(e.getKey(), list);
     }
     CallTargets targets = CallTargets.of(units.values());
-    Stubs.Declared stubs =
+    Edits.WrittenFiles gated =
         Edits.gatedFiles(
-                project,
-                sources,
-                edits,
-                args.list("imports"),
-                what,
-                "Change that use first, or choose a bound it meets.")
-            .declared();
+            project,
+            sources,
+            edits,
+            args.list("imports"),
+            what,
+            "Change that use first, or choose a bound it meets.");
+    Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(units.keySet()));
     int kept = 0;
     if (calls != null) {
@@ -1294,7 +1295,8 @@ final class TypeParameters {
             + (none ? " (was " + old.replaceFirst("^extends\\s+", "") + ")" : " to " + type)
             + (calls == null
                 ? ""
-                : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types")),
+                : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types"))
+            + gated.said(),
         stubs);
   }
 

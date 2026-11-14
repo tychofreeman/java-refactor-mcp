@@ -402,15 +402,15 @@ final class SubclassToStrategy {
       }
     }
     byFile.put(opened.file(), null);
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                holding.texts(),
-                byFile,
-                chosen,
-                "turning " + subName + " into a function of " + baseName,
-                "Nothing was changed.")
-            .declared();
+            project,
+            holding.texts(),
+            byFile,
+            chosen,
+            "turning " + subName + " into a function of " + baseName,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "turned "
             + subName
@@ -442,7 +442,8 @@ final class SubclassToStrategy {
             + subFn
             + ") ("
             + project.relative(opened.file())
-            + " deleted)",
+            + " deleted)"
+            + written.said(),
         declared);
   }
 

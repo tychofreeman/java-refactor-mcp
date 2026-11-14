@@ -82,17 +82,17 @@ final class PushDown {
 
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pushing " + name + " down");
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                texts,
-                edits,
-                List.of(),
-                "pushing " + subName + "." + member + " down to its subclasses",
-                "Nothing was changed. Keep the member where a caller of "
-                    + subName
-                    + " can still reach it.")
-            .declared();
+            project,
+            texts,
+            edits,
+            List.of(),
+            "pushing " + subName + "." + member + " down to its subclasses",
+            "Nothing was changed. Keep the member where a caller of "
+                + subName
+                + " can still reach it.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "pushed "
             + subName
@@ -101,7 +101,8 @@ final class PushDown {
             + " down to "
             + subclasses
             + " subclass"
-            + (subclasses == 1 ? "" : "es"),
+            + (subclasses == 1 ? "" : "es")
+            + written.said(),
         declared);
   }
 

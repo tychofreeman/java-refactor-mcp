@@ -280,15 +280,15 @@ final class InlineFunction {
     edits.computeIfAbsent(declaringFile, k -> new ArrayList<>()).add(removal(declaringText, m));
 
     NameCheck.require(project, texts, edits, NameCheck.meanings(fragments), "inlining " + name);
-    Stubs.Declared declaredStubs =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                texts,
-                edits,
-                List.of(),
-                "inlining " + name,
-                "Keep the method, or change its callers first.")
-            .declared();
+            project,
+            texts,
+            edits,
+            List.of(),
+            "inlining " + name,
+            "Keep the method, or change its callers first.");
+    Stubs.Declared declaredStubs = written.declared();
     return new Outcome(
         "inlined "
             + name
@@ -296,7 +296,8 @@ final class InlineFunction {
             + calls
             + (calls == 1 ? " call" : " calls")
             + " and deleted the method in "
-            + rel,
+            + rel
+            + written.said(),
         declaredStubs);
   }
 

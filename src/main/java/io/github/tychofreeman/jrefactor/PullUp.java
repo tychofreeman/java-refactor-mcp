@@ -112,15 +112,15 @@ final class PullUp {
 
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pulling " + name + " up");
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                texts,
-                edits,
-                List.of(),
-                "pulling " + subName + "." + member + " up to " + superName,
-                "Nothing was changed. Move only a member that uses nothing the subclass has.")
-            .declared();
+            project,
+            texts,
+            edits,
+            List.of(),
+            "pulling " + subName + "." + member + " up to " + superName,
+            "Nothing was changed. Move only a member that uses nothing the subclass has.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "pulled "
             + subName
@@ -133,7 +133,8 @@ final class PullUp {
             + ")"
             + (twin == null
                 ? ""
-                : ", in place of its abstract declaration" + stillAbstract(superDecl)),
+                : ", in place of its abstract declaration" + stillAbstract(superDecl))
+            + written.said(),
         declared);
   }
 

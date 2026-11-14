@@ -231,8 +231,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `change_type`). Slice 2 is option (a): the new type gets exactly the type parameters its
   members use, plus those their bounds need, in the class's order, each declared as the class
   writes it; over all of the class's always, and over a `type_parameters` argument.
-- Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
-  `MoveType` keep their own per-file import fix and gate.
+- Order 32 (one edit pipeline) is closed as partly done; since #497 only `MoveType` and
+  `MoveToPackage` (which moves the file and adds imports first) keep their own per-file import fix
+  and gate.
 
 ## Where code goes
 
@@ -283,6 +284,11 @@ Each was chosen from options; the record named beside it has the options it beat
   the end (an insert at a replacement's start goes before it), and throws `IllegalStateException`
   on overlapping edits, a tool's bug. For a window of a file, pass the window's start as `offset`
   rather than shifting the edits; filter edits outside the window first. No sort before it.
+- `Edits.gatedFiles` is the one multi-file path (#497, was `MemberMove.gate` and six copies):
+  each file's edits applied (`Edits.textOf`: the text given, else read from disk), its imports
+  fixed, all through the gate; a null edit list deletes the file, an empty one leaves it alone. It
+  returns `WrittenFiles` (the fixed texts, the import notes as "rel: imported a.B", the stubs);
+  a tool's result appends `said()`, so every multi-file tool names the imports it changed.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's

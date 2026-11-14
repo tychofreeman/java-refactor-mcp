@@ -197,15 +197,15 @@ final class EnumSwitch {
     edits.put(eFile, List.of(new TextEdit(0, eText.length(), out)));
     String fix =
         "Check that each case's value type-checks as " + type + " in " + at.e().getName() + ".";
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                at.project(),
-                texts,
-                edits,
-                List.of(),
-                "turning the switch into " + at.name() + "()",
-                fix)
-            .declared();
+            at.project(),
+            texts,
+            edits,
+            List.of(),
+            "turning the switch into " + at.name() + "()",
+            fix);
+    Stubs.Declared declared = written.declared();
     int count = values.size();
     return new Outcome(
         "added the field "
@@ -221,7 +221,8 @@ final class EnumSwitch {
             + (count == 1
                 ? " constant passes its case's value"
                 : " constants pass their case's value")
-            + at.now(),
+            + at.now()
+            + written.said(),
         declared);
   }
 
@@ -343,15 +344,10 @@ final class EnumSwitch {
     String out = TextEdit.apply(bodies, appended, 0);
     edits.put(eFile, List.of(new TextEdit(0, eText.length(), out)));
     String fix = "Check that each case's body compiles in " + at.e().getName() + ".";
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                at.project(),
-                texts,
-                edits,
-                List.of(),
-                "turning the switch into " + name + "()",
-                fix)
-            .declared();
+            at.project(), texts, edits, List.of(), "turning the switch into " + name + "()", fix);
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         (fallback == null ? "declared " : "implemented ")
             + type
@@ -363,7 +359,8 @@ final class EnumSwitch {
             + copied.stream()
                 .map(l -> "; the case of " + l + " is copied into each of them")
                 .reduce("", String::concat)
-            + at.now(),
+            + at.now()
+            + written.said(),
         declared);
   }
 

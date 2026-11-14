@@ -518,15 +518,15 @@ final class Signatures {
         edits.put(e.getKey(), list);
       }
     }
-    Stubs.Declared declared =
+    Edits.WrittenFiles written =
         Edits.gatedFiles(
-                project,
-                holding.texts(),
-                edits,
-                List.of(),
-                "adding " + type + " " + parameter + " to " + name,
-                "Check that " + value + " type-checks as " + type + " at each construction.")
-            .declared();
+            project,
+            holding.texts(),
+            edits,
+            List.of(),
+            "adding " + type + " " + parameter + " to " + name,
+            "Check that " + value + " type-checks as " + type + " at each construction.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "added the component "
             + type
@@ -537,7 +537,8 @@ final class Signatures {
             + "; "
             + constructions
             + (constructions == 1 ? " construction passes " : " constructions pass ")
-            + value,
+            + value
+            + written.said(),
         declared);
   }
 

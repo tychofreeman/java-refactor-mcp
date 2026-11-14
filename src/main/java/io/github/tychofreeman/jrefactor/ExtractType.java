@@ -710,7 +710,8 @@ final class ExtractType {
             + "), held in "
             + holder
             + "; changed "
-            + String.join(", ", files),
+            + String.join(", ", files)
+            + written.said(),
         declared);
   }
 
