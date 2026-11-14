@@ -48,11 +48,12 @@ final class Gate {
     try {
       declaring = Stubs.declare(project, before, old);
     } catch (IOException | RuntimeException e) {
-      Journal.restore(old); // the stubs it wrote too, which the call's journal does not hold
+      Journal.restore(
+          project, old); // the stubs it wrote too, which the call's journal does not hold
       throw e;
     }
     if (!declaring.introduced().isEmpty()) {
-      Journal.restore(old);
+      Journal.restore(project, old);
       throw refusal(project, declaring.introduced(), what, fix);
     }
     journal(project, old);
@@ -138,7 +139,7 @@ final class Gate {
     if (project.session().deferred) {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
         String old = Files.exists(change.getKey()) ? Files.readString(change.getKey()) : null;
-        Journal.put(change.getKey(), change.getValue());
+        Journal.put(project, change.getKey(), change.getValue());
         Journal.wrote(project, change.getKey(), old, change.getValue());
       }
       return new Stubs.Check(List.of(), Stubs.Declared.NONE);
@@ -150,17 +151,17 @@ final class Gate {
     }
     try {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
-        Journal.put(change.getKey(), change.getValue());
+        Journal.put(project, change.getKey(), change.getValue());
       }
       Stubs.Check check = Stubs.declare(project, before, old);
       if (!check.introduced().isEmpty()) {
-        Journal.restore(old);
+        Journal.restore(project, old);
       } else {
         journal(project, old);
       }
       return check;
     } catch (IOException | RuntimeException e) {
-      Journal.restore(old);
+      Journal.restore(project, old);
       throw e;
     }
   }
@@ -182,7 +183,7 @@ final class Gate {
   static void write(SourceProject project, Path file, String text) throws IOException {
     String before = Files.exists(file) ? Files.readString(file) : null;
     String mode = Journal.modeOf(file);
-    Journal.put(file, text);
+    Journal.put(project, file, text);
     Journal.wrote(project, file, before, text);
     Journal.mode(project, file, mode);
   }

@@ -63,7 +63,7 @@ final class FieldOrder {
       int at = Lines.start(text, reader.getStartPosition());
       String field = text.substring(Lines.start(text, moved.getStartPosition()), to);
       String without = text.substring(0, from) + text.substring(to);
-      Journal.put(file, without.substring(0, at) + field + without.substring(at));
+      Journal.put(project, file, without.substring(0, at) + field + without.substring(at));
       return true;
     }
     return false;

@@ -356,6 +356,13 @@ again in the substituted text in order). Options: (a) that, in `InlineFunction` 
 smallest, and the way `Extraction.reindent` already does it); (b) the shared `shift(text, from, to,
 protected ranges)` in `Lines` that the review suggests, with `Extraction` moved onto it (the
 Indent issue, a later item); (c) refuse a body with a text block.
+**Default to reopen (2026-11-13, issue #479; the owner said take the smallest fix):** a file the
+journal deletes takes with it the directories it empties, stopping at a source root or the
+project's root (`Journal.removable`; `put` and `restore` take the project). Options: (a) that
+(chosen: no state, so it holds across the command line's runs too); (b) also recording the
+directories each call creates, so a directory the user made empty elsewhere stays (the review's
+second half; needs the journal's entries, saved by the command line, to carry them); (c) never
+removing a directory.
 
 ## Constructive transformations (2026-11-05)
 
@@ -828,6 +835,7 @@ sections 3 and 4.
 | 225 | 233 | `batch` `retry`: a step number sent as a string (`"step": "2"`) was an engine error (a `ClassCastException`), and two changes of one step (two `step` 2, or `step` 2 and `remove` 2) were applied silently, one of them lost (issue #488, code review) | Done 2026-11-13 (`Batch.retried` refuses a number that is not a JSON number, and a step that `step` or `remove` names twice; `after` may repeat. `BatchRetryTest`. Default to reopen (the smallest): refuse a string over reading `"2"` as 2) | Issue #488; `docs/sessions/fix-batch-retry-numbers.md` |
 | 253 | 263 | The file that declares a type was looked up seven ways; `TypeSwitch.fileOf` matched a path suffix over every file, so `inline` of a class field took `a/com/example/Address.java` for `com.example.Address` and refused, and `move` with `to=com.example.shop.Tax` refused "several files declare Tax" naming the decoy `a/com/example/shop/Tax.java` (issue #482, code review) | Done 2026-11-13: `SourceProject.fileDeclaring(qualified)` and `fileOf(ITypeBinding)` (by the implied path), `Names.outermost`; `TypeSwitch.fileAround`, `Stubs.Round.sourceOf`, `ByLine.topLevel` and `MoveMember.outermost` inlined into them; `Signatures.projects`, `Imports.own`, `Rename`, `Jdt.staticImported`, `ChangeSignature.referenced` (now with the local and anonymous check), `Fold`, `MoveToPackage` call them. `move` takes a qualified `to` as the import where a simple name is ambiguous. `inspect`'s package uses `packageOf`; its looser file rule is documented. Goldens `inline_class_same_suffix`, `move_member_qualified_same_suffix` | Issue #482; `docs/sessions/file-declaring-type.md` |
 | 255 | 265 | Agents that call the tools through `bin/jrefactor` in a session without the Claude Code hooks left no session log, so their tool use could not be measured | Done 2026-11-14: `JREFACTOR_LOG=<file>` makes each `Cli` run append one line in `SessionLog.entry`'s format, a Bash call of `bin/jrefactor` with JSON arguments written out as their objects, which `bin/session-report <file>` reads unchanged (`Cli.logLine`, `CliTest`); a failure to log changes nothing | The owner, 2026-11-14; `docs/sessions/cli-log.md` |
+| 226 | 234 | `Journal.put` removed every directory a deletion left empty with no bound: `move` with `delete=true` of a plain project's only file deleted the project's root, and an undone or refused `create_file` in an empty `src/test/java` deleted that source root (issue #479, code review) | Done 2026-11-13 (`Journal.removable` stops at a source root and the project's root; `put` and `restore` take the project, added by `add_parameter`. `JournalTest`. Default to reopen in Decisions: no record of created directories) | Issue #479; `docs/sessions/fix-journal-parent-dirs.md` |
 
 ### The 2026-11-04 list
 
