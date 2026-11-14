@@ -1587,3 +1587,22 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `add_declaration`, each copy made a delegate by `replace_declaration` in one batch, then `inline`
   of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
   two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.
+
+## 2026-11-14: switch-arms
+
+- `At.placeCall` from the block written twice in `EnumSwitch`: `extract_function` of the first copy
+  worked (a static `placeCall(Path eFile, At at, List<TextEdit> eEdits)`). Then:
+  - `remove_parameter` `eFile` with `value=at.eFile()` was refused: the call passes the local
+    `eFile`, which holds `at.eFile()`; the tool compares the argument's text, not what a local
+    initialized to it holds. Followed its fix (`replace_expression` of the argument first), in a batch.
+  - `function_to_method` was refused (the first parameter, `At`, is not of the method's class), and
+    its fix, `move` to `EnumSwitch.At`, was refused too: `move` takes a top-level class only, and
+    `At` is a nested record. The method was moved by hand: `add_declaration` of the instance form
+    to `EnumSwitch.At`, `replace_text` of the call, `replace_declaration` deleting the static one.
+    A `move` to a member type (or a record), or `function_to_method` onto a parameter's nested type,
+    would be one step.
+  - `fold` of `At.placeCall` over the second copy was refused: it folds only a method that is one
+    return or a void method's statements, and this one builds a map and returns it. Replaced by
+    `replace_text`. A fold of "statements, then return a local they built" into `T x = m(...)`
+    would have done it.
+
