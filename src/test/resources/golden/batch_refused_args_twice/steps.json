@@ -1,0 +1,11 @@
+[
+  {
+    "tool": "replace_text",
+    "file": "com/example/B.java",
+    "args": {
+      "file": "com/example/A.java",
+      "old": "return x;",
+      "new": "return x + 1;"
+    }
+  }
+]

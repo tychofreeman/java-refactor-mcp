@@ -1845,12 +1845,12 @@ field, and the gate's "would add compile errors".
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server
   name; roadmap #100).
 - A step with keys beside `tool` that are arguments of its tool (by their names, old names or
-  retired ones) is refused before any step runs (roadmap #196, 2026-11-13): `step k (tool) has
-  its arguments file, old and new beside "tool"; a step's arguments go under "args": {"tool":
-  "replace_text", "id": ..., "args": {"file": ..., "old": ..., "new": ...}}.`, then the other
-  steps sent that way by number. Such a step is not read as if its arguments were under `args`
-  (the smallest choice; the options are in `docs/design.md`, Decisions). Other keys beside `tool`
-  are ignored, as before.
+  retired ones) is read as if they were under `args` (roadmap #198, the user's choice of
+  2026-11-13, replacing #196's refusal; the options are in `docs/design.md`, Decisions), and the
+  result ends with a line naming those steps: `steps 2 and 3: their arguments beside "tool" were
+  read as their "args".` Refused, before any step runs: a key given both beside `tool` and under
+  `args` with different values (`step k (tool) gives file both beside "tool" and under "args",
+  differently; send it once, under "args".`). Other keys beside `tool` are ignored, as before.
 - Line arguments (`line`, `start_line`, `end_line`) are as read before the
   batch; the batch moves them past earlier steps' edits. A line an earlier step
   rewrote with a different line count is refused, naming the step; a line between

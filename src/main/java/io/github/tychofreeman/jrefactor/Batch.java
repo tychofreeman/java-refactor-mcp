@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,9 +39,9 @@ final class Batch {
     if (!mode.equals("each") && !mode.equals("end")) {
       throw new Refusal("check must be \"each\" or \"end\"; got " + mode + ".");
     }
-    List<Map<String, Object>> run = steps;
+    Lifted lifted = underArgs(steps, session);
+    List<Map<String, Object>> run = lifted.steps();
     try {
-      argumentsUnderArgs(run, session);
       Outcome outcome;
       if (mode.equals("end")) {
         Gate.Checked<String> checked =
@@ -51,10 +52,10 @@ final class Batch {
                 "Add the steps that fix them, or change the steps that cause them.");
         outcome =
             new Outcome(
-                checked.result() + "\nchecked at the end: no new compile errors",
+                checked.result() + "\nchecked at the end: no new compile errors" + lifted.note(),
                 checked.declared());
       } else {
-        outcome = Outcome.of(steps(project, run, false));
+        outcome = Outcome.of(steps(project, run, false) + lifted.note());
       }
       session.refusedBatch = null;
       return outcome;
@@ -446,15 +447,16 @@ final class Batch {
   }
 
   /**
-   * Refuses steps that put their tool's arguments beside {@code tool} rather than under {@code
-   * args}, before any step runs, showing the first one's shape. A step whose tool is unknown is
-   * left to the run, whose refusal lists the tools.
+   * Steps with the arguments their tool takes moved from beside {@code tool} to under {@code args},
+   * and the numbers of the steps that had any there. A step whose tool is unknown is left to the
+   * run, whose refusal lists the tools.
    */
-  private static void argumentsUnderArgs(List<Map<String, Object>> steps, Session session) {
-    String first = null;
-    List<String> others = new ArrayList<>();
+  private static Lifted underArgs(List<Map<String, Object>> steps, Session session) {
+    List<Map<String, Object>> lifted = new ArrayList<>();
+    List<String> moved = new ArrayList<>();
     for (int i = 0; i < steps.size(); i++) {
       Map<String, Object> step = steps.get(i);
+      lifted.add(step);
       if (!(step.get("tool") instanceof String name)) {
         continue;
       }
@@ -469,45 +471,35 @@ final class Batch {
       if (beside.isEmpty()) {
         continue;
       }
-      if (first != null) {
-        others.add(String.valueOf(i + 1));
-        continue;
-      }
-      List<String> args = new ArrayList<>();
+      Map<String, Object> args = new LinkedHashMap<>();
       if (step.get("args") instanceof Map<?, ?> given) {
-        given.keySet().forEach(k -> args.add(String.valueOf(k)));
+        given.forEach((k, v) -> args.put(String.valueOf(k), v));
       }
-      args.addAll(beside);
-      StringBuilder shape = new StringBuilder("{\"tool\": \"" + name + "\"");
-      for (String key : step.keySet()) {
-        if (STEP_KEYS.contains(key) && !key.equals("tool") && !key.equals("args")) {
-          shape.append(", \"").append(key).append("\": ...");
+      for (String key : beside) {
+        if (args.containsKey(key) && !Objects.equals(args.get(key), step.get(key))) {
+          throw new Refusal(
+              "step "
+                  + (i + 1)
+                  + " ("
+                  + name
+                  + ") gives "
+                  + key
+                  + " both beside \"tool\" and under \"args\", differently; send it once, under"
+                  + " \"args\". Nothing was changed.");
         }
+        args.put(key, step.get(key));
       }
-      shape.append(", \"args\": {");
-      shape.append(String.join(", ", args.stream().map(k -> "\"" + k + "\": ...").toList()));
-      shape.append("}}");
-      first =
-          "step "
-              + (i + 1)
-              + " ("
-              + name
-              + ") has its arguments "
-              + listed(beside)
-              + " beside \"tool\"; a step's arguments go under \"args\": "
-              + shape
-              + ".";
+      Map<String, Object> copy = new LinkedHashMap<>();
+      step.forEach((k, v) -> {
+        if (!beside.contains(k)) {
+          copy.put(k, v);
+        }
+      });
+      copy.put("args", args);
+      lifted.set(i, copy);
+      moved.add(String.valueOf(i + 1));
     }
-    if (first == null) {
-      return;
-    }
-    String rest =
-        others.isEmpty()
-            ? ""
-            : others.size() == 1
-                ? " Step " + others.get(0) + " has its arguments beside \"tool\" too."
-                : " Steps " + listed(others) + " have their arguments beside \"tool\" too.";
-    throw new Refusal(first + rest + " Nothing was changed.");
+    return new Lifted(lifted, moved);
   }
 
   /** Whether {@code def} takes an argument named {@code key}, by its name or an old one. */
@@ -523,5 +515,22 @@ final class Batch {
     return last == 0
         ? items.get(0)
         : String.join(", ", items.subList(0, last)) + " and " + items.get(last);
+  }
+
+  /**
+   * Steps with their arguments under {@code args}, and the numbers of those that had them beside.
+   */
+  private record Lifted(List<Map<String, Object>> steps, List<String> moved) {
+    /** The result's line naming the steps whose arguments were beside {@code tool}, or nothing. */
+    String note() {
+      if (moved.isEmpty()) {
+        return "";
+      }
+      return moved.size() == 1
+          ? "\nstep " + moved.get(0) + ": its arguments beside \"tool\" were read as its \"args\"."
+          : "\nsteps "
+              + listed(moved)
+              + ": their arguments beside \"tool\" were read as their \"args\".";
+    }
   }
 }

@@ -1,0 +1,5 @@
+batch of 3 steps:
+1. replaced 1 occurrence in com/example/A.java, line 5
+2. replaced 1 occurrence in com/example/A.java, line 9
+3. renamed total to sum in com/example/A.java: 2 occurrences, lines 9, 10
+steps 2 and 3: their arguments beside "tool" were read as their "args".
