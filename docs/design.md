@@ -51,7 +51,7 @@ pattern search in `inspect` that the refusal points to (more work).
 2026-11-05).** Probes found `int` to `long`, `int` to `double` and `char` to `int` compile
 and change overflow, division and printing. A use that is an operand of arithmetic, a
 shift, a unary or compound operator, an argument of a call, a cast, a branch of `?:`, a
-switch selector, or `==` on a boxed type is refused (`PrimitiveUses`); copies, returns and
+switch selector, or `==` on a boxed type is refused (`TypeDecidedUses`); copies, returns and
 ordering comparisons are allowed. Options it beat: refusing every primitive type change
 (simplest, but `int` to `long` could no longer be done by the tool), and applying it while
 listing the risky uses in the result (most permissive, but a normal-flow change would be
