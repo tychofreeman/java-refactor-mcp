@@ -203,4 +203,17 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
             + Nodes.columns(found, unit.getPosition(line, 0))
             + ". Pass column, the one where the one you mean starts.");
   }
+
+  /**
+   * The package declaration a new file beside this one starts with, or "" in the default package.
+   */
+  String packageHeader() {
+    return packageHeader(
+        unit.getPackage() == null ? null : unit.getPackage().getName().getFullyQualifiedName());
+  }
+
+  /** The package declaration of a new file in {@code pkg}, or "" for the default package. */
+  static String packageHeader(String pkg) {
+    return pkg == null || pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
+  }
 }

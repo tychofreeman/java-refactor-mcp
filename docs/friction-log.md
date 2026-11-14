@@ -1722,3 +1722,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
   dropped needless parentheses and negated a comparison would have saved them.
 - `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.
+
+## 2026-11-14: extract-type-sibling
+
+- `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`
+  inline where the method names it as a local; `extract_variable` at each copy, then `fold`, in one
+  batch, folded all three. A `fold` that matched an inlined local of the body would save the step.
+- `fold` of `Opened.packageHeader(String pkg)` (with a null test) did not reach `Stubs` and
+  `MoveType`, which test only `isEmpty()`: `replace_expression` at each.
+- Otherwise through the tools: `move`, `rename`, `add_parameter` (three), `replace_statements`,
+  `replace_declaration`, `add_declaration`, `extract_variable`. The roadmap row went in by hand.

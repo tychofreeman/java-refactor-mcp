@@ -493,4 +493,15 @@ final class Edits {
   static String textOf(Map<Path, String> texts, Path file) throws IOException {
     return texts.containsKey(file) ? texts.get(file) : Files.readString(file);
   }
+
+  /**
+   * Writes a new type's file, {@code target}, its imports fixed ({@code chosen} for an ambiguous
+   * name), through the gate; a refusal names it as creating {@code type} and ends with {@code fix}.
+   */
+  static void newFile(
+      SourceProject project, Path target, String text, String type, List<String> chosen, String fix)
+      throws Exception {
+    String fixed = Imports.fix(project, target, "", text, chosen).text();
+    Gate.applyOrRefuse(project, Map.of(target, fixed), "creating " + type, fix);
+  }
 }
