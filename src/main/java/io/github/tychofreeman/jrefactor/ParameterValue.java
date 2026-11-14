@@ -10,7 +10,6 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
@@ -26,8 +25,6 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -65,12 +62,7 @@ final class ParameterValue {
     for (SimpleName n : Nodes.all(m, SimpleName.class)) {
       if (n.resolveBinding() instanceof IVariableBinding b
           && b.getVariableDeclaration().getKey().equals(key)) {
-        ASTNode p = n.getParent();
-        if ((p instanceof Assignment a && a.getLeftHandSide() == n)
-            || p instanceof PostfixExpression
-            || (p instanceof PrefixExpression pre
-                && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                    || pre.getOperator() == PrefixExpression.Operator.DECREMENT))) {
+        if (Nodes.written(n)) {
           return true;
         }
       }

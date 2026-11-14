@@ -1640,6 +1640,15 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   without the space fixed it.
 - No Java by hand but the rebase's merge of `Nodes` and `NodesTest` with #526's `Nodes.show`.
 
+## 2026-11-14: nodes-written
+
+- `ConvertLoop.writes` made a delegate of `Nodes.written` and inlined in one batch: worked.
+- The other copies were conditions inside larger statements; `replace_text` of each condition
+  (four lines to `Nodes.written(n)`) did them. `Extraction.assigned` and `refuseFinalFields`
+  (a visitor) were rewritten with `replace_declaration`: no tool turns a visitor of three node
+  kinds into a filter over `Nodes.all`.
+- No Java by hand.
+
 ## 2026-11-14: extract-type-sibling
 
 - `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`
