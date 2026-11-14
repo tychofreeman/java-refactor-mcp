@@ -7,6 +7,8 @@ import java.util.Map;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -16,7 +18,6 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
  * extract_variable: an expression is named. A declaration of it is inserted just before its
@@ -204,29 +205,38 @@ final class ExtractVariable {
     }
   }
 
-  /** Refuses a name that a field of the enclosing class, or of a superclass, already has. */
+  /**
+   * Refuses a name that a field of a type around the expression, or of one of its supertypes,
+   * already has: a local of that name hides the field from the rest of the method.
+   */
   private static void checkFieldName(Expression e, String name) {
-    ASTNode n = e;
-    while (n != null && !(n instanceof TypeDeclaration)) {
-      n = n.getParent();
-    }
-    if (n == null) {
-      return;
-    }
-    for (ITypeBinding c = ((TypeDeclaration) n).resolveBinding();
-        c != null;
-        c = c.getSuperclass()) {
-      for (IVariableBinding f : c.getDeclaredFields()) {
-        if (f.getName().equals(name)) {
-          throw new Refusal(
-              name
-                  + " hides the field "
-                  + name
-                  + " of "
-                  + c.getName()
-                  + ", so a use of the field in this method would read the new variable. Use"
-                  + " another name.");
+    for (ASTNode n = e; n != null; n = n.getParent()) {
+      ITypeBinding type =
+          n instanceof AbstractTypeDeclaration t
+              ? t.resolveBinding()
+              : n instanceof AnonymousClassDeclaration a ? a.resolveBinding() : null;
+      if (type == null) {
+        continue;
+      }
+      List<ITypeBinding> todo = new ArrayList<>(List.of(type));
+      for (int i = 0; i < todo.size(); i++) {
+        ITypeBinding c = todo.get(i);
+        for (IVariableBinding f : c.getDeclaredFields()) {
+          if (f.getName().equals(name)) {
+            throw new Refusal(
+                name
+                    + " hides the field "
+                    + name
+                    + " of "
+                    + (c.isAnonymous() ? "an anonymous class" : c.getName())
+                    + ", so a use of the field in this method would read the new variable. Use"
+                    + " another name.");
+          }
         }
+        if (c.getSuperclass() != null) {
+          todo.add(c.getSuperclass());
+        }
+        todo.addAll(List.of(c.getInterfaces()));
       }
     }
   }

@@ -1286,8 +1286,10 @@ gorefactor's `extract_function` (roadmap #23; the shared name since #120, 2026-1
   on some paths only, a return mid-way through a void method (with the range to
   the end of the body), `this(...)`/`super(...)`, an assignment to a final
   field ("line 9 assigns the final field upper, which only a constructor or
-  initializer may do"), a name a method of the type or a supertype has; then
-  the gate.
+  initializer may do"), a name a method of the type or a supertype has, or of a type around
+  it or one of that type's supertypes ("Inner is inside Outer, which has a method log; a method
+  of that name in Inner would hide it from the calls written there", #469, also with
+  `visibility`); then the gate.
 - Result: `extracted lines 9-12 of a/B.java into sum(List<Integer> values),
   returning total, at lines 14-20; the call is line 9`, a note past five
   parameters, then import notes.
@@ -1312,8 +1314,10 @@ arguments.
   assigns. Allowed: the first effect of a statement (`f(p.bin(), p.bin())`
   names the first `p.bin()`, roadmap #99), and pure code from a branch
   (`any ? price * qty : 0`). Also refuses: assigned to; a statement not
-  directly in a block; a type that does not resolve; a new name that a field of the
-  enclosing class or its superclasses already has, which the local would hide.
+  directly in a block; a type that does not resolve; a new name that a field already has, which
+  the local would hide: a field of any type around the expression (a class, an enum, a record, an
+  interface, an anonymous class; #469, 2026-11-13) or of one of their superclasses and interfaces
+  (an interface's constant).
   `all_occurrences` is built only with `as=parameter` (below); `pointer` is not built yet.
 - `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
   expr;` after the type's fields (its first member when it has none, 2026-11-07), `field`

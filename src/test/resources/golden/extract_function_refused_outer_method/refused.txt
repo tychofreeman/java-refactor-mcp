@@ -1,0 +1,1 @@
+Inner is inside Outer, which has a method log

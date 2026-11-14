@@ -317,6 +317,16 @@ two shapes for one thing, and a key that is both a step key and an argument woul
 owner asked for the smallest choice; reopen (b) if the refusal still costs a turn each session.
 `Batch.argumentsUnderArgs` (roadmap #196).
 
+**Default to reopen (2026-11-13, issue #469; the owner said take the smallest fix):** the name
+checks of `extract_function` and `extract_variable` walk every type around the extraction and
+each one's supertypes, refusing a name any of them declares (a method, a field). Options: (a) that
+walk (chosen: small, in each tool's own check, and it errs toward refusing a name no call there
+uses); (b) a check on meaning over the whole enclosing type, as `NameCheck` does for moved code:
+every simple name outside the edit must keep its binding (exact, so no false refusals, but a second
+parse of the file and a new entry point in `NameCheck`); (c) only the shapes the issue names. Still
+not checked: a local of an enclosing method that the new local, in an anonymous or local class's
+method, would hide, and a static import of the name. Reopen (b) if the refusals cost turns.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -766,6 +776,7 @@ sections 3 and 4.
 | 188 | 195 | Run one golden case or probe, or a few: `GoldenTest` and `ProbeTest` ran every case, so sessions wrote scratch scripts to run one through the CLI and diff it | Done 2026-11-13 (`-Djrefactor.golden=<names>` and `-Djrefactor.probe=<names>`, comma-separated directory names or globs with `*` and `?`, read by `Cases.select` in both factories; a pattern that matches no case fails the run, naming it. Surefire's `-Dtest=GoldenTest#<case>` was tried first and selects nothing: its method filter sees the factory method `cases`, not the dynamic tests' names. Defaults to reopen (the owner said take the smallest): one property per test class over one shared, and failing on any pattern that matches nothing over failing only when none matches) | The owner's follow-up of `docs/sessions/move-record-fields.md`; `docs/sessions/golden-one-case.md` |
 | 189 | 196 | A `batch` step with its tool's arguments beside `tool` rather than under `args` was refused by the step's tool ("replace_text needs file"), which does not say where they go (four friction entries, 2026-11-10 and 2026-11-13) | Done 2026-11-13 replaced by #198, which reads them; `Batch.argumentsUnderArgs`, before any step runs: a key beside `tool` that the tool takes, by its name, an old one or a retired one, is refused naming the keys and showing the first such step with them under `args`, then the other such steps by number; other keys stay ignored. Default to reopen: refuse over reading them as arguments, in Decisions) | `docs/friction-log.md`; `docs/sessions/batch-args-beside-tool.md` |
 | 200 | 208 | `push_down`'s override check missed what the moved method overrides when `name` had parentheses (`Sub.hello()`, compared with the bare method name), in a superclass's superclass, and in an interface's default method: the move type-checked and the class then ran the inherited method (issue #465, code review) | Done 2026-11-13 (`PushDown.refuseOverride` asks `CallTargets.overridden` of the method's binding: every supertype, transitively, abstract methods and `Object`'s included, which the old check skipped; probe `push_down_grandparent_override`, goldens `push_down_refused_override_parens` and `_default`) | Issue #465; `docs/sessions/fix-push-down-override.md` |
+| 201 | 209 | `extract_function` and `extract_variable` checked a new name only against the type and its supertypes: a method of an enclosing type, or a field of an enclosing type, an enum, a record or an interface, was captured silently (issue #469, code review) | Done 2026-11-13 (`Extraction.refuseEnclosing`, from `refuseClash` and `checkOverride`; `ExtractVariable.checkFieldName` walks every `AbstractTypeDeclaration` and anonymous class around the expression, superclasses and interfaces; probes `extract_*_hides_*`, goldens `extract_function_refused_outer_method`, `extract_variable_refused_hides_enum_field`. Default to reopen in Decisions: the walk over a meaning check) | Issue #469; `docs/sessions/fix-extract-name-clash.md` |
 
 ### The 2026-11-04 list
 

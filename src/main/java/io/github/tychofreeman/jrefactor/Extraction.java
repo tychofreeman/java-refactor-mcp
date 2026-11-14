@@ -396,6 +396,7 @@ final class Extraction {
       }
       todo.addAll(List.of(t.getInterfaces()));
     }
+    refuseEnclosing(type, label);
   }
 
   /**
@@ -927,6 +928,7 @@ final class Extraction {
           "visibility applies to a method of a named class; extract in the anonymous class with"
               + " the default, private.");
     }
+    refuseEnclosing(here, here.getName());
     List<String> mine = new ArrayList<>();
     for (IVariableBinding p : params) {
       mine.add(p.getType().getErasure().getQualifiedName());
@@ -1100,5 +1102,33 @@ final class Extraction {
       out.add(t.getErasure().getKey());
     }
     return out;
+  }
+
+  /**
+   * Refuses a name that a method of a type around {@code type}, or of one of its supertypes, has: a
+   * method of that name in {@code type} would hide it from every unqualified call inside {@code
+   * type} (JLS 15.12.1).
+   */
+  private void refuseEnclosing(ITypeBinding type, String label) {
+    for (ITypeBinding outer = type.getDeclaringClass();
+        outer != null;
+        outer = outer.getDeclaringClass()) {
+      for (ITypeBinding t : ancestors(outer)) {
+        for (IMethodBinding m : t.getDeclaredMethods()) {
+          if (m.getName().equals(name)) {
+            throw new Refusal(
+                label
+                    + " is inside "
+                    + (outer.isAnonymous() ? "an anonymous class" : outer.getName())
+                    + (t == outer ? "" : " (through " + t.getErasure().getName() + ")")
+                    + ", which has a method "
+                    + name
+                    + "; a method of that name in "
+                    + label
+                    + " would hide it from the calls written there. Choose another name.");
+          }
+        }
+      }
+    }
   }
 }
