@@ -1521,3 +1521,19 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   with each at its own indentation did them. Tried first: one step per indentation would have
   worked, had I known them. A match per line's own indentation, or a note naming the near misses,
   would make it one call.
+
+## 2026-11-14: indent-utility
+
+- `move` of `MemberMove.reindented` and `Declarations.step` into the new `Indent` (one member,
+  `private Indent() {}`) wrote their bodies four spaces a step: the bug the item fixes (a Javadoc
+  of two lines set the old step to one). Spotless put it back; `move_member_javadoc_step` pins it.
+- `inline` of `Primitives.indent`, made a delegate `Indent.reindent(content.stripTrailing(),
+  indent)`, was refused: "the argument indent ... reads state that content.stripTrailing() could
+  change". A `String` method changes nothing; the delegate stays. Tried before: none other, since
+  folding the strip into `Indent.reindent` would change `LoopToStream`'s callers.
+- `rename` of `Indent.reindented` with `name` and no `line` was refused again ("rename needs
+  line"); the batch's `retry` with `line` fixed it, as on 2026-11-14 (hierarchy-helper).
+- No Java by hand: `create_file`, `move` (three helpers), `rename`, `fold` (`Indent.width` folded
+  five copies of `l.length() - l.stripLeading().length()`), `replace_declaration` to a delegate
+  then `inline` (`RemoveElse.indentWidth`, `leadingWhitespace`, `Declarations.leadingSpaces`,
+  `memberIndent`), `add_parameter`, `replace_text` for the step fallbacks and the two fixes.

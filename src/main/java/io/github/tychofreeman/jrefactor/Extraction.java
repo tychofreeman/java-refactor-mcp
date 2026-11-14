@@ -321,7 +321,7 @@ final class Extraction {
     String memberIndent = indentOf(lineStartOffset(member.getStartPosition()));
     int firstStatement = sel.statements().get(0).getStartPosition();
     String statementIndent = indentOf(lineStartOffset(firstStatement));
-    int step = Declarations.step(text);
+    int step = Indent.step(text);
     String bodyIndent = memberIndent + " ".repeat(step > 0 ? step : 4);
 
     StringBuilder method = new StringBuilder("\n");

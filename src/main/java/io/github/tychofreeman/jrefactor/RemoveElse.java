@@ -70,7 +70,7 @@ final class RemoveElse {
 
     int start = ifs.getStartPosition();
     int end = start + ifs.getLength();
-    String base = leadingWhitespace(text, Lines.start(text, start));
+    String base = Lines.indentOf(text, Lines.start(text, start));
     String replacement =
         "if ("
             + source(text, ifs.getExpression())
@@ -132,7 +132,7 @@ final class RemoveElse {
     int delta = 0;
     for (String l : lines) {
       if (!l.isBlank()) {
-        delta = Math.max(0, indentWidth(l) - base.length());
+        delta = Math.max(0, Indent.width(l) - base.length());
         break;
       }
     }
@@ -141,26 +141,10 @@ final class RemoveElse {
       if (l.isBlank()) {
         out.add("");
       } else {
-        out.add(l.substring(Math.min(delta, indentWidth(l))));
+        out.add(l.substring(Math.min(delta, Indent.width(l))));
       }
     }
     return String.join("\n", out);
-  }
-
-  private static int indentWidth(String line) {
-    int n = 0;
-    while (n < line.length() && (line.charAt(n) == ' ' || line.charAt(n) == '\t')) {
-      n++;
-    }
-    return n;
-  }
-
-  private static String leadingWhitespace(String text, int lineStart) {
-    int i = lineStart;
-    while (i < text.length() && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) {
-      i++;
-    }
-    return text.substring(lineStart, i);
   }
 
   private static String source(String text, ASTNode node) {

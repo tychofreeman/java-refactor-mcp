@@ -641,7 +641,7 @@ final class ThrowsCallers {
   }
 
   static String step(String text) {
-    return " ".repeat(Math.max(Declarations.step(text), 2));
+    return " ".repeat(Indent.step(text, 2));
   }
 
   private static String where(Site site) {
