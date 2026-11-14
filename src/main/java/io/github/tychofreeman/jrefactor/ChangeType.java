@@ -97,8 +97,8 @@ final class ChangeType {
 
   /**
    * Refuses a change of or to a primitive or boxed type when a use of the field in the project is
-   * one whose result the type decides ({@link TypeDecidedUses}); {@code holding} holds the files that
-   * name the field.
+   * one whose result the type decides ({@link TypeDecidedUses}); {@code holding} holds the files
+   * that name the field.
    */
   private static void checkUses(
       SourceProject project, Holding holding, FieldDeclaration decl, String field, String type) {
