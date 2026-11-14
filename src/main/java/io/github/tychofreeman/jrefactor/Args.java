@@ -159,4 +159,17 @@ final class Args {
     }
     throw new Refusal(key + " must be an object of strings; got " + value + ".");
   }
+
+  /** The names in a comma-separated list, none for null. */
+  static List<String> commaSeparated(String list) {
+    List<String> out = new ArrayList<>();
+    if (list != null) {
+      for (String s : list.split(",")) {
+        if (!s.isBlank()) {
+          out.add(s.strip());
+        }
+      }
+    }
+    return out;
+  }
 }
