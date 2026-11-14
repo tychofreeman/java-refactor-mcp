@@ -1,1 +1,1 @@
-one of add_catch, remove_catch, finally, remove_finally and unwrap
+one of add_catch, remove_catch, finally, remove_finally, unwrap, add_resource and remove_resource

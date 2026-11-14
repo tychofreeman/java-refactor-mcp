@@ -1121,7 +1121,7 @@ in the same turn only if it is sent after it.
     after the last element (on a new line when the elements are one per line).
 - `change_try` (#199, issue #364, 2026-11-13; the user chose one new tool over options on
   `replace_statements` and over two tools, every change but resources first, and an edit, not a
-  refactoring): `file`, `line` (the try), and exactly one of:
+  refactoring; resources in #206, 2026-11-14): `file`, `line` (the try), and exactly one of:
   - `add_catch` (a type), with `body` (the clause's statements; default `throw e;`, the variable
     `e`, or with no `body` the first of `e`, `e2`, ... the method does not use) or `join` (the type
     of an existing clause, which becomes a multi-catch `catch (A | B e)`). Placed before the first
@@ -1137,13 +1137,39 @@ in the same turn only if it is sent after it.
     Refused with resources ("the try declares resources, which it closes; unwrap takes a try
     without them.") or a finally ("the try's finally would no longer run. Send remove_finally
     first, or move its statements after the try.").
+  - `add_resource` (#206, 2026-11-14; the user chose text with a position over declaration text
+    only and over text or a moved-in local): a declaration (`Reader r = open()`) or an effectively
+    final variable, with `position` (1-based in the resource list, last by default; resources
+    close in reverse order). A plain try becomes a try-with-resources. Refused: a position out of
+    range ("position 3 is not in the resource list: pass 1 to 2, or leave it out to add the
+    resource last."); a declared name that a variable used in the body or a later resource has
+    ("the resource log would hide the field log that line 17 uses. Give the resource another
+    name."). Result: `added the resource FileReader g = open(path), 1 of 2 (resources close last
+    first) at line 15 of <file>`.
+  - `remove_resource` (#206, 2026-11-14; the user chose "move it out and close it" over moving it
+    out without closing it and over refusing when the body uses it): the resource's variable. Its
+    declaration goes just before a try of the body and the resources after it, whose finally
+    closes it (`if (r != null) { r.close(); }`, or `r.close();` when the initializer is a `new`);
+    the resources before it, the catches and the finally stay on a try around both, dropped when
+    it has none of them. So it opens and closes in the same order, before any catch, as JLS
+    14.20.3's translation; the one change is that an exception close() throws while another is
+    thrown replaces that one instead of being suppressed, which the result says. Refused: no such
+    resource ("the try has no resource x; its resources are r."); a variable after the try of the
+    same name, which the declaration would hide ("declared before the try, r would hide the field
+    r that line 17 uses. Rename the resource first (rename), then remove it."); a try that is not
+    in a block or a switch. Result: `took the resource r out of the try at line 15 of <file>:
+    declared just before the try, which closes it in its finally when it is not null. Changed: an
+    exception r.close() throws while another is thrown (by the body or a later resource's close())
+    now replaces that one, where the try-with-resources added it to the other's suppressed
+    exceptions.`
   A `remove_catch` or `remove_finally` that leaves no catch, finally or resource unwraps the try,
   and the result says so. Result: `added a catch of FileNotFoundException, before the catch of
   Exception at line 10 of <file>`. None or two changes are refused ("change_try takes one of
-  add_catch, remove_catch, finally, remove_finally and unwrap; got add_catch and unwrap. Send one
-  change a call, or several calls in a batch."). The gate judges the rest: a catch of a checked
-  exception the body cannot throw, one left unhandled once a clause or the try is gone. Not yet:
-  resources of a try-with-resources.
+  add_catch, remove_catch, finally, remove_finally, unwrap, add_resource and remove_resource; got
+  add_catch and unwrap. Send one change a call, or several calls in a batch."). The gate judges
+  the rest: a catch of a checked exception the body cannot throw, one left unhandled once a clause
+  or the try is gone, a resource that is not `AutoCloseable` or not effectively final, a close()
+  whose checked exception nothing handles.
 - `replace_text`: `file`, `old`, `new`, `all_occurrences`, `append`. `old` must occur
   once unless `all_occurrences`; refused with the lines it occurs on. Result:
   `replaced <n> occurrence(s) in <file>, line(s) ...`. Not found exactly, `old` is found
