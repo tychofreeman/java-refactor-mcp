@@ -54,6 +54,14 @@ fact here becomes wrong, fix or remove it in the same PR.
   (`bin/session-log`, `bin/session-report`) is the measured part.
   Since #168 the report also says what carried each edit step to Java (`build`, `content`, ...)
   and how much Java was typed against names given to `build`: the generators' trend.
+- An agent whose session has no hooks (bin/session-log not loaded) is measured by the CLI's own
+  log (roadmap #264, 2026-11-14): with `JREFACTOR_LOG=<file>` set, each `bin/jrefactor` run
+  appends one line to the file in the hook's format (`Cli.logLine` through `SessionLog.entry`: a
+  Bash call `bin/jrefactor <args>`, PostToolUse when done, PostToolUseFailure when refused or an
+  error, with `cwd`, the printed result and the time), so `bin/session-report <file>` reads it
+  unchanged. A JSON argument (`-`, `@file`, inline) is logged as its object with sections filled
+  in, `;`, `&`, `|` and `'` written as JSON escapes, so the report's step parsing sees the steps;
+  `key_file=-` text is not logged. Logging never changes a run's output or exit status.
 - Before fixing a roadmap row, check `main` and the open branches for the same
   row: two sessions once fixed #67 at once, and one PR (#118) was closed.
 - gorefactor's `docs/parity.md` (Go, TypeScript and Java at parity) is the source of roadmap
