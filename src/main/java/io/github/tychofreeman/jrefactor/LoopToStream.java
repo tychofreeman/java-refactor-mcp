@@ -299,24 +299,13 @@ final class LoopToStream {
    */
   private static VariableDeclarationStatement collected(
       String text, EnhancedForStatement loop, List<Statement> rest) {
-    if (!(loop.getParent() instanceof Block block)) {
+    VariableDeclarationStatement list = declarationBefore(loop);
+    if (list == null
+        || !emptyNew(fragment(list).getInitializer(), "java.util.ArrayList")
+        || !declaredAs(list, Set.of("java.util.List", "java.util.Collection"))) {
       return null;
     }
-    int at = block.statements().indexOf(loop);
-    if (at < 1
-        || !(block.statements().get(at - 1) instanceof VariableDeclarationStatement list)
-        || list.fragments().size() != 1
-        || !(list.fragments().get(0) instanceof VariableDeclarationFragment out)
-        || !(out.getInitializer() instanceof ClassInstanceCreation made)
-        || made.getAnonymousClassDeclaration() != null
-        || !made.arguments().isEmpty()
-        || made.resolveTypeBinding() == null
-        || !made.resolveTypeBinding().getErasure().getQualifiedName().equals("java.util.ArrayList")
-        || list.getType().resolveBinding() == null
-        || !Set.of("java.util.List", "java.util.Collection")
-            .contains(list.getType().resolveBinding().getErasure().getQualifiedName())) {
-      return null;
-    }
+    VariableDeclarationFragment out = fragment(list);
     if (rest.size() != 1) {
       return null;
     }
@@ -324,10 +313,7 @@ final class LoopToStream {
     if (b == null || b.adds() == 0) {
       return null;
     }
-    long uses =
-        Nodes.all(loop, SimpleName.class).stream()
-            .filter(n -> Bindings.same(n.resolveBinding(), out.resolveBinding()))
-            .count();
+    long uses = uses(loop, out.resolveBinding());
     return uses == b.adds() ? list : null;
   }
 
@@ -442,10 +428,13 @@ final class LoopToStream {
     };
   }
 
-  /** The segments on one line after {@code prefix}, or one a line when that is too long. */
+  /**
+   * The segments on one line after {@code prefix}, or one a line when that is too long or a segment
+   * spans lines.
+   */
   private static String layout(String indent, String prefix, List<String> segments, int step) {
     String one = String.join("", segments);
-    if (indent.length() + prefix.length() + one.length() + 1 <= WIDTH) {
+    if (!one.contains("\n") && indent.length() + prefix.length() + one.length() + 1 <= WIDTH) {
       return one;
     }
     return String.join("\n" + indent + " ".repeat(2 * step), segments);
@@ -660,12 +649,8 @@ final class LoopToStream {
     if (stages.stream().anyMatch(s -> s.body().contains("Stream."))) {
       imports.add("java.util.stream.Stream");
     }
-    String prefix =
-        Nodes.source(text, list)
-            .substring(0, out.getInitializer().getStartPosition() - list.getStartPosition());
-    List<String> segments = new ArrayList<>();
-    segments.add(primary(text, loop.getExpression()) + ".stream()");
-    stages.forEach(s -> segments.add(s.text()));
+    String prefix = beforeInitializer(text, list);
+    List<String> segments = segments(text, loop, stages);
     segments.add(terminal);
     return new Rewrite(
         lead(text, list, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
@@ -722,14 +707,8 @@ final class LoopToStream {
    * loop computes, such as a flag; else null.
    */
   private static VariableDeclarationStatement resultBefore(EnhancedForStatement loop) {
-    if (!(loop.getParent() instanceof Block block)) {
-      return null;
-    }
-    int at = block.statements().indexOf(loop);
-    if (at < 1
-        || !(block.statements().get(at - 1) instanceof VariableDeclarationStatement d)
-        || d.fragments().size() != 1
-        || fragment(d).getInitializer() == null) {
+    VariableDeclarationStatement d = declarationBefore(loop);
+    if (d == null || fragment(d).getInitializer() == null) {
       return null;
     }
     IBinding v = fragment(d).resolveBinding();
@@ -770,10 +749,7 @@ final class LoopToStream {
         sets.add(a);
       }
     }
-    long uses =
-        Nodes.all(loop.getBody(), SimpleName.class).stream()
-            .filter(n -> Bindings.same(n.resolveBinding(), binding))
-            .count();
+    long uses = uses(loop.getBody(), binding);
     String set = sets.isEmpty() ? null : Nodes.source(text, sets.get(0).getRightHandSide());
     boolean flag =
         constant(v.getInitializer())
@@ -804,8 +780,7 @@ final class LoopToStream {
     List<Stage> stages = new ArrayList<>(read.stages());
     List<Statement> rest = read.rest();
     String cont = indent + " ".repeat(2 * step);
-    List<String> segments = new ArrayList<>();
-    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    String mapped = "";
     if (rest.size() == 1
         && rest.get(0) instanceof ExpressionStatement e
         && sets.contains(e.getExpression())
@@ -813,7 +788,6 @@ final class LoopToStream {
         && stages.getLast().method().equals("filter")) {
       Stage last = stages.removeLast();
       stages.add(new Stage("map", last.param(), last.body()));
-      stages.forEach(s -> segments.add(s.text()));
     } else {
       String name = Names.fresh(v.getName() + "Changed", loop);
       int[] range = statementsRange(text, read.holder(), rest);
@@ -825,8 +799,7 @@ final class LoopToStream {
       String lines =
           Indent.reindent(
               TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]), inner);
-      stages.forEach(s -> segments.add(s.text()));
-      segments.add(
+      mapped =
           ".map("
               + read.param()
               + " -> {\n"
@@ -840,7 +813,7 @@ final class LoopToStream {
               + name
               + ";\n"
               + cont
-              + "})");
+              + "})";
     }
     String tail;
     String head = "";
@@ -852,17 +825,14 @@ final class LoopToStream {
     } else {
       tail = " ? " + set + " : " + initial;
     }
+    List<String> segments = segments(text, loop, stages);
+    if (!mapped.isEmpty()) {
+      segments.add(mapped);
+    }
     segments.add(".reduce(false, Boolean::logicalOr)" + tail);
-    String prefix =
-        Nodes.source(text, result)
-            .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
-    String one = String.join("", segments);
-    boolean wrap =
-        one.contains("\n")
-            || indent.length() + prefix.length() + head.length() + one.length() + 1 > WIDTH;
-    String pipeline = wrap ? String.join("\n" + cont, segments) : one;
+    String prefix = beforeInitializer(text, result) + head;
     return new Rewrite(
-        lead(text, result, loop, indent) + prefix + head + pipeline + ";",
+        lead(text, result, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
         result.getStartPosition(),
         List.of(),
         "set " + v.getName() + " by " + summary(stages, ".reduce"));
@@ -908,10 +878,7 @@ final class LoopToStream {
     VariableDeclarationFragment v = fragment(result);
     IBinding binding = v.resolveBinding();
     List<Statement> rest = read.rest();
-    long uses =
-        Nodes.all(loop.getBody(), SimpleName.class).stream()
-            .filter(n -> Bindings.same(n.resolveBinding(), binding))
-            .count();
+    long uses = uses(loop.getBody(), binding);
     if (rest.size() != 1 || !(rest.get(0) instanceof ExpressionStatement e) || uses != 1) {
       return null;
     }
@@ -964,9 +931,7 @@ final class LoopToStream {
         return null;
       }
     }
-    List<String> segments = new ArrayList<>();
-    segments.add(primary(text, loop.getExpression()) + ".stream()");
-    read.stages().forEach(s -> segments.add(s.text()));
+    List<String> segments = segments(text, loop, read.stages());
     String terminal;
     if (count) {
       terminal = ".count()";
@@ -990,9 +955,7 @@ final class LoopToStream {
                     : "(" + from + ")")
                 + " + ";
     String cast = count && kind.equals("int") ? "(int) " : "";
-    String prefix =
-        Nodes.source(text, result)
-            .substring(0, initial.getStartPosition() - result.getStartPosition());
+    String prefix = beforeInitializer(text, result);
     String before = prefix + plus + cast;
     return new Rewrite(
         lead(text, result, loop, indent) + before + layout(indent, before, segments, step) + ";",
@@ -1054,16 +1017,12 @@ final class LoopToStream {
     } else {
       test = last.body();
     }
-    List<String> segments = new ArrayList<>();
-    segments.add(primary(text, loop.getExpression()) + ".stream()");
-    stages.forEach(s -> segments.add(s.text()));
+    List<String> segments = segments(text, loop, stages);
     String tail =
         all || (initial.equals("false") && set.equals("true")) ? "" : " ? " + set + " : " + initial;
     String terminal = all ? ".allMatch(" : ".anyMatch(";
     segments.add(terminal + last.param() + " -> " + test + ")" + tail);
-    String prefix =
-        Nodes.source(text, result)
-            .substring(0, v.getInitializer().getStartPosition() - result.getStartPosition());
+    String prefix = beforeInitializer(text, result);
     return new Rewrite(
         lead(text, result, loop, indent) + prefix + layout(indent, prefix, segments, step) + ";",
         result.getStartPosition(),
@@ -1154,28 +1113,15 @@ final class LoopToStream {
    */
   private static VariableDeclarationStatement grouping(
       EnhancedForStatement loop, List<Statement> rest) {
-    if (!(loop.getParent() instanceof Block block)) {
-      return null;
-    }
-    int at = block.statements().indexOf(loop);
-    if (at < 1
-        || !(block.statements().get(at - 1) instanceof VariableDeclarationStatement d)
-        || d.fragments().size() != 1
-        || !(fragment(d).getInitializer() instanceof ClassInstanceCreation made)
-        || made.getAnonymousClassDeclaration() != null
-        || !made.arguments().isEmpty()
-        || made.resolveTypeBinding() == null
-        || !made.resolveTypeBinding().getErasure().getQualifiedName().equals("java.util.HashMap")
-        || d.getType().resolveBinding() == null
-        || !d.getType().resolveBinding().getErasure().getQualifiedName().equals("java.util.Map")) {
+    VariableDeclarationStatement d = declarationBefore(loop);
+    if (d == null
+        || !emptyNew(fragment(d).getInitializer(), "java.util.HashMap")
+        || !declaredAs(d, Set.of("java.util.Map"))) {
       return null;
     }
     IBinding m = fragment(d).resolveBinding();
     MethodInvocation add = groupAdd(rest, m);
-    long uses =
-        Nodes.all(loop, SimpleName.class).stream()
-            .filter(n -> Bindings.same(n.resolveBinding(), m))
-            .count();
+    long uses = uses(loop, m);
     return add != null && uses == 1 ? d : null;
   }
 
@@ -1195,20 +1141,11 @@ final class LoopToStream {
         || compute.arguments().size() != 2
         || !(compute.arguments().get(1) instanceof LambdaExpression make)
         || make.parameters().size() != 1
-        || !(make.getBody() instanceof ClassInstanceCreation list)
-        || !list.arguments().isEmpty()
-        || list.getAnonymousClassDeclaration() != null
-        || list.resolveTypeBinding() == null
-        || !list.resolveTypeBinding()
-            .getErasure()
-            .getQualifiedName()
-            .equals("java.util.ArrayList")) {
+        || !emptyNew(make.getBody(), "java.util.ArrayList")) {
       return null;
     }
     IBinding ignored = ((VariableDeclaration) make.parameters().get(0)).resolveBinding();
-    boolean used =
-        Nodes.all(make.getBody(), SimpleName.class).stream()
-            .anyMatch(n -> Bindings.same(n.resolveBinding(), ignored));
+    boolean used = uses(make.getBody(), ignored) > 0;
     return used ? null : add;
   }
 
@@ -1276,18 +1213,10 @@ final class LoopToStream {
                 + " ".repeat(2 * step)
                 + String.join(",\n" + cont + " ".repeat(2 * step), arguments)
                 + "))";
-    List<String> segments = new ArrayList<>();
-    segments.add(primary(text, loop.getExpression()) + ".stream()");
-    read.stages().forEach(s -> segments.add(s.text()));
+    List<String> segments = segments(text, loop, read.stages());
     segments.add(collect);
-    String prefix =
-        Nodes.source(text, groups)
-            .substring(0, m.getInitializer().getStartPosition() - groups.getStartPosition());
-    String joined = String.join("", segments);
-    String pipeline =
-        !joined.contains("\n") && indent.length() + prefix.length() + joined.length() + 1 <= WIDTH
-            ? joined
-            : String.join("\n" + cont, segments);
+    String prefix = beforeInitializer(text, groups);
+    String pipeline = layout(indent, prefix, segments, step);
     Exceptional.change(
         project,
         "a null key from "
@@ -1317,5 +1246,56 @@ final class LoopToStream {
       return x.getKey().equals(y.getKey());
     }
     return Nodes.source(text, a).equals(Nodes.source(text, b));
+  }
+
+  /** How many names in {@code scope} name {@code binding}. */
+  private static long uses(ASTNode scope, IBinding binding) {
+    return Nodes.all(scope, SimpleName.class).stream()
+        .filter(n -> Bindings.same(n.resolveBinding(), binding))
+        .count();
+  }
+
+  /** The text of {@code d} before its initializer: {@code List<R> out = }. */
+  private static String beforeInitializer(String text, VariableDeclarationStatement d) {
+    return Nodes.source(text, d)
+        .substring(0, fragment(d).getInitializer().getStartPosition() - d.getStartPosition());
+  }
+
+  /** The local declared alone in the statement just before {@code loop}, or null. */
+  private static VariableDeclarationStatement declarationBefore(EnhancedForStatement loop) {
+    if (!(loop.getParent() instanceof Block block)) {
+      return null;
+    }
+    int at = block.statements().indexOf(loop);
+    return at >= 1
+            && block.statements().get(at - 1) instanceof VariableDeclarationStatement d
+            && d.fragments().size() == 1
+        ? d
+        : null;
+  }
+
+  /** Whether {@code e} is {@code new T<>()} of the class {@code qualified}, with no body. */
+  private static boolean emptyNew(ASTNode e, String qualified) {
+    return e instanceof ClassInstanceCreation made
+        && made.getAnonymousClassDeclaration() == null
+        && made.arguments().isEmpty()
+        && made.resolveTypeBinding() != null
+        && made.resolveTypeBinding().getErasure().getQualifiedName().equals(qualified);
+  }
+
+  /** Whether {@code d} declares its local as one of the types {@code qualified} (erased). */
+  private static boolean declaredAs(VariableDeclarationStatement d, Set<String> qualified) {
+    ITypeBinding t = d.getType().resolveBinding();
+    return t != null && qualified.contains(t.getErasure().getQualifiedName());
+  }
+
+  /**
+   * A pipeline's segments up to its terminal: the loop's collection as a stream, then each stage.
+   */
+  private static List<String> segments(String text, EnhancedForStatement loop, List<Stage> stages) {
+    List<String> segments = new ArrayList<>();
+    segments.add(primary(text, loop.getExpression()) + ".stream()");
+    stages.forEach(s -> segments.add(s.text()));
+    return segments;
   }
 }
