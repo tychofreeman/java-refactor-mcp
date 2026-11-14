@@ -1670,3 +1670,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   the switch), `extract_function`, `inline` of the two locals, `move` to `JavaTypes`. `inline` of
   the switch into `return` wrote `return (switch ... );`; the parentheses could not go by two
   `replace_text`s (each step must parse), so `replace_declaration` rewrote the method.
+
+## 2026-11-14: moved-type-context
+
+- `move` of the static `MoveType.label` (whose first parameter was by then the new record
+  `MovedType`) to `MovedType` was refused: "MovedType is not a class ... that resolves"; `move`
+  takes a top-level class, not a record (`Opened.topLevel`). `function_to_method` in place needs
+  the first parameter to be of the method's own class. Tried: `move` then `function_to_method`
+  (refused at the move). Done by hand: `add_declaration` of the instance methods on the record,
+  `replace_text` of the calls, `replace_declaration` deleting the statics. `move` to a record would
+  make it two calls.
+- The `new MovedType(...)` `extract_type` wrote into a call inside a loop, hoisted to before the
+  loop: `extract_variable` declares it just before the call's statement, inside the loop, and
+  `move_statement` stops at the block. Done with `insert_statements` and `replace_expression`.
