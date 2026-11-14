@@ -51,4 +51,25 @@ class PublishedToolsTest {
     }
     assertSame(Tools.REPLACE_PARAMETER, Tools.named("replace_parameter", session));
   }
+
+  @Test
+  void withAliasesGorefactorsNamesArePublishedAfterTheTools() {
+    Session session = new Session();
+    session.publishAliases = true;
+    List<Tools.Def> published = Tools.published(session);
+    assertEquals(Tools.ALL, published.subList(0, Tools.ALL.size()));
+    assertEquals(
+        List.of(Tools.CREATE_LOOP, Tools.CREATE_CALL, Tools.CREATE_GUARD, Tools.REPLACE_PARAMETER),
+        published.subList(Tools.ALL.size(), published.size()));
+  }
+
+  @Test
+  void withAliasesAndWithoutBuildOnlyReplaceParameterIsAdded() {
+    Session session = new Session();
+    session.publishAliases = true;
+    session.noBuild = true;
+    List<Tools.Def> published = Tools.published(session);
+    assertEquals(Tools.ALL.size() + 1, published.size());
+    assertSame(Tools.REPLACE_PARAMETER, published.get(published.size() - 1));
+  }
 }

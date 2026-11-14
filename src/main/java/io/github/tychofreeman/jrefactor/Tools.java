@@ -1501,7 +1501,7 @@ final class Tools {
 
   /**
    * remove_parameter with value, by gorefactor's name for a parameter the method computes: an
-   * alias, not published.
+   * alias, published only under JREFACTOR_PUBLISH_ALIASES.
    */
   static final Def REPLACE_PARAMETER =
       new Def(
@@ -1524,7 +1524,10 @@ final class Tools {
             return Signatures.removeParameter(project, ByLine.named(project, args));
           });
 
-  /** insert_statements with one build loop, by gorefactor's name: an alias, not published. */
+  /**
+   * insert_statements with one build loop, by gorefactor's name: an alias (#376's arm publishes
+   * it).
+   */
   static final Def CREATE_LOOP =
       new Def(
           "create_loop",
@@ -1587,7 +1590,10 @@ final class Tools {
                       "call", "call", "new", "new", "args", "args", "into", "into", "type",
                       "type")));
 
-  /** insert_statements with one build guard, by gorefactor's name: an alias, not published. */
+  /**
+   * insert_statements with one build guard, by gorefactor's name: an alias (#376's arm publishes
+   * it).
+   */
   static final Def CREATE_GUARD =
       new Def(
           "create_guard",
@@ -1986,6 +1992,10 @@ final class Tools {
   /** The aliases that are one build entry, which a server without build does not have. */
   static final Set<String> BUILDING_ALIASES = Set.of("create_loop", "create_call", "create_guard");
 
+  /** gorefactor's names for the generators, published under JREFACTOR_PUBLISH_ALIASES. */
+  static final List<Def> PUBLISHABLE_ALIASES =
+      List.of(CREATE_LOOP, CREATE_CALL, CREATE_GUARD, REPLACE_PARAMETER);
+
   private static Outcome loopToStream(SourceProject project, Args args) throws Exception {
     return LoopToStream.run(project, args.required("file"), args.integer("line"));
   }
@@ -2026,12 +2036,24 @@ final class Tools {
     return Primitives.insertStatements(project, new Args(args.tool(), values));
   }
 
-  /** The tools the server publishes: every tool, or under JREFACTOR_NO_BUILD the typed edits. */
+  /**
+   * The tools the server publishes: every tool, under JREFACTOR_NO_BUILD with the typed edits, and
+   * under JREFACTOR_PUBLISH_ALIASES gorefactor's names for the generators after them.
+   */
   static List<Def> published(Session session) {
-    if (!session.noBuild) {
-      return ALL;
+    List<Def> tools =
+        new ArrayList<>(
+            session.noBuild
+                ? ALL.stream().map(def -> TYPED.getOrDefault(def.name(), def)).toList()
+                : ALL);
+    if (session.publishAliases) {
+      for (Def alias : PUBLISHABLE_ALIASES) {
+        if (!(session.noBuild && BUILDING_ALIASES.contains(alias.name()))) {
+          tools.add(alias);
+        }
+      }
     }
-    return ALL.stream().map(def -> TYPED.getOrDefault(def.name(), def)).toList();
+    return tools;
   }
 
   /** The tool named {@code name} as {@code session}'s server publishes it, or a refusal. */
