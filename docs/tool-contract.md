@@ -1677,7 +1677,9 @@ the same batch as this step, with check "end"."
 ## `add_supertype` (built)
 Adds a supertype to a top-level class or interface, in its header. Arguments: `file`, `name`
 (the top-level type), `relation` (`extends` or `implements`, the clause the supertype goes in)
-and `supertype` (as written, such as `Base` or `List<String>`).
+and `supertype` (as written, such as `Base` or `List<String>`). A new clause goes before a
+`permits` clause (`sealed class Shape implements Named permits Circle`; #484, it had gone after
+it and did not parse).
 
 Result: `added S as a supertype of T (relation) in file`, with `; imported ...` when the edit
 adds an import. Refusals: a relation other than `extends` or `implements`; a name that is not a
