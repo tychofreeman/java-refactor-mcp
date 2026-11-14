@@ -1327,3 +1327,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 ## 2026-11-13: roadmap-open-issues
 
 - Docs only; the rows inserted by a script.
+
+## 2026-11-13: release-cancel-trap
+
+- Not a tool: #461 merged while #460's run on `main` was building, which cancelled #460's release;
+  rerun by hand (v0.33.0). Recorded as a trap in the session notes.
