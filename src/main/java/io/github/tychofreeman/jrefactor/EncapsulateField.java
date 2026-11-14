@@ -2,7 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -95,18 +94,9 @@ final class EncapsulateField {
       }
     }
 
-    List<Path> candidates =
-        project.javaFiles().stream().map(p -> p.toAbsolutePath().normalize()).distinct().toList();
-    Map<Path, String> texts = new LinkedHashMap<>();
-    List<Path> toParse = new ArrayList<>();
-    for (Path p : candidates) {
-      String content = p.equals(file) ? text : Files.readString(p);
-      if (p.equals(file) || content.contains(field)) {
-        texts.put(p, content);
-        toParse.add(p);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
+    Holding holding = Holding.of(project, field, file);
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Set<Path> usedIn = new LinkedHashSet<>();

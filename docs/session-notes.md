@@ -257,6 +257,10 @@ Each was chosen from options; the record named beside it has the options it beat
   first, each once by erasure key), `overridden`, `concreteOverridden`, `isSubtype` (by erasure key,
   safe across parses) and `isA` (by qualified name, for a library type). Loop over it rather than
   writing a worklist over `getSuperclass()` and `getInterfaces()`.
+- The files a tool reads because they hold a name are `Holding.of(project, name, also...)`, or
+  `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
+  write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
+  caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);

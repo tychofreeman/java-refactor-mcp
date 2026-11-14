@@ -2,7 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -110,18 +109,9 @@ final class MoveMember {
     String sourceKey = Bindings.declarationKey(source.resolveBinding());
     String base = member.contains("(") ? member.substring(0, member.indexOf('(')).strip() : member;
 
-    List<Path> candidates =
-        project.javaFiles().stream().map(p -> p.toAbsolutePath().normalize()).distinct().toList();
-    Map<Path, String> texts = new LinkedHashMap<>();
-    List<Path> toParse = new ArrayList<>();
-    for (Path p : candidates) {
-      String content = p.equals(file) ? text : Files.readString(p);
-      if (p.equals(file) || p.equals(targetFile) || content.contains(base)) {
-        texts.put(p, content);
-        toParse.add(p);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
+    Holding holding = Holding.of(project, base, file, targetFile);
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
     TypeDeclaration target = MemberMove.typeNamed(parsed.get(targetFile), toName);
     Precondition.require(
         Precondition.that(
@@ -343,15 +333,9 @@ final class MoveMember {
                     + ". Make it a constant first, or leave it in place."));
     String key = frag.resolveBinding().getVariableDeclaration().getKey();
 
-    Map<Path, String> texts = new LinkedHashMap<>();
-    for (Path p : project.javaFiles()) {
-      Path n = p.toAbsolutePath().normalize();
-      String content = n.equals(file) ? text : Files.readString(n);
-      if (n.equals(file) || n.equals(targetFile) || content.contains(member)) {
-        texts.put(n, content);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
+    Holding holding = Holding.of(project, member, file, targetFile);
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
     TypeDeclaration target = MemberMove.typeNamed(parsed.get(targetFile), toName);
     Precondition.require(
         Precondition.that(
