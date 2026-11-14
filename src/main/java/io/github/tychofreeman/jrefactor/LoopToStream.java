@@ -193,7 +193,7 @@ final class LoopToStream {
     Read read = stages(text, variable, element, body);
     checkBody(opened, text, loop, body, computes, computes != null && searches(read, computes));
     String indent = Lines.indentOf(text, loop.getStartPosition());
-    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
+    int step = Indent.step(text, 2);
     VariableDeclarationStatement list = collected(text, loop, read.rest());
     VariableDeclarationStatement groups = grouping(loop, read.rest());
     Rewrite rewrite =
@@ -500,26 +500,6 @@ final class LoopToStream {
     };
   }
 
-  /** {@code lines} with their common indentation replaced by {@code to}. */
-  static String reindent(String lines, String to) {
-    String[] each = lines.split("\n", -1);
-    int common = Integer.MAX_VALUE;
-    for (String l : each) {
-      if (!l.isBlank()) {
-        common = Math.min(common, l.length() - l.stripLeading().length());
-      }
-    }
-    StringBuilder out = new StringBuilder();
-    for (int i = 0; i < each.length; i++) {
-      String l = each[i];
-      out.append(l.isBlank() ? "" : to + l.substring(common));
-      if (i < each.length - 1) {
-        out.append('\n');
-      }
-    }
-    return out.toString();
-  }
-
   /** The segments on one line after {@code prefix}, or one a line when that is too long. */
   private static String layout(String indent, String prefix, List<String> segments, int step) {
     String one = String.join("", segments);
@@ -786,7 +766,8 @@ final class LoopToStream {
           ".forEach("
               + lambda
               + "{\n"
-              + reindent(statementsText(text, read.holder(), rest), callIndent + " ".repeat(step))
+              + Indent.reindent(
+                  statementsText(text, read.holder(), rest), callIndent + " ".repeat(step))
               + callIndent
               + "})";
     }
@@ -904,7 +885,8 @@ final class LoopToStream {
       }
       String inner = cont + " ".repeat(step);
       String lines =
-          reindent(TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]), inner);
+          Indent.reindent(
+              TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]), inner);
       stages.forEach(s -> segments.add(s.text()));
       segments.add(
           ".map("
@@ -1210,7 +1192,7 @@ final class LoopToStream {
       int[] range = statementsRange(text, read.holder(), rest);
       lambda =
           "{\n"
-              + reindent(
+              + Indent.reindent(
                   TextEdit.apply(text.substring(range[0], range[1]), edits, range[0]),
                   indent + " ".repeat(step))
               + indent
