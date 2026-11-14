@@ -32,6 +32,9 @@ import org.junit.jupiter.api.TestFactory;
  * args.properties} (the call, as a golden case's, with {@code <arg>.txt} files) and {@code
  * probe.properties}, whose {@code expect} is {@code applied} (the output must be the same), {@code
  * refused}, or {@code changed} (an edit meant to change it, which shows the probe sees a change).
+ *
+ * <p>{@code -Djrefactor.probe=<names>} runs only the cases named, as {@code jrefactor.golden} does
+ * for {@code GoldenTest}.
  */
 class ProbeTest {
 
@@ -40,12 +43,9 @@ class ProbeTest {
 
   @TestFactory
   List<DynamicTest> probes() throws IOException {
-    try (Stream<Path> dirs = Files.list(PROBES)) {
-      return dirs.filter(Files::isDirectory)
-          .sorted()
-          .map(dir -> DynamicTest.dynamicTest(dir.getFileName().toString(), () -> probe(dir)))
-          .toList();
-    }
+    return Cases.select(PROBES, "jrefactor.probe", System.getProperty("jrefactor.probe")).stream()
+        .map(dir -> DynamicTest.dynamicTest(dir.getFileName().toString(), () -> probe(dir)))
+        .toList();
   }
 
   private static void probe(Path caseDir) throws Exception {

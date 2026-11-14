@@ -30,6 +30,10 @@ import org.junit.jupiter.api.TestFactory;
  * lines), and {@code out/} (the project after; without it, the project must be unchanged), {@code
  * result.txt} (the text the tool returns), or {@code refused.txt} (a fragment the refusal must
  * contain; the project must be unchanged).
+ *
+ * <p>{@code -Djrefactor.golden=<names>} runs only the cases named: comma-separated directory names
+ * or globs ({@code *}, {@code ?}), with {@code -Dtest=GoldenTest}. A name that matches no case
+ * fails the run.
  */
 class GoldenTest {
 
@@ -38,12 +42,9 @@ class GoldenTest {
 
   @TestFactory
   List<DynamicTest> cases() throws IOException {
-    try (Stream<Path> dirs = Files.list(GOLDEN)) {
-      return dirs.filter(Files::isDirectory)
-          .sorted()
-          .map(dir -> DynamicTest.dynamicTest(dir.getFileName().toString(), () -> runCase(dir)))
-          .toList();
-    }
+    return Cases.select(GOLDEN, "jrefactor.golden", System.getProperty("jrefactor.golden")).stream()
+        .map(dir -> DynamicTest.dynamicTest(dir.getFileName().toString(), () -> runCase(dir)))
+        .toList();
   }
 
   private static void runCase(Path caseDir) throws Exception {
