@@ -1337,3 +1337,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand: `replace_declaration`, `replace_text`, `remove_parameter`. The probe and goldens
   were written by heredocs (resources).
+
+## 2026-11-13: fix-invert-if-dangling-else
+
+- The fix was first written by a Python script before the red run; reverted, the red run seen, and
+  rewritten through one `batch` (`replace_text`, two `add_declaration`s). The probe and golden are
+  resources, written by heredoc. Nothing by hand in Java.

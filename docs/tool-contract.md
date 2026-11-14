@@ -1790,7 +1790,8 @@ through for_each or while", "through for", "through while"); a loop already in t
 Inverts an if that has an else: the branches swap and the condition is negated. Arguments: `file`,
 `line` (the line the if starts on). A comparison takes its opposite operator (`==` and `!=`, `<` and
 `>=`, `<=` and `>`); a `!x` loses its `!`; any other condition is wrapped as `!(...)` (or `!x` for a
-name or a call).
+name or a call). An unbraced else branch that ends in an if without an else (`else for (...) if (d)
+z();`) becomes the then branch in braces, so the new `else` does not attach to that if.
 
 Result: `inverted the if at line L in file; its condition is now C`, with `; imported ...` when an
 import is added. Refusals: no if on the line, several on it, an if with no else, an else if chain
