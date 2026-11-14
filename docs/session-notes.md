@@ -236,6 +236,9 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Where code goes
 
+- Which checked exceptions code throws and does not catch is `Exceptions.uncaught(roots)` (#481,
+  2026-11-14): deferred code skipped, resources' `close()` counted; `Exceptions.checked` and
+  `caught` for one node. Do not write another walk; `ThrowsCallers` still has its own test.
 - A name a tool declares comes from `Names` (#480, 2026-11-14): `Names.free(name, taken)` adds a
   number while the name is taken or a keyword, `Names.fresh(name, node)` takes the names of the
   node's file, `Names.parameterName(type)` names a parameter by its type. A new fresh-name loop

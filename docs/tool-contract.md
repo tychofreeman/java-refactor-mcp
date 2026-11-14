@@ -1029,6 +1029,8 @@ in the same turn only if it is sent after it.
     indentation step in; a `try` catches the checked exceptions they throw and rethrows them
     (`catch (IOException e) { throw e; }`, multi-catch for several, a free name), or has an
     empty `finally` when they throw none. Another head is refused, naming the forms.
+    What they throw is `Exceptions.uncaught` (roadmap #342, issue #481, 2026-11-14): code inside
+    a lambda or a class they declare does not count, and a resource's `close()` does.
   - `build` in place of `content`, on `insert_statements` and `replace_statements` (roadmap
     #149, 2026-11-13; the generators, `docs/design.md`): a list whose entries are statements as
     typed (strings) or objects that name what to write, in order. `{"call": "pricing.priceOf",
