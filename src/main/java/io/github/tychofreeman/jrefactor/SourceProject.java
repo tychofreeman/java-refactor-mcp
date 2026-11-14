@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 
 /**
  * A Java project the server works on. Tool arguments name files relative to {@code root}; the
@@ -170,5 +171,39 @@ public record SourceProject(
    */
   public boolean namedModule() {
     return sourceRoots.stream().anyMatch(r -> Files.isRegularFile(r.resolve("module-info.java")));
+  }
+
+  /**
+   * The file under a source root that the name of the top-level type {@code qualified} implies, if
+   * it exists, or null.
+   */
+  public Path fileDeclaring(String qualified) {
+    String path = qualified.replace('.', '/') + ".java";
+    for (Path root : sourceRoots) {
+      Path f = root.resolve(path);
+      if (Files.isRegularFile(f)) {
+        return f.toAbsolutePath().normalize();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The file that declares {@code type}: the one its outermost type's name implies, if it exists;
+   * null for a local or anonymous class, an array, a primitive, a recovered type or a type the
+   * project's sources do not hold.
+   */
+  public Path fileOf(ITypeBinding type) {
+    if (type == null || type.isRecovered() || type.isArray() || type.isPrimitive()) {
+      return null;
+    }
+    for (ITypeBinding t = type.getErasure();
+        t.getDeclaringClass() != null;
+        t = t.getDeclaringClass()) {
+      if (t.isLocal() || t.isAnonymous()) {
+        return null;
+      }
+    }
+    return fileDeclaring(Names.outermost(type).getQualifiedName());
   }
 }

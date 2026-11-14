@@ -672,12 +672,9 @@ public final class Rename {
     Path from = null;
     Path to = null;
     if (type.getDeclaringClass() == null) {
-      String rel = type.getQualifiedName().replace('.', '/') + ".java";
-      for (Path root : project.sourceRoots()) {
-        if (Files.isRegularFile(root.resolve(rel))) {
-          from = root.resolve(rel);
-          to = from.resolveSibling(newName + ".java");
-        }
+      from = project.fileDeclaring(type.getQualifiedName());
+      if (from != null) {
+        to = from.resolveSibling(newName + ".java");
       }
       if (to != null && Files.exists(to)) {
         throw new Refusal(project.relative(to) + " already exists. Choose another name.");
@@ -758,9 +755,7 @@ public final class Rename {
         parameter.getDeclaringMethod() != null
             ? parameter.getDeclaringMethod().getDeclaringClass()
             : parameter.getDeclaringClass();
-    while (top.getDeclaringClass() != null) {
-      top = top.getDeclaringClass();
-    }
+    top = Names.outermost(top);
     // The file that declares the top-level type, found by its binding: a second top-level class
     // of a file is not in the file its name implies.
     String topKey = top.getErasure().getTypeDeclaration().getKey();

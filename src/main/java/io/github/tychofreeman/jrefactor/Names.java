@@ -42,4 +42,13 @@ final class Names {
         ? "item"
         : singular;
   }
+
+  /** The top-level type that holds {@code t}, or {@code t}'s erasure when it is top-level. */
+  static ITypeBinding outermost(ITypeBinding t) {
+    ITypeBinding top = t.getErasure();
+    while (top.getDeclaringClass() != null) {
+      top = top.getDeclaringClass();
+    }
+    return top;
+  }
 }

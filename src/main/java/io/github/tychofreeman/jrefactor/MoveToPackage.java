@@ -338,10 +338,7 @@ final class MoveToPackage {
   }
 
   private static ITypeBinding topLevel(ITypeBinding t) {
-    while (t != null && t.getDeclaringClass() != null) {
-      t = t.getDeclaringClass();
-    }
-    return t == null ? null : t.getTypeDeclaration();
+    return t == null ? null : Names.outermost(t);
   }
 
   private static String packageOf(ITypeBinding t) {

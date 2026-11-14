@@ -94,7 +94,7 @@ final class EnumSwitch {
       int line,
       String as)
       throws Exception {
-    Path eFile = TypeSwitch.fileAround(project, e);
+    Path eFile = project.fileOf(e);
     if (eFile == null) {
       throw new Refusal(
           "the switch is over "
