@@ -16,7 +16,9 @@ import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.junit.jupiter.api.Test;
@@ -110,5 +112,22 @@ class NodesTest {
     assertEquals(60, shown.length());
     assertTrue(shown.startsWith("String.join(\", \", \"aaaa"), shown);
     assertTrue(shown.endsWith("..."), shown);
+  }
+
+  @Test
+  void aWriteIsSeenThroughParentheses() {
+    CompilationUnit unit =
+        Jdt.parseSyntax("class W { void m(int a, int b) { (a)++; ((b)) = 1; --a; a = -b; } }");
+    List<String> written =
+        Nodes.all(unit, SimpleName.class).stream()
+            .filter(Nodes::written)
+            .map(n -> n.getIdentifier() + "@" + n.getStartPosition())
+            .toList();
+    assertEquals(4, written.size(), written.toString());
+    assertTrue(
+        Nodes.all(unit, PrefixExpression.class).stream()
+            .anyMatch(p ->
+                p.getOperator() == PrefixExpression.Operator.MINUS
+                    && !Nodes.written(p.getOperand())));
   }
 }
