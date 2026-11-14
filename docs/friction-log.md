@@ -1648,3 +1648,15 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   (a visitor) were rewritten with `replace_declaration`: no tool turns a visitor of three node
   kinds into a filter over `Nodes.all`.
 - No Java by hand.
+
+## 2026-11-14: node-text
+
+- All through the tools: `move` of `Generated.source` to `Nodes`, `fold` of `Nodes.end` and of
+  `Nodes.source` over the project, then `inline` of each of the eleven private copies, which
+  `fold` had turned into delegates. One call per copy, in a shell loop: a batch would have done
+  it in one, but each copy's file had to be named.
+- `rename` of `Nodes.source` to `text` was refused: its parameter is named `text`. Kept `source`.
+- `fold` left ten sites where the node expression is a getter called twice (`d.getJavadoc()`):
+  "a call would evaluate it once". A getter of an AST node has no effect; a way to tell `fold`
+  that a getter is pure would have taken them.
+- `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.

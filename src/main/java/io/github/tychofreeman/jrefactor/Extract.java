@@ -88,8 +88,7 @@ final class Extract {
     }
 
     boolean contains(ASTNode node) {
-      return node.getStartPosition() >= startOffset
-          && node.getStartPosition() + node.getLength() <= endOffset;
+      return node.getStartPosition() >= startOffset && Nodes.end(node) <= endOffset;
     }
 
     String lines() {

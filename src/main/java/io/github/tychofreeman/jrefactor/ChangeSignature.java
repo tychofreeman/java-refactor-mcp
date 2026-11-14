@@ -84,7 +84,7 @@ final class ChangeSignature {
       for (Signatures.Decl d : decls) {
         Signatures.requireReturnType(d, family);
         Type old = d.m().getReturnType2();
-        if (src(d.file(), old).equals(returnType)) {
+        if (Nodes.source(d.file().text(), old).equals(returnType)) {
           continue;
         }
         change.replace(d.file(), old, returnType);
@@ -186,7 +186,7 @@ final class ChangeSignature {
     List<String> now = new ArrayList<>();
     List<String> kept = new ArrayList<>();
     for (Object o : thrown) {
-      String text = src(d.file(), (ASTNode) o);
+      String text = Nodes.source(d.file().text(), (ASTNode) o);
       now.add(text);
       String match = matching(removed, (Type) o, text);
       if (match == null) {
@@ -198,7 +198,8 @@ final class ChangeSignature {
     for (String name : added) {
       boolean has = false;
       for (Object o : thrown) {
-        has |= matching(List.of(name), (Type) o, src(d.file(), (ASTNode) o)) != null;
+        has |=
+            matching(List.of(name), (Type) o, Nodes.source(d.file().text(), (ASTNode) o)) != null;
       }
       if (!has) {
         kept.add(name);
@@ -328,7 +329,7 @@ final class ChangeSignature {
           change.replace(s, r, "return;");
         }
       } else if (statement(e)) {
-        String call = src(s, e) + ";";
+        String call = Nodes.source(s.text(), e) + ";";
         if (r.getParent() instanceof Block) {
           change.replace(
               s,
@@ -350,7 +351,7 @@ final class ChangeSignature {
         + ", line "
         + s.line(e)
         + " returns "
-        + src(s, e)
+        + Nodes.source(s.text(), e)
         + ", which may do or throw something and is not a statement, so a void method cannot"
         + " keep it. Put it in a local first (extract_variable), or change the body in the same"
         + " batch.";
@@ -428,9 +429,5 @@ final class ChangeSignature {
       return true;
     }
     return false;
-  }
-
-  private static String src(Signatures.Source s, ASTNode n) {
-    return s.text().substring(n.getStartPosition(), Nodes.end(n));
   }
 }

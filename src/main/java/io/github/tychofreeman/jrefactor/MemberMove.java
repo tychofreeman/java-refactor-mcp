@@ -219,11 +219,6 @@ final class MemberMove {
     return edits;
   }
 
-  /** The text of {@code m} as written in {@code text}. */
-  static String textOf(String text, BodyDeclaration m) {
-    return text.substring(m.getStartPosition(), Nodes.end(m));
-  }
-
   /** The top-level type of {@code unit} named {@code name}, or null. */
   static TypeDeclaration typeNamed(CompilationUnit unit, String name) {
     for (Object o : unit.types()) {

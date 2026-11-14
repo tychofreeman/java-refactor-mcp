@@ -570,7 +570,7 @@ final class Signatures {
       List<String> out = new ArrayList<>();
       for (Object o : node.parameters()) {
         ASTNode p = (ASTNode) o;
-        out.add(file.text().substring(p.getStartPosition(), Nodes.end(p)));
+        out.add(Nodes.source(file.text(), p));
       }
       return out;
     }
@@ -978,8 +978,7 @@ final class Signatures {
                 + c.where(argument)
                 + " passes "
                 + argument
-                + (here.equals(
-                        c.file().text().substring(argument.getStartPosition(), Nodes.end(argument)))
+                + (here.equals(Nodes.source(c.file().text(), argument))
                     ? ", in which a name means something else than in the method (a member of"
                         + " another object than the one the method runs on, or another"
                         + " overload)"
@@ -1107,7 +1106,7 @@ final class Signatures {
     }
     SignatureChange change = new SignatureChange(family);
     String text = d.file().text();
-    String local = text.substring(p.getStartPosition(), Nodes.end(p)) + " = " + value + ";";
+    String local = Nodes.source(text, p) + " = " + value + ";";
     declareFirst(change, d.file(), m, local);
     change.remove(d.file(), m.parameters(), at);
     change.removeParamTag(d, at);

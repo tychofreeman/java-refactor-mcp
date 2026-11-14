@@ -97,7 +97,7 @@ final class PullUp {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Map<Path, String> texts = holding.texts();
-    String movedText = MemberMove.textOf(text, moved);
+    String movedText = Nodes.source(text, moved);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
     String targetText = Edits.textOf(texts, target);
     if (twin != null) {

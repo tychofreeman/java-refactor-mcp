@@ -244,6 +244,6 @@ class NarrowCheckStressTest {
   }
 
   private static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength();
+    return Nodes.end(node);
   }
 }

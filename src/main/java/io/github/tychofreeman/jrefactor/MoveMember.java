@@ -196,7 +196,7 @@ final class MoveMember {
           fragments.add(site.getExpression());
         }
         if (!isStatic && site.getExpression() != null && NonNull.mayBeNull(site.getExpression())) {
-          nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
+          nullable.add(Nodes.source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
         list.add(
             rewrite(
@@ -693,8 +693,8 @@ final class MoveMember {
         // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
         parts.add(
             keep && NonNull.mayBeNull(expr)
-                ? "java.util.Objects.requireNonNull(" + source(fileText, expr) + ")"
-                : source(fileText, expr));
+                ? "java.util.Objects.requireNonNull(" + Nodes.source(fileText, expr) + ")"
+                : Nodes.source(fileText, expr));
       } else {
         ASTNode owner = owningType(site);
         if (owner instanceof AnonymousClassDeclaration) {
@@ -736,7 +736,7 @@ final class MoveMember {
                 + " is called inside another argument of a call. Move the inner call into a"
                 + " variable first.");
       }
-      parts.add(source(fileText, arg));
+      parts.add(Nodes.source(fileText, arg));
     }
     int s = site.getStartPosition();
     return new TextEdit(
@@ -760,10 +760,6 @@ final class MoveMember {
       }
     }
     return null;
-  }
-
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
   }
 
   /**

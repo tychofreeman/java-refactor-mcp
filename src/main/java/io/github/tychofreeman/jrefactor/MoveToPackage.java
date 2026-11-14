@@ -102,7 +102,7 @@ final class MoveToPackage {
                 list.add(
                     new TextEdit(
                         n.getStartPosition(),
-                        n.getStartPosition() + n.getLength(),
+                        Nodes.end(n),
                         newName + imported.substring(oldName.length())));
                 hits.add(u.getLineNumber(i.getStartPosition()));
               }
@@ -169,7 +169,7 @@ final class MoveToPackage {
       if (f.equals(opened.file())) {
         if (u.getPackage() != null) {
           ASTNode p = u.getPackage().getName();
-          list.add(new TextEdit(p.getStartPosition(), p.getStartPosition() + p.getLength(), pkg));
+          list.add(new TextEdit(p.getStartPosition(), Nodes.end(p), pkg));
         } else {
           // The default package: the package line goes before the imports and the type.
           int at =

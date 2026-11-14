@@ -960,8 +960,7 @@ public final class Rename {
     return TextEdit.apply(
         source,
         occurrences.stream()
-            .map(n ->
-                new TextEdit(n.getStartPosition(), n.getStartPosition() + n.getLength(), newName))
+            .map(n -> new TextEdit(n.getStartPosition(), Nodes.end(n), newName))
             .toList(),
         0);
   }

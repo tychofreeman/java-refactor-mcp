@@ -109,17 +109,11 @@ final class ConvertLambda {
         Map.of(opened.file(), text),
         Map.of(
             opened.file(),
-            List.of(
-                new TextEdit(
-                    node.getStartPosition(),
-                    node.getStartPosition() + node.getLength(),
-                    replacement))),
+            List.of(new TextEdit(node.getStartPosition(), Nodes.end(node), replacement))),
         NameCheck.meanings(List.of(node)),
         "converting the " + what + " at line " + line);
     String after =
-        text.substring(0, node.getStartPosition())
-            + replacement
-            + text.substring(node.getStartPosition() + node.getLength());
+        text.substring(0, node.getStartPosition()) + replacement + text.substring(Nodes.end(node));
     Edits.Written written =
         Edits.gated(
             project,
@@ -157,7 +151,7 @@ final class ConvertLambda {
         && c.getExpression() == null
         && c.typeArguments().isEmpty()
         && params.equals(names(c.arguments()))) {
-      return source(text, c.getType()) + "::new";
+      return Nodes.source(text, c.getType()) + "::new";
     }
     if (body instanceof SuperMethodInvocation s
         && s.getQualifier() == null
@@ -193,16 +187,16 @@ final class ConvertLambda {
     if (receiver instanceof Name n && params.equals(args)) {
       IBinding b = n.resolveBinding();
       if (b instanceof ITypeBinding) {
-        return source(text, n) + "::" + m;
+        return Nodes.source(text, n) + "::" + m;
       }
       if (b instanceof IVariableBinding v && !params.contains(n.getFullyQualifiedName())) {
         if (!fixed(v)) {
           throw new Refusal(
-              source(text, n)
+              Nodes.source(text, n)
                   + " is a field that may change, and a method reference evaluates its receiver"
                   + " once, where the lambda reads it at each call. Keep the lambda.");
         }
-        return source(text, n) + "::" + m;
+        return Nodes.source(text, n) + "::" + m;
       }
     }
     throw new Refusal(NOT_ONE_CALL);
@@ -236,36 +230,36 @@ final class ConvertLambda {
               + "]"
               + "[]".repeat(t.getDimensions() - 1);
         }
-        return ps + " -> new " + source(text, c.getType()) + "(" + all + ")";
+        return ps + " -> new " + Nodes.source(text, c.getType()) + "(" + all + ")";
       }
       case SuperMethodReference s -> {
         return ps + " -> super." + m + "(" + all + ")";
       }
       case TypeMethodReference t -> {
         return isStatic
-            ? ps + " -> " + source(text, t.getType()) + "." + m + "(" + all + ")"
+            ? ps + " -> " + Nodes.source(text, t.getType()) + "." + m + "(" + all + ")"
             : ps + " -> " + names.get(0) + "." + m + "(" + rest + ")";
       }
       case ExpressionMethodReference e -> {
         Expression on = e.getExpression();
         if (on instanceof Name n && n.resolveBinding() instanceof ITypeBinding) {
           return isStatic
-              ? ps + " -> " + source(text, n) + "." + m + "(" + all + ")"
+              ? ps + " -> " + Nodes.source(text, n) + "." + m + "(" + all + ")"
               : ps + " -> " + names.get(0) + "." + m + "(" + rest + ")";
         }
         if (on instanceof ThisExpression) {
-          return ps + " -> " + source(text, on) + "." + m + "(" + all + ")";
+          return ps + " -> " + Nodes.source(text, on) + "." + m + "(" + all + ")";
         }
         if (!(on instanceof Name n
             && n.resolveBinding() instanceof IVariableBinding v
             && fixed(v))) {
           throw new Refusal(
               "the receiver "
-                  + source(text, on)
+                  + Nodes.source(text, on)
                   + " is evaluated once by the method reference, and would be at each call by a"
                   + " lambda. Put it in a variable first.");
         }
-        return ps + " -> " + source(text, on) + "." + m + "(" + all + ")";
+        return ps + " -> " + Nodes.source(text, on) + "." + m + "(" + all + ")";
       }
       default -> throw new Refusal("this kind of method reference is not converted yet.");
     }
@@ -298,7 +292,7 @@ final class ConvertLambda {
     int shift =
         Lines.indentOf(text, m.getStartPosition()).length()
             - Lines.indentOf(text, c.getStartPosition()).length();
-    String body = source(text, m.getBody());
+    String body = Nodes.source(text, m.getBody());
     if (shift > 0) {
       body = body.replace("\n" + " ".repeat(shift), "\n");
     }
@@ -327,9 +321,9 @@ final class ConvertLambda {
     }
     String body;
     if (l.getBody() instanceof Block b) {
-      body = source(text, b).replace("\n", "\n  ");
+      body = Nodes.source(text, b).replace("\n", "\n  ");
     } else {
-      String expr = source(text, l.getBody());
+      String expr = Nodes.source(text, l.getBody());
       body =
           "{\n"
               + ind
@@ -494,9 +488,5 @@ final class ConvertLambda {
       out.add(name);
     }
     return out;
-  }
-
-  private static String source(String text, ASTNode n) {
-    return text.substring(n.getStartPosition(), n.getStartPosition() + n.getLength());
   }
 }
