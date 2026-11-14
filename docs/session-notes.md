@@ -599,6 +599,12 @@ Each was chosen from options; the record named beside it has the options it beat
   JVM (`GoldenTest.junitJars`), for a tool that needs a library to resolve.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
   cached type count must equal `TypeCheck.uncached`.
+- One golden case, or a few (#195, 2026-11-13): `flock /tmp/jr-heavy.lock ./mvnw -q -o test
+  -Dtest=GoldenTest -Djrefactor.golden=add_case,rename_*` (directory names or globs with `*` and
+  `?`, comma-separated; `Cases.select`); a probe likewise with `-Dtest=ProbeTest
+  -Djrefactor.probe=<names>`. A pattern that matches no case fails the run. Surefire's
+  `-Dtest=GoldenTest#<case>` selects nothing (its filter sees the factory method `cases`, not the
+  dynamic tests), so no scratch script is needed to run one case.
 - A rule in the gate that skips work (such as the narrowed check) is checked by
   a stress run on a real project before it is merged: the narrowed check's first
   rule missed three of 60 random edits, all through inheritance, though every

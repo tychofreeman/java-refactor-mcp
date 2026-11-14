@@ -251,7 +251,9 @@ open an issue with the entries. This repository's own log is
 
 ## Contributing
 
-Build and test with `./mvnw verify`. How the server is built, the rules for
+Build and test with `./mvnw verify`; one golden case, or a few, with
+`./mvnw test -Dtest=GoldenTest -Djrefactor.golden=add_case,rename_*` (`ProbeTest`
+and `-Djrefactor.probe=...` for the behavior probes). How the server is built, the rules for
 working in this repo, and the roadmap:
 
 - [CLAUDE.md](CLAUDE.md): how Claude Code works in this repo
