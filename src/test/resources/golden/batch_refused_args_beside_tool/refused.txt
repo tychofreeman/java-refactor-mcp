@@ -1,1 +1,0 @@
-step 2 (replace_text) has its arguments file, old and new beside "tool"; a step's arguments go under "args": {"tool": "replace_text", "id": ..., "args": {"file": ..., "old": ..., "new": ...}}. Step 3 has its arguments beside "tool" too. Nothing was changed.

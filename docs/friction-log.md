@@ -1312,3 +1312,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   scratch scripts, not in the repo.
 - My first `git add -A` on another branch (cli-batch-retry) committed the user's untracked
   `examples/darktable-project-CLAUDE.md`; the user kept it in the history. Stage by path.
+
+## 2026-11-13: batch-args-accept
+
+- The golden case was renamed and a new one written by `git mv`, `cp` and heredocs: no tool
+  copies a case directory (as skeleton-build-blocks logged). `result.txt` was pinned from a run
+  with a placeholder.
