@@ -261,13 +261,14 @@ final class Stubs {
           // A call that fits no overload of a project method: the stub is an overload, typed from
           // the call.
           case IProblem.UndefinedMethod, IProblem.ParameterMismatch -> {
-            MethodInvocation call = ancestorOrSelf(node, MethodInvocation.class);
+            MethodInvocation call = Nodes.ancestorOrSelf(node, MethodInvocation.class);
             if (call != null) {
               method(unit, call);
             }
           }
           case IProblem.UndefinedConstructor -> {
-            ClassInstanceCreation creation = ancestorOrSelf(node, ClassInstanceCreation.class);
+            ClassInstanceCreation creation =
+                Nodes.ancestorOrSelf(node, ClassInstanceCreation.class);
             if (creation != null) {
               constructor(unit, creation);
             }
@@ -305,7 +306,7 @@ final class Stubs {
           }
           case IProblem.UndefinedType -> {
             if (p.getArguments().length > 0
-                && ancestorOrSelf(node, ImportDeclaration.class) == null) {
+                && Nodes.ancestorOrSelf(node, ImportDeclaration.class) == null) {
               type(file, p.getArguments()[0]);
             }
           }
@@ -320,7 +321,8 @@ final class Stubs {
       ITypeBinding owner;
       boolean isStatic;
       if (receiver == null) {
-        AbstractTypeDeclaration enclosing = ancestorOrSelf(call, AbstractTypeDeclaration.class);
+        AbstractTypeDeclaration enclosing =
+            Nodes.ancestorOrSelf(call, AbstractTypeDeclaration.class);
         owner = enclosing == null ? null : enclosing.resolveBinding();
         isStatic = inStaticContext(call);
       } else if (receiver instanceof Name name && name.resolveBinding() instanceof ITypeBinding t) {
@@ -767,7 +769,7 @@ final class Stubs {
      */
     private void bareField(CompilationUnit unit, SimpleName use) throws IOException {
       uses.clear();
-      AbstractTypeDeclaration enclosing = ancestorOrSelf(use, AbstractTypeDeclaration.class);
+      AbstractTypeDeclaration enclosing = Nodes.ancestorOrSelf(use, AbstractTypeDeclaration.class);
       ITypeBinding owner = enclosing == null ? null : enclosing.resolveBinding();
       Path target = project.fileOf(owner);
       String name = use.getIdentifier();
@@ -864,22 +866,12 @@ final class Stubs {
    * do not make the call an instance one.
    */
   private static boolean inStaticContext(ASTNode node) {
-    AbstractTypeDeclaration owner = ancestorOrSelf(node, AbstractTypeDeclaration.class);
+    AbstractTypeDeclaration owner = Nodes.ancestorOrSelf(node, AbstractTypeDeclaration.class);
     for (ASTNode n = node.getParent(); n != null; n = n.getParent()) {
       if (n instanceof BodyDeclaration d && d.getParent() == owner) {
         return Modifier.isStatic(d.getModifiers());
       }
     }
     return false;
-  }
-
-  /** {@code node} or its nearest ancestor of {@code type}, or null. */
-  private static <T> T ancestorOrSelf(ASTNode node, Class<T> type) {
-    for (ASTNode n = node; n != null; n = n.getParent()) {
-      if (type.isInstance(n)) {
-        return type.cast(n);
-      }
-    }
-    return null;
   }
 }

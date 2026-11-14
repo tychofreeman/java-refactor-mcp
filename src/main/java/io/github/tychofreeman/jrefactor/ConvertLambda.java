@@ -475,10 +475,7 @@ final class ConvertLambda {
    */
   private static List<String> parameterNames(IMethodBinding sam, ASTNode at) {
     Set<String> used = new HashSet<>();
-    ASTNode member = at;
-    while (member != null && !(member instanceof BodyDeclaration)) {
-      member = member.getParent();
-    }
+    ASTNode member = Nodes.ancestorOrSelf(at, BodyDeclaration.class);
     if (member != null) {
       for (SimpleName n : Nodes.all(member, SimpleName.class)) {
         used.add(n.getIdentifier());
