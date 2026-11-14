@@ -788,6 +788,9 @@ final class Signatures {
                 + ". Remove it without value after changing that call, or keep it.");
       }
     }
+    if (!sameType(family, at, param, field)) {
+      return removeWithExpression(project, family, at, parameter, value);
+    }
     SignatureChange change = new SignatureChange(family);
     String read = literal ? value : readOf(m, field, value);
     for (SimpleName n : Nodes.all(m.getBody(), SimpleName.class)) {
@@ -1237,5 +1240,27 @@ final class Signatures {
       }
     }
     return true;
+  }
+
+  /**
+   * Whether {@code value}, a literal or {@code field}, has the type of {@code param} at every call,
+   * so that each read of the parameter can become a read of it and compute the same.
+   */
+  private static boolean sameType(
+      MethodFamily family, int at, IVariableBinding param, IVariableBinding field) {
+    if (param == null) {
+      return false;
+    }
+    String key = param.getType().getKey();
+    if (field != null) {
+      return field.getType().getKey().equals(key);
+    }
+    for (Call c : family.calls) {
+      ITypeBinding t = ((Expression) c.arguments().get(at)).resolveTypeBinding();
+      if (t == null || !t.getKey().equals(key)) {
+        return false;
+      }
+    }
+    return !family.calls.isEmpty();
   }
 }
