@@ -25,16 +25,19 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PackageDeclaration;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.QualifiedType;
+import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodReference;
+import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeMethodReference;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -89,6 +92,7 @@ final class MoveType {
     Map<String, List<Integer>> lines = new TreeMap<>();
     int references = 0;
     TreeMap<Integer, String> widened = new TreeMap<>();
+    Set<String> accessed = new TreeSet<>();
     for (Map.Entry<Path, String> e : held.entrySet()) {
       Path f = e.getKey();
       String text = e.getValue();
@@ -132,7 +136,18 @@ final class MoveType {
       }
       Set<String> qualifiers = new HashSet<>();
       qualifyAndWiden(
-          u, text, decl, type, key, outerKey, outerLabel, simple, edits, widened, qualifiers);
+          u,
+          text,
+          decl,
+          type,
+          key,
+          outerKey,
+          outerLabel,
+          simple,
+          edits,
+          widened,
+          accessed,
+          qualifiers);
       for (Object o : decl.modifiers()) {
         if (o instanceof Modifier m && (m.isStatic() || m.isPrivate() || m.isProtected())) {
           edits.add(dropModifier(text, m));
@@ -229,6 +244,9 @@ final class MoveType {
     }
     if (!widened.isEmpty()) {
       result += "; widened " + joinAnd(new ArrayList<>(widened.values())) + " to package-private";
+    }
+    if (!accessed.isEmpty()) {
+      result += "; reads of " + joinAnd(new ArrayList<>(accessed)) + " became accessor calls";
     }
     return new Outcome(result, declared);
   }
@@ -368,6 +386,7 @@ final class MoveType {
       String simple,
       List<TextEdit> edits,
       Map<Integer, String> widened,
+      Set<String> accessed,
       Set<String> qualifiers) {
     int start = decl.getStartPosition();
     int end = start + decl.getLength();
@@ -385,7 +404,50 @@ final class MoveType {
               edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), q + "."));
               qualifiers.add(q.contains(".") ? q.substring(0, q.indexOf('.')) : q);
             }
-            widen(b, inside);
+            if (!accessorCall(n, b, inside)) {
+              widen(b, inside);
+            }
+            return true;
+          }
+
+          /**
+           * Whether {@code b}, which {@code n} reads, is a record's field that the move puts on the
+           * other side of the boundary from the read: the read, which can no longer see the private
+           * field, becomes a call of the accessor, which means the same when the accessor only
+           * returns the field.
+           */
+          private boolean accessorCall(SimpleName n, IBinding b, boolean inside) {
+            if (!(b instanceof IVariableBinding v)
+                || !v.isField()
+                || Modifier.isStatic(v.getModifiers())
+                || v.getDeclaringClass() == null
+                || !v.getDeclaringClass().isRecord()) {
+              return false;
+            }
+            ITypeBinding r = v.getDeclaringClass().getTypeDeclaration();
+            ASTNode record = u.findDeclaringNode(r.getKey());
+            if (record == null
+                || (record.getStartPosition() >= start && record.getStartPosition() < end)
+                    == inside) {
+              return false;
+            }
+            String field = label(v.getVariableDeclaration(), key, outerKey, outerLabel, simple);
+            if (!returnsField(u, r, v.getName())) {
+              throw new Refusal(
+                  (inside ? simple : outerLabel)
+                      + " reads the field "
+                      + field
+                      + ", which is private once "
+                      + simple
+                      + " is top-level, and "
+                      + field
+                      + "() does more than return it. Replace each read with a call of "
+                      + field
+                      + "() if that is what it should mean, then move it again.");
+            }
+            int at = n.getStartPosition() + n.getLength();
+            edits.add(new TextEdit(at, at, "()"));
+            accessed.add(field);
             return true;
           }
 
@@ -622,5 +684,32 @@ final class MoveType {
     return String.join(", ", items.subList(0, items.size() - 1))
         + " and "
         + items.get(items.size() - 1);
+  }
+
+  /**
+   * Whether the accessor of record {@code r}'s component {@code name} is the generated one, or one
+   * that only returns the field.
+   */
+  private static boolean returnsField(CompilationUnit u, ITypeBinding r, String name) {
+    for (IMethodBinding m : r.getDeclaredMethods()) {
+      if (!m.getName().equals(name) || m.getParameterTypes().length != 0) {
+        continue;
+      }
+      if (m.isSyntheticRecordMethod()) {
+        return true;
+      }
+      if (!(u.findDeclaringNode(m.getKey()) instanceof MethodDeclaration d)
+          || d.getBody() == null
+          || d.getBody().statements().size() != 1
+          || !(d.getBody().statements().get(0) instanceof ReturnStatement ret)) {
+        return false;
+      }
+      return (ret.getExpression() instanceof SimpleName s && s.getIdentifier().equals(name))
+          || (ret.getExpression() instanceof FieldAccess f
+              && f.getExpression() instanceof ThisExpression t
+              && t.getQualifier() == null
+              && f.getName().getIdentifier().equals(name));
+    }
+    return true;
   }
 }

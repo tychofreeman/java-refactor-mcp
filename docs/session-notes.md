@@ -309,6 +309,12 @@ Each was chosen from options; the record named beside it has the options it beat
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
 
+- `move` of a member type writes a read of a record's field that crosses the new boundary (a
+  nested record's private fields are visible to the whole top-level type) as an accessor call
+  (#184, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
+  the field (`returnsField`). JDT's `findDeclaringNode` gives null for a record's field:
+  `NameCheck.declaration` takes the component of that name.
+
 - `move_file` (#81, 2026-11-04) is `MoveFile`: each file through `Gate.write` (a null
   text deletes), so a move, copy or delete is one undo. Text only; Java under a
   source root is refused for `move_type`.

@@ -1,0 +1,1 @@
+Helper reads the field Range.length, which is private once Range is top-level, and Range.length() does more than return it
