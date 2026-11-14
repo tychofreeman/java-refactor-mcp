@@ -1176,7 +1176,9 @@ in the same turn only if it is sent after it.
   `line`/`column` addressing and `imports` are not built.
 
 Refusals come back as an error result whose text starts `refused: `. Other
-failures start `engine error (not a refusal; ...)`.
+failures start `engine error (not a refusal; ...)`, a `StackOverflowError` or an
+`OutOfMemoryError` of one call too, and the server answers the next call (#490); another
+`VirtualMachineError` ends the server.
 
 ## Signature changes (built)
 
