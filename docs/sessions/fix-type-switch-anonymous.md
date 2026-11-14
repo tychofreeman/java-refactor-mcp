@@ -1,6 +1,6 @@
 # type_switch_to_method: the pattern variable inside an anonymous class
 
-- **Item:** issue #551 (found while fixing #468; roadmap row 267, order 257)
+- **Item:** issue #551 (found while fixing #468; roadmap row 330, order 320)
 - **Date:** 2026-11-14
 - **Branch:** fix-type-switch-anonymous
 

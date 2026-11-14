@@ -144,7 +144,10 @@ its first bound's erasure, or `Object`, and type arguments are dropped (`raise(O
 #177, 2026-11-13, issue #408). The refusal for several members of a name lists each by the form
 that names it: "Ex has 2 members named raise: raise(Object), raise(Throwable). Name one with its
 parameter types, as raise(Throwable)." (it listed `raise(T), raise(T)` and suggested `raise(T)`,
-which it then refused again). `line` turns into the same name (`ByLine.named`).
+which it then refused again). `line` turns into the same name (`ByLine.named`). `move`, `pull_up`,
+`push_down` and `extract_supertype` take the same names (`MemberMove.member`, issue #483): their
+several-methods refusal suggests the erased form too ("Pick one: name one with its parameter
+types, as Ex.raise(Object)."), where it suggested `Ex.raise(T)` and refused that again.
 
 ## Names shared with gorefactor
 
@@ -702,7 +705,7 @@ would mean its own superclass. Keep the switch as it is." A field read through t
 where the body declares a variable of that name, else `radius`. A body's own locals are told by
 binding, so a field of the method's class named as a local of another scope is refused as a field.
 The pattern variable used inside an anonymous or local class of a case body is refused (roadmap
-#267, issue #551, 2026-11-14), since `this` there would be that class's object: "the case uses c
+#330, issue #551, 2026-11-14), since `this` there would be that class's object: "the case uses c
 inside a class it declares, where this would be that class's object, not Circle's. Declare a local
 for it before that class (Circle circle = c;) and use the local inside the class, then call again."
 
@@ -1559,8 +1562,11 @@ first version takes `file` (the file that declares the field), `name` (`Type.fie
 and `type` (the new type as written).
 
 - Result: `changed the type of Type.field from <old> to <new> in <file>`.
-- Refuses: a name that is not a field of the top-level class; a declaration of several
-  fields; a change that adds compile errors (the gate names them, nothing changes).
+- Refuses: a `type` that does not parse ("type long) does not parse: ...", #492, as for a
+  method); a name that is not a field of the top-level class; a declaration of several
+  fields; a field that writes its `[]` after its name ("Tally.counts writes its [] after its
+  name. Write it after the type first.", #492: `int counts[]` to `long[]` had become
+  `long[][]`); a change that adds compile errors (the gate names them, nothing changes).
 - A method (roadmap #82, 2026-11-04): `name` is `Type.method` (with parameter types for
   an overload) and `parameter` (whose type changes) or `return_type: true`; optional
   `imports`. Every declaration in the method's family (overrides, implementations)
@@ -1987,7 +1993,9 @@ The project is the nearest directory with a `pom.xml` at or above `-C`
 (default: the current directory). `key=value` values are typed by the tool's
 schema (integer, boolean; arrays and objects as JSON). `key_file=path` gives
 the text argument `key` from a file. Output is the result the model would
-read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. The undo
+read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. JSON that does not parse (the
+object, with or without sections, or an array or object `key=value`) is refused with the
+parser's message (#491). The undo
 stack (the newest 20 changes) is kept between runs in
 `$XDG_CACHE_HOME/jrefactor` or `~/.cache/jrefactor`, one file per project,
 beside the Maven classpath (used while `pom.xml` is unchanged and every entry

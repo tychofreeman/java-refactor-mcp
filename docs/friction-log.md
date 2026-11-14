@@ -1441,3 +1441,32 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand: `add_declaration` (the test), `replace_text` (the fix; its first send rethrew
   the union-typed `e`, which the gate refused as an unhandled `Exception`).
+
+## 2026-11-13: fix-cli-malformed-json
+
+- No Java by hand: `add_declaration` (the test), `replace_text` (its second case), one `batch` of
+  two `replace_text`s (the fix).
+
+## 2026-11-13: fix-field-change-type
+
+- No Java by hand. `extract_function` twice (the new parameter's checks, the return type's
+  preconditions), then one `batch`: `replace_text` for the doc comments and the visibility, and
+  `fold` of each. `fold Signatures.checkNewParameter` missed `EnumField`'s copy, which writes
+  `Signatures.parsesAs(...)` where the body has `parsesAs(...)`: the qualifier of a static call
+  in the same class is not matched to the bare name. Tried: `fold` alone (1 match). Done with
+  `replace_text` instead. `fold` could match a call qualified by the method's own class.
+- `extract_function` writes a private method; making it package-private for `fold` across
+  classes took a `replace_text` (no visibility option on `fold`).
+## 2026-11-13: member-lookup
+
+- `move` of `MemberMove.label` to `Declarations` was refused for a method reference
+  (`MemberMove::label` in `EnumField`); the reference was swapped to `Declarations::methodLabel`
+  (what it should hand back) by `replace_text` in the same `batch`, then the move passed.
+- A batch sent through an unquoted heredoc lost the `\\.` of a `split` regex: the shell trap the
+  session notes name. Resent the step by `retry` with an `@@` section in a quoted heredoc.
+- `fold` was not tried for the name-parsing copy: the extracted method ends in `return new
+  MemberName(...)`, which the copy in `MemberMove.member` does not have. The copy was replaced by
+  `replace_statements` with the call. A fold of a method returning a record of the locals it
+  sets could match such a copy.
+- Otherwise through the tools: `extract_function` (twice, one returning a record), `move`,
+  `rename` (twice), statement edits. Goldens are resources.
