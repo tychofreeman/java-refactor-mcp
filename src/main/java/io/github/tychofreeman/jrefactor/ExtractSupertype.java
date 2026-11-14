@@ -117,7 +117,7 @@ final class ExtractSupertype {
               + ") from "
               + name
               + " with "
-              + Extract.and(members)
+              + Names.listed(members)
               + "; "
               + name
               + " implements it");
@@ -179,7 +179,7 @@ final class ExtractSupertype {
             + ") from "
             + name
             + " with "
-            + Extract.and(members)
+            + Names.listed(members)
             + "; "
             + name
             + " extends it");

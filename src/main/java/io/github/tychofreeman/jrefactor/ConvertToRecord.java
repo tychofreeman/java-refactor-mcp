@@ -136,7 +136,7 @@ final class ConvertToRecord {
       throw new Refusal(
           name
               + " does not define "
-              + Extract.and(missing)
+              + Names.listed(missing)
               + overload(type)
               + ", which a record generates from its components: equality would compare values,"
               + " not identity, and toString would list them. Pass value_semantics=true if that is"
@@ -219,8 +219,8 @@ final class ConvertToRecord {
             + String.join(", ", names)
             + ") in "
             + rel
-            + (missing.isEmpty() ? "" : "; it now has the record's " + Extract.and(missing))
-            + (widened.isEmpty() ? "" : "; made " + Extract.and(widened) + " public")
+            + (missing.isEmpty() ? "" : "; it now has the record's " + Names.listed(missing))
+            + (widened.isEmpty() ? "" : "; made " + Names.listed(widened) + " public")
             + written.fixed().said(),
         written.declared());
   }

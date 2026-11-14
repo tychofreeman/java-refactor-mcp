@@ -216,9 +216,9 @@ final class SessionReport {
     StringBuilder out = new StringBuilder();
     out.append("- tool calls: ").append(calls.size()).append("\n");
     out.append("- through jrefactor: ")
-        .append(plural(refactorings, "refactoring step"))
+        .append(Names.plural(refactorings, "refactoring step"))
         .append(", ")
-        .append(plural(edits, "edit step"))
+        .append(Names.plural(edits, "edit step"))
         .append("\n");
     if (!typed.carriers.isEmpty()) {
       List<String> parts = new ArrayList<>();
@@ -226,11 +226,11 @@ final class SessionReport {
       out.append("- edit steps by what carried the code: ")
           .append(String.join(", ", parts))
           .append("\n- Java typed in edits: ")
-          .append(plural(typed.java, "character"))
+          .append(Names.plural(typed.java, "character"))
           .append(", ")
           .append(typed.inBuild)
           .append(" in build strings; names in build: ")
-          .append(plural(typed.names, "character"))
+          .append(Names.plural(typed.names, "character"))
           .append("\n");
     }
     if (cliCalls > 0) {
@@ -530,10 +530,6 @@ final class SessionReport {
 
   private static void count(Map<String, Integer> into, String key) {
     into.merge(key, 1, Integer::sum);
-  }
-
-  private static String plural(int n, String what) {
-    return n + " " + what + (n == 1 ? "" : "s");
   }
 
   private static void list(StringBuilder out, String title, List<String> items) {

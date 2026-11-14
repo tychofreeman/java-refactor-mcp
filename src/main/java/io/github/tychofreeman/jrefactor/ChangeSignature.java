@@ -237,9 +237,9 @@ final class ChangeSignature {
   private static String matching(List<String> names, Type t, String text) {
     ITypeBinding b = t.resolveBinding();
     for (String name : names) {
-      String simple = name.substring(name.lastIndexOf('.') + 1);
+      String simple = Names.simpleName(name);
       if (text.equals(name)
-          || text.substring(text.lastIndexOf('.') + 1).equals(simple)
+          || Names.simpleName(text).equals(simple)
               && (!name.contains(".") || b == null || b.getQualifiedName().equals(name))) {
         return name;
       }

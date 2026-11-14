@@ -748,7 +748,7 @@ class RefactoringStressTest {
 
     private static String simple(Type type) {
       String name = type.toString().replaceAll("<.*", "");
-      return name.substring(name.lastIndexOf('.') + 1);
+      return Names.simpleName(name);
     }
   }
 

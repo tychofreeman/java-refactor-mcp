@@ -54,7 +54,7 @@ final class MoveType {
   /** Moves the nested type {@code name} ("Outer.Inner") declared in {@code rel}. */
   static Outcome run(SourceProject project, String rel, String name) throws IOException {
     Path file = project.javaFile(rel);
-    String simple = name.substring(name.lastIndexOf('.') + 1);
+    String simple = Names.simpleName(name);
     Holding holding = Holding.of(project, simple, file);
     Map<Path, String> held = holding.texts();
     Map<Path, CompilationUnit> parsed = holding.units();
@@ -82,7 +82,7 @@ final class MoveType {
       throw new Refusal(
           project.relative(target) + " already exists. Rename " + name + " first, then move it.");
     }
-    String pkg = packageOf(unit);
+    String pkg = Names.packageOf(unit);
     String key = type.getTypeDeclaration().getKey();
     String outerKey = type.getDeclaringClass().getTypeDeclaration().getKey();
     int start = decl.getStartPosition();
@@ -98,7 +98,7 @@ final class MoveType {
       Path f = e.getKey();
       String text = e.getValue();
       CompilationUnit u = parsed.get(f);
-      boolean samePackage = packageOf(u).equals(pkg);
+      boolean samePackage = Names.packageOf(u).equals(pkg);
       List<TextEdit> edits = new ArrayList<>();
       List<ASTNode> refs = new ArrayList<>();
       List<SimpleName> named = new ArrayList<>();
@@ -192,7 +192,7 @@ final class MoveType {
       Boolean lastStatic = null;
       for (Object o : u.imports()) {
         ImportDeclaration i = (ImportDeclaration) o;
-        String last = simpleName(i.getName().getFullyQualifiedName());
+        String last = Names.simpleName(i.getName().getFullyQualifiedName());
         boolean used = i.isOnDemand() || usedInside.contains(last);
         if (!used) {
           continue;
@@ -249,22 +249,23 @@ final class MoveType {
       lines.forEach((r, ls) -> each.add(r + " " + Lines.list(ls)));
       result +=
           ", with "
-              + plural(references, "reference")
+              + Names.plural(references, "reference")
               + " in "
-              + plural(lines.size(), "file")
+              + Names.plural(lines.size(), "file")
               + ": "
               + String.join("; ", each);
     }
     if (!widened.isEmpty()) {
-      result += "; widened " + joinAnd(new ArrayList<>(widened.values())) + " to package-private";
+      result +=
+          "; widened " + Names.listed(new ArrayList<>(widened.values())) + " to package-private";
     }
     if (!accessed.isEmpty()) {
-      result += "; reads of " + joinAnd(new ArrayList<>(accessed)) + " became accessor calls";
+      result += "; reads of " + Names.listed(new ArrayList<>(accessed)) + " became accessor calls";
     }
     if (!sealed.isEmpty()) {
       result +=
           "; wrote a permits clause on "
-              + joinAnd(sealed)
+              + Names.listed(sealed)
               + ", as the move put permitted subtypes in another file";
     }
     return new Outcome(result, declared);
@@ -642,29 +643,8 @@ final class MoveType {
     return String.join("\n", out);
   }
 
-  private static String packageOf(CompilationUnit u) {
-    return u.getPackage() == null ? "" : u.getPackage().getName().getFullyQualifiedName();
-  }
-
   private static String qualified(String pkg, String simple) {
     return pkg.isEmpty() ? simple : pkg + "." + simple;
-  }
-
-  private static String simpleName(String qualified) {
-    return qualified.substring(qualified.lastIndexOf('.') + 1);
-  }
-
-  private static String plural(int n, String what) {
-    return n + " " + what + (n == 1 ? "" : "s");
-  }
-
-  private static String joinAnd(List<String> items) {
-    if (items.size() == 1) {
-      return items.get(0);
-    }
-    return String.join(", ", items.subList(0, items.size() - 1))
-        + " and "
-        + items.get(items.size() - 1);
   }
 
   /**

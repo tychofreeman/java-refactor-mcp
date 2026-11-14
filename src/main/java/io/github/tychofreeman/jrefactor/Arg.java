@@ -11,7 +11,7 @@ import tools.jackson.databind.node.ObjectNode;
  */
 record Arg(String name, ObjectNode schema, boolean mandatory) {
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = Json.MAPPER;
 
   /** The Java file a tool works on. */
   static final Arg FILE = string("file", "Java file path.").required();
