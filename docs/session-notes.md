@@ -263,7 +263,9 @@ Each was chosen from options; the record named beside it has the options it beat
   name is refused saying which it is and listing the file's classes and interfaces
   (`Opened.notAClass`, #155). The other callers of `MemberMove.typeNamed` with their own
   wording (`PullUp`, `MoveMember`, `AddResult`, `InlineClass`, `SubclassToStrategy`) were not
-  changed.
+  changed. `Opened.classOrRecord` also takes a record (#439, 2026-11-13: `inline` only, so far);
+  `MemberMove.member` takes any `AbstractTypeDeclaration`. A tool that should take records
+  switches to it once a golden case shows its algorithm holds for one.
 - A new tool starts from `Opened` (read, parse, find the target) and lists its
   up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
   (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,

@@ -36,7 +36,7 @@ final class MemberMove {
    * with other variables.
    */
   static BodyDeclaration member(
-      TypeDeclaration t, String subName, String name, String rel, String tool) {
+      AbstractTypeDeclaration t, String subName, String name, String rel, String tool) {
     String base = name;
     List<String> params = null;
     int paren = name.indexOf('(');
@@ -52,8 +52,8 @@ final class MemberMove {
       }
     }
     List<MethodDeclaration> named = new ArrayList<>();
-    for (MethodDeclaration m : t.getMethods()) {
-      if (m.getName().getIdentifier().equals(base)) {
+    for (Object o : t.bodyDeclarations()) {
+      if (o instanceof MethodDeclaration m && m.getName().getIdentifier().equals(base)) {
         named.add(m);
       }
     }
@@ -65,8 +65,8 @@ final class MemberMove {
     }
     List<FieldDeclaration> fields = new ArrayList<>();
     if (params == null) {
-      for (FieldDeclaration f : t.getFields()) {
-        if (declaresField(f, base)) {
+      for (Object o : t.bodyDeclarations()) {
+        if (o instanceof FieldDeclaration f && declaresField(f, base)) {
           fields.add(f);
         }
       }

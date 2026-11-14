@@ -1389,6 +1389,8 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   it in a variable first"), a body that uses `super`. A receiver that may be null is
   reported as a change to exceptional behavior (it now fails where the body uses it),
   and refused under `preserve_exceptions`.
+- A method of a record inlines as a class's does (issue #439, 2026-11-13); one of an enum is
+  still refused, naming the file's classes and interfaces, or saying it declares none.
 - A bare field of the body that a local or parameter of the calling member hides is
   qualified, `this.count` (or the type, for a static), so it keeps meaning the field
   (roadmap #93).
