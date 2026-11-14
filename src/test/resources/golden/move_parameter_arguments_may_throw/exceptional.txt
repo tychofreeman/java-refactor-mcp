@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- the arguments bounds[0] and bounds[1] / scale (com/example/Span.java, line 9) now run in the other order, and one may throw: what has run when it throws, or which exception it is, changes

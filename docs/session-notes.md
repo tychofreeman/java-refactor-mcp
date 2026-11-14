@@ -281,6 +281,9 @@ Each was chosen from options; the record named beside it has the options it beat
   call: it reads a final field (#329). `Behavior` asks `changesNow()` of moved code: a lambda
   or anonymous class body runs when it is called, not where it is written (#297). A new tool that moves code into or out of
   a construct asks them, not its own parent walk.
+  `remove_parameter` and `move_parameter` judge an argument by `Signatures.acts` (`Effects`'s
+  changes, a new array, and a string's `+` of an object, whose `toString` `Effects` does not see) and
+  `Signatures.mayThrow` (#475); the old syntax-only `Signatures.pure` is gone.
 - A refactoring that moves code declares it to `Behavior.check` (a `Move`: the code,
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
   the gate runs the effect, place, copy, exceptional and `NameCheck` rules (#96,
@@ -389,7 +392,7 @@ Each was chosen from options; the record named beside it has the options it beat
 - `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
   `references` (a method reference is kept in `family.references`, not refused; `family.sources`
   holds each parsed file, so a referenced method's file is edited once) and
-  `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `pure` and
+  `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `quietAndSafe` (named `pure` until #475) and
   `statement`; the gate judges calls, bodies that still throw and unreachable catches.
   `ThrowsCallers` is `callers`: every file parsed into `family.sources`, calls and declarations
   indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either

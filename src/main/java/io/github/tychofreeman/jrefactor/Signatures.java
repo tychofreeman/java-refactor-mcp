@@ -19,12 +19,8 @@ import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.BooleanLiteral;
-import org.eclipse.jdt.core.dom.CastExpression;
-import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -33,25 +29,17 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
-import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.NullLiteral;
-import org.eclipse.jdt.core.dom.NumberLiteral;
-import org.eclipse.jdt.core.dom.ParenthesizedExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.RecordPattern;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.StringLiteral;
-import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 
 /**
@@ -59,6 +47,19 @@ import org.eclipse.jdt.core.dom.VariableDeclaration;
  * (what it overrides and what overrides it) and at every call in the project.
  */
 final class Signatures {
+
+  /** The types whose {@code toString} a string's {@code +} calls without effect. */
+  private static final Set<String> PLAIN_TO_STRING =
+      Set.of(
+          "java.lang.String",
+          "java.lang.Boolean",
+          "java.lang.Byte",
+          "java.lang.Character",
+          "java.lang.Short",
+          "java.lang.Integer",
+          "java.lang.Long",
+          "java.lang.Float",
+          "java.lang.Double");
 
   private Signatures() {}
 
@@ -157,7 +158,7 @@ final class Signatures {
     }
     for (Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
-      if (!pure(argument)) {
+      if (acts(argument)) {
         throw new Refusal(
             "the argument "
                 + argument
@@ -165,6 +166,16 @@ final class Signatures {
                 + c.where(argument)
                 + ") may have side effects, and removing it would drop them. Assign it to a"
                 + " variable before the call, or remove the call.");
+      }
+      if (mayThrow(argument)) {
+        Exceptional.change(
+            project,
+            "the argument "
+                + argument
+                + " ("
+                + c.where(argument)
+                + ") may throw, and removing it drops that",
+            "assign it to a variable before the call, or keep the parameter.");
       }
     }
     SignatureChange change = new SignatureChange(family);
@@ -205,8 +216,27 @@ final class Signatures {
       List<Expression> impure = new ArrayList<>();
       for (int i = low; i <= high; i++) {
         Expression argument = (Expression) c.arguments().get(i);
-        if (!pure(argument)) {
+        if (acts(argument)) {
           impure.add(argument);
+        }
+      }
+      Expression moved = (Expression) c.arguments().get(from);
+      for (int i = low; i <= high; i++) {
+        Expression other = (Expression) c.arguments().get(i);
+        if (i != from
+            && (mayThrow(moved) && (mayThrow(other) || acts(other))
+                || mayThrow(other) && acts(moved))) {
+          Exceptional.change(
+              project,
+              "the arguments "
+                  + other
+                  + " and "
+                  + moved
+                  + " ("
+                  + c.where(moved)
+                  + ") now run in the other order, and one may throw: what has run when it"
+                  + " throws, or which exception it is, changes",
+              "assign one to a variable before the call first.");
         }
       }
       if (impure.size() > 1) {
@@ -689,45 +719,6 @@ final class Signatures {
         + "("
         + String.join(", ", types)
         + ")";
-  }
-
-  /** Whether evaluating {@code e} can have no side effect: names, literals, this, and the like. */
-  private static boolean pure(Expression e) {
-    return switch (e) {
-      case Name n -> true;
-      case NumberLiteral n -> true;
-      case StringLiteral n -> true;
-      case CharacterLiteral n -> true;
-      case BooleanLiteral n -> true;
-      case NullLiteral n -> true;
-      case TypeLiteral n -> true;
-      case TextBlock n -> true;
-      case ThisExpression n -> true;
-      case LambdaExpression n -> true;
-      case MethodReference n -> true;
-      case FieldAccess f -> pure(f.getExpression());
-      case ParenthesizedExpression p -> pure(p.getExpression());
-      case CastExpression c -> pure(c.getExpression());
-      case InstanceofExpression i -> pure(i.getLeftOperand());
-      case PrefixExpression p ->
-          p.getOperator() != PrefixExpression.Operator.INCREMENT
-              && p.getOperator() != PrefixExpression.Operator.DECREMENT
-              && pure(p.getOperand());
-      case InfixExpression i ->
-          pure(i.getLeftOperand()) && pure(i.getRightOperand()) && allPure(i.extendedOperands());
-      case ConditionalExpression c ->
-          pure(c.getExpression()) && pure(c.getThenExpression()) && pure(c.getElseExpression());
-      default -> false;
-    };
-  }
-
-  private static boolean allPure(List<?> expressions) {
-    for (Object o : expressions) {
-      if (!pure((Expression) o)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /** The offset just after the first "(" following {@code node}. */
@@ -1277,5 +1268,46 @@ final class Signatures {
       }
     }
     return null;
+  }
+
+  /**
+   * Whether evaluating {@code e} changes state where it stands (outside lambdas and anonymous
+   * classes): a write, a call, a new object or array, or a string's {@code +} of an object, which
+   * calls its {@code toString}.
+   */
+  private static boolean acts(Expression e) {
+    for (Effects.Effect x : Effects.of(e).all()) {
+      if (!x.deferred() && (x.changes() || x.kind() == Effects.Kind.NEW_ARRAY)) {
+        return true;
+      }
+    }
+    for (InfixExpression i : Nodes.all(e, InfixExpression.class)) {
+      ITypeBinding t = i.resolveTypeBinding();
+      if (i.getOperator() != InfixExpression.Operator.PLUS
+          || t == null
+          || !t.getQualifiedName().equals("java.lang.String")
+          || Effects.later(i, e) != null) {
+        continue;
+      }
+      List<Expression> operands = new ArrayList<>(List.of(i.getLeftOperand(), i.getRightOperand()));
+      for (Object o : i.extendedOperands()) {
+        operands.add((Expression) o);
+      }
+      for (Expression o : operands) {
+        ITypeBinding ot = o.resolveTypeBinding();
+        if (ot == null
+            || !(ot.isPrimitive()
+                || ot.isNullType()
+                || PLAIN_TO_STRING.contains(ot.getQualifiedName()))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Whether evaluating {@code e} may throw where it stands, by {@link Effects#mayThrow()}. */
+  private static boolean mayThrow(Expression e) {
+    return !Effects.of(e).mayThrow().isEmpty();
   }
 }

@@ -1222,6 +1222,17 @@ too (`ByLine.named`).
   the constructor above this one and the field initializers, not before them"). Every such
   removal reports the change to exceptional behavior, as a call may throw.
 - `move_parameter`: optional `before` (default last).
+- An argument that `remove_parameter` drops or `move_parameter` moves past another (#475,
+  2026-11-13): one that changes state where it stands (a write, a call, a new object or array, a
+  string's `+` of an object other than a `String` or a box, which calls its `toString`) is refused
+  as before: "the argument "seen " + item (...) may have side effects, and removing it would drop
+  them ..."; for a move, two such in the moved range. One that may throw (a division, a cast, a
+  dereference, an array read) is reported as a change to exceptional behavior, refused under
+  `preserve_exceptions`: "the argument sum / values.length (com/example/Stats.java, line 9) may
+  throw, and removing it drops that"; for a move, when the moved argument and one it passes
+  could each throw or one throws and the other acts: "the arguments bounds[0] and bounds[1] /
+  scale (...) now run in the other order, and one may throw: what has run when it throws, or
+  which exception it is, changes". Both are read from `Effects.of`.
 
 The change covers the method's family: every project declaration that overrides
 it or that it overrides, transitively, joined by binding key across files (an

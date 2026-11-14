@@ -107,7 +107,7 @@ final class ChangeSignature {
           if (body instanceof Block block) {
             voidReturns(change, l.file(), l.node(), block);
           } else if (!statement((Expression) body)) {
-            if (!pure((Expression) body)) {
+            if (!quietAndSafe((Expression) body)) {
               throw new Refusal(unkept(l.file(), body));
             }
             change.replace(l.file(), body, "{}");
@@ -334,7 +334,7 @@ final class ChangeSignature {
       boolean alone =
           text.substring(lineStart, r.getStartPosition()).isBlank()
               && text.substring(Nodes.end(r), lineEnd).isBlank();
-      if (pure(e)) {
+      if (quietAndSafe(e)) {
         if (last && alone) {
           change.replaceRange(s, lineStart, lineEnd, "");
         } else {
@@ -395,7 +395,7 @@ final class ChangeSignature {
    * Whether evaluating {@code e} does nothing and cannot throw: names, literals, {@code this.x},
    * and operators on them other than division and a string's {@code +} of an object.
    */
-  private static boolean pure(Expression e) {
+  private static boolean quietAndSafe(Expression e) {
     if (e instanceof SimpleName
         || e instanceof NumberLiteral
         || e instanceof BooleanLiteral
@@ -406,16 +406,18 @@ final class ChangeSignature {
       return true;
     }
     if (e instanceof ParenthesizedExpression p) {
-      return pure(p.getExpression());
+      return quietAndSafe(p.getExpression());
     }
     if (e instanceof FieldAccess f) {
       return f.getExpression() instanceof ThisExpression;
     }
     if (e instanceof PrefixExpression p) {
-      return !statement(p) && pure(p.getOperand());
+      return !statement(p) && quietAndSafe(p.getOperand());
     }
     if (e instanceof ConditionalExpression c) {
-      return pure(c.getExpression()) && pure(c.getThenExpression()) && pure(c.getElseExpression());
+      return quietAndSafe(c.getExpression())
+          && quietAndSafe(c.getThenExpression())
+          && quietAndSafe(c.getElseExpression());
     }
     if (e instanceof InfixExpression in) {
       if (in.getOperator() == InfixExpression.Operator.DIVIDE
@@ -432,7 +434,7 @@ final class ChangeSignature {
         ITypeBinding t = o.resolveTypeBinding();
         boolean plain =
             t != null && (t.isPrimitive() || t.getQualifiedName().equals("java.lang.String"));
-        if (!pure(o) || !(plain || in.getOperator() != InfixExpression.Operator.PLUS)) {
+        if (!quietAndSafe(o) || !(plain || in.getOperator() != InfixExpression.Operator.PLUS)) {
           return false;
         }
       }
