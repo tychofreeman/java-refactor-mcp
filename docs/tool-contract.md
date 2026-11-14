@@ -1508,7 +1508,8 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   arguments, one with an effect, that the body first uses in the other order than the
   call passes them (`f(bump(), count)` with `b + a`).
 - A body of several statements (roadmap #84, 2026-11-04): a void method's call statement
-  becomes the body's statements, re-indented; a method ending in its one `return expr`
+  becomes the body's statements, re-indented (the lines inside a text block as they are, so
+  the string keeps its value; #477, 2026-11-13); a method ending in its one `return expr`
   must be called as all of an initializer, a `return` or an assignment's value, and its
   other statements go before that statement ("part of a larger expression" otherwise).
   Refused also: a `return` before the last statement; a body that assigns a parameter;
