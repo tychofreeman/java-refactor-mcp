@@ -399,7 +399,7 @@ public final class Rename {
     Map<Path, List<Integer>> renamedAt = new TreeMap<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);
     int occurrences = 0;
-    Holding holding = Holding.of(project, oldName, null);
+    Holding holding = Holding.of(project, oldName);
     Map<Path, String> held = holding.texts();
     Map<Path, CompilationUnit> parsed = holding.units();
     for (Path f : held.keySet()) {
@@ -478,7 +478,7 @@ public final class Rename {
   private static Outcome renameMethod(SourceProject project, IMethodBinding method, String newName)
       throws IOException {
     String oldName = method.getName();
-    Holding holding = Holding.of(project, oldName, null);
+    Holding holding = Holding.of(project, oldName);
     Map<Path, String> texts = holding.texts();
     Map<Path, CompilationUnit> units = holding.units();
     Set<String> keys =
@@ -541,7 +541,7 @@ public final class Rename {
   private static Map<Path, Map<Integer, String>> meanings(SourceProject project, String newName)
       throws IOException {
     Map<Path, Map<Integer, String>> out = new TreeMap<>();
-    Holding holding = Holding.of(project, newName, null);
+    Holding holding = Holding.of(project, newName);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
         String key = meaning(n.resolveBinding());
@@ -689,7 +689,7 @@ public final class Rename {
     Map<Path, List<Integer>> renamedAt = new TreeMap<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);
     int occurrences = 0;
-    Holding holding = Holding.of(project, oldName, null);
+    Holding holding = Holding.of(project, oldName);
     Map<Path, String> held = holding.texts();
     Map<Path, CompilationUnit> parsed = holding.units();
     for (Path f : held.keySet()) {
@@ -754,7 +754,7 @@ public final class Rename {
     String topKey = top.getErasure().getTypeDeclaration().getKey();
     Path file = null;
     for (Map.Entry<Path, CompilationUnit> e :
-        Holding.of(project, top.getName(), null).units().entrySet()) {
+        Holding.of(project, top.getName()).units().entrySet()) {
       if (e.getValue().findDeclaringNode(topKey) != null) {
         file = e.getKey();
       }

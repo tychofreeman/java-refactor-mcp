@@ -1,12 +1,10 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,20 +113,9 @@ final class InlineFunction {
 
     Path declaringFile = file;
     String declaringText = text;
-    List<Path> candidates =
-        new ArrayList<>(
-            new LinkedHashSet<>(
-                project.javaFiles().stream().map(p -> p.toAbsolutePath().normalize()).toList()));
-    Map<Path, String> texts = new LinkedHashMap<>();
-    List<Path> toParse = new ArrayList<>();
-    for (Path p : candidates) {
-      String content = p.equals(file) ? text : Files.readString(p);
-      if (p.equals(file) || content.contains(member)) {
-        texts.put(p, content);
-        toParse.add(p);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
+    Holding holding = Holding.of(project, member, file);
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
 
     List<SingleVariableDeclaration> params = typed(m.parameters(), SingleVariableDeclaration.class);
     List<IVariableBinding> paramBindings = new ArrayList<>();

@@ -247,7 +247,7 @@ final class SafeDelete {
     String theirs = inherited.getMethodDeclaration().getKey();
     MethodDeclaration sub = null;
     MethodDeclaration base = null;
-    for (CompilationUnit u : Holding.of(project, simple, null).units().values()) {
+    for (CompilationUnit u : Holding.of(project, simple).units().values()) {
       if (u.findDeclaringNode(own) instanceof MethodDeclaration d) {
         sub = d;
       }

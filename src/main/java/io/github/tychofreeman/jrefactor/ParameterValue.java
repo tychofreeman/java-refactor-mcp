@@ -2,8 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -845,13 +843,7 @@ final class ParameterValue {
   private static boolean overriddenBelow(
       SourceProject project, IMethodBinding b, ITypeBinding site) {
     try {
-      List<Path> files = new ArrayList<>();
-      for (Path f : project.javaFiles()) {
-        if (Files.readString(f).contains(b.getName())) {
-          files.add(f);
-        }
-      }
-      for (CompilationUnit u : Jdt.parseAll(project, files).values()) {
+      for (CompilationUnit u : Holding.of(project, b.getName()).units().values()) {
         for (MethodDeclaration d : Nodes.all(u, MethodDeclaration.class)) {
           IMethodBinding o = d.resolveBinding();
           if (o != null

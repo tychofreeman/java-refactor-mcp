@@ -1492,3 +1492,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - `ParameterValue.Swap(offset, length, text)` to `TextEdit(start, end, text)`: each construction
   by `replace_expression`, the type by `replace_text` with `all_occurrences`; no tool changes a
   record's components and its constructions together (`change_signature` takes methods only).
+
+## 2026-11-14: holding-names
+
+- `change_type` of `Holding.of`'s `also` to `Path...` was refused: "type Path... does not
+  parse". A varargs type is not a type the tool parses. Done with `replace_declaration` of the
+  method in the same `batch` as the seven `replace_text`s that dropped the callers' `null`.
+- No Java by hand: `replace_declaration`, `add_declaration`, `replace_statements` for each copy,
+  `replace_text` for the callers and `inspect`'s loop head, `create_file` for `HoldingTest`.
