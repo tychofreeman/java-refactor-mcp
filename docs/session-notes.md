@@ -446,8 +446,10 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - A construction with a class body (`new T(...) {...}`, an enum constant with a body) resolves to
   the anonymous class's own constructor, not `T`'s: ask `Signatures.constructed(binding)` for the
-  one the arguments go to (#142, 2026-11-13). `MethodFamily.findCalls` does; `ByLine`,
-  `SafeDelete`, `ThrowsCallers` and `Signatures.addComponent` still compare the raw binding.
+  one the arguments go to (#142, 2026-11-13). `Calls.binding(node)` (#503, 2026-11-14) is the
+  method any call node runs, `constructed` applied; `MethodFamily`, `ByLine`, `ThrowsCallers`,
+  `CallTargets` and `TypeParameters` use it. `SafeDelete` and `Signatures.addComponent` still
+  compare the raw binding.
 
 - `add_parameter` with `name` an enum (#150, 2026-11-13) is `EnumField`, entered first from
   `Signatures.addParameter` (it returns null when `name` is no enum of the file): one file's text
