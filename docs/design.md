@@ -410,6 +410,28 @@ a stricter procedure for resolving its conflicts (that procedure had already del
 brought back another, and numbers were still taken twice). Why: every PR appended a row at the
 end of one table, so each merge to `main` put the other open PRs in conflict.
 
+**Decided (2026-11-14, the user, the follow-ups of #501 in `docs/sessions/one-label.md`): one
+parser for `Type.member(params)`**, `Qualified.parse`, over leaving the four splitters until a
+refusal showed a model sending one tool's label to another. The name splits at its last dot before
+the parameter list, so the type may be nested (`Outer.Inner.m`) and the parameter types may hold
+dots, commas inside angle brackets and varargs (`m(Map.Entry, Map<K, List<V>>, int...)`).
+`Qualified.of` (which split at the first dot), `Fold` (the last two segments), `Implement` (the
+last dot, compared with the simple name of the declaring class), `TestFor` (type or method guessed
+by the case of the last segment) and `Declarations.memberName` read names through it.
+**Default to reopen (2026-11-14):** the tools that take a top-level class (`Opened.topLevel`:
+`pull_up`, `push_down`, `move`, `encapsulate_field`, `change_type`, `inline` of a method) now
+refuse `Outer.Inner.m` saying it is a member type, over making each of them act on member types
+(their call and import rewriting assume a top-level class; each would need its own goldens).
+`TestFor` tries the whole name as a type first, then the last segment as a method of the rest.
+
+**Decided (2026-11-14, the user, the follow-ups of #501): a label that names a method is written
+as `Declarations.methodLabel` writes it**, the parameter types as source writes them, erased only
+when two overloads of the type would otherwise read alike (option (a)), over (b) every label
+erased, as `Names.methodLabel` was (one rule, but `List<String>` reads as `List` and `implement`
+would have to take erased names), and over (c) keeping both forms, documented (a label one tool
+prints might not be the one another prints). `MoveType.label` (the owner after a move) and
+`Rename.describe` (prose) keep their own forms.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

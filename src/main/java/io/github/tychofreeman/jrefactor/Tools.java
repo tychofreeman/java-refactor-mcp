@@ -1639,12 +1639,12 @@ final class Tools {
 
   private static Outcome methodToFunction(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
-    int dot = name.indexOf('.');
-    if (dot <= 0) {
+    Qualified q = Qualified.parse(name);
+    if (q.type() == null || q.type().isEmpty()) {
       throw new Refusal(
           "method_to_function takes the method as Type.method, so it knows the class to keep it in.");
     }
-    return MoveMember.run(project, args.required("file"), name, name.substring(0, dot));
+    return MoveMember.run(project, args.required("file"), name, q.type());
   }
 
   private static Outcome inspect(SourceProject project, Args args) throws Exception {

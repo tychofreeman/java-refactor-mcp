@@ -1,0 +1,1 @@
+Outer.Sub is a member type, and this tool takes a top-level class or interface

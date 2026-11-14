@@ -1803,3 +1803,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `inline` of `Extract.lineEndOffset` wrote `Lines.end(text, unit.getPosition(line(x), 0))`, the
   line of an offset turned back into an offset on it; one `replace_text` made it `Lines.end(text,
   x)`. No tool sees that two calls undo each other.
+
+## 2026-11-14: qualified-parser
+
+- No Java by hand. `inspect` with `names` refused the whole list for one name that was not a
+  member (`Fold.typeName`, a local), showing none of the others; resent without it. Showing the
+  names it found beside the refusal would have saved the call.

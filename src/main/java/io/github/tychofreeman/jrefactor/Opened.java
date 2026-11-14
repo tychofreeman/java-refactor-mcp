@@ -29,6 +29,21 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
   /** The top-level class or interface named {@code name}, which must resolve. */
   TypeDeclaration topLevel(String name) {
     TypeDeclaration type = MemberMove.typeNamed(unit, name);
+    if (type == null
+        && name.contains(".")
+        && Declarations.typePath(unit, name.split("\\.")) != null) {
+      List<String> topLevel = new ArrayList<>();
+      for (Object o : unit.types()) {
+        topLevel.add(((AbstractTypeDeclaration) o).getName().getIdentifier());
+      }
+      throw new Refusal(
+          name
+              + " is a member type, and this tool takes a top-level class or interface: "
+              + rel
+              + " declares "
+              + String.join(", ", topLevel)
+              + ".");
+    }
     if (type == null) {
       notAClass(name);
     }

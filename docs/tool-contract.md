@@ -153,6 +153,17 @@ price * qty`, `lambdas, method references or anonymous classes`). `inline_variab
 first column of each variable, where it had listed every use's ("pass column, the one of the one
 you mean"); `convert_lambda` with a column where none starts names the columns where they do.
 
+A name of the form `Type.member` is split at its last dot before the parameter list, so the type
+may be nested (`Outer.Inner.m`) and the parameter types may hold dots, generics and varargs
+(`Qualified.parse`, 2026-11-14; it had split at the first dot in most tools, the last two segments
+in `fold`, and by the case of the last segment in `test_for`). A tool that takes a top-level class
+refuses a member type by name: "Outer.Sub is a member type, and this tool takes a top-level class
+or interface: com/example/Outer.java declares Outer." (it had looked for a member `Sub.k` of
+`Outer`). `fold` qualifies a call outside the method's class as code there names the class
+(`Tax.withTax` inside `Price`, `Price.Tax.withTax` elsewhere); `implement` takes the owner with
+its enclosing types or package (`Shapes.Shape.area`); `test_for` takes a method whose name starts
+in upper case (`Request.GET`), trying the whole name as a type first.
+
 A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
 follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
 that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by
