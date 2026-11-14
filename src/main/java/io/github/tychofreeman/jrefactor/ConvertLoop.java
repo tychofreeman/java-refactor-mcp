@@ -251,14 +251,14 @@ final class ConvertLoop {
     Statement body = loop.getBody();
     stable(text, indexed.of(), body, line);
     if (!indexed.array()) {
-      unchanged(text, of, body, line);
+      unchanged(text, indexed.of(), body, line);
     }
     List<Expression> reads = new ArrayList<>();
     for (SimpleName n : Nodes.all(body, SimpleName.class)) {
       if (!same(n.resolveBinding(), indexed.index())) {
         continue;
       }
-      Expression read = elementRead(text, n, of, indexed.array());
+      Expression read = elementRead(text, n, indexed.of(), indexed.array());
       if (read == null) {
         throw new Refusal(
             "the loop at line "
@@ -315,12 +315,12 @@ final class ConvertLoop {
   }
 
   /** The {@code x.get(i)} or {@code x[i]} that {@code i} is the index of, or null. */
-  private static Expression elementRead(String text, SimpleName i, String of, boolean array) {
+  private static Expression elementRead(String text, SimpleName i, Expression of, boolean array) {
     ASTNode parent = i.getParent();
     if (array) {
       if (parent instanceof ArrayAccess a
           && a.getIndex() == i
-          && source(text, a.getArray()).equals(of)
+          && LoopToStream.sameVariable(text, a.getArray(), of)
           && !writes(a)) {
         return a;
       }
@@ -331,7 +331,7 @@ final class ConvertLoop {
         && m.arguments().size() == 1
         && m.arguments().get(0) == i
         && m.getExpression() != null
-        && source(text, m.getExpression()).equals(of)) {
+        && LoopToStream.sameVariable(text, m.getExpression(), of)) {
       return m;
     }
     return null;
@@ -395,16 +395,16 @@ final class ConvertLoop {
   /**
    * Refuses a body that adds to or removes from the list {@code of}, which an iterator fails on.
    */
-  private static void unchanged(String text, String of, Statement body, int line) {
+  private static void unchanged(String text, Expression of, Statement body, int line) {
     for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
       if (m.getExpression() != null
           && LoopToStream.CHANGES.contains(m.getName().getIdentifier())
-          && source(text, m.getExpression()).equals(of)) {
+          && LoopToStream.sameVariable(text, m.getExpression(), of)) {
         throw new Refusal(
             "the loop at line "
                 + line
                 + " changes "
-                + of
+                + source(text, m.getExpression())
                 + " ("
                 + source(text, m)
                 + "), which an enhanced for over it would fail on.");
@@ -539,7 +539,7 @@ final class ConvertLoop {
     stable(text, of, body, line);
     String from = source(text, of);
     if (!array) {
-      unchanged(text, from, body, line);
+      unchanged(text, of, body, line);
     }
     String i = LoopToStream.unused("i", loop);
     String primary = LoopToStream.primary(text, of);

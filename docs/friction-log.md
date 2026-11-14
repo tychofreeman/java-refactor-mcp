@@ -1373,3 +1373,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand: two `batch`es (`replace_text`, `add_declaration`) sent from a file
   (`@file`), since the code held a `' '` that closed the shell's single-quoted argument; then
   `replace_text` for the class comment. The probe and goldens were written by heredocs.
+
+## 2026-11-13: fix-loop-receiver-binding
+
+- No Java by hand: one `batch` from a file (`replace_text`, `replace_declaration`, `add_declaration`
+  across `LoopToStream` and `ConvertLoop`), then `remove_parameter` for the parameter it left unused.
+  The probes and goldens were written by heredocs.

@@ -191,8 +191,7 @@ final class LoopToStream {
     VariableDeclarationStatement result = resultBefore(loop);
     IBinding computes = result == null ? null : fragment(result).resolveBinding();
     Read read = stages(text, variable, element, body);
-    checkBody(
-        opened, text, loop, body, from, computes, computes != null && searches(read, computes));
+    checkBody(opened, text, loop, body, computes, computes != null && searches(read, computes));
     String indent = Lines.indentOf(text, loop.getStartPosition());
     int step = Declarations.step(text) > 0 ? Declarations.step(text) : 4;
     VariableDeclarationStatement list = collected(text, loop, read.rest());
@@ -239,7 +238,6 @@ final class LoopToStream {
       String text,
       EnhancedForStatement loop,
       Statement body,
-      String from,
       IBinding result,
       boolean search) {
     int line = Lines.number(text, loop.getStartPosition());
@@ -274,13 +272,14 @@ final class LoopToStream {
               + ", a checked exception, which a lambda passed to forEach, filter or map cannot"
               + " throw.");
     }
-    String owner = owner(text, loop.getExpression());
+    Expression owner = owner(loop.getExpression());
     for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
       if (m.getExpression() == null || !CHANGES.contains(m.getName().getIdentifier())) {
         continue;
       }
       String receiver = source(text, m.getExpression());
-      if (receiver.equals(from) || receiver.equals(owner)) {
+      if (sameVariable(text, m.getExpression(), loop.getExpression())
+          || (owner != null && sameVariable(text, m.getExpression(), owner))) {
         throw new Refusal(
             "the loop at line "
                 + line
@@ -1179,15 +1178,15 @@ final class LoopToStream {
   }
 
   /**
-   * The map whose {@code entrySet()}, {@code keySet()} or {@code values()} {@code source} is, as
-   * written; else null.
+   * The map whose {@code entrySet()}, {@code keySet()} or {@code values()} {@code source} is; else
+   * null.
    */
-  private static String owner(String text, Expression source) {
+  private static Expression owner(Expression source) {
     return source instanceof MethodInvocation m
             && m.getExpression() != null
             && m.arguments().isEmpty()
             && Set.of("entrySet", "keySet", "values").contains(m.getName().getIdentifier())
-        ? source(text, m.getExpression())
+        ? m.getExpression()
         : null;
   }
 
@@ -1412,5 +1411,30 @@ final class LoopToStream {
         groups.getStartPosition(),
         imports,
         "grouped into " + m.getName() + " by " + summary(read.stages(), ".collect(groupingBy)"));
+  }
+
+  /**
+   * Whether {@code a} and {@code b} are the same variable: by binding when each is a name or {@code
+   * this.f} ({@code this.items} and {@code items}), else by their text.
+   */
+  static boolean sameVariable(String text, Expression a, Expression b) {
+    IVariableBinding x = variable(a);
+    IVariableBinding y = variable(b);
+    if (x != null && y != null) {
+      return x.getKey().equals(y.getKey());
+    }
+    return source(text, a).equals(source(text, b));
+  }
+
+  private static IVariableBinding variable(Expression e) {
+    if (e instanceof SimpleName n && n.resolveBinding() instanceof IVariableBinding v) {
+      return v;
+    }
+    if (e instanceof FieldAccess f
+        && f.getExpression() instanceof ThisExpression t
+        && t.getQualifier() == null) {
+      return f.resolveFieldBinding();
+    }
+    return null;
   }
 }
