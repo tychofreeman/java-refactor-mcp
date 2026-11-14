@@ -82,16 +82,7 @@ final class ChangeSignature {
         Signatures.checkPrimitiveUses(family, args, returnType, true);
       }
       for (Signatures.Decl d : decls) {
-        Precondition.require(
-            Precondition.that(
-                () -> !d.m().isConstructor(),
-                () -> family.label + " is a constructor, which has no return type."),
-            Precondition.that(
-                () -> d.m().extraDimensions().isEmpty(),
-                () ->
-                    family.label
-                        + " writes its return type's [] after its parameters. Write it before the"
-                        + " name first."));
+        Signatures.requireReturnType(d, family);
         Type old = d.m().getReturnType2();
         if (src(d.file(), old).equals(returnType)) {
           continue;
