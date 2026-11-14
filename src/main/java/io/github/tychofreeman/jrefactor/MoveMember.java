@@ -988,7 +988,7 @@ final class MoveMember {
                   .count()
               > 1;
       String label =
-          typeName + "." + (overloaded ? MemberMove.label(c) : c.getName().getIdentifier());
+          typeName + "." + (overloaded ? Declarations.methodLabel(c) : c.getName().getIdentifier());
       try {
         run(project, rel, label, to, imports);
       } catch (Refusal r) {

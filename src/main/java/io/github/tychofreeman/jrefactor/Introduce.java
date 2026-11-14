@@ -161,7 +161,7 @@ final class Introduce {
                 "name",
                     Names.typeLabel(m.resolveBinding().getDeclaringClass())
                         + "."
-                        + MemberMove.label(m),
+                        + Declarations.methodLabel(m),
                 "parameter", name,
                 "type", typeName,
                 "value", source));

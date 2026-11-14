@@ -242,7 +242,7 @@ final class Generated {
 
   /** {@code m} by its types and signature: Outer.Inner.m(int). */
   private static String key(MethodDeclaration m) {
-    StringBuilder key = new StringBuilder(MemberMove.label(m));
+    StringBuilder key = new StringBuilder(Declarations.writtenLabel(m));
     for (ASTNode n = m.getParent(); n != null; n = n.getParent()) {
       if (n instanceof AbstractTypeDeclaration t) {
         key.insert(0, t.getName().getIdentifier() + ".");
