@@ -10,6 +10,7 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.ArrayInitializer;
+import org.eclipse.jdt.core.dom.AssertStatement;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CastExpression;
@@ -42,7 +43,11 @@ import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.ThrowStatement;
+import org.eclipse.jdt.core.dom.TryStatement;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
+import org.eclipse.jdt.core.dom.UnionType;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
@@ -68,7 +73,8 @@ final class Effects {
     /**
      * What may throw where it stands, as the syntax shows it: a dereference of a variable or an
      * expression ({@code p.x}, {@code e.m()}), an array element, an integer {@code /} or {@code %},
-     * a reference cast. Calls may throw too; {@link #mayThrow} counts them.
+     * a reference cast, a compound {@code /=} or {@code %=} on an integer, a {@code throw}, an
+     * {@code assert}. Calls may throw too; {@link #mayThrow} counts them.
      */
     MAY_THROW
   }
@@ -125,6 +131,13 @@ final class Effects {
           }
 
           @Override
+          public void preVisit(ASTNode n) {
+            if (n instanceof Expression x && x.resolveUnboxing()) {
+              add(Kind.MAY_THROW, n, null);
+            }
+          }
+
+          @Override
           public boolean visit(SimpleName n) {
             if (n.resolveBinding() instanceof IVariableBinding v) {
               add(Kind.NAME, n, v);
@@ -141,6 +154,25 @@ final class Effects {
           @Override
           public boolean visit(Assignment n) {
             add(Kind.WRITE, n, target(n.getLeftHandSide()));
+            if (n.getOperator() == Assignment.Operator.DIVIDE_ASSIGN
+                || n.getOperator() == Assignment.Operator.REMAINDER_ASSIGN) {
+              ITypeBinding type = n.getLeftHandSide().resolveTypeBinding();
+              if (type != null && isIntegral(type)) {
+                add(Kind.MAY_THROW, n, null);
+              }
+            }
+            return true;
+          }
+
+          @Override
+          public boolean visit(ThrowStatement n) {
+            add(Kind.MAY_THROW, n, null);
+            return true;
+          }
+
+          @Override
+          public boolean visit(AssertStatement n) {
+            add(Kind.MAY_THROW, n, null);
             return true;
           }
 
@@ -433,10 +465,10 @@ final class Effects {
   }
 
   /**
-   * Whether {@code s} holds a return, or a yield, break or continue that leaves it, outside lambdas
-   * and classes declared in it.
+   * Whether {@code s} holds a return, a yield, break or continue that leaves it, or, when {@code
+   * throwing}, a throw that no try in it catches, outside lambdas and classes declared in it.
    */
-  static boolean leaves(Statement s) {
+  static boolean leaves(Statement s, boolean throwing) {
     boolean[] found = {false};
     s.accept(
         new ASTVisitor() {
@@ -458,6 +490,12 @@ final class Effects {
           @Override
           public boolean visit(ReturnStatement n) {
             found[0] = true;
+            return false;
+          }
+
+          @Override
+          public boolean visit(ThrowStatement n) {
+            found[0] |= throwing && !caught(n, s);
             return false;
           }
 
@@ -531,5 +569,56 @@ final class Effects {
       }
     }
     return out;
+  }
+
+  /**
+   * Whether a try inside {@code s} catches what {@code n} throws: {@code n} is in its body, and a
+   * catch clause takes a supertype of the thrown expression's type.
+   */
+  private static boolean caught(ThrowStatement n, Statement s) {
+    ITypeBinding thrown = n.getExpression().resolveTypeBinding();
+    if (thrown == null) {
+      return false;
+    }
+    for (ASTNode at = n, p = n.getParent(); at != s && p != null; at = p, p = p.getParent()) {
+      if (p instanceof TryStatement t && at == t.getBody()) {
+        for (Object o : t.catchClauses()) {
+          Type type = ((CatchClause) o).getException().getType();
+          List<Type> types = new ArrayList<>();
+          if (type instanceof UnionType u) {
+            for (Object a : u.types()) {
+              types.add((Type) a);
+            }
+          } else {
+            types.add(type);
+          }
+          for (Type each : types) {
+            ITypeBinding b = each.resolveBinding();
+            if (b != null && thrown.isSubTypeCompatible(b)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Whether {@code type} is an integer type, primitive or boxed: one that / and % may throw on. */
+  private static boolean isIntegral(ITypeBinding type) {
+    return switch (type.getQualifiedName()) {
+      case "int",
+          "long",
+          "short",
+          "byte",
+          "char",
+          "java.lang.Integer",
+          "java.lang.Long",
+          "java.lang.Short",
+          "java.lang.Byte",
+          "java.lang.Character" ->
+          true;
+      default -> false;
+    };
   }
 }
