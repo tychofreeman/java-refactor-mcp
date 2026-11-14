@@ -86,7 +86,7 @@ final class ByLine {
       List<String> each = new ArrayList<>();
       for (Hit h : declared) {
         each.add(
-            Signatures.label(h.method())
+            Names.methodLabel(h.method())
                 + " at column "
                 + Nodes.columns(List.of(h.at()), lineStart));
       }
@@ -109,7 +109,7 @@ final class ByLine {
       for (List<Hit> same : methods.values()) {
         List<ASTNode> at = same.stream().map(Hit::at).toList();
         each.add(
-            Signatures.label(same.get(0).method())
+            Names.methodLabel(same.get(0).method())
                 + (at.size() == 1 ? " at column " : " at columns ")
                 + Nodes.columns(at, lineStart));
       }
@@ -138,7 +138,7 @@ final class ByLine {
       }
     }
     throw new Refusal(
-        Signatures.label(method)
+        Names.methodLabel(method)
             + " is not written in "
             + home
             + " (a default constructor): declare it first.");

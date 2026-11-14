@@ -269,7 +269,7 @@ final class TypeParameters {
           if (p.typeArguments().isEmpty()) {
             continue; // a diamond infers it
           }
-          list.add(inserted(p.typeArguments(), at, argument));
+          list.add(SignatureChange.insertAt(p.typeArguments(), at, argument));
         } else if (!declared.isEmpty()) {
           raw += exempt(t) ? 0 : 1;
           continue; // a raw use stays raw
@@ -406,17 +406,7 @@ final class TypeParameters {
       int end = Nodes.end(target.getName());
       return new TextEdit(end, end, "<" + written + ">");
     }
-    return inserted(target.typeParameters(), at, written);
-  }
-
-  /** The edit that puts {@code text} at {@code at} of {@code list}, which is not empty. */
-  private static TextEdit inserted(List<?> list, int at, String text) {
-    if (at >= list.size()) {
-      int end = Nodes.end((ASTNode) list.get(list.size() - 1));
-      return new TextEdit(end, end, ", " + text);
-    }
-    int start = ((ASTNode) list.get(at)).getStartPosition();
-    return new TextEdit(start, start, text + ", ");
+    return SignatureChange.insertAt(target.typeParameters(), at, written);
   }
 
   /**
@@ -843,7 +833,7 @@ final class TypeParameters {
         if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
           throw new Refusal(
               t.isTypeVariable()
-                  ? Signatures.label(d.binding())
+                  ? Names.methodLabel(d.binding())
                       + " already names a type parameter "
                       + parameter
                       + " (line "
@@ -853,7 +843,7 @@ final class TypeParameters {
                       + "). Choose another name."
                   : parameter
                       + " is a type that "
-                      + Signatures.label(d.binding())
+                      + Names.methodLabel(d.binding())
                       + " already names (line "
                       + d.file().line(n)
                       + " of "
@@ -925,7 +915,7 @@ final class TypeParameters {
         }
         if (at < 0) {
           throw new Refusal(
-              Signatures.label(d.binding())
+              Names.methodLabel(d.binding())
                   + " has no type parameter "
                   + beforeName
                   + " to put "
@@ -938,7 +928,7 @@ final class TypeParameters {
         int start = m.getReturnType2().getStartPosition();
         list.add(new TextEdit(start, start, "<" + written + "> "));
       } else {
-        list.add(inserted(declared, at, written));
+        list.add(SignatureChange.insertAt(declared, at, written));
       }
       List<Type> roots = new ArrayList<>();
       roots.add(m.getReturnType2());

@@ -134,7 +134,7 @@ final class ChangeSignature {
         List<String> gained = new ArrayList<>();
         for (Signatures.Decl d : handled.decls) {
           throwsClause(change, d, handled.names.get(d.m()), List.of(), new ArrayList<>());
-          gained.add(Signatures.label(d.binding()));
+          gained.add(Names.methodLabel(d.binding()));
         }
         declarations += handled.decls.size();
         chosen.addAll(handled.imports);

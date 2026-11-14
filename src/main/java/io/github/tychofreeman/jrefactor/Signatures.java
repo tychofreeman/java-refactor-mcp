@@ -493,7 +493,8 @@ final class Signatures {
         IMethodBinding b = c.resolveConstructorBinding();
         if (b != null && b.getDeclaringClass().getErasure().getKey().equals(key)) {
           list.add(
-              insertAt(text, c.arguments(), text.indexOf('(', Nodes.end(c.getType())), at, value));
+              SignatureChange.insertAt(
+                  c.arguments(), text.indexOf('(', Nodes.end(c.getType())) + 1, at, value));
           constructions++;
         }
       }
@@ -501,16 +502,16 @@ final class Signatures {
         IMethodBinding b = c.resolveConstructorBinding();
         if (b != null && b.getDeclaringClass().getErasure().getKey().equals(key)) {
           list.add(
-              insertAt(text, c.arguments(), text.indexOf('(', c.getStartPosition()), at, value));
+              SignatureChange.insertAt(
+                  c.arguments(), text.indexOf('(', c.getStartPosition()) + 1, at, value));
           constructions++;
         }
       }
       if (e.getKey().equals(opened.file())) {
         list.add(
-            insertAt(
-                text,
+            SignatureChange.insertAt(
                 components,
-                text.indexOf('(', Nodes.end(r.getName())),
+                text.indexOf('(', Nodes.end(r.getName())) + 1,
                 at,
                 type + " " + parameter));
       }
@@ -540,22 +541,6 @@ final class Signatures {
             + value
             + written.said(),
         declared);
-  }
-
-  /**
-   * The edit that puts {@code item} at index {@code at} of {@code list}, whose ( is at {@code
-   * open}.
-   */
-  static TextEdit insertAt(String text, List<?> list, int open, int at, String item) {
-    if (list.isEmpty()) {
-      return new TextEdit(open + 1, open + 1, item);
-    }
-    if (at >= list.size()) {
-      int end = Nodes.end((ASTNode) list.get(list.size() - 1));
-      return new TextEdit(end, end, ", " + item);
-    }
-    int start = ((ASTNode) list.get(at)).getStartPosition();
-    return new TextEdit(start, start, item + ", ");
   }
 
   /** A file of the project, read and parsed with bindings. */
@@ -645,7 +630,7 @@ final class Signatures {
       IMethodBinding over = library.get(k);
       if (over != null) {
         throw new Refusal(
-            label(declared.get(k))
+            Names.methodLabel(declared.get(k))
                 + " overrides "
                 + over.getName()
                 + " in "
@@ -672,23 +657,6 @@ final class Signatures {
   /** The key that names {@code b}'s declaration in every file's bindings. */
   static String key(IMethodBinding b) {
     return b.getMethodDeclaration().getKey();
-  }
-
-  /**
-   * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
-   * types.
-   */
-  static String label(IMethodBinding b) {
-    List<String> types = new ArrayList<>();
-    for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
-      types.add(t.getErasure().getName());
-    }
-    return Names.typeLabel(b.getDeclaringClass())
-        + "."
-        + b.getName()
-        + "("
-        + String.join(", ", types)
-        + ")";
   }
 
   /** The offset just after the first "(" following {@code node}. */
