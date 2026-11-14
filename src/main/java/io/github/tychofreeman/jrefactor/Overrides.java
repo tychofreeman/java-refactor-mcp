@@ -3,7 +3,6 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -40,25 +39,6 @@ final class Overrides {
   }
 
   /**
-   * Whether {@code t} extends or implements the type named {@code qualified}, by name: bindings of
-   * two parses do not compare.
-   */
-  private static boolean below(ITypeBinding t, String qualified) {
-    List<ITypeBinding> todo = new ArrayList<>(List.of(t));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding s = todo.get(i);
-      if (i > 0 && s.getErasure().getQualifiedName().equals(qualified)) {
-        return true;
-      }
-      if (s.getSuperclass() != null) {
-        todo.add(s.getSuperclass());
-      }
-      todo.addAll(Arrays.asList(s.getInterfaces()));
-    }
-    return false;
-  }
-
-  /**
    * A method that clashes with the new one, "Square.area(int)"; {@code subtype} is the type below
    * that declares it, or null when the new method would override it.
    */
@@ -72,25 +52,18 @@ final class Overrides {
   static Clash of(
       SourceProject project, Path file, ITypeBinding owner, String name, List<String> params)
       throws IOException {
-    List<ITypeBinding> todo = new ArrayList<>(List.of(owner.getErasure()));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
-      String clash = i == 0 ? null : clash(t, name, params);
+    for (ITypeBinding t : Hierarchy.supertypes(owner.getErasure(), false)) {
+      String clash = clash(t, name, params);
       if (clash != null) {
         return new Clash(clash, null);
       }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(Arrays.asList(t.getInterfaces()));
     }
     String key = owner.getErasure().getKey();
-    String qualified = owner.getErasure().getQualifiedName();
     for (CompilationUnit u :
         Holding.of(project, owner.getErasure().getName(), file).units().values()) {
       for (TypeDeclaration t : Nodes.all(u, TypeDeclaration.class)) {
         ITypeBinding tb = t.resolveBinding();
-        if (tb != null && !tb.getErasure().getKey().equals(key) && below(tb, qualified)) {
+        if (tb != null && !tb.getErasure().getKey().equals(key) && Hierarchy.isSubtype(tb, key)) {
           String clash = clash(tb, name, params);
           if (clash != null) {
             return new Clash(clash, tb);

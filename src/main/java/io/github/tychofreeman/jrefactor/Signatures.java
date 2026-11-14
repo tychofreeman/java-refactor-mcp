@@ -608,7 +608,7 @@ final class Signatures {
               if (b != null) {
                 String k = key(b);
                 declared.put(k, b);
-                for (IMethodBinding over : overridden(b)) {
+                for (IMethodBinding over : Hierarchy.overridden(b)) {
                   String o = key(over);
                   links.computeIfAbsent(k, x -> new HashSet<>()).add(o);
                   links.computeIfAbsent(o, x -> new HashSet<>()).add(k);
@@ -643,37 +643,6 @@ final class Signatures {
       }
     }
     return keys;
-  }
-
-  /** The methods of supertypes that {@code b} overrides. */
-  private static List<IMethodBinding> overridden(IMethodBinding b) {
-    List<IMethodBinding> out = new ArrayList<>();
-    if (b.isConstructor() || b.getDeclaringClass() == null) {
-      return out;
-    }
-    Deque<ITypeBinding> todo = new ArrayDeque<>();
-    Set<String> seen = new HashSet<>();
-    ITypeBinding start = b.getDeclaringClass();
-    if (start.getSuperclass() != null) {
-      todo.add(start.getSuperclass());
-    }
-    todo.addAll(List.of(start.getInterfaces()));
-    while (!todo.isEmpty()) {
-      ITypeBinding t = todo.pop();
-      if (!seen.add(t.getErasure().getKey())) {
-        continue;
-      }
-      for (IMethodBinding m : t.getDeclaredMethods()) {
-        if (b.overrides(m)) {
-          out.add(m);
-        }
-      }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
-    }
-    return out;
   }
 
   /**

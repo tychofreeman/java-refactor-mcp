@@ -373,13 +373,7 @@ final class Extraction {
     if (type == null) {
       return;
     }
-    List<ITypeBinding> todo = new ArrayList<>(List.of(type));
-    Set<String> seen = new LinkedHashSet<>();
-    while (!todo.isEmpty()) {
-      ITypeBinding t = todo.remove(0);
-      if (!seen.add(t.getErasure().getKey())) {
-        continue;
-      }
+    for (ITypeBinding t : Hierarchy.supertypes(type, true)) {
       for (IMethodBinding m : t.getDeclaredMethods()) {
         if (m.getName().equals(name)) {
           throw new Refusal(
@@ -391,10 +385,6 @@ final class Extraction {
                   + " another name.");
         }
       }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
     }
     refuseEnclosing(type, label);
   }
@@ -933,7 +923,7 @@ final class Extraction {
     for (IVariableBinding p : params) {
       mine.add(p.getType().getErasure().getQualifiedName());
     }
-    for (ITypeBinding t : ancestors(here)) {
+    for (ITypeBinding t : Hierarchy.supertypes(here, true)) {
       if (t.getErasure().getKey().equals(here.getErasure().getKey())) {
         for (IMethodBinding m : t.getDeclaredMethods()) {
           if (m.getName().equals(name)) {
@@ -978,7 +968,7 @@ final class Extraction {
         ITypeBinding b = d.resolveBinding();
         if (b != null
             && !b.getErasure().getKey().equals(hereKey)
-            && keys(ancestors(b)).contains(hereKey)) {
+            && keys(Hierarchy.supertypes(b, true)).contains(hereKey)) {
           for (IMethodBinding m : b.getDeclaredMethods()) {
             if (m.getName().equals(name)) {
               throw new Refusal(
@@ -1045,8 +1035,9 @@ final class Extraction {
     }
     ITypeBinding owner = type.resolveBinding();
     String ownerKey = owner.getErasure().getKey();
-    if (!keys(ancestors(here)).contains(ownerKey) || ownerKey.equals(here.getErasure().getKey())) {
-      return keys(ancestors(owner)).contains(here.getErasure().getKey())
+    if (!keys(Hierarchy.supertypes(here, true)).contains(ownerKey)
+        || ownerKey.equals(here.getErasure().getKey())) {
+      return keys(Hierarchy.supertypes(owner, true)).contains(here.getErasure().getKey())
           ? "it is in " + owner.getName() + " itself"
           : null;
     }
@@ -1083,19 +1074,6 @@ final class Extraction {
                     .equals(m.getMethodDeclaration().getKey()));
   }
 
-  /** {@code t} and every type above it, nearest first. */
-  private static List<ITypeBinding> ancestors(ITypeBinding t) {
-    List<ITypeBinding> out = new ArrayList<>(List.of(t));
-    for (int i = 0; i < out.size(); i++) {
-      ITypeBinding each = out.get(i);
-      if (each.getSuperclass() != null) {
-        out.add(each.getSuperclass());
-      }
-      out.addAll(List.of(each.getInterfaces()));
-    }
-    return out;
-  }
-
   private static Set<String> keys(List<ITypeBinding> types) {
     Set<String> out = new LinkedHashSet<>();
     for (ITypeBinding t : types) {
@@ -1113,7 +1091,7 @@ final class Extraction {
     for (ITypeBinding outer = type.getDeclaringClass();
         outer != null;
         outer = outer.getDeclaringClass()) {
-      for (ITypeBinding t : ancestors(outer)) {
+      for (ITypeBinding t : Hierarchy.supertypes(outer, true)) {
         for (IMethodBinding m : t.getDeclaredMethods()) {
           if (m.getName().equals(name)) {
             throw new Refusal(

@@ -449,18 +449,7 @@ final class LoopToStream {
 
   /** Whether {@code t} is a {@code java.util.Collection}, which has {@code stream()}. */
   static boolean collection(ITypeBinding t) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals("java.util.Collection")) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (collection(i)) {
-        return true;
-      }
-    }
-    return collection(t.getSuperclass());
+    return Hierarchy.isA(t, "java.util.Collection");
   }
 
   private static boolean declaredIn(Opened opened, IVariableBinding v, Statement body) {
@@ -1235,18 +1224,7 @@ final class LoopToStream {
 
   /** Whether {@code t} is a {@code java.util.Map}. */
   private static boolean map(ITypeBinding t) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals("java.util.Map")) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (map(i)) {
-        return true;
-      }
-    }
-    return map(t.getSuperclass());
+    return Hierarchy.isA(t, "java.util.Map");
   }
 
   /**

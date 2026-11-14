@@ -76,25 +76,17 @@ final class Skeleton {
   }
 
   private static void walk(
-      ITypeBinding t,
-      List<IMethodBinding> concrete,
-      List<IMethodBinding> abstracts,
-      Set<String> seen) {
-    if (t == null || !seen.add(t.getKey())) {
-      return;
-    }
-    for (IMethodBinding m : t.getDeclaredMethods()) {
-      int mods = m.getModifiers();
-      if (m.isConstructor() || Modifier.isStatic(mods) || Modifier.isPrivate(mods)) {
-        continue;
+      ITypeBinding type, List<IMethodBinding> concrete, List<IMethodBinding> abstracts) {
+    for (ITypeBinding t : Hierarchy.supertypes(type, true)) {
+      for (IMethodBinding m : t.getDeclaredMethods()) {
+        int mods = m.getModifiers();
+        if (m.isConstructor() || Modifier.isStatic(mods) || Modifier.isPrivate(mods)) {
+          continue;
+        }
+        boolean isAbstract =
+            Modifier.isAbstract(mods) || (t.isInterface() && !Modifier.isDefault(mods));
+        (isAbstract ? abstracts : concrete).add(m);
       }
-      boolean isAbstract =
-          Modifier.isAbstract(mods) || (t.isInterface() && !Modifier.isDefault(mods));
-      (isAbstract ? abstracts : concrete).add(m);
-    }
-    walk(t.getSuperclass(), concrete, abstracts, seen);
-    for (ITypeBinding i : t.getInterfaces()) {
-      walk(i, concrete, abstracts, seen);
     }
   }
 
@@ -175,7 +167,7 @@ final class Skeleton {
   static List<IMethodBinding> leftAbstract(ITypeBinding type, List<IMethodBinding> more) {
     List<IMethodBinding> concrete = new ArrayList<>(more);
     List<IMethodBinding> abstracts = new ArrayList<>();
-    walk(type, concrete, abstracts, new HashSet<>());
+    walk(type, concrete, abstracts);
     List<IMethodBinding> out = new ArrayList<>();
     for (IMethodBinding a : abstracts) {
       boolean done =

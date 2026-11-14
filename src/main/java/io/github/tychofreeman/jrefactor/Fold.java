@@ -544,9 +544,7 @@ final class Fold {
    */
   private static boolean overloaded(IMethodBinding m, ITypeBinding from) {
     String key = m.getMethodDeclaration().getKey();
-    List<ITypeBinding> todo = new ArrayList<>(List.of(from));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
+    for (ITypeBinding t : Hierarchy.supertypes(from, true)) {
       for (IMethodBinding other : t.getDeclaredMethods()) {
         if (other.getName().equals(m.getName())
             && other.getParameterTypes().length == m.getParameterTypes().length
@@ -554,10 +552,6 @@ final class Fold {
           return true;
         }
       }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
     }
     return false;
   }
@@ -747,19 +741,7 @@ final class Fold {
     if (t.isPrimitive() || param.isPrimitive()) {
       return t.getKey().equals(param.getKey());
     }
-    String target = param.getErasure().getQualifiedName();
-    List<ITypeBinding> todo = new ArrayList<>(List.of(t));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding s = todo.get(i);
-      if (s.getErasure().getQualifiedName().equals(target) || target.equals("java.lang.Object")) {
-        return true;
-      }
-      if (s.getSuperclass() != null) {
-        todo.add(s.getSuperclass());
-      }
-      todo.addAll(List.of(s.getInterfaces()));
-    }
-    return false;
+    return Hierarchy.isSubtype(t, param);
   }
 
   /** Whether {@code n} is directly in {@code type}, so the call needs no qualifier. */
