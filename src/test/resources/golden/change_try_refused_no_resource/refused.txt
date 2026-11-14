@@ -1,0 +1,1 @@
+the try has no resource x; its resources are r.

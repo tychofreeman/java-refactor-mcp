@@ -498,3 +498,8 @@ write, was checked first with a scratch parse before any of it was built on.
 - `change_try` (2026-11-13, issue #364) was the first tool whose shape the user picked from options
   written into its issue before any code: one tool with one argument per change, over options on
   an existing tool and over two tools.
+- Its resources (2026-11-14, roadmap #206) were written from the language's own translation of a
+  try-with-resources (JLS 14.20.3) and pinned by probes that run each order of opening, failing and
+  closing: the probes kept the form honest where the user's description of the choice (the close
+  first in an existing finally) would have run catches before the close, and found the one change
+  the form cannot avoid, suppression, which the result now names.

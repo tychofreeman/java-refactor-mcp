@@ -213,7 +213,13 @@ Each was chosen from options; the record named beside it has the options it beat
   (2026-11-13, the user): `callers=propagate` by default, each caller declaring it up the chain,
   with `stop_at` (the user's addition) naming where it ends in a catch; `catch` and `refuse` as
   options. A catch rethrows unchecked, never swallows; a call inside an existing try gets one more
-  clause on it, over a nested try.- `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
+  clause on it, over a nested try.
+- `change_try` resources (#206, 2026-11-14, the user chose each; `docs/design.md`, Decisions):
+  `remove_resource` moves the resource out and closes it (over moving it out unclosed and over
+  refusing when the body uses it), `add_resource` is text with a `position` (over declaration text
+  only and over text or a moved-in local). Default to reopen: with catches, a finally or earlier
+  resources kept, the close goes in a new inner try's finally, not the existing finally.
+- `subclass_to_strategy` (#332, 2026-11-12, the user chose each): the model names the function's
   type (`type`) or the tool declares a nested interface named after the method, over
   java.util.function when it fits and over always an interface; the superclass's old constructors
   stay, delegating with its own body's function, over adding the parameter to every construction;
@@ -651,7 +657,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `ThrowsCallers.exceptionSupers` (a probe field, shared with `change_signature`'s `callers`) and
   goes before the first clause catching a supertype; its variable is `ThrowsCallers.freeIn`'s.
   What Java itself rejects (a never-thrown checked catch, an exception left unhandled) is the
-  gate's. Resources are not built yet.
+  gate's. Resources (#206, 2026-11-14): `addResource` inserts the text at its place in the list
+  (`hidden` refuses a new name a later use has); `removeResource` writes JLS 14.20.3's translation
+  as text, the body re-indented by `Indent.restep` when it nests, and its result's `note` (the
+  `Edit` record's third part) says the one change, suppression. Its close goes in the result text,
+  not `Exceptional.change`: an edit takes no `preserve_exceptions`, which that part names.
 
 - `build` (#149, 2026-11-13) is `Build`: `Primitives.built` hands it the argument as sent
   (`Args.raw`), the range it replaces and the indentation; `Build.statements` returns the text

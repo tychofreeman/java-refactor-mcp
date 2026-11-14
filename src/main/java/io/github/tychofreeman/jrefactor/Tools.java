@@ -1407,24 +1407,27 @@ final class Tools {
       new Def(
           "change_try",
           """
-          Change the try statement that starts on a line, one change a call. add_catch IOException \
-          adds catch (IOException e) { throw e; }, or its body; it goes before a clause that \
-          catches a supertype, and with join, an existing clause's type, joins that clause as a \
-          multi-catch (catch (IOException | IllegalStateException e)). remove_catch removes a \
-          clause, or one type of a multi-catch. finally adds a finally block of statements; \
-          remove_finally removes it. unwrap puts the try's statements in its place, dropping its \
-          catches. A try left with nothing to catch or finish is unwrapped.\
+          Change the try that starts on a line, one change a call: add_catch IOException adds \
+          catch (IOException e) { throw e; } before any clause of a supertype; remove_resource \
+          declares the resource before a try of the body whose finally closes it. A try left with \
+          nothing to catch or finish is unwrapped.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line the try starts on.").required(),
-              Arg.string("add_catch", "An exception type to catch."),
-              Arg.string("body", "With add_catch: the clause's statements; e is the exception."),
-              Arg.string("join", "With add_catch: the type of the clause to join."),
-              Arg.string("remove_catch", "The type whose clause, or multi-catch entry, goes."),
-              Arg.string("finally", "Statements for a new finally block."),
-              Arg.bool("remove_finally", "Remove the finally block."),
+              Arg.integer("line", "The try's 1-based line.").required(),
+              Arg.string("add_catch", "A type to catch."),
+              Arg.string("body", "With add_catch: its statements; e is the exception."),
+              Arg.string(
+                  "join", "With add_catch: a caught type whose clause it joins as a multi-catch."),
+              Arg.string("remove_catch", "A caught type to remove."),
+              Arg.string("finally", "Statements of a new finally."),
+              Arg.bool("remove_finally", "Remove the finally."),
               Arg.bool("unwrap", "Replace the try with its statements."),
+              Arg.string("add_resource", "Reader r = open(), or an effectively final variable."),
+              Arg.integer(
+                  "position",
+                  "With add_resource: 1-based, last by default; resources close last first."),
+              Arg.string("remove_resource", "The resource's variable."),
               Arg.IMPORTS),
           Kind.EDIT,
           ChangeTry::run);
