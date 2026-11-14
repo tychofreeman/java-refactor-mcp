@@ -196,8 +196,13 @@ in one wording built from the argument's description (`Args.check`, `Arg.missing
 such sentence each, in the schema's order: "rename needs name: The current name; ... Pass name.
 rename needs new_name: The new name; a valid Java name. Pass new_name." Inside a `batch` the
 step's refusal carries it after the batch's prefix ("step 2 of 3 (invert_if) refused: invert_if
-needs line: ..."). Only a missing argument (absent or null) is refused here; an empty string is
-the tool's to judge (`content` may be empty to delete). It replaced the hand-written refusals, each in
+needs line: ..."). A required string sent empty or blank is refused in the same words, as one
+left out (issue #622): `rename` with `new_name=""` is "rename needs new_name: The new name; a valid
+Java name. Pass new_name.", where it was "rename needs new_name.". `content` and `new` are the
+exception (#620's decision, reopenable): they may be sent empty (`content` empty deletes, `new`
+empty removes `old`), and the tool judges them. An argument a tool requires only on some routes,
+read through `Args.required`, is refused empty, blank or absent in the same words, with the
+description of the tool that reads it (a router's target's). It replaced the hand-written refusals, each in
 its own wording ("invert_if needs line, the 1-based line the if starts on.", "extract_function
 needs start_line and end_line.", "replace_parameter needs value.", ...). A tool whose required
 arguments depend on its route (`move`, `inline`, `add_parameter`, `change_signature`, the edits

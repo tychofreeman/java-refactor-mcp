@@ -1,0 +1,1 @@
+rename needs new_name: The new name; a valid Java name. Pass new_name.

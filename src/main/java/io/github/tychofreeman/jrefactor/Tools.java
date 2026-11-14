@@ -953,7 +953,7 @@ final class Tools {
       throw new Refusal(
           "imports is for moving a member (name Type.member with to), whose import fix takes it.");
     }
-    return target.handler().run(project, args.routed(target.name(), target.args()));
+    return target.handler().run(project, args.routed(target.name(), target.arguments()));
   }
 
   /**
@@ -1069,7 +1069,7 @@ final class Tools {
               + name
               + " to inline every call of it.");
     }
-    return target.handler().run(project, args.routed(target.name(), target.args()));
+    return target.handler().run(project, args.routed(target.name(), target.arguments()));
   }
 
   static final Def REPLACE_TEXT =
@@ -1827,7 +1827,7 @@ final class Tools {
    */
   static Outcome call(Def def, SourceProject project, Map<String, Object> values) throws Exception {
     Args args =
-        new Args(def.name(), values)
+        new Args(def.name(), values, def.arguments())
             .renamed(ARG_ALIASES.getOrDefault(def.name(), Map.of()))
             .without(RETIRED_ARGS.getOrDefault(def.name(), Set.of()));
     args.check(def.arguments());

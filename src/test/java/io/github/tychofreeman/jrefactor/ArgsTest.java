@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -29,11 +30,22 @@ class ArgsTest {
     assertFalse(routed.has("copy"));
     assertFalse(routed.has("package"));
     Refusal refusal = assertThrows(Refusal.class, () -> routed.required("imports"));
-    assertEquals("move_member needs imports.", refusal.getMessage());
+    assertEquals("move_member needs imports. Pass imports.", refusal.getMessage());
   }
 
   @Test
   void valuesAreTheArgumentsAsSent() {
     assertEquals(Map.of("over", "items"), args("over", "items").values());
+  }
+
+  @Test
+  void requiredRefusesAnEmptyValueInTheArgumentsWords() {
+    Args sent =
+        args("line", 3, "name", "")
+            .routed("invert_if", List.of(Arg.FILE, Arg.string("name", "The if's name").required()));
+    Refusal refusal = assertThrows(Refusal.class, () -> sent.required("name"));
+    assertEquals("invert_if needs name: The if's name. Pass name.", refusal.getMessage());
+    refusal = assertThrows(Refusal.class, () -> sent.required("file"));
+    assertEquals("invert_if needs file: Java file path. Pass file.", refusal.getMessage());
   }
 }

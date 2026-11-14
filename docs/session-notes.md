@@ -424,7 +424,7 @@ Each was chosen from options; the record named beside it has the options it beat
   line, cut to 60 characters), never `node.toString()`, which is JDT's reformatting (#526). A unit
   knows its text through `Jdt.sourceOf`.
 - A router (`move`, `inline`) hands its arguments on with `Args.routed(target.name(),
-  target.args())` (#524): every given argument the target takes goes, so a new one needs no
+  target.arguments())` (#524; the `Arg` list since #622, so `required` speaks in the target's words): every given argument the target takes goes, so a new one needs no
   copying; `preserve_exceptions` is the session's already (`Tools.call`).
 - A tool's result is an `Outcome`; `render()` gives the text the model reads,
   with the stubs named after it.
@@ -440,7 +440,10 @@ Each was chosen from options; the record named beside it has the options it beat
   wording from its description (`Arg.missing`, #521, 2026-11-14, the owner's option (a), over
   per-tool wording by overrides and over hand checks): do not check one in the tool. Mark an
   argument required only when every route of the tool needs it; `RequiredArgsTest` calls each
-  tool without each one.
+  tool without each one, and with each required string empty and blank (#622, 2026-11-14): those
+  read as missing, but `content` and `new` (`Args.MAY_BE_EMPTY`, #620's decision). `Args` keeps
+  the tool's `List<Arg>` from `Tools.call`; an `Args` built elsewhere (`new Args(tool, values)`)
+  has none, and its `required` refuses without a description.
 - A new tool's arguments are a `List<Arg>` (`Arg.FILE`, `Arg.IMPORTS`,
   `Arg.string(...).required()`, ...), not JSON (#97). To check that a rewrite of
   `Tools` keeps every schema, diff two runs of `ToolSchemasTest`
