@@ -177,8 +177,8 @@ Each was chosen from options; the record named beside it has the options it beat
   A new option that would make the model choose a place is against this choice. A tool that adds
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
-  the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
-  file's step (`MemberMove.reindented`, #316); it had written two spaces. The first member of an
+  the member as the type's members (`Indent.member`), each step inside it as the target
+  file's step (`Indent.restep`, #316); it had written two spaces. The first member of an
   enum that has constants only goes through `MemberMove.afterConstants` (#141), which writes the
   `;` after the last constant: `Declarations.plan` (so stubs too) and `MemberMove.appendTo` ask it
   before their own end-of-type branch, since an enum's constants are not `bodyDeclarations()`. A field an edit adds
@@ -237,6 +237,9 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Where code goes
 
+- Which checked exceptions code throws and does not catch is `Exceptions.uncaught(roots)` (#481,
+  2026-11-14): deferred code skipped, resources' `close()` counted; `Exceptions.checked` and
+  `caught` for one node. Do not write another walk; `ThrowsCallers` still has its own test.
 - A name a tool declares comes from `Names` (#480, 2026-11-14): `Names.free(name, taken)` adds a
   number while the name is taken or a keyword, `Names.fresh(name, node)` takes the names of the
   node's file, `Names.parameterName(type)` names a parameter by its type. A new fresh-name loop
@@ -280,6 +283,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
+- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
+  where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
+  `restep` for a member moved between files (each step becomes the target's) and `member` for the
+  indentation of a type's members. Not a new helper in a tool, and not a written `"  "`.
 - `Journal.put` and `Journal.restore` are the one writer of project files; the
   journal also keeps a file's mode (`Journal.mode`, `copyMode`), so undo puts back
   an executable file executable. Both take the project: a deletion removes the directories it
@@ -313,6 +320,9 @@ Each was chosen from options; the record named beside it has the options it beat
   up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
   (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,
   `Declarations` and the signature tools keep their own resolvers (roadmap #74).
+- A node named by `line` and `column` is found by `Opened.onLine`, narrowed by `Opened.atColumn`,
+  with `Opened.several` when one is meant (or `startingOn` with a `column`): one refusal wording
+  for every tool (#520). A tool that takes `column` uses them, not its own visitor or line scan.
 - What code reads, writes and calls comes from `Effects.of(node)`
   (`docs/sessions/one-effects-analysis.md`); a new effect kind goes in
   `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw" (a `throw`, an `assert`, an
@@ -453,7 +463,7 @@ Each was chosen from options; the record named beside it has the options it beat
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
   directly (`indexToEach`, `iteratorToEach`, `toIterator`, `toIndex`), sharing `stable` (the
   walked list or array cannot change between passes) and `unchanged` (no call changes the list).
-  It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. A for and a
+  It borrows `LoopToStream.elementOf`, `unused`, `primary` and `CHANGES`, and `Indent.reindent`. A for and a
   while (`forToWhile`, `whileToFor`) go through `continues` (the continues of this loop, by label
   or innermost loop), `before` (statements put before one) and `last` (statements put last in a
   body). A do-while to a while is `while (true) { body; if (!cond) break; }` (`doToWhile`, the

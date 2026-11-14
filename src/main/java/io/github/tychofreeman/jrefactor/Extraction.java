@@ -16,8 +16,6 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.BreakStatement;
-import org.eclipse.jdt.core.dom.CatchClause;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.ContinueStatement;
@@ -48,11 +46,8 @@ import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.ThrowStatement;
-import org.eclipse.jdt.core.dom.TryStatement;
-import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.TypeParameter;
-import org.eclipse.jdt.core.dom.UnionType;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
@@ -326,7 +321,7 @@ final class Extraction {
     String memberIndent = indentOf(lineStartOffset(member.getStartPosition()));
     int firstStatement = sel.statements().get(0).getStartPosition();
     String statementIndent = indentOf(lineStartOffset(firstStatement));
-    int step = Declarations.step(text);
+    int step = Indent.step(text);
     String bodyIndent = memberIndent + " ".repeat(step > 0 ? step : 4);
 
     StringBuilder method = new StringBuilder("\n");
@@ -731,73 +726,11 @@ final class Extraction {
 
   /** The checked exceptions the statements throw and do not catch. */
   List<String> thrown() {
-    List<ITypeBinding> types = new ArrayList<>();
-    for (ASTNode n : own()) {
-      List<ITypeBinding> from = new ArrayList<>();
-      IMethodBinding m = null;
-      if (n instanceof MethodInvocation i) {
-        m = i.resolveMethodBinding();
-      } else if (n instanceof SuperMethodInvocation i) {
-        m = i.resolveMethodBinding();
-      } else if (n instanceof ClassInstanceCreation c) {
-        m = c.resolveConstructorBinding();
-      }
-      if (m != null) {
-        from.addAll(List.of(m.getExceptionTypes()));
-      }
-      if (n instanceof ThrowStatement t && t.getExpression().resolveTypeBinding() != null) {
-        from.add(t.getExpression().resolveTypeBinding());
-      }
-      for (ITypeBinding t : from) {
-        if (checked(t) && !caught(n, t) && types.stream().noneMatch(t::isSubTypeCompatible)) {
-          types.removeIf(other -> other.isSubTypeCompatible(t));
-          types.add(t);
-        }
-      }
-    }
     List<String> out = new ArrayList<>();
-    for (ITypeBinding t : types) {
+    for (ITypeBinding t : Exceptions.uncaught(sel.statements())) {
       out.add(typeName(t));
     }
     return out;
-  }
-
-  /** Whether a try among the statements, around {@code n}, catches {@code t}. */
-  private boolean caught(ASTNode n, ITypeBinding t) {
-    ASTNode child = n;
-    for (ASTNode p = n.getParent(); p != null && sel.contains(p); p = p.getParent()) {
-      if (p instanceof TryStatement ts && ts.getBody() == child) {
-        for (Object o : ts.catchClauses()) {
-          Type caught = ((CatchClause) o).getException().getType();
-          List<Type> alternatives = new ArrayList<>();
-          if (caught instanceof UnionType u) {
-            for (Object a : u.types()) {
-              alternatives.add((Type) a);
-            }
-          } else {
-            alternatives.add(caught);
-          }
-          for (Type a : alternatives) {
-            ITypeBinding b = a.resolveBinding();
-            if (b != null && t.isSubTypeCompatible(b)) {
-              return true;
-            }
-          }
-        }
-      }
-      child = p;
-    }
-    return false;
-  }
-
-  private static boolean checked(ITypeBinding t) {
-    for (ITypeBinding s = t; s != null; s = s.getSuperclass()) {
-      String q = s.getQualifiedName();
-      if (q.equals("java.lang.RuntimeException") || q.equals("java.lang.Error")) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /** The enclosing method's type parameters, as written, or nothing. */

@@ -1,0 +1,1 @@
+2 lambdas, method references or anonymous classes start on line 7, at columns 35 and 56. Pass column

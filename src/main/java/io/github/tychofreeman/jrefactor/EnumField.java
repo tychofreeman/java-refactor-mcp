@@ -113,7 +113,7 @@ final class EnumField {
         edits.add(Signatures.insertAt(text, c.arguments(), open - 1, at, value));
       }
     }
-    int step = Declarations.step(text) > 0 ? Declarations.step(text) : 2;
+    int step = Indent.step(text, 2);
     String in = " ".repeat(step);
     String assign = "this." + parameter + " = " + parameter + ";";
     String members = "private final " + type + " " + parameter + ";\n\n";

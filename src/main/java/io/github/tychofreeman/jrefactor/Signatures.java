@@ -1167,7 +1167,7 @@ final class Signatures {
       next++;
     }
     String outer = Lines.indentOf(text, m.getName().getStartPosition());
-    String inner = outer + " ".repeat(Math.max(Declarations.step(text), 2));
+    String inner = outer + " ".repeat(Indent.step(text, 2));
     if (text.substring(from, next).contains("\n")) {
       int line = Lines.start(text, next);
       String indent = next == close ? inner : Lines.indentOf(text, next);

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
@@ -49,10 +48,7 @@ final class ExtractVariable {
     Path file = opened.file();
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    int lineStart = Lines.offsetOf(text, line);
-    int lineEnd = text.indexOf('\n', lineStart) < 0 ? text.length() : text.indexOf('\n', lineStart);
-
-    Expression e = find(unit, text, expression.strip(), lineStart, lineEnd, line, column);
+    Expression e = find(opened, expression.strip(), line, column);
     Statement statement = enclosingStatement(e);
     checkPlace(e, statement, expression.strip());
 
@@ -115,29 +111,14 @@ final class ExtractVariable {
   }
 
   /** The expression on {@code line} with source text {@code source}, by column if several. */
-  static Expression find(
-      CompilationUnit unit,
-      String text,
-      String source,
-      int lineStart,
-      int lineEnd,
-      int line,
-      Integer column) {
+  static Expression find(Opened opened, String source, int line, Integer column) {
+    String text = opened.text();
     List<Expression> found = new ArrayList<>();
-    unit.accept(
-        new ASTVisitor() {
-          @Override
-          public boolean preVisit2(ASTNode node) {
-            if (node instanceof Expression x
-                && x.getStartPosition() >= lineStart
-                && x.getStartPosition() < lineEnd
-                && text.substring(x.getStartPosition(), x.getStartPosition() + x.getLength())
-                    .equals(source)) {
-              found.add(x);
-            }
-            return true;
-          }
-        });
+    for (Expression x : opened.onLine(line, Expression.class)) {
+      if (text.substring(x.getStartPosition(), Nodes.end(x)).equals(source)) {
+        found.add(x);
+      }
+    }
     if (found.isEmpty()) {
       throw new Refusal(
           "no expression with the source text "
@@ -146,32 +127,9 @@ final class ExtractVariable {
               + line
               + ". Give the line where it starts and its text exactly as written.");
     }
-    if (column != null) {
-      for (Expression x : found) {
-        if (x.getStartPosition() - lineStart + 1 == column) {
-          return x;
-        }
-      }
-      throw new Refusal(
-          source
-              + (found.size() == 1 ? " starts at column " : " starts at columns ")
-              + Nodes.columns(found, lineStart)
-              + " of line "
-              + line
-              + ", not "
-              + column
-              + ". Pass one of them.");
-    }
+    found = opened.atColumn(found, line, column, source);
     if (found.size() > 1) {
-      throw new Refusal(
-          source
-              + " occurs "
-              + found.size()
-              + " times on line "
-              + line
-              + ", at columns "
-              + Nodes.columns(found, lineStart)
-              + "; pass column, the one where the one you mean starts.");
+      throw opened.several(found, line, "occurrences of " + source);
     }
     return found.get(0);
   }

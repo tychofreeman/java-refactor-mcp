@@ -37,11 +37,8 @@ final class Primitives {
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    int lineStart = lineStart(unit, line, rel);
-    int lineEnd = text.indexOf('\n', lineStart) < 0 ? text.length() : text.indexOf('\n', lineStart);
-    Expression e =
-        ExtractVariable.find(
-            unit, text, expression, lineStart, lineEnd, line, args.integer("column"));
+    lineStart(unit, line, rel);
+    Expression e = ExtractVariable.find(opened, expression, line, args.integer("column"));
     String replacement =
         args.has("build")
             ? Build.expression(
@@ -401,24 +398,7 @@ final class Primitives {
 
   /** {@code content}'s lines with their common indentation replaced by {@code indent}. */
   static String indent(String content, String indent) {
-    String[] lines = content.stripTrailing().split("\n", -1);
-    int common = Integer.MAX_VALUE;
-    for (String l : lines) {
-      if (!l.isBlank()) {
-        common = Math.min(common, l.length() - l.stripLeading().length());
-      }
-    }
-    common = common == Integer.MAX_VALUE ? 0 : common;
-    StringBuilder out = new StringBuilder();
-    for (int i = 0; i < lines.length; i++) {
-      if (i > 0) {
-        out.append('\n');
-      }
-      if (!lines[i].isBlank()) {
-        out.append(indent).append(lines[i].substring(Math.min(common, lines[i].length())));
-      }
-    }
-    return out.toString();
+    return Indent.reindent(content.stripTrailing(), indent);
   }
 
   /**

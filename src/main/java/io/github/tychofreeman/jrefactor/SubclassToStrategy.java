@@ -177,8 +177,8 @@ final class SubclassToStrategy {
     String ret = src(baseText, own.getReturnType2());
     String fnType = type == null ? cap : type;
     String sam = type == null ? method : samOf(project, baseFile, baseText, base, type, own);
-    String indent = MemberMove.memberIndent(baseText, base);
-    String step = " ".repeat(Math.max(Declarations.step(baseText), 2));
+    String indent = Indent.member(baseText, base, 2);
+    String step = " ".repeat(Indent.step(baseText, 2));
     String in = indent + step;
 
     List<TextEdit> edits = new ArrayList<>();
@@ -322,7 +322,7 @@ final class SubclassToStrategy {
                 + ")"
                 + thrownText(subText, over)
                 + " "
-                + overBody.replace("\n" + MemberMove.memberIndent(subText, sub), "\n" + indent)
+                + Indent.restep(overBody, indent, Indent.step(baseText, 2))
                 + "\n"));
 
     // Every use of the subclass.
