@@ -73,6 +73,11 @@ final class MoveMember {
         !to.contains(".") && MemberMove.typeNamed(unit, to) != null
             ? file
             : targetFile(project, to, rel);
+    if (to.contains(".") && !imports.contains(to)) {
+      // The class the model named is the one a moved name that two classes have stands for.
+      imports = new ArrayList<>(imports);
+      imports.add(to);
+    }
     BodyDeclaration declared = MemberMove.member(source, typeName, member, rel, "move");
     if (declared instanceof FieldDeclaration fd) {
       return field(project, opened, fd, typeName, member, toName, targetFile, imports);
@@ -457,11 +462,17 @@ final class MoveMember {
    */
   private static Path targetFile(SourceProject project, String to, String rel) throws IOException {
     String simple = to.substring(to.lastIndexOf('.') + 1);
-    String suffix = "/" + (to.contains(".") ? to.replace('.', '/') : simple) + ".java";
     List<Path> found = new ArrayList<>();
-    for (Path p : project.javaFiles()) {
-      if (("/" + project.relative(p)).endsWith(suffix)) {
-        found.add(p.toAbsolutePath().normalize());
+    if (to.contains(".")) {
+      Path declaring = project.fileDeclaring(to);
+      if (declaring != null) {
+        found.add(declaring);
+      }
+    } else {
+      for (Path p : project.javaFiles()) {
+        if (p.getFileName().toString().equals(simple + ".java")) {
+          found.add(p.toAbsolutePath().normalize());
+        }
       }
     }
     if (found.isEmpty()) {
@@ -847,15 +858,7 @@ final class MoveMember {
    * Whether {@code a} and {@code b} are in one top-level type, whose private members both reach.
    */
   private static boolean sameTopLevel(ITypeBinding a, ITypeBinding b) {
-    return outermost(a).getKey().equals(outermost(b).getKey());
-  }
-
-  private static ITypeBinding outermost(ITypeBinding t) {
-    ITypeBinding out = t;
-    while (out.getDeclaringClass() != null) {
-      out = out.getDeclaringClass();
-    }
-    return out;
+    return Names.outermost(a).getKey().equals(Names.outermost(b).getKey());
   }
 
   /**

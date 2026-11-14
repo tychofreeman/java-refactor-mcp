@@ -1864,7 +1864,9 @@ errors".
 
 Moves a method of a top-level class to another top-level class, of the same file or (roadmap #109,
 2026-11-06) another: `to` is the class's name, found as `<to>.java` in the project, or with its
-package (`com.example.shop.Tax`) when several files declare one; refused naming them. Arguments:
+package (`com.example.shop.Tax`) when several files declare one; refused naming them. A name with
+its package is the file that name implies under a source root, and the class to import where another
+class has its simple name (issue #482). Arguments:
 `file`, `name` (`Type.method`, or `Type.method(params)` for an overload), `to` (the target class).
 Imports follow in every file; a method moved to another package becomes public, and what its body
 uses that the target cannot reach is the gate's compile error.
@@ -1927,7 +1929,8 @@ field, an instance getter or setter that would override a method of the class's 
   the refused one, and every refused batch ends by saying how to retry. From the command line,
   the refused batch is kept between runs, beside the undo stack (#194, 2026-11-13). Refused: a retry with no
   refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
-  it. The refusal's hint says a step's tool can change and how to move a step.
+  it, one that is not a JSON number (`"2"`), and a step that `step` or `remove` names twice (#488;
+  `after` may repeat, each step added in order). The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server

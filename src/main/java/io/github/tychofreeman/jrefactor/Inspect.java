@@ -359,7 +359,11 @@ public final class Inspect {
     return node.getStartPosition() + node.getLength() - 1;
   }
 
-  /** The path of {@code file} under the project root, or a refusal saying which files exist. */
+  /**
+   * The path of {@code file} under the project root, or a refusal saying which files exist. Unlike
+   * {@link SourceProject#javaFile}, any {@code .java} file under the root will do: reading one
+   * needs no package, so a file outside the source roots (an example, a fixture) can be read too.
+   */
   private static Path javaFile(SourceProject project, String file) throws IOException {
     Path root = project.root().toAbsolutePath().normalize();
     Path path = root.resolve(file).normalize();
@@ -398,8 +402,10 @@ public final class Inspect {
         if (!f.startsWith(root)) {
           continue;
         }
-        Path dir = root.relativize(f).getParent();
-        String pkg = dir == null ? "(the default package)" : dir.toString().replace('/', '.');
+        String pkg = project.packageOf(f);
+        if (pkg.isEmpty()) {
+          pkg = "(the default package)";
+        }
         int n = (int) Files.readString(f).lines().count();
         byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(f.getFileName() + " " + n);
         lines.merge(pkg, n, Integer::sum);

@@ -775,10 +775,7 @@ final class Fold {
 
   /** Whether {@code n} is in the top-level type that declares {@code type}, or in it. */
   private static boolean sameTopLevel(ASTNode n, ITypeBinding type) {
-    ITypeBinding top = type;
-    while (top.getDeclaringClass() != null) {
-      top = top.getDeclaringClass();
-    }
+    ITypeBinding top = Names.outermost(type);
     for (ASTNode p = n; p != null; p = p.getParent()) {
       if (p instanceof AbstractTypeDeclaration t && t.getParent() instanceof CompilationUnit) {
         ITypeBinding b = t.resolveBinding();

@@ -909,7 +909,7 @@ final class LoopToStream {
       stages.add(new Stage("map", last.param(), last.body()));
       stages.forEach(s -> segments.add(s.text()));
     } else {
-      String name = unused(v.getName() + "Changed", loop);
+      String name = Names.fresh(v.getName() + "Changed", loop);
       int[] range = statementsRange(text, read.holder(), rest);
       List<TextEdit> edits = new ArrayList<>();
       for (Assignment a : sets) {
@@ -982,17 +982,6 @@ final class LoopToStream {
         || (e instanceof PrefixExpression p
             && p.getOperator() == PrefixExpression.Operator.MINUS
             && p.getOperand() instanceof NumberLiteral);
-  }
-
-  /** {@code name}, or it with a number after it, that no name in {@code loop}'s file is. */
-  static String unused(String name, ASTNode loop) {
-    Set<String> taken = new java.util.HashSet<>();
-    Nodes.all(loop.getRoot(), SimpleName.class).forEach(n -> taken.add(n.getIdentifier()));
-    String out = name;
-    for (int i = 2; taken.contains(out); i++) {
-      out = name + i;
-    }
-    return out;
   }
 
   /**
@@ -1205,8 +1194,8 @@ final class LoopToStream {
       return null;
     }
     IBinding entry = loop.getParameter().resolveBinding();
-    String key = unused("key", loop);
-    String value = unused("value", loop);
+    String key = Names.fresh("key", loop);
+    String value = Names.fresh("value", loop);
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(loop.getBody(), SimpleName.class)) {
       if (!same(n.resolveBinding(), entry)) {

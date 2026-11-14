@@ -100,7 +100,7 @@ final class TypeSwitch {
             ? over
             : ((PatternInstanceofExpression) ((IfStatement) node).getExpression()).getLeftOperand();
     ITypeBinding s = selector.resolveTypeBinding();
-    Path sFile = s == null ? null : fileAround(project, s);
+    Path sFile = s == null ? null : project.fileOf(s);
     Precondition.require(
         Precondition.that(
             () ->
@@ -137,7 +137,7 @@ final class TypeSwitch {
     texts.putIfAbsent(sFile, Files.readString(sFile));
     for (Case c : cases) {
       if (c.type() != null) {
-        Path f = fileAround(project, c.type());
+        Path f = project.fileOf(c.type());
         texts.putIfAbsent(f, Files.readString(f));
       }
     }
@@ -167,7 +167,7 @@ final class TypeSwitch {
           throw new Refusal(c.type().getName() + " already declares " + name + "().");
         }
       }
-      Path f = fileAround(project, c.type());
+      Path f = project.fileOf(c.type());
       String method =
           "@Override\n  public "
               + r
@@ -332,7 +332,7 @@ final class TypeSwitch {
     IVariableBinding variable = p.getPatternVariable2().resolveBinding();
     ITypeBinding bound = variable == null ? null : variable.getType();
     ITypeBinding t = bound == null ? null : bound.getErasure();
-    if (t == null || fileAround(project, t) == null) {
+    if (t == null || project.fileOf(t) == null) {
       throw new Refusal(
           "the case "
               + label
@@ -524,13 +524,7 @@ final class TypeSwitch {
     if (t.getDeclaringClass() != null) {
       return null;
     }
-    String path = t.getErasure().getQualifiedName().replace('.', '/') + ".java";
-    for (Path f : project.javaFiles()) {
-      if (("/" + project.relative(f)).endsWith("/" + path)) {
-        return f.toAbsolutePath().normalize();
-      }
-    }
-    return null;
+    return project.fileDeclaring(t.getErasure().getQualifiedName());
   }
 
   /**
@@ -546,20 +540,5 @@ final class TypeSwitch {
       p = p.getParent();
     }
     return p == sw;
-  }
-
-  /**
-   * The project file that declares {@code t}, a top-level type or a member type (the file of its
-   * outermost type), or null, as for a local or anonymous class.
-   */
-  static Path fileAround(SourceProject project, ITypeBinding t) throws IOException {
-    ITypeBinding top = t.getErasure();
-    while (top.getDeclaringClass() != null) {
-      if (top.isLocal() || top.isAnonymous()) {
-        return null;
-      }
-      top = top.getDeclaringClass();
-    }
-    return fileOf(project, top);
   }
 }

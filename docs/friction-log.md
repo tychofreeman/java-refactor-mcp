@@ -1392,6 +1392,24 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand: one `replace_text`. The golden case is resources.
 
+## 2026-11-13: fix-batch-retry-numbers
+
+- No Java by hand: one `batch` of two `add_declaration`s (the tests), one of three `replace_text`s
+  (the fix), one `replace_text` (the doc comment).
+## 2026-11-13: file-declaring-type
+
+- `move` of `TypeSwitch.fileDeclaring` (a static method taking a `SourceProject`) to
+  `SourceProject` was refused: "SourceProject is not a class ... that resolves" (it is a record).
+  The plan was `move`, then `function_to_method`. Done as one `batch`: `add_declaration` of the
+  instance method, `replace_text` of the one call, `replace_declaration` with empty content.
+- `inline` of `Stubs.Round.sourceOf` (an instance method of a member class, made a delegate first)
+  was refused with `name=Stubs.Round.sourceOf` ("declares no method Round.sourceOf") and with
+  `Round.sourceOf` ("Round is not a top-level type"). Done as `replace_text` with
+  `all_occurrences` of `= sourceOf(` and a delete. `inline` could take a member class's method.
+- Everything else went through the tools: `extract_variable`, `extract_function`, `inline` (local
+  and static method), `move_parameter`, `move` (to `Names`), `rename`, `replace_statements`,
+  `insert_statements`. Goldens are resources.
+
 ## 2026-11-13: fix-field-change-type
 
 - No Java by hand. `extract_function` twice (the new parameter's checks, the return type's

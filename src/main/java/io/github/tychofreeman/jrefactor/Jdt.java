@@ -219,13 +219,7 @@ final class Jdt {
         List<String> parts = List.of(m.group(1).split("\\."));
         // The member's type is the longest prefix that names a file: p.Outer.Inner.m is in p/Outer.
         for (int k = parts.size() - 1; k > 0; k--) {
-          String rel = String.join("/", parts.subList(0, k)) + ".java";
-          Path declaring =
-              project.sourceRoots().stream()
-                  .map(r -> r.resolve(rel).toAbsolutePath().normalize())
-                  .filter(Files::isRegularFile)
-                  .findFirst()
-                  .orElse(null);
+          Path declaring = project.fileDeclaring(String.join(".", parts.subList(0, k)));
           if (declaring != null) {
             if (!given.contains(declaring)) {
               out.add(declaring);
