@@ -99,20 +99,15 @@ final class Extraction {
     int insertAt = Extract.lineEndOffset(unit, text, line(Nodes.end(member) - 1));
     String callIndent = indentOf(lineStartOffset(sel.statements().get(0).getStartPosition()));
     String callLine = callIndent + c.call().replace("\n", "\n" + callIndent) + "\n";
-    String edited =
-        text.substring(0, sel.startOffset())
-            + callLine
-            + text.substring(sel.endOffset(), insertAt)
-            + method
-            + text.substring(insertAt);
+    List<TextEdit> edits =
+        List.of(
+            new TextEdit(sel.startOffset(), sel.endOffset(), callLine),
+            new TextEdit(insertAt, insertAt, method));
+    String edited = TextEdit.apply(text, edits, 0);
     NameCheck.require(
         project,
         Map.of(path, text),
-        Map.of(
-            path,
-            List.of(
-                new TextEdit(sel.startOffset(), sel.endOffset(), callLine),
-                new TextEdit(insertAt, insertAt, method))),
+        Map.of(path, edits),
         NameCheck.meanings(sel.statements()),
         "extracting " + sel.lines() + " into " + name);
     int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
