@@ -352,11 +352,14 @@ final class Edits {
       throws Exception {
     // Only a file under a source root has a package the imports can be resolved in; elsewhere
     // (a golden expected file, a script) the text is applied as written.
+    String rel = project.relative(path);
+    if (rel.endsWith(".java")) {
+      resultParses(project, after, rel, what);
+    }
     Imports.Fixed fixed =
         project.packageOf(path) == null
             ? new Imports.Fixed(after, 0, List.of())
-            : FromFields.complete(
-                before, Imports.fix(project, path, before, after, chosen), path.toString());
+            : FromFields.complete(before, Imports.fix(project, path, before, after, chosen), rel);
     Stubs.Declared declared = Gate.applyOrRefuse(project, Map.of(path, fixed.text()), what, fix);
     return new Written(fixed, declared);
   }
@@ -385,6 +388,17 @@ final class Edits {
   /** {@code source} parsed, or refused with its first syntax errors and their lines. */
   static CompilationUnit parses(String source, String what) {
     CompilationUnit unit = Jdt.parseSyntax(source);
+    String errors = syntaxErrors(unit);
+    if (!errors.isEmpty()) {
+      throw new Refusal(what + " does not parse:" + errors + "\nFix the syntax and send it again.");
+    }
+    return unit;
+  }
+
+  /**
+   * The first three syntax errors of {@code unit}, each on a line of its own after its line number.
+   */
+  private static String syntaxErrors(CompilationUnit unit) {
     StringBuilder errors = new StringBuilder();
     int count = 0;
     for (IProblem problem : unit.getProblems()) {
@@ -396,9 +410,27 @@ final class Edits {
             .append(problem.getMessage());
       }
     }
-    if (count > 0) {
-      throw new Refusal(what + " does not parse:" + errors + "\nFix the syntax and send it again.");
+    return errors.toString();
+  }
+
+  /**
+   * Refuses {@code text}, what {@code what} made of {@code rel}, when it does not parse: under an
+   * edit, as syntax the model sent; under a refactoring, as code the tool itself wrote.
+   */
+  private static void resultParses(SourceProject project, String text, String rel, String what) {
+    if (project.session().editing) {
+      parses(text, "the result");
+      return;
     }
-    return unit;
+    String errors = syntaxErrors(Jdt.parseSyntax(text));
+    if (!errors.isEmpty()) {
+      throw new Refusal(
+          what
+              + " wrote code that does not parse:"
+              + errors
+              + "\nThis is a fault in the tool, not in your code: "
+              + rel
+              + " is unchanged. Make this change with an edit instead.");
+    }
   }
 }

@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.ArrayAccess;
+import org.eclipse.jdt.core.dom.ArrayInitializer;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
@@ -82,12 +85,28 @@ final class InlineVariable {
 
     String source =
         text.substring(init.getStartPosition(), init.getStartPosition() + init.getLength());
-    String inlined = needsParentheses(init) ? "(" + source + ")" : source;
+    boolean array = init instanceof ArrayInitializer;
+    if (array) {
+      // An initializer alone is an expression only in a declaration; elsewhere new and the type.
+      Type type = stmt.getType();
+      source =
+          "new "
+              + text.substring(type.getStartPosition(), Nodes.end(type))
+              + "[]".repeat(fragment.getExtraDimensions())
+              + " "
+              + source;
+    }
+    String inlined = needsParentheses(init) && !array ? "(" + source + ")" : source;
     List<TextEdit> edits = new ArrayList<>();
     int uses = 0;
     for (SimpleName use : usesIn(block, variable, after)) {
+      // new T[] {...}[i] does not parse: an array creation is indexed in parentheses.
+      boolean indexed = use.getParent() instanceof ArrayAccess a && a.getArray() == use;
       edits.add(
-          new TextEdit(use.getStartPosition(), use.getStartPosition() + use.getLength(), inlined));
+          new TextEdit(
+              use.getStartPosition(),
+              use.getStartPosition() + use.getLength(),
+              array && indexed ? "(" + source + ")" : inlined));
       uses++;
     }
     int declared = Lines.number(text, stmt.getStartPosition());

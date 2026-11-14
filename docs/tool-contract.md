@@ -47,6 +47,30 @@ default (`docs/design.md`, Decisions).
   `inline_variable`, an initializer that may throw moved into an `if`, a loop, a
   `?:` or `&&`/`||` branch, a lambda, a `switch` or a `try` (it would throw there
   only, if at all, or be caught).
+- Which guards keep it (roadmap #173, 2026-11-13, `Guards`; every refactoring that
+  goes through the behavior gate). Code that may throw only by an integer `/` or `%`
+  (ArithmeticException) or by a dereference of a variable or expression (`p.cost`,
+  `a.length`, a record accessor; NullPointerException) is kept under a guard only
+  when the guard tests its own operand: compares the divisor to a constant number
+  (`d == 0`, `0 != d`, `d > 0`), or tests the receiver for null (`x == null`,
+  `x != null`, `Objects.isNull(x)`, `Objects.nonNull(x)`, `x instanceof T`), or
+  switches on it. The operand is the same variable or field by binding, through the
+  same qualifier (`this.d` is `d`), or else the same expression as written. Moving
+  it from under such a guard is refused as before ("... under the guard that keeps
+  it from throwing; ... Keep it there.", "... guards it; ... above that guard. Keep
+  it there."). Moving it from under any other condition (an `if`, `?:`, `&&`/`||`,
+  a loop or a `switch`), or above an early exit that does not test the operand, is
+  reported: "n / d may throw (n / d) and runs only sometimes where it is (in a
+  branch of ?:), under a condition that does not test what it divides by or
+  dereferences; extracting n / d moves it out from under that condition: it would
+  now throw where the condition skipped it", or "... moves it above the statement at
+  line 5, which may leave the block early but does not test what it divides by or
+  dereferences: it would now throw where that exit came first". Under
+  `preserve_exceptions` that is refused, as every report is.
+  Everything else that may throw (an array element, a reference cast, a call, a new
+  object) keeps the rule before: any guard keeps it, and moving it from under one is
+  refused. Leaving a catch clause, a lambda or an anonymous class is refused as
+  before, and so is leaving a try that catches or finishes (unchanged).
 
 ## Moved code keeps its meaning (`NameCheck`)
 
@@ -69,6 +93,14 @@ class without one (2026-11-07), and fix imports; lines are 1-based.
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+When the JDT compiler itself throws while type-checking (ECJ fails this way on some code that does
+not compile, issue #405), the call is refused, every file put back: "The Java compiler (ECJ) failed
+while type-checking, so nothing was changed: <exception> (in <where in ECJ>). It fails this way on
+some code that does not compile, such as a lambda or method reference whose target type no longer
+fits its type parameter's bounds. Change the edit so the code it writes type-checks (another type,
+bound or argument); if every edit fails this way, the project as it is trips the compiler: fix the
+code there first." (`Jdt.compilerFailed`, 2026-11-13.)
+
 An edit (any tool through `Edits.gated`) that adds a final instance field with no value to a
 class with no constructor but "not implemented" stubs also adds the constructor that sets every
 such field, in declaration order, after the last of them; a stub of the same parameter types is
@@ -77,6 +109,14 @@ constructor Reservation(String book, String member), since final fields book, me
 unset"), and, for a top-level class with no superclass, its instance fields final and one
 constructor, adds "; Reservation now fits a record: convert_to_record makes it one".
 
+A refactoring through `Edits.gated` whose own output does not parse is refused as the tool's
+fault: "inlining names wrote code that does not parse:" with the first three errors and their
+lines, then "This is a fault in the tool, not in your code: p/Arr.java is unchanged. Make this
+change with an edit instead." An edit whose result does not parse keeps "the result does not
+parse: ... Fix the syntax and send it again." (2026-11-13, issue #410: the refactoring's case had
+named the file by its absolute path and asked the model to fix its syntax). A refactoring that
+writes through `Gate.applyOrRefuse` alone gets the gate's compile refusal instead.
+
 A compile refusal lists the errors, then what to send. When the errors are blank final fields no
 constructor sets ("The blank final field book may not have been initialized"), it names
 `add_declaration` with `constructor: ["book", ...]`, sent with the fields in one batch
@@ -84,6 +124,17 @@ constructor sets ("The blank final field book may not have been initialized"), i
 declaring them ("The method price() of type Cart must override or implement a supertype method"),
 it names `add_supertype` for that type, before the methods in one batch (2026-11-06). Other errors
 with these keep the edit's own advice after the hints.
+
+A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
+follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
+that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by
+their erased types instead, the compiler's erasure read from the syntax: a type variable becomes
+its first bound's erasure, or `Object`, and type arguments are dropped (`raise(Object)`,
+`raise(Throwable)`). A name is matched as written first, then erased (`Declarations.find`, roadmap
+#177, 2026-11-13, issue #408). The refusal for several members of a name lists each by the form
+that names it: "Ex has 2 members named raise: raise(Object), raise(Throwable). Name one with its
+parameter types, as raise(Throwable)." (it listed `raise(T), raise(T)` and suggested `raise(T)`,
+which it then refused again). `line` turns into the same name (`ByLine.named`).
 
 ## Names shared with gorefactor
 
@@ -322,11 +373,23 @@ there on 2026-11-06, gorefactor's #601), is an unpublished alias. Arguments: `fi
 - `kind=class`: `<Supertype>.java` extends the class's old superclass, if any,
   and takes its place in the class's `extends`; each member moves into it as
   `pull_up` moves it (fields and methods), with `pull_up`'s refusals.
+- `kind=class` under an old superclass that needs more (roadmap #179, 2026-11-13, issue #409):
+  the new class is `abstract` when a member moved into it is abstract, or when the old
+  superclass leaves an abstract method that none of the members implements (the class keeps
+  implementing it): `abstract class Base<T> { abstract T get(); }` with `size` gives `public
+  abstract class Sized<T> extends Base<T>`, and the result says `extracted abstract class`. It
+  declares one constructor for each constructor of the old superclass that the class's own
+  constructors call by `super(...)`, with that constructor's parameters (as the call sees them),
+  names, access and `throws`, its body `super(<the parameters>);`, and a no-argument one when
+  another constructor of the class calls `super()` implicitly; none when the class calls only
+  the implicit one. The class's `super(...)` calls are left as written: each now picks the
+  pass-through constructor of the same parameters, which picks the same old one.
 - One call: a refusal at any step changes nothing. Result: `extracted interface
   Pricing (com/example/Pricing.java) from Flat with price; Flat implements it`,
   or `extracted class Priced (...) from Flat with base and price; Flat extends it`.
 - Refused: an interface, a file of the new name that exists, a member not found, a method that
-  is not public or is static (interface); a `supertype` that is one of the class's type
+  is not public or is static (interface); (until 2026-11-13, issue #409, also every `kind=class`
+  under an abstract superclass or one without a no-argument constructor); a `supertype` that is one of the class's type
   parameters ("V is a type parameter of Repo: in Repo's header the name would mean it, not the
   new interface. Choose another name."); a bound that names a private type ("the bound of K
   uses the private type Repo.Key, which Finder, in its own file, cannot name. Make Repo.Key
@@ -1237,7 +1300,12 @@ and `column` (only when the line has two variables of that name).
   an initializer that reads state (a field, an element, a call's result) that a
   call or assignment between the declaration and a use could change; a declared
   type that differs from the initializer's; an initializer that reads a name a later declaration in the block
-  hides at a use. `function` (inline by a function's name) is not built yet.
+  hides at a use; an initializer that creates an array (`new int[n]`, `{1, 2}`) used more than
+  once, since each use would hold a different array where there was one (2026-11-13, issue #410).
+- An array initializer written alone (`String[] names = {"a", "b"};`) is written at each use as
+  an array creation with the declared type, dimensions after the name included:
+  `new String[] {"a", "b"}.length`, `(new int[][] {{1, 2}})[0]` (parenthesized where it is
+  indexed, which does not parse otherwise; 2026-11-13, issue #410).
 
 ## `fold` (built)
 
@@ -1386,7 +1454,8 @@ and `type` (the new type as written).
 - Bounds (roadmap #159, 2026-11-13, the generics sketch's slice 3; the user chose the sketch's
   recommendation, `change_type`, over `change_signature` for a method's bound and over a new
   tool): `type_parameter` names a type parameter of `name`, a class (`Sorter`; an interface or
-  a record too) or a method (`Sorter.max`, or by `line`), and `type` becomes its bound, written
+  a record too) or a method (`Sorter.max`, or by `line` and `column` as the other signature tools take it, #176),
+  and `type` becomes its bound, written
   as given (`Comparable<T>`, `Object & Comparable<T>`); `type: "Object"` removes it. A method's
   bound changes in every declaration of its family. Uses are not edited: a use outside the bound
   is the gate's refusal ("Change that use first, or choose a bound it meets."); each call of a

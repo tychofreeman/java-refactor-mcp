@@ -1,0 +1,1 @@
+extracted abstract class Sized<T> (p/Sized.java) from Box with size; Box extends it
