@@ -78,7 +78,7 @@ final class AddResult {
         throw new Refusal(q.type() + " already has a type " + recordName + ".");
       }
     }
-    String zero = zero(type);
+    String zero = JavaTypes.zero(type);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -220,14 +220,5 @@ final class AddResult {
       }
     }
     return true;
-  }
-
-  /** The value a variable of {@code type} starts with: 0, false or null. */
-  private static String zero(String type) {
-    return switch (type) {
-      case "int", "long", "short", "byte", "char", "float", "double" -> "0";
-      case "boolean" -> "false";
-      default -> "null";
-    };
   }
 }

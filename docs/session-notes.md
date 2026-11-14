@@ -276,6 +276,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- Java's primitive types as tools write them are `JavaTypes` (#530): `BOXED`, `isPrimitive`, `isBox`,
+  `zero` (a variable's start value) and `placeholder` (a typed test argument). A member's kind for
+  layout is `Placement.Rank`, not an int. `TypeDecidedUses` (was `PrimitiveUses`) is the
+  primitive-use rule of `change_type`; `Primitives` stays the edit primitives.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);

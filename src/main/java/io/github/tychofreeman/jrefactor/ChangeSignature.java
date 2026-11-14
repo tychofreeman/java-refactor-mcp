@@ -79,7 +79,7 @@ final class ChangeSignature {
     if (returnType != null) {
       boolean toVoid = returnType.equals("void");
       if (!toVoid) {
-        Signatures.checkPrimitiveUses(family, args, returnType, true);
+        Signatures.checkTypeDecidedUses(family, args, returnType, true);
       }
       for (Signatures.Decl d : decls) {
         Signatures.requireReturnType(d, family);

@@ -60,18 +60,6 @@ final class TypeParameters {
 
   private TypeParameters() {}
 
-  /** Each primitive type's boxed type, which can be a type argument. */
-  private static final Map<String, String> BOXED =
-      Map.of(
-          "int", "Integer",
-          "long", "Long",
-          "boolean", "Boolean",
-          "double", "Double",
-          "float", "Float",
-          "char", "Character",
-          "short", "Short",
-          "byte", "Byte");
-
   static Outcome add(SourceProject project, Args args) throws Exception {
     String written = args.required("type_parameter").strip();
     String value = args.required("value").strip();
@@ -88,15 +76,15 @@ final class TypeParameters {
                 "add_parameter with type_parameter needs name, the class that gets the type"
                     + " parameter."),
         Precondition.that(
-            () -> !BOXED.containsKey(value),
+            () -> !JavaTypes.BOXED.containsKey(value),
             () ->
                 value
                     + " is a primitive, which cannot be a type argument. Pass value "
-                    + BOXED.get(value)
+                    + JavaTypes.BOXED.get(value)
                     + "; where a member's type is "
                     + value
                     + ", change it to "
-                    + BOXED.get(value)
+                    + JavaTypes.BOXED.get(value)
                     + " first (change_type, which checks the uses a boxed type changes)."));
     Signatures.parsesAs("type_parameter", written, "class X<" + written + "> {}");
     Signatures.parsesAs("value", value, "class X { " + value + " x; }");

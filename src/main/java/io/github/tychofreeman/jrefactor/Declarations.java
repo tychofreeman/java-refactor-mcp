@@ -162,7 +162,7 @@ final class Declarations {
     }
     // Each member goes where its kind goes: a field after the last field, a constructor after the
     // last constructor or field, before the first member when there is none; the rest at the end.
-    pending.sort(Comparator.comparingInt(Placement::rank));
+    pending.sort(Comparator.comparing(Placement::rank));
     Map<Place, List<BodyDeclaration>> byPlace = new LinkedHashMap<>();
     for (BodyDeclaration d : pending) {
       byPlace
