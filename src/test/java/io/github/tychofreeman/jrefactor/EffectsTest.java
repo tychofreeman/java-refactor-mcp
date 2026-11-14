@@ -7,7 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BreakStatement;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.Statement;
@@ -33,6 +37,15 @@ class EffectsTest {
           + "    try { throw new IllegalStateException(); } catch (RuntimeException e) { }\n"
           + "    return boxed;\n"
           + "  }\n}\n";
+
+  private static final String JUMPS =
+      "class J {\n  int f(int[] xs) {\n    outer:\n    for (int x : xs) {\n      {\n"
+          + "        for (int i = 0; i < x; i++) {\n          if (i > 1) break outer;\n"
+          + "          if (i > 0) break;\n        }\n"
+          + "        class L {\n          int g() {\n            return 1;\n          }\n        }\n"
+          + "      }\n    }\n"
+          + "    if (xs.length > 0) {\n      return 1;\n    } else {\n"
+          + "      throw new IllegalStateException();\n    }\n  }\n}\n";
 
   private static Opened open(Path root) throws Exception {
     Path src = root.resolve("com/example");
@@ -118,5 +131,27 @@ class EffectsTest {
     assertTrue(Effects.leaves(statementOn(root, 7), true));
     assertFalse(Effects.leaves(statementOn(root, 10), true));
     assertFalse(Effects.leaves(statementOn(root, 7), false));
+  }
+
+  @Test
+  void aJumpExitsWhatItDoesNotLandIn() {
+    CompilationUnit unit = Jdt.parseSyntax(JUMPS);
+    Block inner = Nodes.all(unit, Block.class).get(2);
+    List<BreakStatement> breaks = Nodes.all(unit, BreakStatement.class);
+    assertTrue(Effects.exits(breaks.get(0), inner), "break outer");
+    assertFalse(Effects.exits(breaks.get(1), inner), "break of the inner for");
+    List<ReturnStatement> returns = Nodes.all(unit, ReturnStatement.class);
+    assertFalse(Effects.exits(returns.get(0), inner), "return of a local class");
+    assertTrue(Effects.exits(returns.get(1), Nodes.all(unit, IfStatement.class).get(2)));
+  }
+
+  @Test
+  void completesNormallyUnlessEveryPathJumps() {
+    CompilationUnit unit = Jdt.parseSyntax(JUMPS);
+    List<IfStatement> ifs = Nodes.all(unit, IfStatement.class);
+    assertTrue(Effects.completesNormally(ifs.get(0)), "an if without else");
+    assertFalse(Effects.completesNormally(ifs.get(2)), "return or throw");
+    assertFalse(Effects.completesNormally(Nodes.all(unit, Block.class).get(0)), "the body");
+    assertTrue(Effects.completesNormally(Nodes.all(unit, Block.class).get(2)), "a class last");
   }
 }
