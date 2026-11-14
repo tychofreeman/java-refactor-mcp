@@ -10,10 +10,12 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 class CliTest {
 
@@ -199,5 +201,39 @@ class CliTest {
 
     assertEquals(2, run("batch", retry), out());
     assertTrue(out().contains("no refused batch"), out());
+  }
+
+  @Test
+  void aLoggedRunReadsAsAShellCallInTheSessionReport() {
+    Instant now = Instant.parse("2026-11-14T10:00:00Z");
+    String json =
+        "{\"tool\": \"replace_text\", \"file\": \"A.txt\", \"old\": \"a;\", \"new\": \"it's | b\"}";
+    String refused = Cli.logLine(List.of("-"), json, root, "refused: no match", 2, now);
+    JsonNode e = SessionLog.JSON.readTree(refused);
+    assertEquals("PostToolUseFailure", e.path("hook_event_name").asString());
+    assertEquals("Bash", e.path("tool_name").asString());
+    assertEquals(root.toString(), e.path("cwd").asString());
+    assertEquals("refused: no match", e.path("result").asString());
+    assertEquals("2026-11-14T10:00:00Z", e.path("time").asString());
+    String command = e.path("tool_input").path("command").asString();
+    assertTrue(command.startsWith("bin/jrefactor '"), command);
+    assertEquals(
+        SessionLog.JSON.readTree(json),
+        SessionLog.JSON.readTree(command.substring(15, command.length() - 1)),
+        command);
+    String done =
+        Cli.logLine(
+            List.of(
+                "rename", "file=com/example/Counter.java", "line=4", "name=step", "new_name=by"),
+            "",
+            root,
+            "renamed",
+            0,
+            now);
+    assertEquals("PostToolUse", SessionLog.JSON.readTree(done).path("hook_event_name").asString());
+    String report = SessionReport.report(List.of(refused, done));
+    assertTrue(report.contains("- bin/jrefactor calls (in Bash): 2"), report);
+    assertTrue(report.contains("- refused by jrefactor: 1"), report);
+    assertTrue(report.contains("1 refactoring step"), report);
   }
 }
