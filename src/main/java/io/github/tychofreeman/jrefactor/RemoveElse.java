@@ -9,8 +9,12 @@ import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.ReturnStatement;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.ThrowStatement;
+import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
@@ -52,6 +56,16 @@ final class RemoveElse {
               + " can finish normally, so the else's statements would run after it as well. Put"
               + " the else's statements in the then-branch, or end the then-branch with a return,"
               + " throw, break or continue.");
+    }
+
+    String hidden = namedAfter(ifs, elseBranch);
+    if (hidden != null) {
+      throw new Refusal(
+          hidden
+              + ", declared in the else, is named after the if at line "
+              + line
+              + ": once the else is removed, the name there would mean that local. Rename the"
+              + " local first (rename with its line), then remove the else.");
     }
 
     int start = ifs.getStartPosition();
@@ -118,7 +132,7 @@ final class RemoveElse {
     int delta = 0;
     for (String l : lines) {
       if (!l.isBlank()) {
-        delta = Math.max(0, leadingSpaces(l) - base.length());
+        delta = Math.max(0, indentWidth(l) - base.length());
         break;
       }
     }
@@ -127,15 +141,15 @@ final class RemoveElse {
       if (l.isBlank()) {
         out.add("");
       } else {
-        out.add(l.substring(Math.min(delta, leadingSpaces(l))));
+        out.add(l.substring(Math.min(delta, indentWidth(l))));
       }
     }
     return String.join("\n", out);
   }
 
-  private static int leadingSpaces(String line) {
+  private static int indentWidth(String line) {
     int n = 0;
-    while (n < line.length() && line.charAt(n) == ' ') {
+    while (n < line.length() && (line.charAt(n) == ' ' || line.charAt(n) == '\t')) {
       n++;
     }
     return n;
@@ -151,5 +165,31 @@ final class RemoveElse {
 
   private static String source(String text, ASTNode node) {
     return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
+  }
+
+  /** A local or class the else block declares that a statement after the if names, or null. */
+  private static String namedAfter(IfStatement ifs, Statement elseBranch) {
+    if (!(elseBranch instanceof Block block) || !(ifs.getParent() instanceof Block outer)) {
+      return null;
+    }
+    List<String> declared = new ArrayList<>();
+    for (Object o : block.statements()) {
+      if (o instanceof VariableDeclarationStatement v) {
+        for (Object f : v.fragments()) {
+          declared.add(((VariableDeclarationFragment) f).getName().getIdentifier());
+        }
+      } else if (o instanceof TypeDeclarationStatement t) {
+        declared.add(t.getDeclaration().getName().getIdentifier());
+      }
+    }
+    List<?> all = outer.statements();
+    for (Object later : all.subList(all.indexOf(ifs) + 1, all.size())) {
+      for (SimpleName n : Nodes.all((ASTNode) later, SimpleName.class)) {
+        if (declared.contains(n.getIdentifier())) {
+          return n.getIdentifier();
+        }
+      }
+    }
+    return null;
   }
 }
