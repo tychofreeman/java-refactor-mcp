@@ -1671,6 +1671,18 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   the switch into `return` wrote `return (switch ... );`; the parentheses could not go by two
   `replace_text`s (each step must parse), so `replace_declaration` rewrote the method.
 
+## 2026-11-14: fewer-parses
+
+- `extract_function` of lines 959-1020 of `ParameterValue` (the tail of `sameTargets`, the range
+  ending on the method's closing brace) was refused as "lines 959-1020 cut the statement at line
+  959": the cut was at line 1020, the brace, and the list that followed named every statement, so
+  959-1019 passed. The refusal should name the line that cuts (or drop a closing brace at the end).
+- `add_parameter` with `value=null` wrote `null` at the call inside `passed`, which had to pass
+  its own new parameter: a second `replace_text`. A `value` naming a parameter of the caller
+  where it has one of that name (`probed`) would have saved it.
+- No Java by hand: `replace_text`, `replace_declaration`, `add_declaration`, `extract_function`
+  and `add_parameter`, in five batches.
+
 ## 2026-11-14: occurrences-record
 
 - `ParameterValue.occurrences` returned `List<int[]>` read by index (`u[0]`..`u[3]`); a record in

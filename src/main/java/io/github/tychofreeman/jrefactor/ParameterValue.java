@@ -2,8 +2,12 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTMatcher;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -115,89 +119,92 @@ final class ParameterValue {
    * a literal. Refused for an argument that would then run twice, be read in another type, or be
    * read again after something that could change it.
    */
-  static java.util.function.Function<Signatures.Call, String> perCall(
-      SourceProject project, InMethod v) {
-    return c -> {
-      for (int i : v.uses()) {
-        Expression arg = (Expression) c.arguments().get(i);
-        String passed = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
-        String name =
-            ((SingleVariableDeclaration) v.method().parameters().get(i)).getName().getIdentifier();
-        if (!quiet(arg)) {
-          throw new Refusal(
-              "a call passes "
-                  + passed
-                  + " for "
-                  + name
-                  + ", which has effects, and passing "
-                  + v.text()
-                  + " with it would run them twice. Put it in a local first.");
-        }
-        ITypeBinding declared =
-            ((SingleVariableDeclaration) v.method().parameters().get(i)).getType().resolveBinding();
-        ITypeBinding given = arg.resolveTypeBinding();
-        if (cast(declared, given) == null) {
+  static PerCall perCall(SourceProject project, InMethod v) {
+    return new PerCall(project, v);
+  }
+
+  /** The argument {@code c} passes for {@code v}, as {@link #perCall} returns it. */
+  private static String passed(
+      InMethod v, Signatures.Call c, SourceProject project, Map<Signatures.Call, Refusal> probed) {
+    for (int i : v.uses()) {
+      Expression arg = (Expression) c.arguments().get(i);
+      String passed = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
+      String name =
+          ((SingleVariableDeclaration) v.method().parameters().get(i)).getName().getIdentifier();
+      if (!quiet(arg)) {
+        throw new Refusal(
+            "a call passes "
+                + passed
+                + " for "
+                + name
+                + ", which has effects, and passing "
+                + v.text()
+                + " with it would run them twice. Put it in a local first.");
+      }
+      ITypeBinding declared =
+          ((SingleVariableDeclaration) v.method().parameters().get(i)).getType().resolveBinding();
+      ITypeBinding given = arg.resolveTypeBinding();
+      if (cast(declared, given) == null) {
+        throw new Refusal(
+            "the call at "
+                + c.where(arg)
+                + " passes "
+                + passed
+                + (given == null ? "" : " (" + given.getName() + ")")
+                + " for "
+                + name
+                + " ("
+                + declared.getName()
+                + "): the method computed "
+                + v.text()
+                + " in the parameter's type, and a call computes it in the argument's unless cast,"
+                + " but this tool casts only to a primitive or an unparameterized java.lang type."
+                + " Pass "
+                + name
+                + " in its own type first, or extract it as a variable instead.");
+      }
+      boolean fixed = Effects.of(arg).fixed();
+      if (v.acts() && !fixed && !v.readsFirst(i)) {
+        throw new Refusal(
+            "the call at "
+                + c.where(arg)
+                + " passes "
+                + passed
+                + " for "
+                + name
+                + ", and would now pass "
+                + v.at(c)
+                + ", reading "
+                + passed
+                + " again after a call in it that could change it. Put "
+                + passed
+                + " in a local first.");
+      }
+      for (int j = i + 1; j < Math.min(v.at(), c.arguments().size()); j++) {
+        Expression other = (Expression) c.arguments().get(j);
+        if (!quiet(other) && (!fixed || writes(other, arg))) {
           throw new Refusal(
               "the call at "
-                  + c.where(arg)
-                  + " passes "
+                  + c.where(other)
+                  + " runs "
+                  + other
+                  + " after "
                   + passed
-                  + (given == null ? "" : " (" + given.getName() + ")")
-                  + " for "
-                  + name
-                  + " ("
-                  + declared.getName()
-                  + "): the method computed "
-                  + v.text()
-                  + " in the parameter's type, and a call computes it in the argument's unless cast,"
-                  + " but this tool casts only to a primitive or an unparameterized java.lang type."
-                  + " Pass "
-                  + name
-                  + " in its own type first, or extract it as a variable instead.");
-        }
-        boolean fixed = Effects.of(arg).fixed();
-        if (v.acts() && !fixed && !v.readsFirst(i)) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(arg)
-                  + " passes "
-                  + passed
-                  + " for "
-                  + name
                   + ", and would now pass "
                   + v.at(c)
+                  + (v.at() < c.arguments().size() ? " after it" : " last")
                   + ", reading "
                   + passed
-                  + " again after a call in it that could change it. Put "
-                  + passed
+                  + " again after "
+                  + other
+                  + " could change it. Put "
+                  + other
                   + " in a local first.");
         }
-        for (int j = i + 1; j < Math.min(v.at(), c.arguments().size()); j++) {
-          Expression other = (Expression) c.arguments().get(j);
-          if (!quiet(other) && (!fixed || writes(other, arg))) {
-            throw new Refusal(
-                "the call at "
-                    + c.where(other)
-                    + " runs "
-                    + other
-                    + " after "
-                    + passed
-                    + ", and would now pass "
-                    + v.at(c)
-                    + (v.at() < c.arguments().size() ? " after it" : " last")
-                    + ", reading "
-                    + passed
-                    + " again after "
-                    + other
-                    + " could change it. Put "
-                    + other
-                    + " in a local first.");
-          }
-        }
       }
-      sameTargets(project, v, c);
-      return v.at(c);
-    };
+    }
+    sameTargets(project, v, c, probed);
+    return v.at(c);
   }
 
   /** Where {@code e} names a parameter of {@code m}, the last first. */
@@ -843,7 +850,8 @@ final class ParameterValue {
    * an enclosing object, or where {@code super} would skip an override; or a call that resolves
    * there to another method, or to one it cannot see.
    */
-  private static void sameTargets(SourceProject project, InMethod v, Signatures.Call c) {
+  private static void sameTargets(
+      SourceProject project, InMethod v, Signatures.Call c, Map<Signatures.Call, Refusal> probed) {
     List<MethodInvocation> calls = Nodes.all(v.expression(), MethodInvocation.class);
     if (calls.isEmpty()) {
       return;
@@ -937,17 +945,117 @@ final class ParameterValue {
         default -> {}
       }
     }
-    String probe = v.written(c, true);
-    String text = c.file().text();
-    int at =
-        c.arguments().isEmpty()
-            ? c.open()
-            : Nodes.end((ASTNode) c.arguments().get(c.arguments().size() - 1));
-    String insert = (c.arguments().isEmpty() ? "" : ", ") + probe;
-    int from = at + insert.length() - probe.length();
-    int to = at + insert.length();
-    CompilationUnit unit =
-        Jdt.parse(project, c.file().file(), text.substring(0, at) + insert + text.substring(at));
+    Refusal refused = (probed != null ? probed : probe(project, v, List.of(c))).get(c);
+    if (refused != null) {
+      throw refused;
+    }
+  }
+
+  /**
+   * The refusal of each of {@code calls} whose argument for {@code v}, written in, would not
+   * compile there or would call another method than {@code v}'s own calls ({@link #sameCalls});
+   * none for a value without calls. Each file is parsed once, with every call's argument written
+   * in.
+   */
+  static Map<Signatures.Call, Refusal> probe(
+      SourceProject project, InMethod v, List<Signatures.Call> calls) {
+    Map<Signatures.Call, Refusal> refused = new HashMap<>();
+    List<MethodInvocation> mine = Nodes.all(v.expression(), MethodInvocation.class);
+    if (mine.isEmpty()) {
+      return refused;
+    }
+    Map<Path, List<Signatures.Call>> byFile = new LinkedHashMap<>();
+    for (Signatures.Call c : calls) {
+      byFile.computeIfAbsent(c.file().file(), f -> new ArrayList<>()).add(c);
+    }
+    for (List<Signatures.Call> here : byFile.values()) {
+      String text = here.get(0).file().text();
+      List<Signatures.Call> written = new ArrayList<>();
+      List<int[]> places = new ArrayList<>();
+      StringBuilder probed = new StringBuilder();
+      List<Signatures.Call> sorted = new ArrayList<>(here);
+      sorted.sort(java.util.Comparator.comparingInt(ParameterValue::probeAt));
+      int copied = 0;
+      for (Signatures.Call c : sorted) {
+        String probe;
+        try {
+          probe = v.written(c, true);
+        } catch (Refusal r) {
+          refused.put(c, r);
+          continue;
+        }
+        int at = probeAt(c);
+        String insert = (c.arguments().isEmpty() ? "" : ", ") + probe;
+        probed.append(text, copied, at).append(insert);
+        copied = at;
+        written.add(c);
+        places.add(new int[] {probed.length() - probe.length(), probed.length()});
+      }
+      if (written.isEmpty()) {
+        continue;
+      }
+      probed.append(text, copied, text.length());
+      CompilationUnit unit = Jdt.parse(project, here.get(0).file().file(), probed.toString());
+      for (int i = 0; i < written.size(); i++) {
+        try {
+          sameCalls(unit, v, written.get(i), mine, places.get(i)[0], places.get(i)[1]);
+        } catch (Refusal r) {
+          refused.put(written.get(i), r);
+        }
+      }
+    }
+    return refused;
+  }
+
+  /**
+   * The cast that converts an argument of type {@code given} as a call converted it to a parameter
+   * of type {@code declared}: empty when none is needed (the same type, or two reference types),
+   * the parameter's type when one primitive is involved and the parameter is a primitive or a
+   * java.lang type without type arguments, else null (an unresolved argument, a type variable,
+   * another reference type, whose name the call's file may not import).
+   */
+  static String cast(ITypeBinding declared, ITypeBinding given) {
+    if (declared == null) {
+      return "";
+    }
+    if (given == null) {
+      return null;
+    }
+    if (!(declared.isPrimitive() || given.isPrimitive())
+        || declared.getName().equals(given.getName())) {
+      return "";
+    }
+    if (declared.isPrimitive()
+        || !declared.isTypeVariable()
+            && !declared.isParameterizedType()
+            && declared.getErasure().getQualifiedName().startsWith("java.lang.")) {
+      return declared.getName();
+    }
+    return null;
+  }
+
+  /**
+   * Where {@link #probe} writes {@code c}'s argument: after its last argument, or in its
+   * parentheses.
+   */
+  private static int probeAt(Signatures.Call c) {
+    return c.arguments().isEmpty()
+        ? c.open()
+        : Nodes.end((ASTNode) c.arguments().get(c.arguments().size() - 1));
+  }
+
+  /**
+   * Refuses when the argument {@code c} would pass, written at {@code from} to {@code to} of {@code
+   * unit}, calls a method it cannot see there, or another method than {@code calls}, the value's
+   * own calls, or an override of one.
+   */
+  private static void sameCalls(
+      CompilationUnit unit,
+      InMethod v,
+      Signatures.Call c,
+      List<MethodInvocation> calls,
+      int from,
+      int to) {
     List<MethodInvocation> there =
         Nodes.all(unit, MethodInvocation.class).stream()
             .filter(n -> n.getStartPosition() >= from && Nodes.end(n) <= to)
@@ -1001,30 +1109,28 @@ final class ParameterValue {
   }
 
   /**
-   * The cast that converts an argument of type {@code given} as a call converted it to a parameter
-   * of type {@code declared}: empty when none is needed (the same type, or two reference types),
-   * the parameter's type when one primitive is involved and the parameter is a primitive or a
-   * java.lang type without type arguments, else null (an unresolved argument, a type variable,
-   * another reference type, whose name the call's file may not import).
+   * {@link #perCall}'s function. {@link #probe} first parses each file once with every call's
+   * argument written in; without it, each call is probed in a parse of its own.
    */
-  static String cast(ITypeBinding declared, ITypeBinding given) {
-    if (declared == null) {
-      return "";
+  static final class PerCall implements java.util.function.Function<Signatures.Call, String> {
+    private final SourceProject project;
+    private final InMethod v;
+    private Map<Signatures.Call, Refusal> probed;
+
+    PerCall(SourceProject project, InMethod v) {
+      this.project = project;
+      this.v = v;
     }
-    if (given == null) {
-      return null;
+
+    /** Probes {@code calls} at once ({@link ParameterValue#probe}), each refused in its turn. */
+    void probe(List<Signatures.Call> calls) {
+      probed = ParameterValue.probe(project, v, calls);
     }
-    if (!(declared.isPrimitive() || given.isPrimitive())
-        || declared.getName().equals(given.getName())) {
-      return "";
+
+    @Override
+    public String apply(Signatures.Call c) {
+      return passed(v, c, project, probed);
     }
-    if (declared.isPrimitive()
-        || !declared.isTypeVariable()
-            && !declared.isParameterizedType()
-            && declared.getErasure().getQualifiedName().startsWith("java.lang.")) {
-      return declared.getName();
-    }
-    return null;
   }
 
   /**
