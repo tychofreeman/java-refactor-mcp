@@ -371,6 +371,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - Code quoted in a refusal or a report goes through `Nodes.show(node)` (its source text on one
   line, cut to 60 characters), never `node.toString()`, which is JDT's reformatting (#526). A unit
   knows its text through `Jdt.sourceOf`.
+- A router (`move`, `inline`) hands its arguments on with `Args.routed(target.name(),
+  target.args())` (#524): every given argument the target takes goes, so a new one needs no
+  copying; `preserve_exceptions` is the session's already (`Tools.call`).
 - A tool's result is an `Outcome`; `render()` gives the text the model reads,
   with the stubs named after it.
 - Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a

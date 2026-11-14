@@ -159,4 +159,20 @@ final class Args {
     }
     throw new Refusal(key + " must be an object of strings; got " + value + ".");
   }
+
+  /**
+   * These arguments for {@code tool}, which a router hands them to: only those {@code takes} names,
+   * and only those given a value.
+   */
+  Args routed(String tool, Set<String> takes) {
+    Map<String, Object> out = new java.util.LinkedHashMap<>(values);
+    out.keySet().retainAll(takes);
+    out.values().removeIf(v -> v == null);
+    return new Args(tool, out);
+  }
+
+  /** The arguments as sent, by name. */
+  Map<String, Object> values() {
+    return values;
+  }
 }
