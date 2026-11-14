@@ -258,14 +258,7 @@ final class Declarations {
           stubs);
     }
     if (content.isBlank()) {
-      int start = Lines.start(text, decl.getStartPosition());
-      int end = Lines.end(text, end(decl));
-      if (start >= 2 && text.charAt(start - 1) == '\n' && text.charAt(start - 2) == '\n') {
-        start--;
-      } else if (end < text.length() && text.charAt(end) == '\n') {
-        end++;
-      }
-      String out = text.substring(0, start) + text.substring(end);
+      String out = TextEdit.apply(text, List.of(MemberMove.removal(text, decl)), 0);
       Edits.Written written =
           Edits.gated(
               project,

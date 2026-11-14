@@ -412,7 +412,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `extract_supertype` (#85, 2026-11-04) is `ExtractSupertype`, composed in one call
   from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member
   `pull_up` or `push_down` removes now takes one blank line beside it with it
-  (`MemberMove.removal`); three goldens that pinned the leftover blank line changed.
+  (`MemberMove.removal`); three goldens that pinned the leftover blank line changed. Since #504
+  every member removal goes through it (`replace_declaration`'s delete, `move` of a method,
+  `inline` of a method): the blank line after (a line of only spaces counts), else, for the last
+  member, the one before.
   From a generic class (#144, 2026-11-13), `ExtractSupertype.generics` picks the type
   parameters: names in the extracted nodes that bind to the class's type variables, closed over
   bounds, each `TypeParameter` copied as text. The class's clause is the names, passed to

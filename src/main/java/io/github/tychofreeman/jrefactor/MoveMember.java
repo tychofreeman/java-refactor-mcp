@@ -235,15 +235,8 @@ final class MoveMember {
     List<TextEdit> inner = movedEdits(text, m, typeName, isStatic, crosses);
     String moved = TextEdit.apply(text.substring(ms, me), inner, ms);
 
-    int start = Lines.start(text, ms);
-    int end = Lines.end(text, me - 1);
-    if (end < text.length() && text.charAt(end) == '\n') {
-      end++;
-    } else if (text.startsWith("}", end) && text.substring(0, start).endsWith("\n\n")) {
-      start--;
-    }
     List<TextEdit> own = edits.computeIfAbsent(file, k -> new ArrayList<>());
-    own.add(new TextEdit(start, end, ""));
+    own.add(MemberMove.removal(text, m));
     edits
         .computeIfAbsent(targetFile, k -> new ArrayList<>())
         .addAll(MemberMove.appendTo(texts.get(targetFile), target, moved));

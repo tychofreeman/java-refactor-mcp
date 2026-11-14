@@ -1567,3 +1567,10 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   helper was written with `add_declaration` and each method's loop with `replace_statements`.
 - Otherwise through the tools: `replace_text` (format strings, `all_occurrences` for the two
   `before` calls), `replace_declaration`, `create_file`, `add_declaration`. Goldens are resources.
+
+## 2026-11-14: one-member-removal
+
+- No Java by hand. `replace_statements` with an end line one short left a statement whose locals
+  it had deleted; the edit tools then declared stubs for them (fields and a constructor of
+  `TextEdit`, a record), and the batch was refused for that constructor, not for the missing
+  locals. A refusal that named the cut statement would have pointed at the range.
