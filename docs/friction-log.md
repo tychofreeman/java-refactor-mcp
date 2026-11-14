@@ -1567,3 +1567,10 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   helper was written with `add_declaration` and each method's loop with `replace_statements`.
 - Otherwise through the tools: `replace_text` (format strings, `all_occurrences` for the two
   `before` calls), `replace_declaration`, `create_file`, `add_declaration`. Goldens are resources.
+
+## 2026-11-14: list-insert
+
+- No Java by hand. Three copies onto one helper: the new `SignatureChange.insertAt` by
+  `add_declaration`, each copy made a delegate by `replace_declaration` in one batch, then `inline`
+  of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
+  two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.

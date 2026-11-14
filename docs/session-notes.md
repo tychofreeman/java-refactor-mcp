@@ -403,6 +403,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `Signatures.changeType`: the family's declarations and typed lambdas, by
   `SignatureChange.replace`; calls are left to the gate.
 
+- An item put into a comma-separated list (arguments, parameters, components, type arguments or
+  parameters) is `SignatureChange.insertAt` (#514, 2026-11-14): `open` is the offset just past the
+  opening bracket, used only for an empty list; the overload without it takes a non-empty one.
+
 - `replace_declaration` with empty content is a safe delete (#83, 2026-11-04):
   `SafeDelete.check` names the uses by binding before the gate, and refuses an
   override of a concrete method unless it only calls super or has the same body

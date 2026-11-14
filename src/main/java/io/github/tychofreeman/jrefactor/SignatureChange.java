@@ -42,21 +42,17 @@ final class SignatureChange {
     add(file, start, end, text);
   }
 
-  /** Inserts {@code text} at position {@code at} of {@code list}, which opens at {@code open}. */
+  /**
+   * Inserts {@code text} at position {@code at} of {@code list}, whose first element goes at {@code
+   * open}; with no list (open below 0), as {@code (text)} at {@code bare}.
+   */
   void insert(Signatures.Source file, List<?> list, int open, int bare, int at, String text) {
-    if (list.isEmpty()) {
-      if (open < 0) {
-        add(file, bare, bare, "(" + text + ")");
-      } else {
-        add(file, open, open, text);
-      }
-    } else if (at == list.size()) {
-      int end = Nodes.end(((ASTNode) list.get(list.size() - 1)));
-      add(file, end, end, ", " + text);
-    } else {
-      int start = ((ASTNode) list.get(at)).getStartPosition();
-      add(file, start, start, text + ", ");
+    if (list.isEmpty() && open < 0) {
+      add(file, bare, bare, "(" + text + ")");
+      return;
     }
+    TextEdit e = insertAt(list, open, at, text);
+    add(file, e.start(), e.end(), e.text());
   }
 
   /** Removes the element at {@code at} of {@code list} with its comma. */
@@ -170,5 +166,27 @@ final class SignatureChange {
             + ")"
             + written.said(),
         stubs);
+  }
+
+  /**
+   * The edit that puts {@code item} at index {@code at} of the comma-separated {@code list}, where
+   * {@code open} is the offset just past its opening bracket: alone there when the list is empty,
+   * else before the element at {@code at}, or after the last one.
+   */
+  static TextEdit insertAt(List<?> list, int open, int at, String item) {
+    if (list.isEmpty()) {
+      return new TextEdit(open, open, item);
+    }
+    return insertAt(list, at, item);
+  }
+
+  /** The edit that puts {@code item} at index {@code at} of {@code list}, which is not empty. */
+  static TextEdit insertAt(List<?> list, int at, String item) {
+    if (at >= list.size()) {
+      int end = Nodes.end((ASTNode) list.get(list.size() - 1));
+      return new TextEdit(end, end, ", " + item);
+    }
+    int start = ((ASTNode) list.get(at)).getStartPosition();
+    return new TextEdit(start, start, item + ", ");
   }
 }
