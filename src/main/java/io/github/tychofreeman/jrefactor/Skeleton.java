@@ -30,7 +30,7 @@ final class Skeleton {
           "declaration is the header of a type (class Cart implements Priced, record Line(int"
               + " qty)), without a body; add members after with add_declaration.");
     }
-    String start = pkg == null || pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
+    String start = Opened.packageHeader(pkg);
     String empty = start + header + " {}\n";
     CompilationUnit unit = Jdt.parse(project, path, empty);
     if (unit.types().size() != 1) {

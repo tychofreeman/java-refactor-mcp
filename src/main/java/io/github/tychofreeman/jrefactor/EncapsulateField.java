@@ -406,8 +406,7 @@ final class EncapsulateField {
               + " "
               + accessor
               + "("
-              + String.join(
-                  ", ", params.stream().map(p -> p.substring(p.lastIndexOf('.') + 1)).toList())
+              + String.join(", ", params.stream().map(p -> Names.simpleName(p)).toList())
               + ") would override "
               + clash.method()
               + ", so a call of it on a "

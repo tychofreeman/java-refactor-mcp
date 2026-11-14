@@ -134,7 +134,7 @@ final class Extraction {
                 ? ""
                 : p.results().size() == 1
                     ? ", returning " + p.results().get(0).getName()
-                    : ", returning " + Extract.and(names(p.results())) + " as " + recordName())
+                    : ", returning " + Names.listed(names(p.results())) + " as " + recordName())
             + ", at lines "
             + first
             + "-"

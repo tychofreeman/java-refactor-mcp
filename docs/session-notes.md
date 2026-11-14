@@ -276,6 +276,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- A tool that creates a new type's file writes it with `Edits.newFile` (imports fixed, through the
+  gate, the caller's last sentence for a refusal) and starts it with `Opened.packageHeader()` (#518).
 - Java's primitive types as tools write them are `JavaTypes` (#530): `BOXED`, `isPrimitive`, `isBox`,
   `zero` (a variable's start value) and `placeholder` (a typed test argument). A member's kind for
   layout is `Placement.Rank`, not an int. `TypeDecidedUses` (was `PrimitiveUses`) is the
@@ -288,6 +290,9 @@ Each was chosen from options; the record named beside it has the options it beat
   a single static import of its method threw (#411), so `parseAll` adds the files those imports
   name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
   declared methods" and returns none.
+- A count's key is `TypeCheck.Problem` (the file relative to the project, and the message), and
+  `introduced` gives `TypeCheck.Added` (a problem and how many more times); only `Gate.refusal`
+  writes them as `rel | message (xN)` (#523). Do not parse a path back out of a message.
 - What the gate counts is `TypeCheck.counts` (every JDT error but those a named module would not
   have, #438); both the full and the narrowed count go through it, and a change to what it drops
   bumps `TypeCheck.FORMAT`, so saved counts are made again. A count depends on whether a source
@@ -296,6 +301,10 @@ Each was chosen from options; the record named beside it has the options it beat
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
+- Small string helpers are in `Names` (#511): `simpleName` of a qualified name, `packageOf` a
+  unit, `plural` ("1 occurrence"), `listed` ("a, b and c"). One JSON mapper, `Json.MAPPER`;
+  SHA-256 hex through `Hashes.sha256Hex` (cache keys keep their lengths by `substring`);
+  `Journal.read` for a file's text or null; `Nodes.at(unit, problem)` for a problem's node.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.source(text, node)` (its text as
   written, #507), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
@@ -414,6 +423,10 @@ Each was chosen from options; the record named beside it has the options it beat
   top-level type to another package of its source root; package-private
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
+
+- `move` of a member type carries what it moves as a `MovedType` (#528): its range in the outer
+  file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
+  `MoveType` that needs them takes it, not the fields one by one.
 
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call

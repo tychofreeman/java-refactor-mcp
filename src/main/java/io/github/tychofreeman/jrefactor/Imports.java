@@ -84,7 +84,7 @@ final class Imports {
         continue;
       }
       String qualified = i.getName().getFullyQualifiedName();
-      String simple = simpleName(qualified);
+      String simple = Names.simpleName(qualified);
       imported.put(simple, i);
       if ((usedBefore.contains(simple) && !usedAfter.contains(simple))
           || (declared.contains(simple) && !hadAtStart.contains(qualified))) {
@@ -94,7 +94,7 @@ final class Imports {
 
     Map<String, String> picks = new HashMap<>();
     for (String name : chosen) {
-      picks.put(simpleName(name), name);
+      picks.put(Names.simpleName(name), name);
     }
     // Evidence for an ambiguous name: what the file imported before this call or its batch, and
     // the packages of the imports it keeps.
@@ -216,7 +216,7 @@ final class Imports {
 
   /** Whether the class {@code qualified} is in the project's sources or on its classpath. */
   static boolean known(SourceProject project, String qualified) throws IOException {
-    return index(project).candidates(simpleName(qualified)).contains(qualified);
+    return index(project).candidates(Names.simpleName(qualified)).contains(qualified);
   }
 
   /**
@@ -582,10 +582,6 @@ final class Imports {
     return names;
   }
 
-  private static String simpleName(String qualified) {
-    return qualified.substring(qualified.lastIndexOf('.') + 1);
-  }
-
   private static int count(String text) {
     int n = 0;
     for (int i = 0; i < text.length(); i++) {
@@ -695,6 +691,6 @@ final class Imports {
   }
 
   private static void put(Map<String, List<String>> into, String qualified) {
-    into.computeIfAbsent(simpleName(qualified), k -> new ArrayList<>()).add(qualified);
+    into.computeIfAbsent(Names.simpleName(qualified), k -> new ArrayList<>()).add(qualified);
   }
 }

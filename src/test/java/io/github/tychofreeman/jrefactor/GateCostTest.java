@@ -24,14 +24,14 @@ class GateCostTest {
     List<Path> files = project.javaFiles();
 
     long start = System.nanoTime();
-    Map<String, Integer> errors = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> errors = TypeCheck.errors(project);
     long cold = System.nanoTime();
     TypeCheck.errors(project);
     long warm = System.nanoTime();
 
     Path file = files.get(0);
     String text = Files.readString(file);
-    List<String> introduced;
+    List<TypeCheck.Added> introduced;
     try {
       introduced = Gate.apply(project, Map.of(file, text + "\n// gate cost\n")).introduced();
     } finally {

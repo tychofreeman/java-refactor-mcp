@@ -173,7 +173,7 @@ final class Batch {
   /** Above this many line pairs, a region's middle is one hunk rather than diffed. */
   private static final long DIFF_LIMIT = 4_000_000L;
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = Json.MAPPER;
 
   /** The keys a step takes itself; its tool's arguments go under {@code args}. */
   private static final Set<String> STEP_KEYS = Set.of("tool", "args", "id");
@@ -523,14 +523,6 @@ final class Batch {
         || Tools.RETIRED_ARGS.getOrDefault(def.name(), Set.of()).contains(key);
   }
 
-  /** "a", "a and b", "a, b and c". */
-  private static String listed(List<String> items) {
-    int last = items.size() - 1;
-    return last == 0
-        ? items.get(0)
-        : String.join(", ", items.subList(0, last)) + " and " + items.get(last);
-  }
-
   /**
    * Steps with their arguments under {@code args}, and the numbers of those that had them beside.
    */
@@ -543,7 +535,7 @@ final class Batch {
       return moved.size() == 1
           ? "\nstep " + moved.get(0) + ": its arguments beside \"tool\" were read as its \"args\"."
           : "\nsteps "
-              + listed(moved)
+              + Names.listed(moved)
               + ": their arguments beside \"tool\" were read as their \"args\".";
     }
   }
