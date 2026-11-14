@@ -326,6 +326,10 @@ Each was chosen from options; the record named beside it has the options it beat
   the field (`returnsField`). JDT's `findDeclaringNode` gives null for a record's field:
   `NameCheck.declaration` takes the component of that name.
 
+- `move` of a member type writes an explicit `permits` on a sealed type of the file that has none
+  when the move splits it from subtypes it permitted implicitly (#190, issue #441,
+  `MoveType.permits`): a sealed type without a clause permits only the subtypes of its own file.
+
 - `move_file` (#81, 2026-11-04) is `MoveFile`: each file through `Gate.write` (a null
   text deletes), so a move, copy or delete is one undo. Text only; Java under a
   source root is refused for `move_type`.

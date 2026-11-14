@@ -1,0 +1,1 @@
+moved Options.Option to p/Option.java (3 lines); widened Options.Level to package-private; wrote a permits clause on Option, as the move put permitted subtypes in another file
