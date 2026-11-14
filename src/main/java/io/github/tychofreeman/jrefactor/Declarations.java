@@ -359,20 +359,9 @@ final class Declarations {
   record Named(BodyDeclaration decl, String label) {}
 
   static Named find(CompilationUnit unit, String name, String rel) {
-    String base = name;
-    List<String> params = null;
-    int paren = name.indexOf('(');
-    if (paren >= 0) {
-      if (!name.endsWith(")")) {
-        throw new Refusal("name " + name + " has an unclosed parenthesis.");
-      }
-      base = name.substring(0, paren).strip();
-      String inside = name.substring(paren + 1, name.length() - 1).strip();
-      params = new ArrayList<>();
-      for (String p : inside.isEmpty() ? List.<String>of() : topLevelCommas(inside)) {
-        params.add(p.replace(" ", ""));
-      }
-    }
+    MemberName memberNameResult = memberName(name);
+    String base = memberNameResult.base();
+    List<String> params = memberNameResult.params();
     String[] parts = base.split("\\.");
     if (params == null) {
       AbstractTypeDeclaration type = typePath(unit, parts);
@@ -389,21 +378,18 @@ final class Declarations {
                 : String.join(".", List.of(parts).subList(0, parts.length - 1)),
             rel);
     List<BodyDeclaration> found = new ArrayList<>();
+    List<MethodDeclaration> named = new ArrayList<>();
     for (Object o : owner.decl().bodyDeclarations()) {
       BodyDeclaration d = (BodyDeclaration) o;
-      if (names(d).contains(memberName)
-          && (params == null || (d instanceof MethodDeclaration m && params.equals(types(m))))) {
+      if (names(d).contains(memberName)) {
         found.add(d);
-      }
-    }
-    if (found.isEmpty() && params != null) {
-      for (Object o : owner.decl().bodyDeclarations()) {
-        if (o instanceof MethodDeclaration m
-            && names(m).contains(memberName)
-            && params.equals(erasedTypes(m))) {
-          found.add(m);
+        if (d instanceof MethodDeclaration m) {
+          named.add(m);
         }
       }
+    }
+    if (params != null) {
+      found = new ArrayList<>(overloads(named, params));
     }
     if (found.isEmpty()) {
       throw new Refusal(
@@ -441,8 +427,33 @@ final class Declarations {
     return new Named(d, owner.label() + "." + label(d));
   }
 
+  /**
+   * {@code name} read as a member's name: {@code m}, {@code Type.m}, or either with parameter types
+   * ({@code m(int, String)}), which are null when it has none.
+   */
+  static MemberName memberName(String name) {
+    String base = name;
+    List<String> params = null;
+    int paren = name.indexOf('(');
+    if (paren >= 0) {
+      if (!name.endsWith(")")) {
+        throw new Refusal("name " + name + " has an unclosed parenthesis.");
+      }
+      base = name.substring(0, paren).strip();
+      String inside = name.substring(paren + 1, name.length() - 1).strip();
+      params = new ArrayList<>();
+      for (String p : inside.isEmpty() ? List.<String>of() : topLevelCommas(inside)) {
+        params.add(p.replace(" ", ""));
+      }
+    }
+    return new MemberName(base, params);
+  }
+
+  /** A member's name as written: the name, and its parameter types or null. */
+  record MemberName(String base, List<String> params) {}
+
   /** The type at {@code parts} (top-level, then nested), or null. */
-  private static AbstractTypeDeclaration typePath(CompilationUnit unit, String[] parts) {
+  static AbstractTypeDeclaration typePath(CompilationUnit unit, String[] parts) {
     AbstractTypeDeclaration at = null;
     List<?> scope = unit.types();
     for (String part : parts) {
@@ -755,12 +766,10 @@ final class Declarations {
    * ({@code raise(Throwable)}), which {@link #find} also takes.
    */
   static String methodLabel(MethodDeclaration m) {
-    String written = MemberMove.label(m);
+    String written = writtenLabel(m);
     if (m.getParent() instanceof AbstractTypeDeclaration t) {
       for (Object o : t.bodyDeclarations()) {
-        if (o != m
-            && o instanceof MethodDeclaration other
-            && MemberMove.label(other).equals(written)) {
+        if (o != m && o instanceof MethodDeclaration other && writtenLabel(other).equals(written)) {
           return m.getName().getIdentifier() + "(" + String.join(", ", erasedTypes(m)) + ")";
         }
       }
@@ -817,5 +826,32 @@ final class Declarations {
       }
     }
     return null;
+  }
+
+  /**
+   * The methods of {@code named} that {@code params} picks: all when it is null, those whose
+   * written parameter types are {@code params}, or else those whose erased ones are ({@code
+   * raise(Throwable)} for {@code <T extends Throwable> T raise(T)}; see {@link #methodLabel}).
+   */
+  static List<MethodDeclaration> overloads(List<MethodDeclaration> named, List<String> params) {
+    List<MethodDeclaration> methods = new ArrayList<>();
+    for (MethodDeclaration m : named) {
+      if (params == null || types(m).equals(params)) {
+        methods.add(m);
+      }
+    }
+    if (methods.isEmpty() && params != null) {
+      for (MethodDeclaration m : named) {
+        if (erasedTypes(m).equals(params)) {
+          methods.add(m);
+        }
+      }
+    }
+    return methods;
+  }
+
+  /** {@code m(int)} for a method: its parameter types as written, as {@link #find} reads them. */
+  static String writtenLabel(MethodDeclaration m) {
+    return m.getName().getIdentifier() + "(" + String.join(", ", Declarations.types(m)) + ")";
   }
 }
