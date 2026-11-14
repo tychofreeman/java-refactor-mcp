@@ -966,9 +966,6 @@ final class Signatures {
               + " reads a field, which the constructor above this one or a field's initializer"
               + " could change before a local in the body reads it. Keep the parameter.");
     }
-    Set<Integer> uses = v.uses();
-    int low = Math.min(at, uses.stream().min(Integer::compare).orElse(at));
-    int high = Math.max(at, uses.stream().max(Integer::compare).orElse(at));
     for (Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
       if (!ParameterValue.passes(v, c, argument)) {
@@ -977,7 +974,7 @@ final class Signatures {
             "the call at "
                 + c.where(argument)
                 + " passes "
-                + argument
+                + Nodes.source(c.file().text(), argument)
                 + (here.equals(Nodes.source(c.file().text(), argument))
                     ? ", in which a name means something else than in the method (a member of"
                         + " another object than the one the method runs on, or another"
@@ -991,109 +988,7 @@ final class Signatures {
                 + value
                 + ". Change that call first, or keep the parameter.");
       }
-      for (int i : uses) {
-        Expression passed = (Expression) c.arguments().get(i);
-        String name = ((SingleVariableDeclaration) m.parameters().get(i)).getName().getIdentifier();
-        if (!ParameterValue.quiet(passed)) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(passed)
-                  + " passes "
-                  + passed
-                  + " for "
-                  + name
-                  + ", and "
-                  + value
-                  + " would then be computed from one "
-                  + passed
-                  + " where the call ran two. Put "
-                  + passed
-                  + " in a local first.");
-        }
-        ITypeBinding declared =
-            ((SingleVariableDeclaration) m.parameters().get(i)).getType().resolveBinding();
-        ITypeBinding given = passed.resolveTypeBinding();
-        if (declared != null
-            && (given == null || declared.isPrimitive() || given.isPrimitive())
-            && (given == null || !declared.getName().equals(given.getName()))) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(passed)
-                  + " passes "
-                  + passed
-                  + (given == null ? "" : " (" + given.getName() + ")")
-                  + " for "
-                  + name
-                  + " ("
-                  + declared.getName()
-                  + "): the call computed "
-                  + argument
-                  + " in that type, and the method would compute "
-                  + value
-                  + " in the parameter's. Keep the parameter, or pass "
-                  + name
-                  + " in its own type first.");
-        }
-        if (v.acts() && !Effects.of(passed).fixed() && (i > at || !v.readsFirst(i))) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(passed)
-                  + " passes "
-                  + passed
-                  + " for "
-                  + name
-                  + ", which a call in "
-                  + value
-                  + " could change: the call read it again as it computed "
-                  + argument
-                  + ", and the method would compute "
-                  + value
-                  + " from the one read. Put "
-                  + passed
-                  + " in a local first.");
-        }
-      }
-      for (int i = 0; i < c.arguments().size(); i++) {
-        Expression other = (Expression) c.arguments().get(i);
-        if (i == at || uses.contains(i)) {
-          continue;
-        }
-        boolean quiet = ParameterValue.quiet(other);
-        if (!quiet && i > low && i < high) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(other)
-                  + " runs "
-                  + other
-                  + " between the arguments "
-                  + value
-                  + " is computed from and "
-                  + argument
-                  + ", which could then differ from "
-                  + value
-                  + " computed in the method. Put "
-                  + other
-                  + " in a local first.");
-        }
-        boolean late =
-            v.acts() ? i > at && !Effects.of(other).fixed() : i > high && !quiet && !v.fixed();
-        if (late) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(other)
-                  + " passes "
-                  + other
-                  + " after "
-                  + argument
-                  + "; in the method, "
-                  + value
-                  + (v.acts() ? " would run after " : " would be computed after ")
-                  + other
-                  + ", not before it. Put "
-                  + other
-                  + " in a local first, or move the parameter last (move_parameter).");
-        }
-      }
+      ParameterValue.checkCall(v, c, ParameterValue.Direction.TO_METHOD);
     }
     if (v.mayThrow()) {
       Exceptional.change(

@@ -592,8 +592,10 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,
   or a parameter through `Signatures.addParameter`. As a parameter (#125, #161) the expression
-  is a `ParameterValue.InMethod`, the record `remove_parameter` `value` uses, so the per-call
-  rules (`ParameterValue.perCall`) are one set for both directions; the occurrences are replaced
+  is a `ParameterValue.InMethod`, the record `remove_parameter` `value` uses, and the per-call
+  rules are one method for both directions (`ParameterValue.checkCall`, its `Direction` the
+  differences: a cast only towards the calls, and where the value stands; #500, 2026-11-14, the
+  owner's option (a), over two copies); the occurrences are replaced
   in the same `SignatureChange` (`addParameter`'s `more`, which may also refuse by the family),
   one write and one undo. With a call it is checked as a `Behavior.Move` to the body's first
   statement (`Behavior.flow`). A call on the method's own object or a static method named alone
@@ -605,7 +607,8 @@ Each was chosen from options; the record named beside it has the options it beat
   per-call checks, whose order of refusals it keeps); a call not probed first is parsed alone.
 
 - `ParameterValue` (roadmap #147, 2026-11-13) holds what an expression of a method's parameters
-  needs, for both directions: `byParameters` and `perCall` (`extract_variable` `as=parameter`:
+  needs, for both directions: `checkCall` (each call's arguments, both ways), `byParameters` and
+  `perCall` (`extract_variable` `as=parameter`:
   each call passes the expression), and `inMethod`, `passes`, `quiet` (`remove_parameter`
   `value`: the method computes it). `inMethod` parses the declaring file with the value declared
   where the body starts, under a name no source has, so its names carry the bindings they have
@@ -948,8 +951,8 @@ Each was chosen from options; the record named beside it has the options it beat
   Compare a use with a declaration by `Bindings.declarationKey` or `Bindings.same`, not
   `getKey()`: a call of a generic method, a member read through `Box<String>`, or a static method
   of a generic class called as `Box.twice(3)` has a key of its own, and `move`, `encapsulate_field`
-  and `inline` missed such uses (#496). `Bindings.erasedKey` is `ParameterValue`'s variant (a
-  type variable keyed as its bound's erasure); whether it should stay is issue #500.
+  and `inline` missed such uses (#496). `ParameterValue` compares by `declarationKey` too since
+  #500 (2026-11-14): its erased key (a type variable as its bound's erasure) was needed by no test.
 - `bin/jrefactor` rebuilds its jar only for a commit newer than the jar; probing
   uncommitted server code takes a temporary commit (roadmap #79).
 - To test a server change from Claude Code without registering it, write a
