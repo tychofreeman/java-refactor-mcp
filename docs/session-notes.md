@@ -231,6 +231,10 @@ Each was chosen from options; the record named beside it has the options it beat
   a single static import of its method threw (#411), so `parseAll` adds the files those imports
   name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
   declared methods" and returns none.
+- What the gate counts is `TypeCheck.counts` (every JDT error but those a named module would not
+  have, #438); both the full and the narrowed count go through it, and a change to what it drops
+  bumps `TypeCheck.FORMAT`, so saved counts are made again. A count depends on whether a source
+  root holds `module-info.java`: the narrowed check starts over when that changes.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
@@ -693,6 +697,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- JDT's headless parser checks every file as the unnamed module: `setEnvironment` has no module
+  path, and the resolver gives each unit a null module name (#438, 2026-11-13, by `javap`; no
+  public API reaches it). A named module's errors that differ are filtered in `TypeCheck.counts`
+  (only the sealed permits one so far); `module-info.java`'s own errors are pre-existing noise
+  (every exported package reads as missing), and `create_file` of one is refused as not parsing.
 - JDT's `SimpleName.isDeclaration()` is false for a record's name (and a constructor's): test
   `t.getName() == n` on the `AbstractTypeDeclaration` too (2026-11-08, `Rename.checkMeanings`).
 - Tool descriptions say what a tool does: no refusal lists, nothing every tool shares (that is
