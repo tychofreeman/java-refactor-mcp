@@ -121,30 +121,11 @@ final class Names {
   }
 
   /**
-   * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
-   * types erased, which {@link Declarations#find} also takes. A declaration's own label, written
-   * types unless two overloads are written alike, is {@link Declarations#methodLabel}.
+   * "Outer.Cart.add(List<String>, int)": the method's class with its enclosing types, and {@link
+   * #memberLabel}, which {@link Declarations#find} takes back as a name.
    */
   static String methodLabel(IMethodBinding b) {
-    List<String> types = new ArrayList<>();
-    for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
-      types.add(t.getErasure().getName());
-    }
-    return typeLabel(b.getDeclaringClass())
-        + "."
-        + b.getName()
-        + "("
-        + String.join(", ", types)
-        + ")";
-  }
-
-  /** "name(Type, Type)" with the parameter types as source names them. */
-  static String signature(IMethodBinding m) {
-    List<String> types = new ArrayList<>();
-    for (ITypeBinding t : m.getParameterTypes()) {
-      types.add(Extract.typeName(t));
-    }
-    return m.getName() + "(" + String.join(", ", types) + ")";
+    return typeLabel(b.getDeclaringClass()) + "." + memberLabel(b);
   }
 
   /**
@@ -160,11 +141,6 @@ final class Names {
       }
     }
     return out;
-  }
-
-  /** "Base.describe(int, String)": the declaring class, and the method as {@link #signature}. */
-  static String sourceLabel(IMethodBinding m) {
-    return m.getDeclaringClass().getErasure().getName() + "." + signature(m);
   }
 
   /** The part of a qualified name after its last dot: {@code Map} for {@code java.util.Map}. */
@@ -183,5 +159,96 @@ final class Names {
     return last == 0
         ? items.get(0)
         : String.join(", ", items.subList(0, last)) + " and " + items.get(last);
+  }
+
+  /**
+   * Whether {@code params} (as {@link Qualified#params}, without spaces) names {@code m}'s
+   * parameters: all when null, else its types as {@link #memberLabel} writes them, written or
+   * erased, or the same with qualifiers dropped.
+   */
+  static boolean takes(IMethodBinding m, List<String> params) {
+    if (params == null) {
+      return true;
+    }
+    IMethodBinding d = m.getMethodDeclaration();
+    for (List<String> types : List.of(writtenTypes(d), erasedTypes(d), writtenTypes(m))) {
+      List<String> plain = types.stream().map(t -> t.replace(" ", "")).toList();
+      if (plain.equals(params)
+          || plain.stream()
+              .map(Names::unqualified)
+              .toList()
+              .equals(params.stream().map(Names::unqualified).toList())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * "add(List<String>, int)": the method's name and its parameter types as source writes them, or
+   * erased ({@code raise(Throwable)}) when another method of its class would read alike, as {@link
+   * Declarations#methodLabel} labels a declaration.
+   */
+  static String memberLabel(IMethodBinding b) {
+    IMethodBinding m = b.getMethodDeclaration();
+    List<String> written = writtenTypes(m);
+    for (IMethodBinding other : m.getDeclaringClass().getDeclaredMethods()) {
+      if (!other.getKey().equals(m.getKey())
+          && other.getName().equals(m.getName())
+          && writtenTypes(other).equals(written)) {
+        return m.getName() + "(" + String.join(", ", erasedTypes(m)) + ")";
+      }
+    }
+    return m.getName() + "(" + String.join(", ", written) + ")";
+  }
+
+  /** {@code m}'s parameter types by simple names, with type arguments: {@code Map.Entry<K, V>}. */
+  private static List<String> writtenTypes(IMethodBinding m) {
+    List<String> types = new ArrayList<>();
+    for (ITypeBinding t : m.getParameterTypes()) {
+      types.add(typeText(Extract.typeName(t)));
+    }
+    return varargs(m, types);
+  }
+
+  /** {@code m}'s parameter types erased: a type variable's first bound, no type arguments. */
+  private static List<String> erasedTypes(IMethodBinding m) {
+    List<String> types = new ArrayList<>();
+    for (ITypeBinding t : m.getParameterTypes()) {
+      ITypeBinding e = t.getErasure();
+      ITypeBinding element = e.isArray() ? e.getElementType().getErasure() : e;
+      String name = element.isPrimitive() ? element.getName() : typeLabel(element);
+      types.add(name + "[]".repeat(e.isArray() ? e.getDimensions() : 0));
+    }
+    return varargs(m, types);
+  }
+
+  /** {@code types} with the last one's {@code []} written {@code ...} when {@code m} is varargs. */
+  private static List<String> varargs(IMethodBinding m, List<String> types) {
+    if (m.isVarargs() && !types.isEmpty()) {
+      String last = types.get(types.size() - 1);
+      types.set(types.size() - 1, last.substring(0, last.length() - 2) + "...");
+    }
+    return types;
+  }
+
+  /**
+   * A parameter type as a label writes it, whatever its spacing: a space after each comma and
+   * around {@code extends}, {@code super} and {@code &}, none elsewhere ({@code Map<K, ? extends
+   * V>}).
+   */
+  static String typeText(String type) {
+    return type.replace(" ", "")
+        .replace(",", ", ")
+        .replace("&", " & ")
+        .replaceAll("\\?(extends|super)", "? $1 ");
+  }
+
+  /**
+   * Qualifiers dropped from a type as written: {@code java.util.List<Map.Entry<K,V>>} as {@code
+   * List<Entry<K,V>>}, for comparing a type written qualified with one that is not.
+   */
+  static String unqualified(String type) {
+    return type.replaceAll("[A-Za-z_$][\\w$]*\\.(?=[A-Za-z_$])", "");
   }
 }

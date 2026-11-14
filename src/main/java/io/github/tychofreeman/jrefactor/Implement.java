@@ -43,16 +43,15 @@ final class Implement {
     Qualified q = Qualified.parse(what);
     String name = q.name();
     String owner = q.type();
-    String params = q.params() == null ? null : String.join(",", q.params());
     List<IMethodBinding> found = new ArrayList<>();
     Set<String> labels = new TreeSet<>();
     for (IMethodBinding m : inherited(t)) {
-      labels.add(Names.sourceLabel(m));
+      labels.add(Names.methodLabel(m));
       if (m.getName().equals(name)
           && (owner == null
               || ("." + m.getDeclaringClass().getErasure().getQualifiedName())
                   .endsWith("." + owner))
-          && (params == null || types(m).equals(params))) {
+          && Names.takes(m, q.params())) {
         found.add(m);
       }
     }
@@ -69,7 +68,7 @@ final class Implement {
     if (found.size() > 1) {
       List<String> each = new ArrayList<>();
       for (IMethodBinding m : found) {
-        each.add(Names.sourceLabel(m));
+        each.add(Names.methodLabel(m));
       }
       throw new Refusal(
           what + " is several methods: " + String.join(", ", each) + ". Name one of them.");

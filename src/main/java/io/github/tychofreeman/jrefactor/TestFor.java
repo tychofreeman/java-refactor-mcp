@@ -23,7 +23,7 @@ final class TestFor {
 
     /** "Cart.add(int)", or "Cart". */
     String label() {
-      return method == null ? type.getName() : type.getName() + "." + Names.signature(method);
+      return method == null ? type.getName() : Names.methodLabel(method);
     }
   }
 
@@ -46,8 +46,7 @@ final class TestFor {
    */
   static Target target(SourceProject project, String name) throws IOException {
     Qualified q = Qualified.parse(name);
-    String params = q.params() == null ? null : String.join(",", q.params());
-    if (params == null) {
+    if (q.params() == null) {
       ITypeBinding whole =
           typeNamed(project, q.type() == null ? q.name() : q.type() + "." + q.name());
       if (whole != null) {
@@ -66,20 +65,17 @@ final class TestFor {
     String member = q.name();
     List<IMethodBinding> found = new ArrayList<>();
     for (IMethodBinding m : b.getDeclaredMethods()) {
-      if (m.getName().equals(member)
-          && !m.isConstructor()
-          && (params == null || params.equals(String.join(",", types(m)).replace(" ", "")))) {
+      if (m.getName().equals(member) && !m.isConstructor() && Names.takes(m, q.params())) {
         found.add(m);
       }
     }
     if (found.isEmpty()) {
-      throw new Refusal(
-          type + " has no method " + member + (params == null ? "" : "(" + params + ")") + ".");
+      throw new Refusal(type + " has no method " + q.member() + ".");
     }
     if (found.size() > 1) {
       List<String> each = new ArrayList<>();
       for (IMethodBinding m : found) {
-        each.add(b.getName() + "." + Names.signature(m));
+        each.add(Names.methodLabel(m));
       }
       throw new Refusal(
           type
@@ -218,14 +214,6 @@ final class TestFor {
       out.add(JavaTypes.placeholder(t.getName()));
     }
     return String.join(", ", out);
-  }
-
-  private static List<String> types(IMethodBinding m) {
-    List<String> out = new ArrayList<>();
-    for (ITypeBinding t : m.getParameterTypes()) {
-      out.add(Extract.typeName(t));
-    }
-    return out;
   }
 
   private static String decapitalize(String name) {

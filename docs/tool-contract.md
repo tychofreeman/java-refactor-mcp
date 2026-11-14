@@ -178,6 +178,17 @@ which it then refused again). `line` turns into the same name (`ByLine.named`). 
 several-methods refusal suggests the erased form too ("Pick one: name one with its parameter
 types, as Ex.raise(Object)."), where it suggested `Ex.raise(T)` and refused that again.
 
+Every label that names a method in a result or a refusal has one form (the user, 2026-11-14): the
+class with its enclosing types, the name, and the parameter types as source writes them, spaced
+`Map<K, ? extends V>`, erased only when two methods of the class would otherwise read alike:
+`Shop.Cart.add(List<String>, int)`, `Box.put(T)`, `Ex.raise(Throwable)`, `Log.add(String,
+Object...)`. It had been erased everywhere in about 25 refusals and results (`Shop.Cart.add(List,
+int)`, `Cart.addAll(Collection)`), and the owner alone with source types in `implement` and in the
+stubs `create_file` lists (`Cart.add(List<String>, int)`). A label from a binding writes a type by
+its simple name where source qualified it (`Set<String>` for `java.util.Set<String>`); `name`
+takes either, comparing with qualifiers dropped when nothing matches as written or erased. Every
+label a tool prints is taken back as `name` by every tool that takes a method's name.
+
 ## Names shared with gorefactor
 
 Tools keep gorefactor's names where the Java tool does the same thing:
@@ -377,7 +388,7 @@ package-private declaration that a use crosses the new boundary with becomes
 public: the type and its members used from another package, and what of
 package `a` the type uses. Result: `moved Shop to package b (b/Shop.java),
 with N references in M files: <file> <lines>; ...; widened Helper, Helper.TAX
-and Shop.price(int) to public` (a method with its parameter types erased, #501). A type of the default package gets a package line
+and Shop.price(int) to public` (a method labelled as below, #501). A type of the default package gets a package line
 and its file moves (#292); a file of the default package that names it gains
 the import, and what it uses of the default package, which a package cannot
 import, is refused by the type check, whose fix says to move those types in the

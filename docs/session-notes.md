@@ -117,12 +117,17 @@ Each was chosen from options; the record named beside it has the options it beat
   back. A dotted path to a type in one file is `Declarations.typePath` (syntax only).
 - Labels from bindings and declarations are in `Names` (#501, 2026-11-14): `typeLabel(ITypeBinding)`
   (`Outer.Inner`), `typeLabelAt(ASTNode)` (the type declarations around a node, local and anonymous
-  classes passed through), `methodLabel(IMethodBinding)` (`Outer.Cart.add(List, int)`, erased; was
-  `Signatures.label`), `signature` (`add(List<String>, int)`, as source writes the types) and
-  `sourceLabel` (`Cart.add(List<String>, int)`, which `implement` and `create_file`'s stubs list).
-  Erased against written types: the user chose (2026-11-14, `docs/design.md`, Decisions) one form,
-  `Declarations.methodLabel`'s (written types, erased only when two overloads read alike), over
-  erased everywhere and over keeping both; its own PR brings `methodLabel` and `sourceLabel` to it.
+  classes passed through), and one label for a method (the user's choice of 2026-11-14, option (a),
+  over erased everywhere and over keeping two forms; `docs/design.md`, Decisions):
+  `Names.methodLabel(IMethodBinding)` (`Outer.Cart.add(List<String>, int)`: the class with its
+  enclosing types, then `Names.memberLabel`) for a binding, `Declarations.methodLabel` for a
+  declaration: the parameter types as source writes them, spaced by `Names.typeText`
+  (`Map<K, ? extends V>`), erased only when two methods of the type would read alike. A binding
+  writes simple names (`Set<String>` where source wrote `java.util.Set<String>`): `name` takes both,
+  as `Declarations.overloads` and `Names.takes` (for `implement` and `test_for`) compare with
+  qualifiers dropped last. `NamesTest.everyMethodLabelNamesItsMethodBackInEveryTool` round-trips
+  them. `Names.sourceLabel` and `Names.signature` are gone. `MoveType.label` (the owner after a
+  move) and `Rename.describe` (prose) keep their own forms.
   A name of the form `Type.member(params)` is read by `Qualified.parse` only (the user, 2026-11-14):
   split at the last dot before the parameter list (`Outer.Inner.m`, `m(Map.Entry, int...)`).
   `Opened.topLevel` refuses a member type by name, saying so. `TypeSwitch.declaration` and `FromFields.path` keep their own walk: they want member

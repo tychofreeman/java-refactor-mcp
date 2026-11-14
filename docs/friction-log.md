@@ -1809,3 +1809,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand. `inspect` with `names` refused the whole list for one name that was not a
   member (`Fold.typeName`, a local), showing none of the others; resent without it. Showing the
   names it found beside the refusal would have saved the call.
+
+## 2026-11-14: one-method-label
+
+- One test edit by hand (a Python string replace in `NamesTest`): half applied, half missed the formatted text and was
+  redone with `replace_text`, which covered it all: no tool was missing.

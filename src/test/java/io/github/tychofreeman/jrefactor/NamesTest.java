@@ -1,11 +1,14 @@
 package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -35,6 +38,38 @@ class NamesTest {
       }
       """;
 
+  private static final String CART =
+      """
+      package p;
+
+      import java.util.List;
+      import java.util.Map;
+
+      class Shop {
+        static class Cart {
+          void add(List<String> names, int n) {}
+
+          void add(String name) {}
+
+          <T> T raise(T t) {
+            return t;
+          }
+
+          <T extends Throwable> T raise(T t) {
+            return t;
+          }
+
+          void log(String format, Object... args) {}
+
+          void put(Map<String, List<Integer>> m) {}
+
+          void each(Map.Entry<String, ? extends Number> e) {}
+
+          void copy(java.util.Set<String> s) {}
+        }
+      }
+      """;
+
   @Test
   void aCountIsPluralUnlessItIsOne() {
     assertEquals("0 occurrences", Names.plural(0, "occurrence"));
@@ -43,12 +78,11 @@ class NamesTest {
   }
 
   @Test
-  void aMethodBindingIsLabelledErasedWithItsEnclosingTypesOrAsSourceWritesIt() throws IOException {
+  void aMethodBindingIsLabelledWithItsEnclosingTypesAndItsTypesAsSourceWritesThem()
+      throws IOException {
     IMethodBinding add = method(parse(), "add").resolveBinding();
 
-    assertEquals("Shop.Cart.add(List, int)", Names.methodLabel(add));
-    assertEquals("add(List<String>, int)", Names.signature(add));
-    assertEquals("Cart.add(List<String>, int)", Names.sourceLabel(add));
+    assertEquals("Shop.Cart.add(List<String>, int)", Names.methodLabel(add));
   }
 
   @Test
@@ -89,5 +123,48 @@ class NamesTest {
   void aUnitsPackageIsItsDeclarationOrEmpty() {
     assertEquals("a.b", Names.packageOf(Jdt.parseSyntax("package a.b; class C {}")));
     assertEquals("", Names.packageOf(Jdt.parseSyntax("class C {}")));
+  }
+
+  @Test
+  void everyMethodLabelNamesItsMethodBackInEveryTool() throws IOException {
+    Path file = dir.resolve("p/Shop.java");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, CART);
+    CompilationUnit unit = Jdt.parse(SourceProject.load(dir), file, CART);
+    AbstractTypeDeclaration cart = Declarations.typePath(unit, new String[] {"Shop", "Cart"});
+    List<String> labels = new ArrayList<>();
+    for (MethodDeclaration m : Nodes.all(cart, MethodDeclaration.class)) {
+      IMethodBinding b = m.resolveBinding();
+      String label = Names.methodLabel(b);
+      labels.add(label);
+      if (!m.getName().getIdentifier().equals("copy")) {
+        assertEquals(label, "Shop.Cart." + Declarations.methodLabel(m));
+      }
+      assertSame(m, Declarations.find(unit, label, "p/Shop.java").decl(), label);
+      Qualified q = Qualified.parse(label);
+      assertSame(m, MemberMove.member(cart, q.type(), q.member(), "p/Shop.java", "pull_up"), label);
+      for (MethodDeclaration other : Nodes.all(cart, MethodDeclaration.class)) {
+        assertEquals(
+            other == m,
+            other.getName().getIdentifier().equals(q.name())
+                && Names.takes(other.resolveBinding(), q.params()),
+            label + " against " + Names.methodLabel(other.resolveBinding()));
+      }
+    }
+    assertEquals(
+        List.of(
+            "Shop.Cart.add(List<String>, int)",
+            "Shop.Cart.add(String)",
+            "Shop.Cart.raise(Object)",
+            "Shop.Cart.raise(Throwable)",
+            "Shop.Cart.log(String, Object...)",
+            "Shop.Cart.put(Map<String, List<Integer>>)",
+            "Shop.Cart.each(Map.Entry<String, ? extends Number>)",
+            "Shop.Cart.copy(Set<String>)"),
+        labels);
+    assertEquals(
+        "copy(java.util.Set<String>)",
+        Declarations.methodLabel(method(unit, "copy")),
+        "a declaration's label writes a qualified type as source does; both are taken back");
   }
 }

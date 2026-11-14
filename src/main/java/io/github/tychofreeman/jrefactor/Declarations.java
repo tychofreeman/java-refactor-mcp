@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -672,19 +673,23 @@ final class Declarations {
 
   /**
    * How a name tells {@code m} apart from the other methods of its type: its written parameter
-   * types ({@code raise(T)}), or, when another method there is written alike, its erased ones
-   * ({@code raise(Throwable)}), which {@link #find} also takes.
+   * types ({@code raise(T)}, spaced as {@link Names#typeText}), or, when another method there is
+   * written alike, its erased ones ({@code raise(Throwable)}), which {@link #find} also takes.
    */
   static String methodLabel(MethodDeclaration m) {
     String written = writtenLabel(m);
+    List<String> types = types(m);
     if (m.getParent() instanceof AbstractTypeDeclaration t) {
       for (Object o : t.bodyDeclarations()) {
         if (o != m && o instanceof MethodDeclaration other && writtenLabel(other).equals(written)) {
-          return m.getName().getIdentifier() + "(" + String.join(", ", erasedTypes(m)) + ")";
+          types = erasedTypes(m);
         }
       }
     }
-    return written;
+    return m.getName().getIdentifier()
+        + "("
+        + String.join(", ", types.stream().map(Names::typeText).toList())
+        + ")";
   }
 
   /**
@@ -741,23 +746,28 @@ final class Declarations {
   /**
    * The methods of {@code named} that {@code params} picks: all when it is null, those whose
    * written parameter types are {@code params}, or else those whose erased ones are ({@code
-   * raise(Throwable)} for {@code <T extends Throwable> T raise(T)}; see {@link #methodLabel}).
+   * raise(Throwable)} for {@code <T extends Throwable> T raise(T)}; see {@link #methodLabel}), or
+   * else either with qualifiers dropped ({@code List<String>} for {@code java.util.List<String>}).
    */
   static List<MethodDeclaration> overloads(List<MethodDeclaration> named, List<String> params) {
-    List<MethodDeclaration> methods = new ArrayList<>();
-    for (MethodDeclaration m : named) {
-      if (params == null || types(m).equals(params)) {
-        methods.add(m);
+    if (params == null) {
+      return new ArrayList<>(named);
+    }
+    List<String> plain = params.stream().map(Names::unqualified).toList();
+    List<Predicate<MethodDeclaration>> tiers =
+        List.of(
+            m -> types(m).equals(params),
+            m -> erasedTypes(m).equals(params),
+            m ->
+                types(m).stream().map(Names::unqualified).toList().equals(plain)
+                    || erasedTypes(m).stream().map(Names::unqualified).toList().equals(plain));
+    for (Predicate<MethodDeclaration> tier : tiers) {
+      List<MethodDeclaration> methods = named.stream().filter(tier).toList();
+      if (!methods.isEmpty()) {
+        return new ArrayList<>(methods);
       }
     }
-    if (methods.isEmpty() && params != null) {
-      for (MethodDeclaration m : named) {
-        if (erasedTypes(m).equals(params)) {
-          methods.add(m);
-        }
-      }
-    }
-    return methods;
+    return new ArrayList<>();
   }
 
   /** {@code m(int)} for a method: its parameter types as written, as {@link #find} reads them. */
