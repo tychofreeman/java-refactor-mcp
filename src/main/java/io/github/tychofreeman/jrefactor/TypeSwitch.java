@@ -195,12 +195,14 @@ final class TypeSwitch {
         NameCheck.meanings(cases.stream().map(Case::body).toList()),
         "moving the cases into their types");
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "turning the switch into " + name + "()",
-            "Check that each case's body compiles in its type.");
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                List.of(),
+                "turning the switch into " + name + "()",
+                "Check that each case's body compiles in its type.")
+            .declared();
     return new Outcome(
         (fallback == null ? "declared " : "implemented ")
             + r

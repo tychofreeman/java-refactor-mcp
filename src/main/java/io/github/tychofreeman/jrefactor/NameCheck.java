@@ -83,8 +83,7 @@ final class NameCheck {
           || (!texts.containsKey(e.getKey()) && !Files.isRegularFile(e.getKey()))) {
         continue;
       }
-      String text =
-          texts.containsKey(e.getKey()) ? texts.get(e.getKey()) : Files.readString(e.getKey());
+      String text = Edits.textOf(texts, e.getKey());
       List<TextEdit> sorted = new ArrayList<>(e.getValue());
       sorted.sort(Comparator.comparingInt(TextEdit::start));
       List<int[]> written = new ArrayList<>();

@@ -188,12 +188,14 @@ final class AddResult {
                   + ") {}\n"));
     }
     Stubs.Declared stubs =
-        MemberMove.gate(
-            project,
-            holding.texts(),
-            edits,
-            "adding the result " + result + " to " + q.type() + "." + member,
-            "Check that " + type + " resolves where the method is.");
+        Edits.gatedFiles(
+                project,
+                holding.texts(),
+                edits,
+                List.of(),
+                "adding the result " + result + " to " + q.type() + "." + member,
+                "Check that " + type + " resolves where the method is.")
+            .declared();
     return new Outcome(
         "added the result "
             + result

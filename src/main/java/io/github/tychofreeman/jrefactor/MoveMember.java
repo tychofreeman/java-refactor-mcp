@@ -268,13 +268,14 @@ final class MoveMember {
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(fragments), "moving " + name + " to " + to);
     Stubs.Declared declared2 =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "moving " + name + " to " + to,
-            "Check that the moved method's names resolve in " + to + ", where it now lives.",
-            imports);
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                imports,
+                "moving " + name + " to " + to,
+                "Check that the moved method's names resolve in " + to + ", where it now lives.")
+            .declared();
     return new Outcome(
         "moved "
             + typeName
@@ -426,13 +427,14 @@ final class MoveMember {
         .computeIfAbsent(targetFile, k -> new ArrayList<>())
         .addAll(MemberMove.addTo(texts.get(targetFile), target, moved, Placement.rank(fd)));
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "moving " + typeName + "." + member + " to " + toName,
-            "Check that what the field's initializer names resolves in " + toName + ".",
-            imports);
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                imports,
+                "moving " + typeName + "." + member + " to " + toName,
+                "Check that what the field's initializer names resolves in " + toName + ".")
+            .declared();
     return new Outcome(
         "moved "
             + typeName

@@ -1,7 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -100,7 +99,7 @@ final class PullUp {
     Map<Path, String> texts = holding.texts();
     String movedText = MemberMove.textOf(text, moved);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
-    String targetText = texts.getOrDefault(target, Files.readString(target));
+    String targetText = Edits.textOf(texts, target);
     if (twin != null) {
       edits
           .computeIfAbsent(target, k -> new ArrayList<>())
@@ -114,12 +113,14 @@ final class PullUp {
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pulling " + name + " up");
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "pulling " + subName + "." + member + " up to " + superName,
-            "Nothing was changed. Move only a member that uses nothing the subclass has.");
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                List.of(),
+                "pulling " + subName + "." + member + " up to " + superName,
+                "Nothing was changed. Move only a member that uses nothing the subclass has.")
+            .declared();
     return new Outcome(
         "pulled "
             + subName

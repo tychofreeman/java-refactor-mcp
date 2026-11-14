@@ -1,7 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -66,7 +65,7 @@ final class PushDown {
                   + member
                   + ". Rename one of them, or leave it where it is.");
         }
-        String subText = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
+        String subText = Edits.textOf(texts, e.getKey());
         edits
             .computeIfAbsent(e.getKey(), k -> new ArrayList<>())
             .addAll(MemberMove.addTo(subText, t, movedText, Placement.rank(moved)));
@@ -84,14 +83,16 @@ final class PushDown {
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(List.of(moved)), "pushing " + name + " down");
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "pushing " + subName + "." + member + " down to its subclasses",
-            "Nothing was changed. Keep the member where a caller of "
-                + subName
-                + " can still reach it.");
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                List.of(),
+                "pushing " + subName + "." + member + " down to its subclasses",
+                "Nothing was changed. Keep the member where a caller of "
+                    + subName
+                    + " can still reach it.")
+            .declared();
     return new Outcome(
         "pushed "
             + subName

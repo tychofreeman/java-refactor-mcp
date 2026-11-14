@@ -1,12 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
@@ -224,40 +219,6 @@ final class MemberMove {
   /** The text of {@code m} as written in {@code text}. */
   static String textOf(String text, BodyDeclaration m) {
     return text.substring(m.getStartPosition(), Nodes.end(m));
-  }
-
-  /**
-   * Applies {@code edits} to each file's text in {@code texts} (the file's imports fixed first),
-   * and runs the result through the gate. Each file's edits are applied back to front.
-   */
-  static Stubs.Declared gate(
-      SourceProject project,
-      Map<Path, String> texts,
-      Map<Path, List<TextEdit>> edits,
-      String what,
-      String fix)
-      throws IOException {
-    return gate(project, texts, edits, what, fix, List.of());
-  }
-
-  /** {@link #gate}, with {@code chosen} the classes to import where a name is ambiguous. */
-  static Stubs.Declared gate(
-      SourceProject project,
-      Map<Path, String> texts,
-      Map<Path, List<TextEdit>> edits,
-      String what,
-      String fix,
-      List<String> chosen)
-      throws IOException {
-    Map<Path, String> changed = new LinkedHashMap<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String before = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
-      List<TextEdit> list = new ArrayList<>(e.getValue());
-      list.sort((a, b) -> b.start() - a.start());
-      String after = TextEdit.apply(before, list, 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), before, after, chosen).text());
-    }
-    return Gate.applyOrRefuse(project, changed, what, fix);
   }
 
   /** The top-level type of {@code unit} named {@code name}, or null. */

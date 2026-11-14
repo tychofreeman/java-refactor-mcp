@@ -186,12 +186,14 @@ final class EncapsulateField {
     own.addAll(MemberMove.appendTo(text, owner, moved));
 
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "encapsulating " + name,
-            "Check that the uses of " + field + " the accessors replace still resolve.");
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                List.of(),
+                "encapsulating " + name,
+                "Check that the uses of " + field + " the accessors replace still resolve.")
+            .declared();
     return new Outcome(
         "encapsulated "
             + typeName

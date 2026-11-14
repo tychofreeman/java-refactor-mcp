@@ -255,12 +255,14 @@ final class Fold {
         NameCheck.meanings(moved),
         "folding into calls of " + call);
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            holding.texts(),
-            edits,
-            "folding into calls of " + call,
-            "Fold one match at a time (line), to see which one breaks.");
+        Edits.gatedFiles(
+                project,
+                holding.texts(),
+                edits,
+                List.of(),
+                "folding into calls of " + call,
+                "Fold one match at a time (line), to see which one breaks.")
+            .declared();
     int count = folded.values().stream().mapToInt(List::size).sum();
     List<String> where = new ArrayList<>();
     for (Map.Entry<Path, List<Integer>> e : folded.entrySet()) {

@@ -393,7 +393,6 @@ final class SubclassToStrategy {
         }
       }
     }
-    Map<Path, String> changed = new HashMap<>();
     List<String> chosen = new ArrayList<>();
     chosen.add(baseType.getQualifiedName());
     for (Object o : subUnit.imports()) {
@@ -402,21 +401,16 @@ final class SubclassToStrategy {
         chosen.add(imp.getName().getFullyQualifiedName());
       }
     }
-    for (Map.Entry<Path, List<TextEdit>> e : byFile.entrySet()) {
-      if (e.getValue().isEmpty()) {
-        continue;
-      }
-      String text = holding.texts().get(e.getKey());
-      String after = TextEdit.apply(text, e.getValue(), 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), text, after, chosen).text());
-    }
-    changed.put(opened.file(), null);
+    byFile.put(opened.file(), null);
     Stubs.Declared declared =
-        Gate.applyOrRefuse(
-            project,
-            changed,
-            "turning " + subName + " into a function of " + baseName,
-            "Nothing was changed.");
+        Edits.gatedFiles(
+                project,
+                holding.texts(),
+                byFile,
+                chosen,
+                "turning " + subName + " into a function of " + baseName,
+                "Nothing was changed.")
+            .declared();
     return new Outcome(
         "turned "
             + subName

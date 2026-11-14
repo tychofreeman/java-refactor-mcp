@@ -195,17 +195,17 @@ final class EnumSwitch {
                 field.members())
             .text();
     edits.put(eFile, List.of(new TextEdit(0, eText.length(), out)));
+    String fix =
+        "Check that each case's value type-checks as " + type + " in " + at.e().getName() + ".";
     Stubs.Declared declared =
-        MemberMove.gate(
-            at.project(),
-            texts,
-            edits,
-            "turning the switch into " + at.name() + "()",
-            "Check that each case's value type-checks as "
-                + type
-                + " in "
-                + at.e().getName()
-                + ".");
+        Edits.gatedFiles(
+                at.project(),
+                texts,
+                edits,
+                List.of(),
+                "turning the switch into " + at.name() + "()",
+                fix)
+            .declared();
     int count = values.size();
     return new Outcome(
         "added the field "
@@ -342,13 +342,16 @@ final class EnumSwitch {
     }
     String out = TextEdit.apply(bodies, appended, 0);
     edits.put(eFile, List.of(new TextEdit(0, eText.length(), out)));
+    String fix = "Check that each case's body compiles in " + at.e().getName() + ".";
     Stubs.Declared declared =
-        MemberMove.gate(
-            at.project(),
-            texts,
-            edits,
-            "turning the switch into " + name + "()",
-            "Check that each case's body compiles in " + at.e().getName() + ".");
+        Edits.gatedFiles(
+                at.project(),
+                texts,
+                edits,
+                List.of(),
+                "turning the switch into " + name + "()",
+                fix)
+            .declared();
     return new Outcome(
         (fallback == null ? "declared " : "implemented ")
             + type

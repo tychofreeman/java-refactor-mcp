@@ -281,12 +281,14 @@ final class InlineFunction {
 
     NameCheck.require(project, texts, edits, NameCheck.meanings(fragments), "inlining " + name);
     Stubs.Declared declaredStubs =
-        MemberMove.gate(
-            project,
-            texts,
-            edits,
-            "inlining " + name,
-            "Keep the method, or change its callers first.");
+        Edits.gatedFiles(
+                project,
+                texts,
+                edits,
+                List.of(),
+                "inlining " + name,
+                "Keep the method, or change its callers first.")
+            .declared();
     return new Outcome(
         "inlined "
             + name

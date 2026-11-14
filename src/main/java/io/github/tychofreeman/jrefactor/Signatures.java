@@ -519,12 +519,14 @@ final class Signatures {
       }
     }
     Stubs.Declared declared =
-        MemberMove.gate(
-            project,
-            holding.texts(),
-            edits,
-            "adding " + type + " " + parameter + " to " + name,
-            "Check that " + value + " type-checks as " + type + " at each construction.");
+        Edits.gatedFiles(
+                project,
+                holding.texts(),
+                edits,
+                List.of(),
+                "adding " + type + " " + parameter + " to " + name,
+                "Check that " + value + " type-checks as " + type + " at each construction.")
+            .declared();
     return new Outcome(
         "added the component "
             + type
