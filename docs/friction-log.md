@@ -1648,3 +1648,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   (a visitor) were rewritten with `replace_declaration`: no tool turns a visitor of three node
   kinds into a filter over `Nodes.all`.
 - No Java by hand.
+## 2026-11-14: test-projects
+
+- `create_file` of `TestProjectsTest`, which calls `TestProjects` before it exists, declared the
+  class stub in `src/main/java`: `TestProjects` does not read as a test double or helper
+  (`Stubs.TEST_DOUBLE`), so it went to the main root. A test-only helper named `Test*` would want
+  the test root. Undone; the class was created first in the test root.
+- `move` of `GoldenTest.copyTree` onto the stub of the same name was not possible: deleting the
+  stub first is refused while the test uses it (a `move` onto the stub itself was not tried).
+  Worked instead: replace the stub with the body, make the old method a delegate, `inline` it.
