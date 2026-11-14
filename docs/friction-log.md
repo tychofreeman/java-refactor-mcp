@@ -1503,7 +1503,6 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Otherwise through the tools: `create_file`, `move` (twice), `rename` (twice), `fold`, `inline`
   (six), `add_declaration`. Goldens are resources.
 
-
 ## 2026-11-14: one-gated-files
 
 - No Java by hand. `inline` of an overloaded static method (`MemberMove.gate`, five and six
