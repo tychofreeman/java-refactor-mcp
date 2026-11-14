@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -125,12 +126,12 @@ public final class Rename {
     Stubs.Declared stubs =
         gate(project, Map.of(file, apply(source, found.occurrences(), newName)), oldName, newName);
     return new Outcome(
-        "renamed %s to %s in %s: %d occurrences, %s"
+        "renamed %s to %s in %s: %s, %s"
             .formatted(
                 oldName,
                 newName,
                 project.relative(file),
-                found.occurrences().size(),
+                Names.plural(found.occurrences().size(), "occurrence"),
                 Lines.list(lineNumbers(cu, found.occurrences()))),
         stubs);
   }
@@ -394,80 +395,64 @@ public final class Rename {
       }
     }
 
-    Map<Path, String> texts = new java.util.TreeMap<>();
-    Map<String, List<Integer>> lines = new java.util.TreeMap<>();
-    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);
-    int occurrences = 0;
-    Holding holding = Holding.of(project, oldName);
-    Map<Path, String> held = holding.texts();
-    Map<Path, CompilationUnit> parsed = holding.units();
-    for (Path f : held.keySet()) {
-      String text = held.get(f);
-      CompilationUnit unit = parsed.get(f);
-      for (String clashKey : clashKeys) {
-        ASTNode clash = unit.findDeclaringNode(clashKey);
-        if (clash != null) {
-          throw new Refusal(
-              owner
-                  + " already has a field "
-                  + newName
-                  + " (line "
-                  + unit.getLineNumber(clash.getStartPosition())
-                  + "). Choose another name.");
-        }
-      }
-      List<SimpleName> uses = new ArrayList<>();
-      unit.accept(
-          new ASTVisitor(true) {
-            @Override
-            public boolean visit(SimpleName node) {
-              if (node.getIdentifier().equals(oldName)
-                  && node.resolveBinding() instanceof IVariableBinding v
-                  && v.getVariableDeclaration().getKey().equals(key)) {
-                uses.add(node);
+    Written written =
+        renameUses(
+            project,
+            Holding.of(project, oldName),
+            oldName,
+            newName,
+            node ->
+                node.resolveBinding() instanceof IVariableBinding v
+                    && v.getVariableDeclaration().getKey().equals(key),
+            (f, unit, uses) -> {
+              for (String clashKey : clashKeys) {
+                ASTNode clash = unit.findDeclaringNode(clashKey);
+                if (clash != null) {
+                  throw new Refusal(
+                      owner
+                          + " already has a field "
+                          + newName
+                          + " (line "
+                          + unit.getLineNumber(clash.getStartPosition())
+                          + "). Choose another name.");
+                }
               }
-              return true;
-            }
-          });
-      if (uses.isEmpty()) {
-        continue;
-      }
-      uses.sort(Comparator.comparingInt(ASTNode::getStartPosition));
-      for (SimpleName use : uses) {
-        VariableDeclaration local = localInScope(unit, use, newName);
-        if (local != null) {
-          int at = unit.getLineNumber(use.getStartPosition());
-          throw new Refusal(
-              "renaming the field "
-                  + owner
-                  + "."
-                  + oldName
-                  + " to "
-                  + newName
-                  + " would change what line "
-                  + at
-                  + " of "
-                  + project.relative(f)
-                  + " means: line "
-                  + at
-                  + " would read the local "
-                  + newName
-                  + " declared at line "
-                  + unit.getLineNumber(local.getStartPosition())
-                  + ", not the field. Choose another name, or rename that local first.");
-        }
-      }
-      texts.put(f, apply(text, uses, newName));
-      lines.put(project.relative(f), lineNumbers(unit, uses));
-      renamedAt.put(f, uses.stream().map(ASTNode::getStartPosition).toList());
-      occurrences += uses.size();
-    }
+              for (SimpleName use : uses) {
+                VariableDeclaration local = localInScope(unit, use, newName);
+                if (local != null) {
+                  int at = unit.getLineNumber(use.getStartPosition());
+                  throw new Refusal(
+                      "renaming the field "
+                          + owner
+                          + "."
+                          + oldName
+                          + " to "
+                          + newName
+                          + " would change what line "
+                          + at
+                          + " of "
+                          + project.relative(f)
+                          + " means: line "
+                          + at
+                          + " would read the local "
+                          + newName
+                          + " declared at line "
+                          + unit.getLineNumber(local.getStartPosition())
+                          + ", not the field. Choose another name, or rename that local first.");
+                }
+              }
+            },
+            null,
+            null);
 
-    Stubs.Declared stubs = gate(project, texts, oldName, newName);
-    checkMeanings(project, renamedAt, existing, oldName, newName);
+    Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
     return summary(
-        "renamed the field " + owner + "." + oldName + " to " + newName, lines, occurrences, stubs);
+        "renamed the field " + owner + "." + oldName + " to " + newName,
+        written.lines(),
+        written.occurrences(),
+        stubs);
   }
 
   /**
@@ -479,59 +464,42 @@ public final class Rename {
       throws IOException {
     String oldName = method.getName();
     Holding holding = Holding.of(project, oldName);
-    Map<Path, String> texts = holding.texts();
-    Map<Path, CompilationUnit> units = holding.units();
     Set<String> keys =
-        Signatures.family(project, units.values(), method, "so it cannot be renamed.");
+        Signatures.family(project, holding.units().values(), method, "so it cannot be renamed.");
 
     TreeSet<String> others = new TreeSet<>();
-    Map<Path, String> changed = new TreeMap<>();
-    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);
-    Map<String, List<Integer>> lines = new TreeMap<>();
-    int occurrences = 0;
-    for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
-      CompilationUnit unit = e.getValue();
-      List<SimpleName> uses = new ArrayList<>();
-      unit.accept(
-          new ASTVisitor(true) {
-            @Override
-            public boolean visit(MethodDeclaration m) {
-              IMethodBinding b = m.resolveBinding();
-              if (b != null && keys.contains(b.getMethodDeclaration().getKey())) {
-                others.add(Names.methodLabel(b));
-                refuseMethodClash(unit, b, newName);
+    Written written =
+        renameUses(
+            project,
+            holding,
+            oldName,
+            newName,
+            node ->
+                node.resolveBinding() instanceof IMethodBinding b
+                    && keys.contains(b.getMethodDeclaration().getKey()),
+            (f, unit, uses) -> {
+              for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
+                IMethodBinding b = m.resolveBinding();
+                if (b != null && keys.contains(b.getMethodDeclaration().getKey())) {
+                  others.add(Names.methodLabel(b));
+                  refuseMethodClash(unit, b, newName);
+                }
               }
-              return true;
-            }
+            },
+            null,
+            null);
 
-            @Override
-            public boolean visit(SimpleName node) {
-              if (node.getIdentifier().equals(oldName)
-                  && node.resolveBinding() instanceof IMethodBinding b
-                  && keys.contains(b.getMethodDeclaration().getKey())) {
-                uses.add(node);
-              }
-              return true;
-            }
-          });
-      if (uses.isEmpty()) {
-        continue;
-      }
-      uses.sort(Comparator.comparingInt(ASTNode::getStartPosition));
-      changed.put(e.getKey(), apply(texts.get(e.getKey()), uses, newName));
-      lines.put(project.relative(e.getKey()), lineNumbers(unit, uses));
-      renamedAt.put(e.getKey(), uses.stream().map(ASTNode::getStartPosition).toList());
-      occurrences += uses.size();
-    }
-
-    Stubs.Declared stubs = gate(project, changed, oldName, newName);
-    checkMeanings(project, renamedAt, existing, oldName, newName);
+    Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
     List<String> names = new ArrayList<>(List.of(Names.methodLabel(method)));
     others.remove(names.get(0));
     names.addAll(others);
     return summary(
-        "renamed the method " + joinAnd(names) + " to " + newName, lines, occurrences, stubs);
+        "renamed the method " + joinAnd(names) + " to " + newName,
+        written.lines(),
+        written.occurrences(),
+        stubs);
   }
 
   /**
@@ -569,10 +537,10 @@ public final class Rename {
     Set<Path> files = new TreeSet<>(renamedAt.keySet());
     files.addAll(existing.keySet());
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(files));
-    int delta = newName.length() - oldName.length();
     Set<String> renamed = new HashSet<>();
     for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
       List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
+      List<TextEdit> edits = renames(at, oldName, newName);
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
         // A constructor's and a record's name declare them too, though JDT's isDeclaration says
         // not.
@@ -582,7 +550,7 @@ public final class Rename {
                 || (n.getParent() instanceof AbstractTypeDeclaration t && t.getName() == n);
         if (declares
             && n.getIdentifier().equals(newName)
-            && at.contains(before(at, n.getStartPosition(), delta))) {
+            && at.contains(NameCheck.before(edits, n.getStartPosition()))) {
           renamed.add(Bindings.declarationKey(n.resolveBinding()));
         }
       }
@@ -590,13 +558,14 @@ public final class Rename {
     for (Map.Entry<Path, CompilationUnit> e : after.entrySet()) {
       CompilationUnit unit = e.getValue();
       List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
+      List<TextEdit> edits = renames(at, oldName, newName);
       Map<Integer, String> was = existing.getOrDefault(e.getKey(), Map.of());
       for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
         String key = Bindings.declarationKey(n.resolveBinding());
         if (!n.getIdentifier().equals(newName) || key == null) {
           continue;
         }
-        int b = before(at, n.getStartPosition(), delta);
+        int b = NameCheck.before(edits, n.getStartPosition());
         boolean wrote = at.contains(b);
         if ((wrote && !renamed.contains(key))
             || (!wrote && was.containsKey(b) && !was.get(b).equals(key))) {
@@ -621,22 +590,9 @@ public final class Rename {
     }
   }
 
-  /**
-   * The position before the rename of {@code after}, a position in the renamed file whose
-   * occurrences, at {@code at} before it (sorted), each grew by {@code delta}.
-   */
-  private static int before(List<Integer> at, int after, int delta) {
-    int k = 0;
-    for (int i = 0; i < at.size(); i++) {
-      int moved = at.get(i) + i * delta;
-      if (moved == after) {
-        return at.get(i);
-      }
-      if (moved < after) {
-        k = i + 1;
-      }
-    }
-    return after - k * delta;
+  /** The edits that renamed {@code oldName} to {@code newName} at each of {@code at}, in order. */
+  private static List<TextEdit> renames(List<Integer> at, String oldName, String newName) {
+    return at.stream().map(p -> new TextEdit(p, p + oldName.length(), newName)).toList();
   }
 
   /**
@@ -673,52 +629,28 @@ public final class Rename {
       }
     }
 
-    Map<Path, String> changed = new TreeMap<>();
-    Map<String, List<Integer>> lines = new TreeMap<>();
-    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);
-    int occurrences = 0;
-    Holding holding = Holding.of(project, oldName);
-    Map<Path, String> held = holding.texts();
-    Map<Path, CompilationUnit> parsed = holding.units();
-    for (Path f : held.keySet()) {
-      String text = held.get(f);
-      CompilationUnit unit = parsed.get(f);
-      List<SimpleName> uses = new ArrayList<>();
-      unit.accept(
-          new ASTVisitor(true) {
-            @Override
-            public boolean visit(SimpleName node) {
-              if (node.getIdentifier().equals(oldName) && refersTo(node.resolveBinding(), key)) {
-                uses.add(node);
-              }
-              return true;
-            }
-          });
-      if (uses.isEmpty()) {
-        continue;
-      }
-      uses.sort(Comparator.comparingInt(ASTNode::getStartPosition));
-      Path written = f.equals(from) ? to : f;
-      if (f.equals(from)) {
-        changed.put(from, null);
-      }
-      changed.put(written, apply(text, uses, newName));
-      lines.put(project.relative(written), lineNumbers(unit, uses));
-      renamedAt.put(written, uses.stream().map(ASTNode::getStartPosition).toList());
-      occurrences += uses.size();
-    }
+    Written written =
+        renameUses(
+            project,
+            Holding.of(project, oldName),
+            oldName,
+            newName,
+            node -> refersTo(node.resolveBinding(), key),
+            (f, unit, uses) -> {},
+            from,
+            to);
 
-    Stubs.Declared stubs = gate(project, changed, oldName, newName);
+    Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
     if (from != null && existing.containsKey(from)) {
       existing.put(to, existing.remove(from));
     }
-    checkMeanings(project, renamedAt, existing, oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
     String what = "renamed the type " + type.getQualifiedName() + " to " + newName;
     if (from != null) {
       what += ", and " + project.relative(from) + " to " + project.relative(to) + ",";
     }
-    return summary(what, lines, occurrences, stubs);
+    return summary(what, written.lines(), written.occurrences(), stubs);
   }
 
   /**
@@ -795,12 +727,12 @@ public final class Rename {
     Stubs.Declared stubs =
         gate(project, Map.of(file, apply(source, occurrences, newName)), oldName, newName);
     return new Outcome(
-        "renamed %s to %s in %s: %d occurrences, %s"
+        "renamed %s to %s in %s: %s, %s"
             .formatted(
                 oldName,
                 newName,
                 project.relative(file),
-                occurrences.size(),
+                Names.plural(occurrences.size(), "occurrence"),
                 Lines.list(lineNumbers(cu, occurrences))),
         stubs);
   }
@@ -887,15 +819,23 @@ public final class Rename {
     if (lines.size() == 1) {
       Map.Entry<String, List<Integer>> only = lines.entrySet().iterator().next();
       return new Outcome(
-          "%s in %s: %d occurrences, %s"
-              .formatted(what, only.getKey(), occurrences, Lines.list(only.getValue())),
+          "%s in %s: %s, %s"
+              .formatted(
+                  what,
+                  only.getKey(),
+                  Names.plural(occurrences, "occurrence"),
+                  Lines.list(only.getValue())),
           stubs);
     }
     List<String> each = new ArrayList<>();
     lines.forEach((rel, ls) -> each.add(rel + " " + Lines.list(ls)));
     return new Outcome(
-        "%s in %d files: %d occurrences, %s"
-            .formatted(what, lines.size(), occurrences, String.join("; ", each)),
+        "%s in %d files: %s, %s"
+            .formatted(
+                what,
+                lines.size(),
+                Names.plural(occurrences, "occurrence"),
+                String.join("; ", each)),
         stubs);
   }
 
@@ -1024,5 +964,69 @@ public final class Rename {
                 new TextEdit(n.getStartPosition(), n.getStartPosition() + n.getLength(), newName))
             .toList(),
         0);
+  }
+
+  /**
+   * What a rename writes: each file's text (null for one it deletes), the lines it changed in each
+   * file, where each renamed name started, and how many it renamed.
+   */
+  private record Written(
+      Map<Path, String> texts,
+      Map<String, List<Integer>> lines,
+      Map<Path, List<Integer>> renamedAt,
+      int occurrences) {}
+
+  /** A check of one file before it is renamed, given its uses in order; it refuses. */
+  private interface FileCheck {
+    void check(Path file, CompilationUnit unit, List<SimpleName> uses);
+  }
+
+  /**
+   * Renames to {@code newName} each name {@code oldName} in {@code holding}'s files that {@code
+   * isUse} accepts, Javadoc included, once {@code check} has seen the file; the file {@code from},
+   * when not null, is written as {@code to} and deleted.
+   */
+  private static Written renameUses(
+      SourceProject project,
+      Holding holding,
+      String oldName,
+      String newName,
+      Predicate<SimpleName> isUse,
+      FileCheck check,
+      Path from,
+      Path to) {
+    Map<Path, String> texts = new TreeMap<>();
+    Map<String, List<Integer>> lines = new TreeMap<>();
+    Map<Path, List<Integer>> renamedAt = new TreeMap<>();
+    int occurrences = 0;
+    for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+      Path f = e.getKey();
+      CompilationUnit unit = e.getValue();
+      List<SimpleName> uses = new ArrayList<>();
+      unit.accept(
+          new ASTVisitor(true) {
+            @Override
+            public boolean visit(SimpleName node) {
+              if (node.getIdentifier().equals(oldName) && isUse.test(node)) {
+                uses.add(node);
+              }
+              return true;
+            }
+          });
+      uses.sort(Comparator.comparingInt(ASTNode::getStartPosition));
+      check.check(f, unit, uses);
+      if (uses.isEmpty()) {
+        continue;
+      }
+      Path written = f.equals(from) ? to : f;
+      if (f.equals(from)) {
+        texts.put(from, null);
+      }
+      texts.put(written, apply(holding.texts().get(f), uses, newName));
+      lines.put(project.relative(written), lineNumbers(unit, uses));
+      renamedAt.put(written, uses.stream().map(ASTNode::getStartPosition).toList());
+      occurrences += uses.size();
+    }
+    return new Written(texts, lines, renamedAt, occurrences);
   }
 }

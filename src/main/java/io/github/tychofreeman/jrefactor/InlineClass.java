@@ -3,6 +3,7 @@ package io.github.tychofreeman.jrefactor;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -195,13 +196,18 @@ final class InlineClass {
             Lines.start(text, homeDecl.getStartPosition()),
             Lines.end(text, Nodes.end(homeDecl) - 1),
             body));
-    String after = TextEdit.apply(text, edits, 0);
-    Map<Path, String> changed = new java.util.HashMap<>();
-    changed.put(opened.file(), Imports.fix(project, opened.file(), text, after, List.of()).text());
-    changed.put(classFile, null);
-    Stubs.Declared declared =
-        Gate.applyOrRefuse(
-            project, changed, "folding " + cls + " into " + holderName, "Nothing was changed.");
+    Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
+    byFile.put(opened.file(), edits);
+    byFile.put(classFile, null);
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
+            project,
+            Map.of(opened.file(), text),
+            byFile,
+            List.of(),
+            "folding " + cls + " into " + holderName,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "folded "
             + cls
@@ -211,7 +217,8 @@ final class InlineClass {
             + field
             + " ("
             + project.relative(classFile)
-            + " deleted)",
+            + " deleted)"
+            + written.said(),
         declared);
   }
 

@@ -177,8 +177,8 @@ final class SubclassToStrategy {
     String ret = src(baseText, own.getReturnType2());
     String fnType = type == null ? cap : type;
     String sam = type == null ? method : samOf(project, baseFile, baseText, base, type, own);
-    String indent = MemberMove.memberIndent(baseText, base);
-    String step = " ".repeat(Math.max(Declarations.step(baseText), 2));
+    String indent = Indent.member(baseText, base, 2);
+    String step = " ".repeat(Indent.step(baseText, 2));
     String in = indent + step;
 
     List<TextEdit> edits = new ArrayList<>();
@@ -322,7 +322,7 @@ final class SubclassToStrategy {
                 + ")"
                 + thrownText(subText, over)
                 + " "
-                + overBody.replace("\n" + MemberMove.memberIndent(subText, sub), "\n" + indent)
+                + Indent.restep(overBody, indent, Indent.step(baseText, 2))
                 + "\n"));
 
     // Every use of the subclass.
@@ -393,7 +393,6 @@ final class SubclassToStrategy {
         }
       }
     }
-    Map<Path, String> changed = new HashMap<>();
     List<String> chosen = new ArrayList<>();
     chosen.add(baseType.getQualifiedName());
     for (Object o : subUnit.imports()) {
@@ -402,21 +401,16 @@ final class SubclassToStrategy {
         chosen.add(imp.getName().getFullyQualifiedName());
       }
     }
-    for (Map.Entry<Path, List<TextEdit>> e : byFile.entrySet()) {
-      if (e.getValue().isEmpty()) {
-        continue;
-      }
-      String text = holding.texts().get(e.getKey());
-      String after = TextEdit.apply(text, e.getValue(), 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), text, after, chosen).text());
-    }
-    changed.put(opened.file(), null);
-    Stubs.Declared declared =
-        Gate.applyOrRefuse(
+    byFile.put(opened.file(), null);
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
             project,
-            changed,
+            holding.texts(),
+            byFile,
+            chosen,
             "turning " + subName + " into a function of " + baseName,
             "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "turned "
             + subName
@@ -448,7 +442,8 @@ final class SubclassToStrategy {
             + subFn
             + ") ("
             + project.relative(opened.file())
-            + " deleted)",
+            + " deleted)"
+            + written.said(),
         declared);
   }
 

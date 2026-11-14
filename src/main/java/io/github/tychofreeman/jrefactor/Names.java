@@ -112,6 +112,14 @@ final class Names {
   }
 
   /**
+   * {@code n} and {@code what}, made plural unless n is 1: {@code 1 occurrence}, {@code 2
+   * occurrences}.
+   */
+  static String plural(int n, String what) {
+    return n + " " + what + (n == 1 ? "" : "s");
+  }
+
+  /**
    * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
    * types erased, which {@link Declarations#find} also takes. A declaration's own label, written
    * types unless two overloads are written alike, is {@link Declarations#methodLabel}.

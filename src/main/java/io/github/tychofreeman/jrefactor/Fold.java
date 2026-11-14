@@ -254,13 +254,15 @@ final class Fold {
         edits,
         NameCheck.meanings(moved),
         "folding into calls of " + call);
-    Stubs.Declared declared =
-        MemberMove.gate(
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
             project,
             holding.texts(),
             edits,
+            List.of(),
             "folding into calls of " + call,
             "Fold one match at a time (line), to see which one breaks.");
+    Stubs.Declared declared = written.declared();
     int count = folded.values().stream().mapToInt(List::size).sum();
     List<String> where = new ArrayList<>();
     for (Map.Entry<Path, List<Integer>> e : folded.entrySet()) {
@@ -276,7 +278,8 @@ final class Fold {
             + name
             + " into calls: "
             + String.join("; ", where)
-            + (left.isEmpty() ? "" : "; left " + left.size() + ": " + String.join(", ", left)),
+            + (left.isEmpty() ? "" : "; left " + left.size() + ": " + String.join(", ", left))
+            + written.said(),
         declared);
   }
 

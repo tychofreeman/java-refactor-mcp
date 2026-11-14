@@ -40,6 +40,9 @@ final class Jdt {
   private static final Pattern STATIC_IMPORT =
       Pattern.compile("^\\s*import\\s+static\\s+([\\w.]+)\\s*;", Pattern.MULTILINE);
 
+  /** The property of a unit that holds the text it was parsed from, when the parse was given it. */
+  static final String SOURCE = "jrefactor.source";
+
   /** The file {@code unit} was parsed from, or null for text parsed alone. */
   static Path fileOf(CompilationUnit unit) {
     return unit.getProperty(FILE) instanceof Path p ? p : null;
@@ -47,7 +50,10 @@ final class Jdt {
 
   /** Parses {@code source} without resolving anything: its problems are syntax errors only. */
   static CompilationUnit parseSyntax(String source) {
-    return (CompilationUnit) syntaxParser(ASTParser.K_COMPILATION_UNIT, source).createAST(null);
+    CompilationUnit unit =
+        (CompilationUnit) syntaxParser(ASTParser.K_COMPILATION_UNIT, source).createAST(null);
+    unit.setProperty(SOURCE, source);
+    return unit;
   }
 
   /** {@code content} parsed as the members of a type, syntax only. */
@@ -88,6 +94,7 @@ final class Jdt {
       throw compilerFailed(e);
     }
     unit.setProperty(FILE, file.toAbsolutePath().normalize());
+    unit.setProperty(SOURCE, source);
     return unit;
   }
 
@@ -276,5 +283,24 @@ final class Jdt {
       completeMembers(i, completed);
     }
     completeMembers(t.getDeclaringClass(), completed);
+  }
+
+  /**
+   * The text {@code unit} was parsed from: the text given to the parse, else its file as it is on
+   * disk, else null.
+   */
+  static String sourceOf(CompilationUnit unit) {
+    if (unit.getProperty(SOURCE) instanceof String s) {
+      return s;
+    }
+    Path file = fileOf(unit);
+    if (file == null) {
+      return null;
+    }
+    try {
+      return Files.readString(file);
+    } catch (IOException e) {
+      return null;
+    }
   }
 }

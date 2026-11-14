@@ -1063,8 +1063,8 @@ final class Build {
       ITypeBinding x = thrown.getExpression().resolveTypeBinding();
       if (x == null
           || x.isRecovered()
-          || !Surround.checked(x)
-          || Surround.caught(thrown, owner, x)) {
+          || !Exceptions.checked(x)
+          || Exceptions.caught(thrown, owner, x)) {
         return;
       }
       if (m != null && List.of(m.getExceptionTypes()).stream().anyMatch(x::isSubTypeCompatible)) {

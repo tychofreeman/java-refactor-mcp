@@ -336,7 +336,7 @@ final class ChangeSignature {
               last ? call : call + "\n" + Lines.indentOf(text, r.getStartPosition()) + "return;");
         } else {
           String outer = Lines.indentOf(text, r.getParent().getStartPosition());
-          String inner = outer + " ".repeat(Math.max(Declarations.step(text), 2));
+          String inner = outer + " ".repeat(Indent.step(text, 2));
           change.replace(s, r, "{\n" + inner + call + "\n" + inner + "return;\n" + outer + "}");
         }
       } else {

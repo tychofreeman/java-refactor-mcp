@@ -175,13 +175,15 @@ final class EncapsulateField {
     }
     own.addAll(MemberMove.appendTo(text, owner, moved));
 
-    Stubs.Declared declared =
-        MemberMove.gate(
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
             project,
             texts,
             edits,
+            List.of(),
             "encapsulating " + name,
             "Check that the uses of " + field + " the accessors replace still resolve.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "encapsulated "
             + typeName
@@ -199,7 +201,8 @@ final class EncapsulateField {
             + " rewritten in "
             + usedIn.size()
             + " file"
-            + (usedIn.size() == 1 ? "" : "s"),
+            + (usedIn.size() == 1 ? "" : "s")
+            + written.said(),
         declared);
   }
 

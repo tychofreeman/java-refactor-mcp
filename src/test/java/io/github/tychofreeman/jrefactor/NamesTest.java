@@ -36,7 +36,15 @@ class NamesTest {
       """;
 
   @Test
-  void aMethodBindingIsLabelledErasedWithItsEnclosingTypesOrAsSourceWritesIt() throws IOException {
+  void aCountIsPluralUnlessItIsOne() {
+    assertEquals("0 occurrences", Names.plural(0, "occurrence"));
+    assertEquals("1 occurrence", Names.plural(1, "occurrence"));
+    assertEquals("2 occurrences", Names.plural(2, "occurrence"));
+  }
+
+  @Test
+  void aMethodBindingIsLabelledErasedWithItsEnclosingTypesOrAsSourceWritesIt()
+      throws IOException {
     IMethodBinding add = method(parse(), "add").resolveBinding();
 
     assertEquals("Shop.Cart.add(List, int)", Names.methodLabel(add));

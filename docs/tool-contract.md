@@ -270,7 +270,7 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   Javadoc references, and the file of a top-level type (`Plant.java` becomes
   `Herb.java`; one `undo` moves it back). Prose in comments is not changed.
 - Result: `renamed total to runningSum in <file>: <n> occurrences, lines a,
-  b` for a local; `renamed the field Item.price to cost in 2 files: 4
+  b` for a local (`1 occurrence, line a` for one: a name nothing uses); `renamed the field Item.price to cost in 2 files: 4
   occurrences, a/Cart.java lines 5, 10; a/Item.java lines 4, 7`; `renamed the
   method Square.area() and Shape.area() to surface in ...`; `renamed the type
   com.example.Plant to Herb, and a/Plant.java to a/Herb.java, in ...`.
@@ -945,7 +945,9 @@ then the only one in a package the file imports from; then the only candidate in
 own sources is taken and named (`chose shop.order.Order over
 org.junit.jupiter.api.Order: it is the project's`, roadmap #131); a refusal suggests the
 project's class first, then `java.*`. Results end with
-`; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. `create_file`
+`; imported a.B, c.D, static e.F.g` and `; removed import e.F`, and their line numbers count the import lines. A tool
+that changes several files (the moves, `pull_up`, `push_down`, `inline`, `fold`, the signature tools, ...)
+names each file: `; a/B.java: imported c.D; e/F.java: removed import c.D` (#497, 2026-11-14). `create_file`
 content is a whole file and keeps its own imports.
 
 The server runs one call at a time: calls sent together in one turn run in the
@@ -1029,6 +1031,8 @@ in the same turn only if it is sent after it.
     indentation step in; a `try` catches the checked exceptions they throw and rethrows them
     (`catch (IOException e) { throw e; }`, multi-catch for several, a free name), or has an
     empty `finally` when they throw none. Another head is refused, naming the forms.
+    What they throw is `Exceptions.uncaught` (roadmap #342, issue #481, 2026-11-14): code inside
+    a lambda or a class they declare does not count, and a resource's `close()` does.
   - `build` in place of `content`, on `insert_statements` and `replace_statements` (roadmap
     #149, 2026-11-13; the generators, `docs/design.md`): a list whose entries are statements as
     typed (strings) or objects that name what to write, in order. `{"call": "pricing.priceOf",
@@ -2041,6 +2045,11 @@ Not built: gorefactor's `-n` preview and `check`.
 Refusals are part of the model's experience. Keep them specific ("this selection
 starts inside a statement; select whole statements, lines 12 to 15") and
 actionable. Avoid generic messages such as "unsupported".
+
+Code a refusal or a report quotes is its source text, on one line and cut to 60 characters with
+"..." (`Nodes.show`, issue #526, 2026-11-14): "the initializer of v reads state that
+names.forEach(n -> { count++; }) (line 10) could change". It had been JDT's reformatting of the
+node, over several lines for a lambda or an anonymous class.
 
 ## Tools that changed for the better (gorefactor evidence)
 

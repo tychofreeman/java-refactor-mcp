@@ -1,12 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
@@ -191,8 +186,8 @@ final class MemberMove {
    * one per line.
    */
   static List<TextEdit> appendTo(String text, AbstractTypeDeclaration type, String moved) {
-    String indent = memberIndent(text, type);
-    String member = indent + reindented(moved, indent, Declarations.step(text));
+    String indent = Indent.member(text, type, 2);
+    String member = indent + Indent.restep(moved, indent, Indent.step(text));
     TextEdit afterConstants = afterConstants(text, type, indent, member);
     if (afterConstants != null) {
       return List.of(afterConstants);
@@ -226,40 +221,6 @@ final class MemberMove {
     return text.substring(m.getStartPosition(), Nodes.end(m));
   }
 
-  /**
-   * Applies {@code edits} to each file's text in {@code texts} (the file's imports fixed first),
-   * and runs the result through the gate. Each file's edits are applied back to front.
-   */
-  static Stubs.Declared gate(
-      SourceProject project,
-      Map<Path, String> texts,
-      Map<Path, List<TextEdit>> edits,
-      String what,
-      String fix)
-      throws IOException {
-    return gate(project, texts, edits, what, fix, List.of());
-  }
-
-  /** {@link #gate}, with {@code chosen} the classes to import where a name is ambiguous. */
-  static Stubs.Declared gate(
-      SourceProject project,
-      Map<Path, String> texts,
-      Map<Path, List<TextEdit>> edits,
-      String what,
-      String fix,
-      List<String> chosen)
-      throws IOException {
-    Map<Path, String> changed = new LinkedHashMap<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String before = texts.getOrDefault(e.getKey(), Files.readString(e.getKey()));
-      List<TextEdit> list = new ArrayList<>(e.getValue());
-      list.sort((a, b) -> b.start() - a.start());
-      String after = TextEdit.apply(before, list, 0);
-      changed.put(e.getKey(), Imports.fix(project, e.getKey(), before, after, chosen).text());
-    }
-    return Gate.applyOrRefuse(project, changed, what, fix);
-  }
-
   /** The top-level type of {@code unit} named {@code name}, or null. */
   static TypeDeclaration typeNamed(CompilationUnit unit, String name) {
     for (Object o : unit.types()) {
@@ -289,67 +250,12 @@ final class MemberMove {
       // The member shares its line with the brace: appendTo opens the body up.
       return appendTo(text, type, moved);
     }
-    String member = reindented(moved, indent, Declarations.step(text));
+    String member = Indent.restep(moved, indent, Indent.step(text));
     if (place.before()) {
       return List.of(new TextEdit(line, line, indent + member + "\n\n"));
     }
     int end = Nodes.end(place.member());
     return List.of(new TextEdit(end, end, "\n\n" + indent + member));
-  }
-
-  /**
-   * The indentation of {@code type}'s members: that of its first member on a line of its own, else
-   * the type's own and one step more (two spaces when the file shows none).
-   */
-  static String memberIndent(String text, AbstractTypeDeclaration type) {
-    for (Object o : type.bodyDeclarations()) {
-      int start = ((ASTNode) o).getStartPosition();
-      String before = text.substring(Lines.start(text, start), start);
-      if (before.isBlank()) {
-        return before;
-      }
-    }
-    int step = Declarations.step(text);
-    return Lines.indentOf(text, type.getStartPosition()) + " ".repeat(step > 0 ? step : 2);
-  }
-
-  /**
-   * {@code moved}, a member's source whose first line starts at the member and whose last line is
-   * at its old indentation, with its other lines moved to {@code indent}: each step of the old
-   * indentation inside the member becomes {@code step} spaces (as it was when {@code step} is 0).
-   */
-  static String reindented(String moved, String indent, int step) {
-    String[] lines = moved.split("\n", -1);
-    if (lines.length < 2) {
-      return moved;
-    }
-    String last = lines[lines.length - 1];
-    int old = last.length() - last.stripLeading().length();
-    int oldStep = Integer.MAX_VALUE;
-    for (int i = 1; i < lines.length; i++) {
-      String l = lines[i];
-      int n = l.length() - l.stripLeading().length();
-      if (!l.isBlank() && n > old) {
-        oldStep = Math.min(oldStep, n - old);
-      }
-    }
-    StringBuilder out = new StringBuilder(lines[0]);
-    for (int i = 1; i < lines.length; i++) {
-      String l = lines[i];
-      out.append('\n');
-      int n = l.length() - l.stripLeading().length();
-      if (l.isBlank() || n < old) {
-        out.append(l.isBlank() ? "" : l);
-        continue;
-      }
-      int extra = n - old;
-      int scaled =
-          step > 0 && oldStep != Integer.MAX_VALUE && extra % oldStep == 0
-              ? extra / oldStep * step
-              : extra;
-      out.append(indent).append(" ".repeat(scaled)).append(l.stripLeading());
-    }
-    return out.toString();
   }
 
   /**

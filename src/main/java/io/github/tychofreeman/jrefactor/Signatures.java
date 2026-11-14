@@ -518,13 +518,15 @@ final class Signatures {
         edits.put(e.getKey(), list);
       }
     }
-    Stubs.Declared declared =
-        MemberMove.gate(
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
             project,
             holding.texts(),
             edits,
+            List.of(),
             "adding " + type + " " + parameter + " to " + name,
             "Check that " + value + " type-checks as " + type + " at each construction.");
+    Stubs.Declared declared = written.declared();
     return new Outcome(
         "added the component "
             + type
@@ -535,7 +537,8 @@ final class Signatures {
             + "; "
             + constructions
             + (constructions == 1 ? " construction passes " : " constructions pass ")
-            + value,
+            + value
+            + written.said(),
         declared);
   }
 
@@ -1147,7 +1150,7 @@ final class Signatures {
       next++;
     }
     String outer = Lines.indentOf(text, m.getName().getStartPosition());
-    String inner = outer + " ".repeat(Math.max(Declarations.step(text), 2));
+    String inner = outer + " ".repeat(Indent.step(text, 2));
     if (text.substring(from, next).contains("\n")) {
       int line = Lines.start(text, next);
       String indent = next == close ? inner : Lines.indentOf(text, next);

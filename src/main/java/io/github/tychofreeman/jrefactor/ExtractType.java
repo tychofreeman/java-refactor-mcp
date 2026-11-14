@@ -684,18 +684,17 @@ final class ExtractType {
         Map.of(target, Imports.fix(project, target, "", created, List.of()).text()),
         "creating " + struct,
         "Nothing was changed.");
-    Map<Path, String> changed = new LinkedHashMap<>();
-    for (Map.Entry<Path, List<TextEdit>> e : edits.entrySet()) {
-      String before = texts.get(e.getKey());
-      String after = TextEdit.apply(before, e.getValue(), 0);
-      changed.put(
-          e.getKey(), Imports.fix(project, e.getKey(), before, after, args.list("imports")).text());
-    }
-    Stubs.Declared declared =
-        Gate.applyOrRefuse(
-            project, changed, "moving components into " + struct, "Nothing was changed.");
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
+            project,
+            texts,
+            edits,
+            args.list("imports"),
+            "moving components into " + struct,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
     List<String> files = new ArrayList<>();
-    for (Path f : changed.keySet()) {
+    for (Path f : written.texts().keySet()) {
       files.add(project.relative(f));
     }
     return new Outcome(
@@ -710,7 +709,8 @@ final class ExtractType {
             + "), held in "
             + holder
             + "; changed "
-            + String.join(", ", files),
+            + String.join(", ", files)
+            + written.said(),
         declared);
   }
 

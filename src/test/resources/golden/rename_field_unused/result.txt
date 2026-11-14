@@ -1,0 +1,1 @@
+renamed the field Counter.count to total in com/example/Counter.java: 1 occurrence, line 4

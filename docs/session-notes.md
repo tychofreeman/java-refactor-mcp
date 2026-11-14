@@ -186,8 +186,8 @@ Each was chosen from options; the record named beside it has the options it beat
   A new option that would make the model choose a place is against this choice. A tool that adds
   a member to a type places it the same way, through `MemberMove.addTo` (by `Placement.rank`):
   `pull_up`, `push_down`, `move` of a static field and `extract_variable` with `as` do. It indents
-  the member as the type's members (`MemberMove.memberIndent`), each step inside it as the target
-  file's step (`MemberMove.reindented`, #316); it had written two spaces. The first member of an
+  the member as the type's members (`Indent.member`), each step inside it as the target
+  file's step (`Indent.restep`, #316); it had written two spaces. The first member of an
   enum that has constants only goes through `MemberMove.afterConstants` (#141), which writes the
   `;` after the last constant: `Declarations.plan` (so stubs too) and `MemberMove.appendTo` ask it
   before their own end-of-type branch, since an enum's constants are not `bodyDeclarations()`. A field an edit adds
@@ -240,11 +240,15 @@ Each was chosen from options; the record named beside it has the options it beat
   `change_type`). Slice 2 is option (a): the new type gets exactly the type parameters its
   members use, plus those their bounds need, in the class's order, each declared as the class
   writes it; over all of the class's always, and over a `type_parameters` argument.
-- Order 32 (one edit pipeline) is closed as partly done: `SignatureChange` and
-  `MoveType` keep their own per-file import fix and gate.
+- Order 32 (one edit pipeline) is closed as partly done; since #497 only `MoveType` and
+  `MoveToPackage` (which moves the file and adds imports first) keep their own per-file import fix
+  and gate.
 
 ## Where code goes
 
+- Which checked exceptions code throws and does not catch is `Exceptions.uncaught(roots)` (#481,
+  2026-11-14): deferred code skipped, resources' `close()` counted; `Exceptions.checked` and
+  `caught` for one node. Do not write another walk; `ThrowsCallers` still has its own test.
 - A name a tool declares comes from `Names` (#480, 2026-11-14): `Names.free(name, taken)` adds a
   number while the name is taken or a keyword, `Names.fresh(name, node)` takes the names of the
   node's file, `Names.parameterName(type)` names a parameter by its type. A new fresh-name loop
@@ -288,6 +292,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
+- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
+  where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
+  `restep` for a member moved between files (each step becomes the target's) and `member` for the
+  indentation of a type's members. Not a new helper in a tool, and not a written `"  "`.
 - `Journal.put` and `Journal.restore` are the one writer of project files; the
   journal also keeps a file's mode (`Journal.mode`, `copyMode`), so undo puts back
   an executable file executable. Both take the project: a deletion removes the directories it
@@ -296,6 +304,11 @@ Each was chosen from options; the record named beside it has the options it beat
   the end (an insert at a replacement's start goes before it), and throws `IllegalStateException`
   on overlapping edits, a tool's bug. For a window of a file, pass the window's start as `offset`
   rather than shifting the edits; filter edits outside the window first. No sort before it.
+- `Edits.gatedFiles` is the one multi-file path (#497, was `MemberMove.gate` and six copies):
+  each file's edits applied (`Edits.textOf`: the text given, else read from disk), its imports
+  fixed, all through the gate; a null edit list deletes the file, an empty one leaves it alone. It
+  returns `WrittenFiles` (the fixed texts, the import notes as "rel: imported a.B", the stubs);
+  a tool's result appends `said()`, so every multi-file tool names the imports it changed.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
@@ -349,6 +362,9 @@ Each was chosen from options; the record named beside it has the options it beat
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
   Goldens pin the separate part of the result in `exceptional.txt`; a case
   without that file must report nothing.
+- Code quoted in a refusal or a report goes through `Nodes.show(node)` (its source text on one
+  line, cut to 60 characters), never `node.toString()`, which is JDT's reformatting (#526). A unit
+  knows its text through `Jdt.sourceOf`.
 - A tool's result is an `Outcome`; `render()` gives the text the model reads,
   with the stubs named after it.
 - Stubs are declared only for edits (`Session.editing`, set for `Kind.EDIT`); a
@@ -459,7 +475,7 @@ Each was chosen from options; the record named beside it has the options it beat
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
   directly (`indexToEach`, `iteratorToEach`, `toIterator`, `toIndex`), sharing `stable` (the
   walked list or array cannot change between passes) and `unchanged` (no call changes the list).
-  It borrows `LoopToStream.elementOf`, `unused`, `primary`, `reindent` and `CHANGES`. A for and a
+  It borrows `LoopToStream.elementOf`, `unused`, `primary` and `CHANGES`, and `Indent.reindent`. A for and a
   while (`forToWhile`, `whileToFor`) go through `continues` (the continues of this loop, by label
   or innermost loop), `before` (statements put before one) and `last` (statements put last in a
   body). A do-while to a while is `while (true) { body; if (!cond) break; }` (`doToWhile`, the
@@ -598,6 +614,10 @@ Each was chosen from options; the record named beside it has the options it beat
   entry whose body is the replaced lines (`Build.around`).
   On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
   expression and finds it again by offset (the import fix changes only lines above it).
+
+- `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
+  2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
+  result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
 
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that

@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
@@ -64,5 +65,20 @@ class NameCheckTest {
                 Map.of(b, List.of(new TextEdit(at, at + 1, "n"))),
                 NameCheck.meanings(List.of(moved)),
                 "moving n"));
+  }
+
+  /**
+   * "a.count + count" with both names renamed to total: each written name's start, and an offset
+   * after them, map back to where they were.
+   */
+  @Test
+  void anOffsetAfterEditsIsWhereItWasBeforeThem() {
+    List<TextEdit> renames = List.of(new TextEdit(2, 7, "total"), new TextEdit(10, 15, "total"));
+    assertEquals(2, NameCheck.before(renames, 2));
+    assertEquals(10, NameCheck.before(renames, 10));
+    assertEquals(16, NameCheck.before(renames, 16));
+    List<TextEdit> longer = List.of(new TextEdit(2, 7, "totals"), new TextEdit(10, 15, "totals"));
+    assertEquals(10, NameCheck.before(longer, 11));
+    assertEquals(16, NameCheck.before(longer, 18));
   }
 }
