@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
@@ -379,7 +377,8 @@ final class Build {
       if (e.loop()) {
         if (e.form.equals(EACH) && e.declared == null) {
           Expression walked = ((EnhancedForStatement) draft.at(e)).getExpression();
-          e.declared = Extract.typeName(element(walked.resolveTypeBinding()), around(walked));
+          e.declared =
+              Extract.typeName(element(walked.resolveTypeBinding()), Nodes.typeAround(walked));
         }
         inferred.add(e.head());
         types(e.body, draft, inferred);
@@ -572,7 +571,7 @@ final class Build {
    * The type around {@code at}, or a supertype or enclosing type of it, with a field {@code name}.
    */
   private static ITypeBinding fieldOwner(String name, ASTNode at) {
-    for (ITypeBinding t = around(at); t != null; t = t.getDeclaringClass()) {
+    for (ITypeBinding t = Nodes.typeAround(at); t != null; t = t.getDeclaringClass()) {
       for (ITypeBinding s = t; s != null; s = s.getSuperclass()) {
         for (IVariableBinding f : s.getDeclaredFields()) {
           if (f.getName().equals(name)) {
@@ -678,7 +677,7 @@ final class Build {
               + e.into
               + " with).");
     }
-    return Extract.typeName(t, around(x));
+    return Extract.typeName(t, Nodes.typeAround(x));
   }
 
   /** Whether {@code c} constructs a generic class without naming its type arguments. */
@@ -726,7 +725,7 @@ final class Build {
       named(call.getExpression().resolveTypeBinding(), call.getName().getIdentifier(), out);
       return out;
     }
-    for (ITypeBinding t = around(call); t != null; t = t.getDeclaringClass()) {
+    for (ITypeBinding t = Nodes.typeAround(call); t != null; t = t.getDeclaringClass()) {
       named(t, call.getName().getIdentifier(), out);
     }
     return out;
@@ -751,23 +750,12 @@ final class Build {
   /** "Pricing.priceOf": the call's method with the type it is called on, when that is known. */
   private static String label(MethodInvocation call, Entry e) {
     ITypeBinding t =
-        call.getExpression() == null ? around(call) : call.getExpression().resolveTypeBinding();
+        call.getExpression() == null
+            ? Nodes.typeAround(call)
+            : call.getExpression().resolveTypeBinding();
     return t == null || t.isRecovered()
         ? e.target
         : Names.typeLabel(t) + "." + call.getName().getIdentifier();
-  }
-
-  /** The type whose code {@code node} is in. */
-  private static ITypeBinding around(ASTNode node) {
-    for (ASTNode p = node.getParent(); p != null; p = p.getParent()) {
-      if (p instanceof AbstractTypeDeclaration t) {
-        return t.resolveBinding();
-      }
-      if (p instanceof AnonymousClassDeclaration a) {
-        return a.resolveBinding();
-      }
-    }
-    return null;
   }
 
   private static List<Entry> entries(Object build, boolean body) {
@@ -1037,7 +1025,7 @@ final class Build {
         throw new Refusal(
             label
                 + " returns "
-                + Extract.typeName(r, around(s))
+                + Extract.typeName(r, Nodes.typeAround(s))
                 + ", so return needs a value. Pass value: what to return when "
                 + when
                 + ".");
@@ -1070,7 +1058,7 @@ final class Build {
       if (m != null && List.of(m.getExceptionTypes()).stream().anyMatch(x::isSubTypeCompatible)) {
         return;
       }
-      String name = Extract.typeName(x, around(s));
+      String name = Extract.typeName(x, Nodes.typeAround(s));
       throw new Refusal(
           label
               + " does not declare "

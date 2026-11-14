@@ -458,7 +458,10 @@ final class Fold {
       }
     }
     if (overloaded(
-        mb, Modifier.isStatic(m.getModifiers()) ? mb.getDeclaringClass() : typeAround(c.root()))) {
+        mb,
+        Modifier.isStatic(m.getModifiers())
+            ? mb.getDeclaringClass()
+            : Nodes.typeAround(c.root()))) {
       // Another method of the name and arity may be more specific for an argument of a subtype
       // (or null); for arguments of the parameters' own types, this method is the one chosen.
       for (int i = 0; i < params.size(); i++) {
@@ -848,18 +851,5 @@ final class Fold {
       }
     }
     return "this code is in no class";
-  }
-
-  /** The type whose body holds {@code n}, or null. */
-  private static ITypeBinding typeAround(ASTNode n) {
-    for (ASTNode p = n; p != null; p = p.getParent()) {
-      if (p instanceof AbstractTypeDeclaration t) {
-        return t.resolveBinding();
-      }
-      if (p instanceof AnonymousClassDeclaration a) {
-        return a.resolveBinding();
-      }
-    }
-    return null;
   }
 }

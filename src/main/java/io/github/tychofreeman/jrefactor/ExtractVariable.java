@@ -49,8 +49,17 @@ final class ExtractVariable {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     Expression e = find(opened, expression.strip(), line, column);
-    Statement statement = enclosingStatement(e);
-    checkPlace(e, statement, expression.strip());
+    Statement statement = Nodes.ancestorOrSelf(e, Statement.class);
+    if (statement == null && !"constant".equals(as)) {
+      throw new Refusal(
+          expression.strip()
+              + " is not inside a statement (it is in a field's initializer, say): a local has no"
+              + " place before it, and a new field would be declared after the field that reads it."
+              + " Extract it with as=constant.");
+    }
+    if (statement != null) {
+      checkPlace(e, statement, expression.strip());
+    }
 
     ITypeBinding type = e.resolveTypeBinding();
     if (type == null || type.isRecovered() || type.isNullType()) {
@@ -132,15 +141,6 @@ final class ExtractVariable {
       throw opened.several(found, line, "occurrences of " + source);
     }
     return found.get(0);
-  }
-
-  /** The statement that contains {@code e}, which must be directly in a block. */
-  private static Statement enclosingStatement(Expression e) {
-    ASTNode n = e;
-    while (!(n instanceof Statement)) {
-      n = n.getParent();
-    }
-    return (Statement) n;
   }
 
   /**

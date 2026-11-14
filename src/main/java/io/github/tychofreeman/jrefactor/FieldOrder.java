@@ -47,7 +47,7 @@ final class FieldOrder {
           || moved.fragments().size() != 1) {
         continue;
       }
-      FieldDeclaration reader = ancestor(n);
+      FieldDeclaration reader = Nodes.ancestorOrSelf(n, FieldDeclaration.class);
       if (reader == null
           || reader.getParent() != moved.getParent()
           || reader.getStartPosition() > moved.getStartPosition()
@@ -67,16 +67,6 @@ final class FieldOrder {
       return true;
     }
     return false;
-  }
-
-  /** The field declaration that holds {@code n}, or null. */
-  private static FieldDeclaration ancestor(ASTNode n) {
-    for (ASTNode a = n; a != null; a = a.getParent()) {
-      if (a instanceof FieldDeclaration d) {
-        return d;
-      }
-    }
-    return null;
   }
 
   /**
