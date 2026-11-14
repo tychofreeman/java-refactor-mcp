@@ -716,6 +716,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - Parallel branches each took the next free roadmap number, and three numbers were used twice
   (175-177, 2026-11-13; renumbered to 182, 184 and 185). Before taking a number, check `main` and
   the open branches' `docs/design.md`, and check again when rebasing.
+- A push to `main` cancels the run still going on the one before (`ci.yml`'s `concurrency`),
+  release job included: merging a docs-only PR minutes after a code PR left the code unreleased
+  (2026-11-13, #460 behind #461; the docs run releases nothing). Wait for a code PR's release
+  before merging the next PR; if one was cancelled, rerun that run
+  (`gh api -X POST repos/<repo>/actions/runs/<id>/rerun`), which tags it by its PR's label.
 - `gh pr checks` right after `gh pr create` can say "no checks reported" before
   CI registers, and `--watch` then returns at once. Wait for the run. A PR that
   conflicts with `main` gets no run at all: check its `mergeable` state.
