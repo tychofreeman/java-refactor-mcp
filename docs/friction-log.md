@@ -1457,6 +1457,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `replace_text` instead. `fold` could match a call qualified by the method's own class.
 - `extract_function` writes a private method; making it package-private for `fold` across
   classes took a `replace_text` (no visibility option on `fold`).
+
+## 2026-11-14: call-binding
+
+- Everything went through the tools: `create_file` of `Calls`, `move` of `CallTargets.binding`
+  into it, `replace_declaration` and `inline` of `TypeParameters.callBinding`, and `replace_text`
+  for the call sites in `ThrowsCallers`, `ByLine` and `MethodFamily` (`all_occurrences`), in one
+  `batch`. Goldens are resources.
 ## 2026-11-13: member-lookup
 
 - `move` of `MemberMove.label` to `Declarations` was refused for a method reference

@@ -30,7 +30,6 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NameQualifiedType;
@@ -43,7 +42,6 @@ import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -991,7 +989,7 @@ final class TypeParameters {
       CompilationUnit unit = after.get(e.getKey());
       for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
         ASTNode n = byOrdinal(unit, c.getKey());
-        IMethodBinding b = n == null ? null : callBinding(n);
+        IMethodBinding b = n == null ? null : Calls.binding(n);
         String was = c.getValue().get(0);
         String now = b == null ? "nothing" : types(b);
         if (!was.equals(now)) {
@@ -1074,7 +1072,7 @@ final class TypeParameters {
       }
     }
     for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
-      IMethodBinding b = callBinding(u.getKey());
+      IMethodBinding b = Calls.binding(u.getKey());
       if (b != null) {
         before
             .computeIfAbsent(u.getValue().file(), k -> new LinkedHashMap<>())
@@ -1084,16 +1082,6 @@ final class TypeParameters {
       }
     }
     return before;
-  }
-
-  /** The method a call or a method reference of the family runs, as it resolves there. */
-  private static IMethodBinding callBinding(ASTNode n) {
-    return switch (n) {
-      case MethodInvocation m -> m.resolveMethodBinding();
-      case SuperMethodInvocation m -> m.resolveMethodBinding();
-      case MethodReference r -> r.resolveMethodBinding();
-      default -> null;
-    };
   }
 
   /** The return and parameter types of {@code b}, by their qualified names. */
@@ -1256,7 +1244,7 @@ final class TypeParameters {
       for (Map.Entry<Path, Map<String, List<String>>> e : calls.entrySet()) {
         for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
           ASTNode n = byOrdinal(after.get(e.getKey()), c.getKey());
-          IMethodBinding b = n == null ? null : callBinding(n);
+          IMethodBinding b = n == null ? null : Calls.binding(n);
           String now = b == null ? "nothing" : types(b);
           if (!c.getValue().get(0).equals(now)) {
             throw new Refusal(
