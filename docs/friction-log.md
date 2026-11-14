@@ -1387,3 +1387,7 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   added). Narrowed back by `sed`: no tool narrows a member's visibility, and `replace_declaration`
   of each would resend the whole method for one word. Sequences tried: none composes (`change_type`
   changes types, not modifiers).
+
+## 2026-11-13: fix-batch-client-name
+
+- No Java by hand: one `replace_text`. The golden case is resources.

@@ -176,10 +176,11 @@ final class Batch {
       if (!(tool instanceof String name)) {
         throw new Refusal("step " + number + " has no tool.");
       }
-      if (name.equals("batch") || name.equals("undo")) {
-        throw new Refusal("step " + number + ": " + name + " cannot be a step of a batch.");
-      }
       Tools.Def def = Tools.named(name, project.session());
+      // By the resolved name: a client's mcp__<server>__undo is undo too.
+      if (def.name().equals("batch") || def.name().equals("undo")) {
+        throw new Refusal("step " + number + ": " + def.name() + " cannot be a step of a batch.");
+      }
       Map<String, Object> stepArgs = new LinkedHashMap<>();
       if (step.get("args") instanceof Map<?, ?> given) {
         given.forEach((k, v) -> stepArgs.put(String.valueOf(k), v));
