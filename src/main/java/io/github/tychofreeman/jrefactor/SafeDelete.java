@@ -21,7 +21,6 @@ import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -113,7 +112,8 @@ final class SafeDelete {
           new ASTVisitor() {
             @Override
             public boolean visit(SimpleName n) {
-              if (!n.isDeclaration() && keys.contains(key(n.resolveBinding()))) {
+              if (!n.isDeclaration()
+                  && keys.contains(Bindings.declarationKey(n.resolveBinding()))) {
                 use(n);
               }
               return true;
@@ -122,7 +122,7 @@ final class SafeDelete {
             @Override
             public boolean visit(ClassInstanceCreation n) {
               if (n.resolveConstructorBinding() != null
-                  && keys.contains(key(n.resolveConstructorBinding()))) {
+                  && keys.contains(Bindings.declarationKey(n.resolveConstructorBinding()))) {
                 use(n);
               }
               return true;
@@ -131,7 +131,7 @@ final class SafeDelete {
             @Override
             public boolean visit(ConstructorInvocation n) {
               if (n.resolveConstructorBinding() != null
-                  && keys.contains(key(n.resolveConstructorBinding()))) {
+                  && keys.contains(Bindings.declarationKey(n.resolveConstructorBinding()))) {
                 use(n);
               }
               return true;
@@ -140,7 +140,7 @@ final class SafeDelete {
             @Override
             public boolean visit(SuperConstructorInvocation n) {
               if (n.resolveConstructorBinding() != null
-                  && keys.contains(key(n.resolveConstructorBinding()))) {
+                  && keys.contains(Bindings.declarationKey(n.resolveConstructorBinding()))) {
                 use(n);
               }
               return true;
@@ -164,16 +164,6 @@ final class SafeDelete {
               + String.join("; ", each)
               + ". Remove or change those uses first, then delete it.");
     }
-  }
-
-  private static String key(IBinding b) {
-    return switch (b) {
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      case ITypeBinding t -> t.getTypeDeclaration().getKey();
-      case null -> null;
-      default -> b.getKey();
-    };
   }
 
   /** {@code return super.m(p1, ..., pn);}, or without {@code return} for a void method. */
@@ -307,8 +297,8 @@ final class SafeDelete {
           && ma.getMethodDeclaration().overrides(mb.getMethodDeclaration())) {
         return true;
       }
-      String ka = key(a);
-      return ka != null && ka.equals(key(b));
+      String ka = Bindings.declarationKey(a);
+      return ka != null && ka.equals(Bindings.declarationKey(b));
     }
 
     /** Whether {@code n} names a method called on this: {@code n(...)} or {@code this.n(...)}. */

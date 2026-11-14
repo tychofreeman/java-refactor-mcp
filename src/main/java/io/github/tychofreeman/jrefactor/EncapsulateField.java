@@ -85,7 +85,7 @@ final class EncapsulateField {
     String cap = Character.toUpperCase(field.charAt(0)) + field.substring(1);
     String getter = getterArg != null && !getterArg.isBlank() ? getterArg : "get" + cap;
     String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
-    String fieldKey = fieldBinding.getKey();
+    String fieldKey = Bindings.declarationKey(fieldBinding);
     String typeText = source(text, fd.getType());
     if (!isStatic) {
       refuseOverride(project, file, owner, getter, List.of(), "getter", field);
@@ -121,7 +121,7 @@ final class EncapsulateField {
             public boolean visit(SimpleName node) {
               if (node.resolveBinding() instanceof IVariableBinding v
                   && v.isField()
-                  && v.getKey().equals(fieldKey)
+                  && fieldKey.equals(Bindings.declarationKey(v))
                   && !(node.getParent() instanceof VariableDeclarationFragment)) {
                 refs.add(node);
               }
@@ -322,7 +322,8 @@ final class EncapsulateField {
         new ASTVisitor() {
           @Override
           public boolean visit(SimpleName node) {
-            if (node.resolveBinding() instanceof IVariableBinding v && v.getKey().equals(key)) {
+            if (node.resolveBinding() instanceof IVariableBinding v
+                && key.equals(Bindings.declarationKey(v))) {
               found[0] = true;
             }
             return true;
