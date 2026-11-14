@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -56,6 +57,9 @@ final class Guard {
           + " tool or sequence of tools makes the change, say so in docs/friction-log.md and ask"
           + " the user. Files under a resources directory may be written directly.";
 
+  /** A redirection's word as {@link #commands} splits it: >, >>, 2>, &>, 2>&1, >&2. */
+  private static final Pattern REDIRECTION = Pattern.compile("[0-9&]*>[>&0-9]*");
+
   /**
    * Runs as a PreToolUse hook: {@code args[0]} is {@code read} or {@code write}. A refused call
    * gets a decision that denies it on stdout; any other call, or any failure, prints nothing, so
@@ -90,43 +94,18 @@ final class Guard {
    * with {@code write}, writes) Java source does so, or "".
    */
   static String each(String line, String dir, boolean write) {
-    Map<String, String> vars = new HashMap<>();
-    String[] cwd = {dir};
-    Function<String, String> at =
-        p -> {
-          for (Map.Entry<String, String> v : vars.entrySet()) {
-            p =
-                p.replace("${" + v.getKey() + "}", v.getValue())
-                    .replace("$" + v.getKey(), v.getValue());
-          }
-          return cwd[0].isEmpty() || Path.of(p).isAbsolute() ? p : Path.of(cwd[0], p).toString();
-        };
-    for (List<String> words : commands(line)) {
-      if (words.size() == 2 && words.get(0).equals("cd")) {
-        cwd[0] = at.apply(words.get(1));
-        continue;
-      }
-      int eq = words.get(0).indexOf('=');
-      if (words.size() == 1
-          && eq > 0
-          && !words.get(0).startsWith("-")
-          && !words.get(0).contains("$")) {
-        vars.put(words.get(0).substring(0, eq), words.get(0).substring(eq + 1));
-        continue;
-      }
-      String f = write ? writes(words, at) : reads(words, at);
-      if (!f.isEmpty() && f.contains("$")) {
-        return words.get(0)
-            + (write ? " writing " : " of ")
-            + f
-            + " refused: a shell variable hides where the path goes, so it cannot be told from"
-            + " Java source; write the path out (a file under resources/ may be read).";
-      }
-      if (!f.isEmpty()) {
-        return words.get(0) + (write ? " writing " : " of ") + f + " refused.";
-      }
+    Use use = use(line, dir, write);
+    if (use == null) {
+      return "";
     }
-    return "";
+    if (use.file().contains("$")) {
+      return use.command()
+          + (write ? " writing " : " of ")
+          + use.file()
+          + " refused: a shell variable hides where the path goes, so it cannot be told from"
+          + " Java source; write the path out (a file under resources/ may be read).";
+    }
+    return use.command() + (write ? " writing " : " of ") + use.file() + " refused.";
   }
 
   /** The words after any VAR=value before the command. */
@@ -153,7 +132,7 @@ final class Guard {
     List<String> operands = new ArrayList<>();
     for (int i = 1; i < words.size(); i++) {
       String w = words.get(i);
-      if (w.contains(">")) { // a redirection: what it writes is not read
+      if (redirection(w)) { // what it writes is not read
         if (w.endsWith(">")) {
           i++;
         }
@@ -189,12 +168,12 @@ final class Guard {
     List<String> operands = new ArrayList<>();
     for (int i = 1; i < words.size(); i++) {
       String w = words.get(i);
-      if (w.endsWith(">") && i + 1 < words.size()) { // a redirection into the next word
+      if (redirection(w) && w.endsWith(">") && i + 1 < words.size()) { // into the next word
         i++;
         if (javaSource(at.apply(words.get(i)))) {
           return words.get(i);
         }
-      } else if (w.contains(">")) {
+      } else if (redirection(w)) {
         // 2>&1
       } else if (w.equals("--in-place") || w.startsWith("-i")) {
         inPlace = true;
@@ -333,5 +312,58 @@ final class Guard {
     boolean judged =
         write ? Set.of("Edit", "Write", "MultiEdit").contains(tool) : tool.equals("Read");
     return judged && javaSource(path) ? tool + " of " + path + " refused." : "";
+  }
+
+  /**
+   * A simple command of a Bash line that reads (or writes) Java source: its name, the file as
+   * written, and the file's path resolved from the line's directory.
+   */
+  record Use(String command, String file, String path) {}
+
+  /**
+   * The first simple command of a Bash line that reads (or, with {@code write}, writes) Java
+   * source, its operands resolved from {@code dir} after the cds before it and with the variables
+   * the line set expanded; null when none does. {@link #each} and the session report judge a line
+   * by it.
+   */
+  static Use use(String line, String dir, boolean write) {
+    Map<String, String> vars = new HashMap<>();
+    String[] cwd = {dir};
+    Function<String, String> at =
+        p -> {
+          for (Map.Entry<String, String> v : vars.entrySet()) {
+            p =
+                p.replace("${" + v.getKey() + "}", v.getValue())
+                    .replace("$" + v.getKey(), v.getValue());
+          }
+          return cwd[0].isEmpty() || Path.of(p).isAbsolute() ? p : Path.of(cwd[0], p).toString();
+        };
+    for (List<String> words : commands(line)) {
+      if (words.size() == 2 && words.get(0).equals("cd")) {
+        cwd[0] = at.apply(words.get(1));
+        continue;
+      }
+      int eq = words.get(0).indexOf('=');
+      if (words.size() == 1
+          && eq > 0
+          && !words.get(0).startsWith("-")
+          && !words.get(0).contains("$")) {
+        vars.put(words.get(0).substring(0, eq), words.get(0).substring(eq + 1));
+        continue;
+      }
+      String f = write ? writes(words, at) : reads(words, at);
+      if (!f.isEmpty()) {
+        return new Use(words.get(0), f, at.apply(f));
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Whether {@code w} is a redirection: a quoted > is part of a word with other text, as in grep's
+   * pattern 'List<Path> x'.
+   */
+  private static boolean redirection(String w) {
+    return REDIRECTION.matcher(w).matches();
   }
 }
