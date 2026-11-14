@@ -69,10 +69,17 @@ final class Nodes {
     return out;
   }
 
-  /** Whether {@code x} is written: an assignment's target, or what ++ or -- changes. */
+  /**
+   * Whether {@code x} is written: an assignment's target, or what ++ or -- changes, also inside
+   * parentheses ({@code (x)++}).
+   */
   static boolean written(Expression x) {
-    ASTNode p = x.getParent();
-    return (p instanceof Assignment a && a.getLeftHandSide() == x)
+    ASTNode at = x;
+    while (at.getParent() instanceof ParenthesizedExpression paren) {
+      at = paren;
+    }
+    ASTNode p = at.getParent();
+    return (p instanceof Assignment a && a.getLeftHandSide() == at)
         || (p instanceof PostfixExpression)
         || (p instanceof PrefixExpression pre
             && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
