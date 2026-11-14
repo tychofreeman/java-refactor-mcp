@@ -436,6 +436,11 @@ Each was chosen from options; the record named beside it has the options it beat
   always the main root and over a move between roots).
 - The session report counts by `Tools.Def.kind`, so a new tool needs only its
   `Kind`.
+- A required argument (`.required()`) is checked by `Args.check` before the tool runs, in one
+  wording from its description (`Arg.missing`, #521, 2026-11-14, the owner's option (a), over
+  per-tool wording by overrides and over hand checks): do not check one in the tool. Mark an
+  argument required only when every route of the tool needs it; `RequiredArgsTest` calls each
+  tool without each one.
 - A new tool's arguments are a `List<Arg>` (`Arg.FILE`, `Arg.IMPORTS`,
   `Arg.string(...).required()`, ...), not JSON (#97). To check that a rewrite of
   `Tools` keeps every schema, diff two runs of `ToolSchemasTest`

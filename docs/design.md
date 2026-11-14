@@ -461,6 +461,21 @@ key matched another type variable with the same bound (`(U) x` passed for `(T) a
 now refused (golden `remove_parameter_value_refused_type_variable`). The cost: such a call, rare,
 is refused where at run time the two casts did the same.
 
+**Decided (2026-11-14, the owner, issue #521): one check for required arguments, in one
+wording**, option (a): `Args.check` refuses an argument the schema marks required that is absent
+or null, before the tool runs, with "<tool> needs <argument>: <description> Pass <argument>."
+built from the `Arg` (`Arg.missing`); `Tools.Def` keeps its `List<Arg>` for it. Over (b) a
+central check whose wording each tool could override (per-tool phrasing such as "the 1-based line
+the if starts on" kept, at the cost of a second place to look and wording that drifts again), and
+(c) leaving the hand-written checks (a required integer arrives as null and each tool must
+remember it). The description is quoted as the schema has it, capital and all, since a model
+reads the same text in the schema; several missing arguments get one sentence each. A blank
+string is not missing (`content` and `new` may be empty), so the checks for a blank value stay
+in their tools (`AddSupertype`, `ChangeType`, `Args.required`, `batch` with no steps). A tool
+whose required arguments depend on its route (`move`, `inline`, `add_parameter`,
+`change_signature`, the edits that take `content` or `build`) marks only what every route needs,
+and refuses the rest itself.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

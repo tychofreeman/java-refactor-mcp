@@ -1834,3 +1834,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   ...), and `inline` of those locals was refused, since the call between could change a non-final
   field. One `replace_statements` wrote the three statements on the fields; a field no statement
   of the body assigns could be passed as it is.
+
+## 2026-11-14: required-arguments
+
+- No Java by hand. `create_file` of the test first declared a stub `arguments()` on the record
+  `Tools.Def`; `replace_declaration` of the record with the new component replaced it. The record's
+  canonical constructor changed shape, so the one test that called it went in the same batch
+  (`replace_text`), after the first `replace_declaration` was refused for that caller.
+- Deleting one `Precondition.that(...)` among several arguments of `Precondition.require` took a
+  `replace_statements` of the whole call: no tool removes one argument of a call.

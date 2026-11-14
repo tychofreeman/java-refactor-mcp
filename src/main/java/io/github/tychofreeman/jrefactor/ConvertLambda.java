@@ -54,11 +54,6 @@ final class ConvertLambda {
       throws Exception {
     Precondition.require(
         Precondition.that(
-            () -> line != null,
-            () ->
-                "convert_lambda needs line, the 1-based line the lambda, method reference or"
-                    + " anonymous class starts on."),
-        Precondition.that(
             () -> List.of("lambda", "anonymous", "method_reference").contains(to),
             () -> "to is lambda, anonymous or method_reference: what it becomes."));
     Opened opened = Opened.of(project, rel);

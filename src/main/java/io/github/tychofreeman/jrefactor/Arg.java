@@ -118,4 +118,19 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
     }
     return root.toString();
   }
+
+  /**
+   * What a call of {@code tool} without this argument is refused with: the argument, what it is
+   * (its description), and the fix.
+   */
+  String missing(String tool) {
+    String about = schema.path("description").asString("");
+    return tool
+        + " needs "
+        + name
+        + (about.isEmpty() ? "." : ": " + about + (about.endsWith(".") ? "" : "."))
+        + " Pass "
+        + name
+        + ".";
+  }
 }

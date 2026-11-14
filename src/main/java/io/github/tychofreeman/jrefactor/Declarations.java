@@ -229,9 +229,6 @@ final class Declarations {
     String rel = args.required("file");
     String name = args.required("name");
     String content = args.string("content");
-    if (content == null) {
-      throw new Refusal("replace_declaration needs content (empty, to delete the declaration).");
-    }
     Path path = project.javaFile(rel);
     String text = Files.readString(path);
     CompilationUnit unit = Edits.parses(text, rel);

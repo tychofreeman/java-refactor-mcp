@@ -29,9 +29,6 @@ final class InvertIf {
   private InvertIf() {}
 
   static Outcome run(SourceProject project, String rel, Integer line) throws Exception {
-    Precondition.require(
-        Precondition.that(
-            () -> line != null, () -> "invert_if needs line, the 1-based line the if starts on."));
     Opened opened = Opened.of(project, rel);
     Path file = opened.file();
     String text = opened.text();
