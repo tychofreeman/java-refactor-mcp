@@ -1228,3 +1228,11 @@ not in placement, since in a batch the reader may name it only in a later step.
 - `batch` refused a first send with each step's arguments at the step's top level ("replace_text
   needs file"); they go under `args`. The refusal could say so when a step has `file` beside
   `tool`.
+
+## 2026-11-13: the generator task set (`generator-tasks`)
+
+By hand: the fixture's Maven files (`mvnw`, `.mvn`, `.gitignore`, `pom.xml` with its artifactId
+changed) copied from the library fixture with `cp` and `sed`: no tool copies a directory. The
+reference solutions used to validate the tasks were applied in scratch copies by a script, not in
+the repo. Everything in the repo went through `bin/jrefactor` batches (`create_file`,
+`replace_text`).

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "depot-reorders",
+    "dir": "testdata/depot",
+    "tests": "testdata/depot-reorders",
+    "check": "./mvnw -q -o test",
+    "prompt": "Inventory.reorders() in package depot.stock returns an empty list. Make it return one ReorderLine for each SKU whose available stock (Stock.available()) is below its reorder point, in the order the SKUs were put into the inventory, with the SKU, its supplier from the inventory's catalog, and the stock's reorder quantity. Acceptance tests call the existing classes and methods by their current names."
+  },
+  {
+    "name": "depot-invoice",
+    "dir": "testdata/depot",
+    "tests": "testdata/depot-invoice",
+    "check": "./mvnw -q -o test",
+    "prompt": "Invoicing.invoiceFor(order) in package depot.orders only throws. Make it return the order's Invoice: the order's id, the account number of the order's customer, that account's billing address, and as the amount the order's total plus its shipping cost to the customer's region (Shipping.cost). Acceptance tests call the existing classes and methods by their current names."
+  },
+  {
+    "name": "depot-shipping",
+    "dir": "testdata/depot",
+    "tests": "testdata/depot-shipping",
+    "check": "./mvnw -q -o test",
+    "prompt": "Every call of Shipping.cost(order, region) in package depot.orders passes the order's own customer's region. Remove the region parameter, so that Shipping.cost(order) works the region out from the order, and keep every caller and test passing. Acceptance tests call Shipping.cost with the order alone."
+  }
+]
