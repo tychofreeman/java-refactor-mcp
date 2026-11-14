@@ -1794,3 +1794,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Two `extract_function`s in a row by the line numbers of one read: the second took the wrong lines
   (the first had shortened the method). `undo` put it back. Extracting bottom-up avoids it; a batch
   that accepted the second's lines as of the read before the batch would too.
+
+## 2026-11-14: lines-helpers
+
+- No Java by hand: one batch of 13 steps (`add_declaration` of `Lines.offsetOf` with a column,
+  `replace_text` at each call, `replace_declaration` with empty content for `Positions` (its file)
+  and the private copies, `replace_statements` in `InlineVariable`), then two delegates `inline`d.
+  `inline` of `Extract.lineEndOffset` wrote `Lines.end(text, unit.getPosition(line(x), 0))`, the
+  line of an offset turned back into an offset on it; one `replace_text` made it `Lines.end(text,
+  x)`. No tool sees that two calls undo each other.

@@ -101,7 +101,7 @@ final class Extract {
      */
     static Selection of(CompilationUnit unit, String text, int start, int end) {
       int startOffset = unit.getPosition(start, 0);
-      int endOffset = lineEndOffset(unit, text, end);
+      int endOffset = Lines.end(text, unit.getPosition(end, 0));
       String range = Lines.range(start, end);
       List<Statement> list = body(unit, startOffset, endOffset, range);
       Statement through = null;
@@ -331,13 +331,6 @@ final class Extract {
       out.add((Statement) o);
     }
     return out;
-  }
-
-  /** The offset just past the line ending of 1-based line {@code line}. */
-  static int lineEndOffset(CompilationUnit unit, String text, int line) {
-    int at = unit.getPosition(line, 0);
-    int nl = text.indexOf('\n', at);
-    return nl < 0 ? text.length() : nl + 1;
   }
 
   private static String span(CompilationUnit unit, ASTNode n) {

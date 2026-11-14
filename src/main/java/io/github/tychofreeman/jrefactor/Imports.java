@@ -435,16 +435,6 @@ final class Imports {
     return names;
   }
 
-  private static int count(String text) {
-    int n = 0;
-    for (int i = 0; i < text.length(); i++) {
-      if (text.charAt(i) == '\n') {
-        n++;
-      }
-    }
-    return n;
-  }
-
   /** The classes named {@code name}, as fully qualified names, sorted, discouraged ones dropped. */
   private record Index(Map<String, List<String>> libraries, Map<String, List<String>> sources) {
     List<String> candidates(String name) {
@@ -712,7 +702,8 @@ final class Imports {
       notes.add("removed import " + String.join(", ", names));
     }
     notes.addAll(plan.chose());
-    return new Fixed(fixed, count(fixed) - count(after), notes);
+    return new Fixed(
+        fixed, Lines.number(fixed, fixed.length()) - Lines.number(after, after.length()), notes);
   }
 
   /** The single-type imports of {@code unit}, as fully qualified names. */

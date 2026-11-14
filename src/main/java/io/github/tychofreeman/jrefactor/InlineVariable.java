@@ -266,9 +266,8 @@ final class InlineVariable {
   private static TextEdit removeLine(String text, ASTNode stmt) {
     int start = stmt.getStartPosition();
     int end = start + stmt.getLength();
-    int lineStart = text.lastIndexOf('\n', start - 1) + 1;
-    int lineEnd = text.indexOf('\n', end);
-    lineEnd = lineEnd < 0 ? text.length() : lineEnd + 1;
+    int lineStart = Lines.start(text, start);
+    int lineEnd = Lines.end(text, end);
     if (!text.substring(lineStart, start).isBlank() || !text.substring(end, lineEnd).isBlank()) {
       throw new Refusal(
           "the declaration shares its line with other code. Put it on a line of its own first.");

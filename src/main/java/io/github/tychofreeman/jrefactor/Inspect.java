@@ -338,7 +338,7 @@ public final class Inspect {
               return false;
             }
             int open = unit.getLineNumber(body.getStartPosition());
-            int close = unit.getLineNumber(end(body));
+            int close = unit.getLineNumber((Nodes.end(body) - 1));
             if (close - open - 1 >= 2) {
               ranges.add(new int[] {open + 1, close - 1});
             }
@@ -346,10 +346,6 @@ public final class Inspect {
           }
         });
     return ranges;
-  }
-
-  private static int end(ASTNode node) {
-    return Nodes.end(node) - 1;
   }
 
   /**

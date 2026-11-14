@@ -67,4 +67,21 @@ final class Lines {
     return (lines.size() == 1 ? "line " : "lines ")
         + lines.stream().map(String::valueOf).collect(Collectors.joining(", "));
   }
+
+  /**
+   * The offset of 1-based {@code line} and {@code column}, or a refusal for one before the file or
+   * past the end of the file or the line.
+   */
+  static int offsetOf(String text, int line, int column) {
+    if (line < 1 || column < 1) {
+      throw new Refusal(
+          "line and column start at 1; got line " + line + ", column " + column + ".");
+    }
+    int start = offsetOf(text, line);
+    int end = text.indexOf('\n', start);
+    if (start + column - 1 > (end < 0 ? text.length() : end)) {
+      throw new Refusal("column " + column + " is past the end of line " + line + ".");
+    }
+    return start + column - 1;
+  }
 }
