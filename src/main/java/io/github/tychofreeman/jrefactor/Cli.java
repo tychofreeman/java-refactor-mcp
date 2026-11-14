@@ -240,7 +240,11 @@ final class Cli {
       starts.add(line.toMatchResult());
     }
     if (starts.isEmpty()) {
-      return JSON.readValue(text, new TypeReference<Map<String, Object>>() {});
+      try {
+        return JSON.readValue(text, new TypeReference<Map<String, Object>>() {});
+      } catch (JacksonException e) {
+        throw new Refusal("the JSON: " + e.getOriginalMessage());
+      }
     }
     Map<String, String> sections = new LinkedHashMap<>();
     for (int i = 0; i < starts.size(); i++) {
@@ -365,7 +369,11 @@ final class Cli {
         return Boolean.parseBoolean(value);
       }
       case "array", "object" -> {
-        return JSON.readValue(value, Object.class);
+        try {
+          return JSON.readValue(value, Object.class);
+        } catch (JacksonException e) {
+          throw new Refusal(key + " must be JSON (an " + type + "): " + e.getOriginalMessage());
+        }
       }
       default -> {
         return value;

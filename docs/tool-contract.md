@@ -1983,7 +1983,9 @@ The project is the nearest directory with a `pom.xml` at or above `-C`
 (default: the current directory). `key=value` values are typed by the tool's
 schema (integer, boolean; arrays and objects as JSON). `key_file=path` gives
 the text argument `key` from a file. Output is the result the model would
-read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. The undo
+read, or `refused: ...`; exit status 0 done, 2 refused, 1 error. JSON that does not parse (the
+object, with or without sections, or an array or object `key=value`) is refused with the
+parser's message (#491). The undo
 stack (the newest 20 changes) is kept between runs in
 `$XDG_CACHE_HOME/jrefactor` or `~/.cache/jrefactor`, one file per project,
 beside the Maven classpath (used while `pom.xml` is unchanged and every entry
