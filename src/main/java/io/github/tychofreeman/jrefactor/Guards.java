@@ -21,7 +21,6 @@ import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NullLiteral;
-import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PatternInstanceofExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
@@ -182,7 +181,7 @@ final class Guards {
     return divisor
         ? e.resolveConstantExpressionValue() instanceof Number
             || e.resolveConstantExpressionValue() instanceof Character
-        : strip(e) instanceof NullLiteral;
+        : Nodes.unparenthesized(e) instanceof NullLiteral;
   }
 
   /**
@@ -190,8 +189,8 @@ final class Guards {
    * through the same qualifier, or else the same expression as written.
    */
   static boolean same(Expression a, Expression b) {
-    a = strip(a);
-    b = strip(b);
+    a = Nodes.unparenthesized(a);
+    b = Nodes.unparenthesized(b);
     IVariableBinding va = variable(a);
     IVariableBinding vb = variable(b);
     if (va != null || vb != null) {
@@ -203,13 +202,6 @@ final class Guards {
       return qa == null || qb == null ? qa == qb : same(qa, qb);
     }
     return a.subtreeMatch(new ASTMatcher(), b);
-  }
-
-  private static Expression strip(Expression e) {
-    while (e instanceof ParenthesizedExpression p) {
-      e = p.getExpression();
-    }
-    return e;
   }
 
   private static IVariableBinding variable(Expression e) {

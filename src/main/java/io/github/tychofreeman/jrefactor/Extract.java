@@ -343,15 +343,6 @@ final class Extract {
     return out;
   }
 
-  static <T extends ASTNode> T ancestorAbove(ASTNode n, Class<T> kind) {
-    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
-      if (kind.isInstance(p)) {
-        return kind.cast(p);
-      }
-    }
-    return null;
-  }
-
   /** The offset just past the line ending of 1-based line {@code line}. */
   static int lineEndOffset(CompilationUnit unit, String text, int line) {
     int at = unit.getPosition(line, 0);

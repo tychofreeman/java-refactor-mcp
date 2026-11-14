@@ -4,9 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 
@@ -88,5 +93,62 @@ final class Nodes {
             .replaceAll("\\s*\\R\\s*([.)])", "$1")
             .replaceAll("\\s*\\R\\s*", " ");
     return line.length() <= SHOWN ? line : line.substring(0, SHOWN - 3) + "...";
+  }
+
+  /** The nearest ancestor of {@code n} of {@code kind}, not {@code n} itself, or null. */
+  static <T extends ASTNode> T ancestor(ASTNode n, Class<T> kind) {
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      if (kind.isInstance(p)) {
+        return kind.cast(p);
+      }
+    }
+    return null;
+  }
+
+  /** {@code node} or its nearest ancestor of {@code type}, or null. */
+  static <T> T ancestorOrSelf(ASTNode node, Class<T> type) {
+    for (ASTNode n = node; n != null; n = n.getParent()) {
+      if (type.isInstance(n)) {
+        return type.cast(n);
+      }
+    }
+    return null;
+  }
+
+  /** The type, named or anonymous, whose body holds {@code n}, or null. */
+  static ITypeBinding typeAround(ASTNode n) {
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      if (p instanceof AbstractTypeDeclaration t) {
+        return t.resolveBinding();
+      }
+      if (p instanceof AnonymousClassDeclaration a) {
+        return a.resolveBinding();
+      }
+    }
+    return null;
+  }
+
+  /** The nearest {@code type} around {@code n}, or null past a lambda or an anonymous class. */
+  static <T extends ASTNode> T enclosing(ASTNode n, Class<T> type) {
+    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
+      if (type.isInstance(p)) {
+        return type.cast(p);
+      }
+      if (p instanceof LambdaExpression || p instanceof AnonymousClassDeclaration) {
+        return null;
+      }
+      if (p instanceof CompilationUnit) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** {@code e} without the parentheses around it. */
+  static Expression unparenthesized(Expression e) {
+    while (e instanceof ParenthesizedExpression p) {
+      e = p.getExpression();
+    }
+    return e;
   }
 }

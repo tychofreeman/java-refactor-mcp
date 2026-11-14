@@ -214,13 +214,9 @@ final class ThrowsCallers {
       String name,
       List<String> chosen)
       throws Exception {
-    ASTNode type = at.getParent();
-    while (!(type instanceof AbstractTypeDeclaration)) {
-      type = type.getParent();
-    }
+    AbstractTypeDeclaration type = Nodes.ancestor(at, AbstractTypeDeclaration.class);
     List<String> out = new ArrayList<>();
-    for (ITypeBinding t =
-            Jdt.probeType(project, file, text, (AbstractTypeDeclaration) type, name, chosen);
+    for (ITypeBinding t = Jdt.probeType(project, file, text, type, name, chosen);
         t != null;
         t = t.getSuperclass()) {
       if (!t.isRecovered()) {

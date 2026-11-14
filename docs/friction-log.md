@@ -1621,3 +1621,21 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   CLAUDE.md allows when the change is not yet easy).
 - No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
   one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.
+
+## 2026-11-14: nodes-ancestor
+
+- `fold` of `Nodes.ancestor` (a loop, then `return null`) was refused: fold matches one return
+  or a void method's statements. Tried next: `replace_declaration` of
+  `SubclassToStrategy.ancestor` with a delegate, then `inline`: refused, "varargs or generic,
+  which inline does not inline yet". Done instead with `replace_text` of its four calls
+  (`all_occurrences`) and `replace_declaration` with empty content, one batch.
+- `inline` of `FieldOrder.ancestor` made a delegate was refused: "argument n has type
+  SimpleName, and the parameter is ASTNode ... the body would not" convert. Widening a
+  `SimpleName` to `ASTNode` cannot change what `Nodes.ancestorOrSelf(n, ...)` does; the call
+  was swapped with `replace_text`.
+- `rename` of `Nodes.ancestorAbove` with `name` and no `line` was refused ("rename needs line"),
+  the third session to meet it.
+- `replace_text` with `old` ` ancestor(st, ` and `all_occurrences` missed the occurrence that
+  starts its line (the space is indentation there) and the batch's delete then refused; `old`
+  without the space fixed it.
+- No Java by hand but the rebase's merge of `Nodes` and `NodesTest` with #526's `Nodes.show`.
