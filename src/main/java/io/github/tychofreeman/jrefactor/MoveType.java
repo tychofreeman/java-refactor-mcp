@@ -278,12 +278,7 @@ final class MoveType {
    */
   private static AbstractTypeDeclaration find(CompilationUnit unit, String name, String rel) {
     String[] parts = name.split("\\.");
-    AbstractTypeDeclaration at = null;
-    for (Object o : unit.types()) {
-      if (o instanceof AbstractTypeDeclaration t && t.getName().getIdentifier().equals(parts[0])) {
-        at = t;
-      }
-    }
+    AbstractTypeDeclaration at = Declarations.typePath(unit, new String[] {parts[0]});
     if (at != null && parts.length == 1) {
       String example = name + ".Inner";
       for (Object o : at.bodyDeclarations()) {
@@ -299,16 +294,7 @@ final class MoveType {
               + example
               + ". To move it to another package, pass package.");
     }
-    for (int i = 1; at != null && i < parts.length; i++) {
-      AbstractTypeDeclaration next = null;
-      for (Object o : at.bodyDeclarations()) {
-        if (o instanceof AbstractTypeDeclaration member
-            && member.getName().getIdentifier().equals(parts[i])) {
-          next = member;
-        }
-      }
-      at = next;
-    }
+    at = Declarations.typePath(unit, parts);
     if (at == null) {
       throw new Refusal("No nested type " + name + " in " + rel + ". Name it as Outer.Inner.");
     }

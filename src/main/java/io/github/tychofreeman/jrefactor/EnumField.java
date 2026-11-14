@@ -150,7 +150,7 @@ final class EnumField {
       }
     }
     if (constructors.size() > 1) {
-      List<String> labels = constructors.stream().map(MemberMove::label).toList();
+      List<String> labels = constructors.stream().map(Declarations::methodLabel).toList();
       throw new Refusal(
           simple
               + " has "

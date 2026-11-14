@@ -1416,3 +1416,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `Journal.put` and both `restore`s, and two `replace_text`s declaring a `project` in the tests
   the value named. Its first send used `position`, which `add_parameter` does not take (`before`
   does); `retry` with three `step` changes fixed it without resending the rest.
+## 2026-11-13: member-lookup
+
+- `move` of `MemberMove.label` to `Declarations` was refused for a method reference
+  (`MemberMove::label` in `EnumField`); the reference was swapped to `Declarations::methodLabel`
+  (what it should hand back) by `replace_text` in the same `batch`, then the move passed.
+- A batch sent through an unquoted heredoc lost the `\\.` of a `split` regex: the shell trap the
+  session notes name. Resent the step by `retry` with an `@@` section in a quoted heredoc.
+- `fold` was not tried for the name-parsing copy: the extracted method ends in `return new
+  MemberName(...)`, which the copy in `MemberMove.member` does not have. The copy was replaced by
+  `replace_statements` with the call. A fold of a method returning a record of the locals it
+  sets could match such a copy.
+- Otherwise through the tools: `extract_function` (twice, one returning a record), `move`,
+  `rename` (twice), statement edits. Goldens are resources.

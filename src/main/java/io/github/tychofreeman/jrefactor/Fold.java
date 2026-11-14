@@ -828,7 +828,7 @@ final class Fold {
             && mb != null
             && d.getName().getIdentifier().equals(method)
             && b.overrides(mb)) {
-          return b.getDeclaringClass().getName() + "." + MemberMove.label(d);
+          return b.getDeclaringClass().getName() + "." + Declarations.methodLabel(d);
         }
       }
     }

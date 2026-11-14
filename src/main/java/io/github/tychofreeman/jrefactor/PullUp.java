@@ -81,7 +81,7 @@ final class PullUp {
                 + " overrides "
                 + declaring
                 + "."
-                + MemberMove.label(md)
+                + Declarations.methodLabel(md)
                 + ", which "
                 + superName
                 + " inherits: in "

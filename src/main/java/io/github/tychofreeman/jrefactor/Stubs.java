@@ -185,20 +185,12 @@ final class Stubs {
       if (before == null) {
         return false;
       }
-      List<?> members = Jdt.parseSyntax(before).types();
-      AbstractTypeDeclaration found = null;
-      for (String part : type.split("\\.")) {
-        found = null;
-        for (Object o : members) {
-          if (o instanceof AbstractTypeDeclaration t && t.getName().getIdentifier().equals(part)) {
-            found = t;
-          }
-        }
-        if (found == null) {
-          return false;
-        }
-        members = found.bodyDeclarations();
+      AbstractTypeDeclaration found =
+          Declarations.typePath(Jdt.parseSyntax(before), type.split("\\."));
+      if (found == null) {
+        return false;
       }
+      List<?> members = found.bodyDeclarations();
       for (Object o : members) {
         if (!field
             && o instanceof MethodDeclaration m
