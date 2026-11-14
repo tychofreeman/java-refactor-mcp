@@ -1501,7 +1501,7 @@ final class Tools {
 
   /**
    * remove_parameter with value, by gorefactor's name for a parameter the method computes: an
-   * alias, not published.
+   * alias, published only under JREFACTOR_PUBLISH_ALIASES.
    */
   static final Def REPLACE_PARAMETER =
       new Def(
@@ -1524,7 +1524,10 @@ final class Tools {
             return Signatures.removeParameter(project, ByLine.named(project, args));
           });
 
-  /** insert_statements with one build loop, by gorefactor's name: an alias, not published. */
+  /**
+   * insert_statements with one build loop, by gorefactor's name: an alias (#376's arm publishes
+   * it).
+   */
   static final Def CREATE_LOOP =
       new Def(
           "create_loop",
@@ -1587,7 +1590,10 @@ final class Tools {
                       "call", "call", "new", "new", "args", "args", "into", "into", "type",
                       "type")));
 
-  /** insert_statements with one build guard, by gorefactor's name: an alias, not published. */
+  /**
+   * insert_statements with one build guard, by gorefactor's name: an alias (#376's arm publishes
+   * it).
+   */
   static final Def CREATE_GUARD =
       new Def(
           "create_guard",
@@ -1845,8 +1851,17 @@ final class Tools {
     if (ALIASES.containsKey(bare)) {
       return ALIASES.get(bare);
     }
-    List<String> names = ALL.stream().map(Def::name).toList();
-    throw new Refusal("No tool " + name + ". The tools are " + String.join(", ", names) + ".");
+    throw noTool(name);
+  }
+
+  /** The refusal for a tool name there is none of, listing the tools there are. */
+  private static Refusal noTool(String name) {
+    return new Refusal(
+        "No tool "
+            + name
+            + ". The tools are "
+            + String.join(", ", ALL.stream().map(Def::name).toList())
+            + ".");
   }
 
   /** A tool's name as an MCP client gives it: mcp__, the server's name, __, the tool's. */
@@ -1903,6 +1918,84 @@ final class Tools {
   static final Map<String, Set<String>> RETIRED_ARGS =
       Map.of("add_declaration", Set.of("after", "before"));
 
+  /** replace_expression as it was before build (#165): typed text only, for JREFACTOR_NO_BUILD. */
+  static final Def REPLACE_EXPRESSION_TYPED =
+      new Def(
+          "replace_expression",
+          """
+          Replace one expression with new text. Find it by file, the line it starts on \
+          and its exact source text (column when the text occurs twice on the line), as \
+          extract_variable does.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the expression starts on.").required(),
+              Arg.string("expression", "Its exact source text.").required(),
+              Arg.integer(
+                  "column", "Optional 1-based column, when the text occurs twice on the line."),
+              Arg.string("new", "The expression to put in its place.").required(),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          Primitives::replaceExpression);
+
+  /** insert_statements as it was before build (#149): typed text only, for JREFACTOR_NO_BUILD. */
+  static final Def INSERT_STATEMENTS_TYPED =
+      new Def(
+          "insert_statements",
+          """
+          Insert statements before or after the statement that starts on a line (directly in a \
+          block). content is the statements, at any indentation; they are indented as \
+          that statement is.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line a statement starts on.").required(),
+              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
+              Arg.string("content", "The statements.").required(),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          Primitives::insertStatements);
+
+  /**
+   * replace_statements as it was before build (#149) and surround's loop object (#163): typed text
+   * only, for JREFACTOR_NO_BUILD.
+   */
+  static final Def REPLACE_STATEMENTS_TYPED =
+      new Def(
+          "replace_statements",
+          """
+          Replace whole statements of one block, from the one starting on start_line to the one \
+          ending on end_line, with content (statements, re-indented); empty content deletes them.
+          With surround in place of content (try, if (ready), for (Item i : items), while (more), \
+          synchronized (lock)), the statements go inside that block; a try catches and rethrows \
+          the checked exceptions they throw.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("start_line", "1-based line the first statement starts on.").required(),
+              Arg.integer("end_line", "1-based line the last statement ends on.").required(),
+              Arg.string("content", "The new statements; empty to delete."),
+              Arg.string(
+                  "surround",
+                  "In place of content: the head of a block to put them in (try, if (cond), ...)."),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          Primitives::replaceStatements);
+
+  /** The statement edits as a server without build publishes them, by name. */
+  static final Map<String, Def> TYPED =
+      Map.of(
+          "insert_statements", INSERT_STATEMENTS_TYPED,
+          "replace_statements", REPLACE_STATEMENTS_TYPED,
+          "replace_expression", REPLACE_EXPRESSION_TYPED);
+
+  /** The aliases that are one build entry, which a server without build does not have. */
+  static final Set<String> BUILDING_ALIASES = Set.of("create_loop", "create_call", "create_guard");
+
+  /** gorefactor's names for the generators, published under JREFACTOR_PUBLISH_ALIASES. */
+  static final List<Def> PUBLISHABLE_ALIASES =
+      List.of(CREATE_LOOP, CREATE_CALL, CREATE_GUARD, REPLACE_PARAMETER);
+
   private static Outcome loopToStream(SourceProject project, Args args) throws Exception {
     return LoopToStream.run(project, args.required("file"), args.integer("line"));
   }
@@ -1941,5 +2034,37 @@ final class Tools {
     }
     values.put("build", List.of(built));
     return Primitives.insertStatements(project, new Args(args.tool(), values));
+  }
+
+  /**
+   * The tools the server publishes: every tool, under JREFACTOR_NO_BUILD with the typed edits, and
+   * under JREFACTOR_PUBLISH_ALIASES gorefactor's names for the generators after them.
+   */
+  static List<Def> published(Session session) {
+    List<Def> tools =
+        new ArrayList<>(
+            session.noBuild
+                ? ALL.stream().map(def -> TYPED.getOrDefault(def.name(), def)).toList()
+                : ALL);
+    if (session.publishAliases) {
+      for (Def alias : PUBLISHABLE_ALIASES) {
+        if (!(session.noBuild && BUILDING_ALIASES.contains(alias.name()))) {
+          tools.add(alias);
+        }
+      }
+    }
+    return tools;
+  }
+
+  /** The tool named {@code name} as {@code session}'s server publishes it, or a refusal. */
+  static Def named(String name, Session session) {
+    Def def = named(name);
+    if (!session.noBuild) {
+      return def;
+    }
+    if (BUILDING_ALIASES.contains(def.name())) {
+      throw noTool(name);
+    }
+    return TYPED.getOrDefault(def.name(), def);
   }
 }

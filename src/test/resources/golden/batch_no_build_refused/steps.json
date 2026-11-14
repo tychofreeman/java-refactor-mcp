@@ -1,0 +1,13 @@
+[
+  {"tool": "add_declaration", "args": {"file": "shop/Ledger.java",
+    "content": "private Pricing pricing;"}},
+  {"tool": "replace_statements", "args": {"file": "shop/Ledger.java", "start_line": 14,
+    "end_line": 14, "build": [
+      "Objects.requireNonNull(customer);",
+      {"call": "Money.zero", "into": "total"},
+      {"loop": "orders", "body": [
+        "if (!order.customer().equals(customer)) {\n  continue;\n}",
+        {"call": "pricing.priceOf", "args": ["order", "customer"], "into": "price"},
+        {"call": "total.plus", "args": ["price"], "into": "total"}]},
+      "return total;"]}}
+]

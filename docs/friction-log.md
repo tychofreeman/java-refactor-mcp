@@ -1228,3 +1228,24 @@ not in placement, since in a batch the reader may name it only in a later step.
 - `batch` refused a first send with each step's arguments at the step's top level ("replace_text
   needs file"); they go under `args`. The refusal could say so when a step has `file` beside
   `tool`.
+
+## 2026-11-13: the generator task set (`generator-tasks`)
+
+By hand: the fixture's Maven files (`mvnw`, `.mvn`, `.gitignore`, `pom.xml` with its artifactId
+changed) copied from the library fixture with `cp` and `sed`: no tool copies a directory. The
+reference solutions used to validate the tasks were applied in scratch copies by a script, not in
+the repo. Everything in the repo went through `bin/jrefactor` batches (`create_file`,
+`replace_text`).
+
+## 2026-11-13: the A/B arm without build (`no-build-arm`)
+
+By hand: the golden case's `in/` and `steps.json` copied from `batch_build_method` with `cp -r`, and
+the wrapper `eval-tasks/jrefactor-ab-server-no-build` made from the skeleton one with `sed` and
+`chmod +x`: no tool copies files or sets a file's mode. The Java went through `bin/jrefactor`
+(`add_declaration`, `create_file`, `replace_statements`, `replace_expression`, `insert_statements`,
+and `extract_variable`, `extract_function`, `inline` and `fold` for the refactoring).
+
+## 2026-11-13: the A/B arm with the aliases published (`alias-arm`)
+
+By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build one with `sed` and
+`chmod +x`. The Java and the docs through `bin/jrefactor`.
