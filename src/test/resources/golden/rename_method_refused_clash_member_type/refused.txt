@@ -1,0 +1,1 @@
+Shapes.Square already has a method scaled(List<Double>) (line 11). Choose another name.

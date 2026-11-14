@@ -769,11 +769,10 @@ public final class Rename {
       }
       if (other.getName().equals(newName) && otherTypes.equals(types)) {
         ASTNode at = unit.findDeclaringNode(other.getKey());
-        String label = Names.methodLabel(other);
         throw new Refusal(
             Names.typeLabel(b.getDeclaringClass())
                 + " already has a method "
-                + label.substring(label.indexOf('.') + 1)
+                + Names.memberLabel(other)
                 + (at == null ? "" : " (line " + unit.getLineNumber(at.getStartPosition()) + ")")
                 + ". Choose another name.");
       }

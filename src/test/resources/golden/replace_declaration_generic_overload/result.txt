@@ -1,1 +1,1 @@
-replaced A.b(Map<String,Integer>) in com/example/A.java, lines 6-8
+replaced A.b(Map<String, Integer>) in com/example/A.java, lines 6-8

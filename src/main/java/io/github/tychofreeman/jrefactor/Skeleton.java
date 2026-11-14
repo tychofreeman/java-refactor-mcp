@@ -59,7 +59,7 @@ final class Skeleton {
     for (int i = 0; i < missing.size(); i++) {
       IMethodBinding m = missing.get(i);
       text.append(i == 0 ? "" : "\n").append(stub(m));
-      stubbed.add(Names.sourceLabel(m));
+      stubbed.add(Names.methodLabel(m));
     }
     return new Made(text.append("}\n").toString(), stubbed);
   }
