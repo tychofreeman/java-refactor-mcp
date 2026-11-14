@@ -56,7 +56,7 @@ final class TestFor {
             : path;
     String member = type.equals(path) ? null : path.substring(dot + 1);
     String simple = type.substring(type.lastIndexOf('.') + 1);
-    Holding holding = Holding.of(project, simple, null);
+    Holding holding = Holding.of(project, simple);
     for (CompilationUnit unit : holding.units().values()) {
       for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
         ITypeBinding b = t.resolveBinding();

@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -159,16 +158,11 @@ final class ThrowsCallers {
 
   /** Parses every file of the project not yet parsed, and indexes calls and declarations by key. */
   private void index() throws Exception {
-    List<Path> missing = new ArrayList<>();
-    for (Path f : project.javaFiles()) {
-      if (!family.sources.containsKey(f)) {
-        missing.add(f);
-      }
-    }
-    Map<Path, CompilationUnit> more = Jdt.parseAll(project, missing);
-    for (Path f : missing) {
+    Holding missing = Holding.where(project, (f, t) -> !family.sources.containsKey(f));
+    for (Map.Entry<Path, CompilationUnit> e : missing.units().entrySet()) {
+      Path f = e.getKey();
       family.sources.put(
-          f, new Signatures.Source(f, project.relative(f), Files.readString(f), more.get(f)));
+          f, new Signatures.Source(f, project.relative(f), missing.texts().get(f), e.getValue()));
     }
     for (Signatures.Source s : family.sources.values()) {
       units.add(s.unit());
