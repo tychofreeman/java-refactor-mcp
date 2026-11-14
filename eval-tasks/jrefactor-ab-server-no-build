@@ -1,0 +1,11 @@
+#!/bin/sh
+# Starts bin/jrefactor-mcp for gorefactor's A/B harness (cmd/refactor-ab), which
+# passes the project to serve as -C <dir>, without build on the statement edits (issue #376,
+# the A/B arm "mcp today"): they take typed code only, as before roadmap #149.
+set -eu
+export JREFACTOR_NO_BUILD=1
+here=$(cd "$(dirname "$0")/.." && pwd)
+if [ "${1:-}" = "-C" ]; then
+  shift
+fi
+exec "$here/bin/jrefactor-mcp" "$@"

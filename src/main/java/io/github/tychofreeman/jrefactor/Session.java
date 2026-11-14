@@ -63,4 +63,10 @@ final class Session {
 
   /** The check that batch ran with. */
   String refusedCheck;
+
+  /**
+   * Whether the statement edits take typed code only, without {@code build} (an A/B arm, issue
+   * #376): set by {@code JREFACTOR_NO_BUILD=1}, the server publishes them as they were before it.
+   */
+  boolean noBuild = "1".equals(System.getenv("JREFACTOR_NO_BUILD"));
 }

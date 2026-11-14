@@ -1236,3 +1236,11 @@ changed) copied from the library fixture with `cp` and `sed`: no tool copies a d
 reference solutions used to validate the tasks were applied in scratch copies by a script, not in
 the repo. Everything in the repo went through `bin/jrefactor` batches (`create_file`,
 `replace_text`).
+
+## 2026-11-13: the A/B arm without build (`no-build-arm`)
+
+By hand: the golden case's `in/` and `steps.json` copied from `batch_build_method` with `cp -r`, and
+the wrapper `eval-tasks/jrefactor-ab-server-no-build` made from the skeleton one with `sed` and
+`chmod +x`: no tool copies files or sets a file's mode. The Java went through `bin/jrefactor`
+(`add_declaration`, `create_file`, `replace_statements`, `replace_expression`, `insert_statements`,
+and `extract_variable`, `extract_function`, `inline` and `fold` for the refactoring).
