@@ -75,13 +75,14 @@ final class Batch {
    * The steps of {@code base}, the refused batch, with {@code changes} made: {@code step} N
    * replaces step N (keeping its tool when the change names none), {@code after} N adds a step
    * after step N (0 for first), {@code remove} N drops step N; a remove and an after move a step.
-   * Numbers are those of {@code base}.
+   * Numbers are those of {@code base}; one that step or remove names twice is refused.
    */
   static List<Map<String, Object>> retried(
       List<Map<String, Object>> base, List<Map<String, Object>> changes) {
     List<Map<String, Object>> replaced = new ArrayList<>(base);
     java.util.Set<Integer> removed = new java.util.HashSet<>();
     java.util.Map<Integer, List<Map<String, Object>>> added = new java.util.HashMap<>();
+    java.util.Set<Integer> changed = new java.util.HashSet<>();
     for (Map<String, Object> c : changes) {
       Map<String, Object> step = new LinkedHashMap<>(c);
       Object replace = step.remove("step");
@@ -93,7 +94,13 @@ final class Batch {
             "each step of a retry has one of step (the number of the one it replaces), after (the"
                 + " number of the one it follows) or remove (the number of the one it drops).");
       }
-      int n = ((Number) (replace != null ? replace : after != null ? after : remove)).intValue();
+      if (!((replace != null ? replace : after != null ? after : remove)
+          instanceof Number number)) {
+        throw new Refusal(
+            "step, after and remove are numbers, those of the refused batch's steps (\"step\": 2,"
+                + " not \"2\").");
+      }
+      int n = number.intValue();
       // A step numbered one past the last is a new last step, as after the last one.
       boolean appended = replace != null && n == base.size() + 1;
       if (n < (after != null ? 0 : 1) || (n > base.size() && !appended)) {
@@ -105,6 +112,12 @@ final class Batch {
                 + " is none of them (step "
                 + (base.size() + 1)
                 + " adds one at the end).");
+      }
+      if (after == null && !changed.add(n)) {
+        throw new Refusal(
+            "step "
+                + n
+                + " is changed twice in this retry (by step or remove): send one change for it.");
       }
       if (remove != null) {
         removed.add(n);
@@ -176,10 +189,11 @@ final class Batch {
       if (!(tool instanceof String name)) {
         throw new Refusal("step " + number + " has no tool.");
       }
-      if (name.equals("batch") || name.equals("undo")) {
-        throw new Refusal("step " + number + ": " + name + " cannot be a step of a batch.");
-      }
       Tools.Def def = Tools.named(name, project.session());
+      // By the resolved name: a client's mcp__<server>__undo is undo too.
+      if (def.name().equals("batch") || def.name().equals("undo")) {
+        throw new Refusal("step " + number + ": " + def.name() + " cannot be a step of a batch.");
+      }
       Map<String, Object> stepArgs = new LinkedHashMap<>();
       if (step.get("args") instanceof Map<?, ?> given) {
         given.forEach((k, v) -> stepArgs.put(String.valueOf(k), v));

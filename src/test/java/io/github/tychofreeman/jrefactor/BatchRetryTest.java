@@ -128,4 +128,29 @@ class BatchRetryTest {
         List.of("rename", "inline", "extract_function"),
         out.stream().map(s -> s.get("tool")).toList());
   }
+
+  @Test
+  void aStepNumberThatIsNoNumberIsRefused() {
+    List<Map<String, Object>> base = List.of(Map.of("tool", "inline", "args", Map.of("n", 1)));
+    Refusal refused =
+        assertThrows(
+            Refusal.class,
+            () -> Batch.retried(base, List.of(Map.of("step", "1", "args", Map.of()))));
+    assertTrue(refused.getMessage().contains("are numbers"), refused.getMessage());
+  }
+
+  @Test
+  void aStepChangedTwiceIsRefused() {
+    List<Map<String, Object>> base =
+        List.of(
+            Map.of("tool", "inline", "args", Map.of("n", 1)),
+            Map.of("tool", "rename", "args", Map.of("n", 2)));
+    for (List<Map<String, Object>> changes :
+        List.of(
+            List.of(Map.<String, Object>of("step", 2), Map.<String, Object>of("step", 2)),
+            List.of(Map.<String, Object>of("step", 2), Map.<String, Object>of("remove", 2)))) {
+      Refusal refused = assertThrows(Refusal.class, () -> Batch.retried(base, changes));
+      assertTrue(refused.getMessage().contains("step 2 is changed twice"), refused.getMessage());
+    }
+  }
 }

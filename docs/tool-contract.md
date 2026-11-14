@@ -1190,7 +1190,9 @@ else from the one project method the line's calls call (`m(...)`, `super.m(...)`
 `this(...)`, `super(...)`), declared in any file; `column` keeps the call starting there. A line
 calling two methods is refused with each one's columns ("line 6 of com/example/Use.java calls 2
 methods: Pricing.price(int) at columns 14 and 27; Use.size(Pricing) at column 38. Pass column, or
-name."), and so is a line with neither. `change_type` with `parameter` or `return_type` takes it
+name."), and so is a line with neither, and one declaring two methods without `column` (#485:
+the last was taken): "line 4 of com/example/Use.java declares 2 methods: Use.a() at column 7;
+Use.b() at column 29. Pass column, or name." `change_type` with `parameter` or `return_type` takes it
 too (`ByLine.named`).
 - `add_parameter`: `type`, `value` (a Java expression each call passes),
   optional `before` (default last), optional `imports`; `values` (constant to expression) with
@@ -1924,7 +1926,8 @@ field, an instance getter or setter that would override a method of the class's 
   the refused one, and every refused batch ends by saying how to retry. From the command line,
   the refused batch is kept between runs, beside the undo stack (#194, 2026-11-13). Refused: a retry with no
   refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
-  it. The refusal's hint says a step's tool can change and how to move a step.
+  it, one that is not a JSON number (`"2"`), and a step that `step` or `remove` names twice (#488;
+  `after` may repeat, each step added in order). The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server
@@ -1948,7 +1951,7 @@ field, an instance getter or setter that would override a method of the class's 
   With `"end"` the gate runs once after the last step.
 - Result: `batch of n steps:` then each step's result, numbered; with `"end"`, a
   last line `checked at the end: no new compile errors`.
-- `batch` and `undo` cannot be steps.
+- `batch` and `undo` cannot be steps, under a client's name too (`mcp__jrefactor__undo`; #473).
 
 ## `undo` (built)
 
