@@ -445,7 +445,9 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
   #344, 2026-11-11; it had been refused).
 - Refused: `this`, or a bare call of a method of the interface, of its supertypes (an
   inherited default, roadmap #94) or of `Object`, in
-  the code that moves (it would mean another object); an anonymous class with
+  the code that moves (it would mean another object); `super.m()`, `super.f` or `super::m`
+  without a qualifier there (roadmap #240, issue #472, 2026-11-13: "the anonymous class uses
+  super, which in a lambda would mean another class's superclass. Keep it."); an anonymous class with
   fields or other methods; a form that does not compile
   there (the gate). Result: `converted the lambda at line 7 of <file> to
   String::length`.
@@ -680,7 +682,9 @@ refuses a dominated pattern).
 Each case's body passes `NameCheck` (roadmap #223, issue #468, 2026-11-13): a name that its case's
 type would resolve to another declaration is refused ("moving the cases into their types would
 make K at line 8 of com/example/Circle.java mean the field K of Circle, not what it meant where it
-was written: ..."). A field read through the pattern variable (`c.radius`) becomes `this.radius`
+was written: ..."). A case that uses `super` (a call, a field or a method reference) is refused,
+for an enum's case too (roadmap #240, issue #472): "the case of Circle uses super, which on Circle
+would mean its own superclass. Keep the switch as it is." A field read through the pattern variable (`c.radius`) becomes `this.radius`
 where the body declares a variable of that name, else `radius`. A body's own locals are told by
 binding, so a field of the method's class named as a local of another scope is refused as a field.
 

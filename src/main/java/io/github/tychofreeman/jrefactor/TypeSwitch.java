@@ -34,6 +34,9 @@ import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
@@ -391,6 +394,16 @@ final class TypeSwitch {
     }
     if (!Nodes.all(e, ThisExpression.class).isEmpty()) {
       throw new Refusal("a case uses this, which on the case's type would mean another object.");
+    }
+    if (!Nodes.all(e, SuperMethodInvocation.class).isEmpty()
+        || !Nodes.all(e, SuperFieldAccess.class).isEmpty()
+        || !Nodes.all(e, SuperMethodReference.class).isEmpty()) {
+      throw new Refusal(
+          "the case of "
+              + typeName
+              + " uses super, which on "
+              + typeName
+              + " would mean its own superclass. Keep the switch as it is.");
     }
     for (Statement s : Nodes.all(e, Statement.class)) {
       boolean jump =

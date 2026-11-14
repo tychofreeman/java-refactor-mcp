@@ -1,0 +1,1 @@
+the anonymous class uses super, which in a lambda would mean another class
