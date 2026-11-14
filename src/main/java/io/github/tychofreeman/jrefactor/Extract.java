@@ -4,7 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Block;
@@ -35,9 +34,7 @@ final class Extract {
     if (startArg == null || endArg == null) {
       throw new Refusal("extract_function needs start_line and end_line.");
     }
-    if (!SourceVersion.isName(name)) {
-      throw new Refusal("name " + name + " is not a valid Java name.");
-    }
+    Precondition.require(Precondition.identifier(name, "the new method"));
     String visibility = args.string("visibility");
     if (visibility != null
         && !List.of("private", "package", "protected", "public").contains(visibility)) {
