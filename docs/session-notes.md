@@ -322,7 +322,7 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call
-  (#184, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
+  (#192, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
   the field (`returnsField`). JDT's `findDeclaringNode` gives null for a record's field:
   `NameCheck.declaration` takes the component of that name.
 
@@ -687,6 +687,9 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Traps
 
+- Parallel branches each took the next free roadmap number, and three numbers were used twice
+  (175-177, 2026-11-13; renumbered to 182, 184 and 185). Before taking a number, check `main` and
+  the open branches' `docs/design.md`, and check again when rebasing.
 - `gh pr checks` right after `gh pr create` can say "no checks reported" before
   CI registers, and `--watch` then returns at once. Wait for the run. A PR that
   conflicts with `main` gets no run at all: check its `mergeable` state.
