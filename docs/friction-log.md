@@ -1410,6 +1410,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   and static method), `move_parameter`, `move` (to `Names`), `rename`, `replace_statements`,
   `insert_statements`. Goldens are resources.
 
+## 2026-11-13: fix-journal-parent-dirs
+
+- No Java by hand. One `batch` (check `"end"`): three `add_parameter`s threading the project into
+  `Journal.put` and both `restore`s, and two `replace_text`s declaring a `project` in the tests
+  the value named. Its first send used `position`, which `add_parameter` does not take (`before`
+  does); `retry` with three `step` changes fixed it without resending the rest.
+
 ## 2026-11-13: fix-field-change-type
 
 - No Java by hand. `extract_function` twice (the new parameter's checks, the return type's

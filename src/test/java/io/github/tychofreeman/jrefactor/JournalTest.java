@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -81,8 +82,9 @@ class JournalTest {
     Files.createDirectories(kept.getParent());
     Files.writeString(kept, "kept");
     Path file = root.resolve("a/b/c/new.txt");
-    Journal.put(file, "new");
-    Journal.put(file, null);
+    SourceProject project = SourceProject.of(root);
+    Journal.put(project, file, "new");
+    Journal.put(project, file, null);
     assertFalse(Files.exists(root.resolve("a/b")));
     assertTrue(Files.exists(kept));
   }
@@ -134,5 +136,28 @@ class JournalTest {
 
   private static String mode(Path file) throws Exception {
     return PosixFilePermissions.toString(Files.getPosixFilePermissions(file));
+  }
+
+  /** Deleting the project's only file leaves the project's directory. */
+  @Test
+  void deletingTheOnlyFileKeepsTheProjectRoot(@TempDir Path parent) throws Exception {
+    Path root = Files.createDirectories(parent.resolve("project"));
+    SourceProject project = SourceProject.of(root);
+    Path file = root.resolve("A.txt");
+    Journal.put(project, file, "a");
+    Journal.put(project, file, null);
+    assertTrue(Files.isDirectory(root));
+  }
+
+  /** A source root left empty stays: the user made it. */
+  @Test
+  void deletingTheOnlyFileOfASourceRootKeepsIt(@TempDir Path root) throws Exception {
+    Path tests = Files.createDirectories(root.resolve("src/test/java"));
+    SourceProject project = new SourceProject(root, List.of(tests), List.of(), null, new Session());
+    Path file = tests.resolve("p/ATest.java");
+    Journal.put(project, file, "class ATest {}");
+    Journal.put(project, file, null);
+    assertFalse(Files.exists(tests.resolve("p")));
+    assertTrue(Files.isDirectory(tests));
   }
 }

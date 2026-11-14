@@ -38,7 +38,8 @@ class GateTest {
   @Test
   void aRestoreRecreatesTheDirectoryOfTheFileItWrites(@TempDir Path root) throws Exception {
     Path file = root.resolve("gone/A.java");
-    Journal.restore(Map.of(file, "old text"));
+    SourceProject project = SourceProject.of(root);
+    Journal.restore(project, Map.of(file, "old text"));
     assertEquals("old text", Files.readString(file));
   }
 

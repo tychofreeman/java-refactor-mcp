@@ -1,17 +1,23 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +25,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The tools from a shell, one call per process, for a session that cannot run the MCP server. The
@@ -50,8 +57,34 @@ final class Cli {
       """;
 
   public static void main(String[] args) {
-    int status = run(List.of(args), Path.of("").toAbsolutePath(), cacheDir(), System.out);
+    String log = System.getenv("JREFACTOR_LOG");
+    if (log == null || log.isEmpty()) {
+      int status = run(List.of(args), Path.of("").toAbsolutePath(), cacheDir(), System.out);
+      System.out.flush();
+      System.exit(status);
+    }
+    Path cwd = Path.of("").toAbsolutePath();
+    String stdin = List.of(args).contains("-") ? keepStdin() : "";
+    ByteArrayOutputStream copy = new ByteArrayOutputStream();
+    OutputStream both =
+        new OutputStream() {
+          @Override
+          public void write(int b) {
+            System.out.write(b);
+            copy.write(b);
+          }
+
+          @Override
+          public void write(byte[] b, int off, int len) {
+            System.out.write(b, off, len);
+            copy.write(b, off, len);
+          }
+        };
+    PrintStream out = new PrintStream(both, true, System.out.charset());
+    int status = run(List.of(args), cwd, cacheDir(), out);
+    out.flush();
     System.out.flush();
+    appendLog(Path.of(log), List.of(args), stdin, cwd, copy.toString(System.out.charset()), status);
     System.exit(status);
   }
 
@@ -381,5 +414,90 @@ final class Cli {
             ? Path.of(cache)
             : Path.of(System.getProperty("user.home"), ".cache");
     return base.resolve("jrefactor");
+  }
+
+  /**
+   * The session log line ({@link SessionLog#entry}) of a run of {@code args} from {@code cwd} that
+   * printed {@code result} and exited with {@code status}, as a shell call of {@code bin/jrefactor}
+   * that {@link SessionReport} reads: each JSON argument written out as its object, {@code stdin}
+   * for {@code -}.
+   */
+  static String logLine(
+      List<String> args, String stdin, Path cwd, String result, int status, Instant now) {
+    ObjectNode hook = SessionLog.JSON.createObjectNode();
+    hook.put("hook_event_name", status == 0 ? "PostToolUse" : "PostToolUseFailure");
+    hook.put("tool_use_id", "jrefactor-" + UUID.randomUUID());
+    hook.put("tool_name", "Bash");
+    hook.putObject("tool_input").put("command", command(args, stdin));
+    hook.put("cwd", cwd.toString());
+    hook.put(status == 0 ? "tool_response" : "error", result.stripTrailing());
+    return SessionLog.entry(SessionLog.JSON.writeValueAsString(hook), now);
+  }
+
+  /** Reads stdin whole and puts it back for {@link #run}; "" when it cannot be read. */
+  private static String keepStdin() {
+    try {
+      byte[] in = System.in.readAllBytes();
+      System.setIn(new ByteArrayInputStream(in));
+      return new String(in, StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      return "";
+    }
+  }
+
+  /** Appends the log line of a run to {@code log}, the file JREFACTOR_LOG names. */
+  private static void appendLog(
+      Path log, List<String> args, String stdin, Path cwd, String result, int status) {
+    try {
+      Files.writeString(
+          log,
+          logLine(args, stdin, cwd, result, status, Instant.now()) + "\n",
+          StandardOpenOption.CREATE,
+          StandardOpenOption.APPEND);
+    } catch (Exception | Error e) {
+      // A log line lost is better than a run changed.
+    }
+  }
+
+  /**
+   * {@code bin/jrefactor} and {@code args} as one shell command, each JSON argument as its object.
+   */
+  private static String command(List<String> args, String stdin) {
+    StringBuilder out = new StringBuilder("bin/jrefactor");
+    for (String word : args) {
+      out.append(' ').append(isJson(word) ? jsonWord(word, stdin) : quoted(word));
+    }
+    return out.toString();
+  }
+
+  /**
+   * A JSON argument as one shell word: its object, sections filled in, on one line in single
+   * quotes, with the characters that end a word or a command written as JSON escapes; the word
+   * itself, quoted, when it cannot be read.
+   */
+  private static String jsonWord(String word, String stdin) {
+    try {
+      String text =
+          word.equals("-")
+              ? stdin
+              : word.startsWith("@") ? Files.readString(Path.of(word.substring(1))) : word;
+      String json = JSON.writeValueAsString(withSections(text));
+      return "'"
+          + json.replace("'", "\\u0027")
+              .replace(";", "\\u003b")
+              .replace("&", "\\u0026")
+              .replace("|", "\\u007c")
+          + "'";
+    } catch (IOException | RuntimeException e) {
+      return quoted(word);
+    }
+  }
+
+  /** {@code word} as one shell word: in single quotes unless every character is safe bare. */
+  private static String quoted(String word) {
+    if (word.matches("[A-Za-z0-9_./=:,@+-]+")) {
+      return word;
+    }
+    return "'" + word.replace("'", "'\\''") + "'";
   }
 }
