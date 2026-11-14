@@ -1,1 +1,1 @@
-Point is a record, and this tool takes a class or interface here. Send the name of one: com/example/Point.java declares none.
+Point is a record, and this tool takes a class or interface here. Its file com/example/Point.java declares no class or interface to send in its place.
