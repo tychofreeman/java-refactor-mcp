@@ -646,6 +646,9 @@ Each was chosen from options; the record named beside it has the options it beat
   On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
   expression and finds it again by offset (the import fix changes only lines above it).
 
+- A member's `@Override` is `Nodes.overrideAnnotation` (#506, 2026-11-14): `java.lang.Override` by
+  binding, or by name when the annotation does not resolve; not a name ending in `Override`.
+
 - `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
   2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
