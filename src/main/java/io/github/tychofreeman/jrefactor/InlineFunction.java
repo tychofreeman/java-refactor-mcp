@@ -1024,13 +1024,19 @@ final class InlineFunction {
     }
   }
 
-  /** Whether {@code node} names a static field or method that {@code owner} declares. */
+  /**
+   * Whether {@code node} names a static field or method that {@code owner} declares by its simple
+   * name; a qualified use ({@code Keys.declared(b)}) means the same in another class.
+   */
   private static boolean usesMembersOf(ASTNode node, ITypeBinding owner) {
     boolean[] found = {false};
     node.accept(
         new ASTVisitor() {
           @Override
           public boolean visit(SimpleName n) {
+            if (Nodes.qualified(n)) {
+              return true;
+            }
             IBinding b = n.resolveBinding();
             // Instance members get the receiver before them; statics would mean another class's.
             if (b instanceof IVariableBinding v
