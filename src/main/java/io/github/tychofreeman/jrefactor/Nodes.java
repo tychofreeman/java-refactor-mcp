@@ -5,12 +5,16 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 
 /** Where syntax nodes are in their source text. */
 final class Nodes {
+
+  /** The most characters {@link #show} gives. */
+  private static final int SHOWN = 60;
 
   private Nodes() {}
 
@@ -65,5 +69,24 @@ final class Nodes {
         || (p instanceof PrefixExpression pre
             && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
                 || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
+  }
+
+  /**
+   * {@code node}'s source text on one line, cut to {@link #SHOWN} characters: what a refusal
+   * quotes, so the model can find it in the file. The node's own {@code toString} reformats it,
+   * over several lines for a lambda or an anonymous class.
+   */
+  static String show(ASTNode node) {
+    String source = node.getRoot() instanceof CompilationUnit u ? Jdt.sourceOf(u) : null;
+    String text =
+        source != null && end(node) <= source.length()
+            ? source.substring(node.getStartPosition(), end(node))
+            : node.toString();
+    String line =
+        text.strip()
+            .replaceAll("\\(\\s*\\R\\s*", "(")
+            .replaceAll("\\s*\\R\\s*([.)])", "$1")
+            .replaceAll("\\s*\\R\\s*", " ");
+    return line.length() <= SHOWN ? line : line.substring(0, SHOWN - 3) + "...";
   }
 }
