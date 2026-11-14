@@ -36,6 +36,9 @@ fact here becomes wrong, fix or remove it in the same PR.
   outside `resources/`. The write guard is an experiment. With both on, a change
   no tool makes is logged and asked of the user, not made by hand.
   A session started before they existed has neither (hooks load at start).
+  `bin/session-report` judges a shell command's Java reads and writes by `Guard.use`, the guards'
+  own test (#519), so a new reader or writer goes in `Guard` and both follow; the report's regexes
+  say only whether any file was written.
 - The README (2026-11-05, the user asked for a review for programmers who let
   models do most of the work): what you get today and what is not proven, the
   tools, requirements (a single-module Maven project), install, Claude Code,

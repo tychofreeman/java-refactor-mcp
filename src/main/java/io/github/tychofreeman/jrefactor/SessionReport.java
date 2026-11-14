@@ -46,14 +46,13 @@ final class SessionReport {
   private static final Pattern REDIRECT =
       Pattern.compile("(?<![0-9&>])>>?\\s*(?!&|/dev/null)([^\\s;&|]+)");
 
-  /** Commands that change files in place. */
+  /**
+   * Commands that change files in place, any file (Java as the write guard judges it: {@link
+   * Guard#use}).
+   */
   private static final Pattern WRITES =
       Pattern.compile(
           "(^|[;&|(]\\s*|\\s)(sed\\s+-i|perl\\s+-\\w*i|tee|cp|mv|rm|touch|patch)(\\s|$)");
-
-  /** Commands that read a Java file. */
-  private static final Pattern READS =
-      Pattern.compile("^\\s*(cat|head|tail|sed\\s+-n|grep|rg|less|awk)\\b.*\\.java\\b");
 
   /** The start of a heredoc, with its delimiter (group 2). */
   private static final Pattern HEREDOC = Pattern.compile("<<-?\\s*(['\"]?)(\\w+)\\1");
@@ -198,7 +197,7 @@ final class SessionReport {
         scratch.add(what);
       } else if (writes) {
         byHand.add(what);
-        int n = handLines(tool, input);
+        int n = handLines(tool, input, cwd);
         if (n >= LARGE_WRITE) {
           large.add(what + ": " + n + " lines");
         }
@@ -207,7 +206,7 @@ final class SessionReport {
         }
         pending.clear();
       } else {
-        String kind = readKind(tool, input);
+        String kind = readKind(tool, input, cwd);
         if (kind != null) {
           count(reads, kind);
         }
@@ -402,7 +401,8 @@ final class SessionReport {
 
   /**
    * Whether a call that is not ours changed files of the project: true by hand, false not at all,
-   * null only files outside the working directory (scratch files).
+   * null only files outside the working directory (scratch files). A shell command writes the files
+   * it redirects into, any file with {@link #WRITES}, and Java as the write guard judges it.
    */
   private static Boolean writes(String tool, JsonNode input, String cwd) {
     switch (tool) {
@@ -411,9 +411,14 @@ final class SessionReport {
         return outside(cwd, path) ? null : Boolean.TRUE;
       }
       case "Bash" -> {
-        String shell = unquoted(input.path("command").asString(""));
+        String command = input.path("command").asString("");
+        String shell = unquoted(command);
         boolean inPlace = WRITES.matcher(shell).find();
         List<String> targets = targets(shell);
+        Guard.Use java = Guard.use(command, cwd, true);
+        if (java != null) {
+          targets.add(java.path());
+        }
         if (!inPlace && targets.isEmpty()) {
           return false;
         }
@@ -428,15 +433,14 @@ final class SessionReport {
     }
   }
 
-  /** The lines of Java a write by hand put in. */
-  private static int handLines(String tool, JsonNode input) {
+  /**
+   * The lines of Java a write by hand put in; a shell command's, when it writes Java as the write
+   * guard judges it.
+   */
+  private static int handLines(String tool, JsonNode input, String cwd) {
     if (tool.equals("Bash")) {
       String command = input.path("command").asString("");
-      String shell = unquoted(command);
-      boolean java =
-          targets(shell).stream().anyMatch(t -> t.endsWith(".java"))
-              || (WRITES.matcher(shell).find() && shell.contains(".java"));
-      return java ? (int) command.lines().count() : 0;
+      return Guard.use(command, cwd, true) != null ? (int) command.lines().count() : 0;
     }
     if (!input.path("file_path").asString("").endsWith(".java")) {
       return 0;
@@ -482,11 +486,14 @@ final class SessionReport {
     return out.toString();
   }
 
-  private static String readKind(String tool, JsonNode input) {
+  /**
+   * The kind of a read, for the counts: a Bash command that reads Java as the read guard judges it.
+   */
+  private static String readKind(String tool, JsonNode input, String cwd) {
     if (tool.equals("Read")) {
       return input.path("file_path").asString("").endsWith(".java") ? "Read java" : "Read other";
     }
-    if (tool.equals("Bash") && READS.matcher(input.path("command").asString("")).find()) {
+    if (tool.equals("Bash") && Guard.use(input.path("command").asString(""), cwd, false) != null) {
       return "Bash java";
     }
     return null;
