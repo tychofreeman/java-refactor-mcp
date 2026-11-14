@@ -784,6 +784,12 @@ method form it becomes the method's body, each `yield` whose target is that swit
 switch a statement inside one) is refused, as before: "the case of RED has yield 5;, which in the
 new method would leave it instead of the code around the switch."
 
+A jump in a case is judged by `Effects.exits` (issue #515, 2026-11-14), the gate's own rule: a
+`break outer;` or `continue outer;` whose label is outside the case leaves it, even from a loop
+inside the case ("the case of Circle has break outer;, which in the new method would leave it ...";
+it had been taken as staying, and the gate refused the result as compile errors), and a `return`
+in a method of a local class declared in the case does not (it had been refused).
+
 Roadmap #154, 2026-11-13 (increment 8): the enum, the switch's interface or abstract class, and
 each case's type may be member types (`Shelf.Level`, `Shape.Circle`), not only top-level ones:
 each is written in the file of its outermost type. A local or anonymous class is still refused.
@@ -1838,6 +1844,11 @@ Arguments: `file`, `line` (the line the loop starts on), `to`, `preserve_excepti
 becomes another statement form running the same code in the same order (the user, 2026-11-10:
 statement forms here, the functional ones in `loop_to_stream`). Built so far:
 
+A body that cannot complete normally (`Effects.completesNormally`: it ends in a return, throw,
+break, continue or yield, or an if/else whose branches each do) gets no update or exit test after
+its last statement (issue #515, 2026-11-14: a body ending in `yield` got `i++;` after it, which
+the gate refused as unreachable).
+
 - `to=for_each` from an index for, `for (int i = 0; i < x.size(); i++)` over a `List` or `i <
   x.length` over an array (`++i` and `i += 1` too): each `x.get(i)` or `x[i]` becomes the element.
   A first local `T e = x.get(i);` the body does not assign names it and is dropped; else the name
@@ -1901,7 +1912,9 @@ the if, at its indentation. Arguments: `file`, `line` (the line the if starts on
 
 Result: `removed the else of the if at line L in file`, with `; imported ...` when an import is added.
 Refusals: no if on the line, several on it, an if with no else, an if not directly in a block, a
-then-branch that can finish normally (it does not end in return, throw, break, continue or yield),
+then-branch that can finish normally (it does not end in return, throw, break, continue or yield,
+or in an if with an else whose two branches each end so: `Effects.completesNormally`, issue #515,
+2026-11-14; such an if had been refused),
 a local or class the else block declares that a statement after the if names (it would take the
 place of a field of that name there; rename the local first), and the gate's "would add compile
 errors".

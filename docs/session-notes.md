@@ -294,7 +294,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98). The node around one:
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
   a lambda or an anonymous class), `Nodes.typeAround(n)` (the binding of the named or anonymous
-  class whose body holds `n`), and `Nodes.unparenthesized(e)` (#508), not a new parent loop.- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
+  class whose body holds `n`), and `Nodes.unparenthesized(e)` (#508), not a new parent loop.
+- A name as a type's members would resolve it is `Jdt.probeType` (#493): a probe field declared
+  as a member (`Jdt.withProbe`: before the first member, or after an enum's constants), imports
+  fixed, parsed. Not a new copy that inserts the field itself.
+- Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
   where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
   `restep` for a member moved between files (each step becomes the target's) and `member` for the
   indentation of a type's members. Not a new helper in a tool, and not a written `"  "`.
@@ -348,6 +352,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `remove_parameter` and `move_parameter` judge an argument by `Signatures.acts` (`Effects`'s
   changes, a new array, and a string's `+` of an object, whose `toString` `Effects` does not see) and
   `Signatures.mayThrow` (#475); the old syntax-only `Signatures.pure` is gone.
+- Whether a jump leaves some code is `Effects.exits(jump, root)` (labels, loops, switches, and
+  lambdas and classes declared inside), and whether a statement can complete normally is
+  `Effects.completesNormally` (#515): a tool asks them, not its own parent walk or last-statement test.
 - A refactoring that moves code declares it to `Behavior.check` (a `Move`: the code,
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
   the gate runs the effect, place, copy, exceptional and `NameCheck` rules (#96,
@@ -469,13 +476,13 @@ Each was chosen from options; the record named beside it has the options it beat
   indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either
   handled already (`catches`, `allows`), declared further (`declare`, by `Signatures.family`) or
   caught (`catchAt`); `write` emits the clauses and the tries as inserts, so they do not overlap
-  other edits. The exception's supertypes come from a probe field parsed in the target's file.
+  other edits. The exception's supertypes come from `Jdt.probeType` in the target's file.
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
   of the files that name the subclass and the superclass's file, text edits per file, each
   through `Imports.fix` (the subclass's imports as the chosen ones) and all through
   `Gate.applyOrRefuse`, the subclass's file as null. `usesInstance` refuses a body that needs the
   instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
-  `samOf` finds a named type's method by parsing the superclass with a probe field.
+  `samOf` finds a named type's method through `Jdt.probeType` on the superclass.
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits

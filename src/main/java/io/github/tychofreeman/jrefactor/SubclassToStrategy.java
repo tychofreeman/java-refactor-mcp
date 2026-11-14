@@ -502,17 +502,10 @@ final class SubclassToStrategy {
       String type,
       MethodDeclaration own)
       throws Exception {
-    int at = Lines.end(text, base.getName().getStartPosition());
-    String probe = text.substring(0, at) + type + " jrefactorProbe;\n" + text.substring(at);
-    String fixed = Imports.fix(project, file, text, probe, List.of()).text();
-    CompilationUnit unit = Jdt.parse(project, file, fixed);
-    for (VariableDeclarationFragment f : Nodes.all(unit, VariableDeclarationFragment.class)) {
-      if (f.getName().getIdentifier().equals("jrefactorProbe") && f.resolveBinding() != null) {
-        IMethodBinding sam = f.resolveBinding().getType().getFunctionalInterfaceMethod();
-        if (sam != null && sam.getParameterTypes().length == own.parameters().size()) {
-          return sam.getName();
-        }
-      }
+    ITypeBinding t = Jdt.probeType(project, file, text, base, type, List.of());
+    IMethodBinding sam = t == null ? null : t.getFunctionalInterfaceMethod();
+    if (sam != null && sam.getParameterTypes().length == own.parameters().size()) {
+      return sam.getName();
     }
     throw new Refusal(
         type

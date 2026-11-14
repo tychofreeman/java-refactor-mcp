@@ -203,7 +203,7 @@ final class ThrowsCallers {
   /**
    * The qualified names of the exception {@code name} and its superclasses, nearest first, as it
    * resolves in the type around {@code at} in {@code file} ({@code text}) with {@code chosen} as
-   * imports: a probe field of that type, parsed with the imports fixed.
+   * imports ({@link Jdt#probeType}).
    */
   static List<String> exceptionSupers(
       SourceProject project,
@@ -215,19 +215,13 @@ final class ThrowsCallers {
       List<String> chosen)
       throws Exception {
     AbstractTypeDeclaration type = Nodes.ancestor(at, AbstractTypeDeclaration.class);
-    int open = text.indexOf('{', Nodes.end(type.getName())) + 1;
-    String probe =
-        text.substring(0, open) + "\n" + name + " jrefactorProbe;" + text.substring(open);
-    String fixed = Imports.fix(project, file, text, probe, chosen).text();
     List<String> out = new ArrayList<>();
-    for (VariableDeclarationFragment f :
-        Nodes.all(Jdt.parse(project, file, fixed), VariableDeclarationFragment.class)) {
-      if (f.getName().getIdentifier().equals("jrefactorProbe") && f.resolveBinding() != null) {
-        for (ITypeBinding t = f.resolveBinding().getType(); t != null; t = t.getSuperclass()) {
-          if (!t.isRecovered()) {
-            out.add(t.getErasure().getQualifiedName());
-          }
-        }
+    for (ITypeBinding t =
+            Jdt.probeType(project, file, text, type, name, chosen);
+        t != null;
+        t = t.getSuperclass()) {
+      if (!t.isRecovered()) {
+        out.add(t.getErasure().getQualifiedName());
       }
     }
     if (!out.contains("java.lang.Throwable")) {

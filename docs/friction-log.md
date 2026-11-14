@@ -1588,6 +1588,15 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
   two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.
 
+## 2026-11-14: probe-type
+
+- `add_declaration` of the `Jdt.probeType` tests before the method existed was refused: the stub
+  it would declare is typed from the use, and `probeType(...).getQualifiedName()` gives no return
+  type to type it by (`Object`). Added the helper first, then the tests (a refactoring first, as
+  CLAUDE.md allows when the change is not yet easy).
+- No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
+  one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.
+
 ## 2026-11-14: nodes-ancestor
 
 - `fold` of `Nodes.ancestor` (a loop, then `return null`) was refused: fold matches one return
