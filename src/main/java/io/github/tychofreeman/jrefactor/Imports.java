@@ -60,139 +60,7 @@ final class Imports {
   static Fixed fix(
       SourceProject project, Path file, String before, String after, List<String> chosen)
       throws IOException {
-    CompilationUnit unit = Jdt.parse(project, file, after);
-    CompilationUnit beforeUnit = Jdt.parse(project, file, before);
-    Set<String> unresolvedBefore = unresolved(beforeUnit);
-    Set<String> missing = unresolved(unit);
-    missing.removeAll(unresolvedBefore);
-    Set<String> usedBefore = names(Jdt.parseSyntax(before));
-    Set<String> usedAfter = names(unit);
-
-    Map<String, ImportDeclaration> imported = new HashMap<>();
-    List<ImportDeclaration> remove = new ArrayList<>();
-    // An import this call or its batch added that a type of the file now shadows: a later step
-    // declared the name the import was found for.
-    String start = Journal.written(project).get(file);
-    Set<String> hadAtStart = importsOf(start == null ? before : start);
-    Set<String> declared = new TreeSet<>();
-    for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
-      declared.add(t.getName().getIdentifier());
-    }
-    for (Object o : unit.imports()) {
-      ImportDeclaration i = (ImportDeclaration) o;
-      if (i.isStatic() || i.isOnDemand()) {
-        continue;
-      }
-      String qualified = i.getName().getFullyQualifiedName();
-      String simple = simpleName(qualified);
-      imported.put(simple, i);
-      if ((usedBefore.contains(simple) && !usedAfter.contains(simple))
-          || (declared.contains(simple) && !hadAtStart.contains(qualified))) {
-        remove.add(i);
-      }
-    }
-
-    Map<String, String> picks = new HashMap<>();
-    for (String name : chosen) {
-      picks.put(simpleName(name), name);
-    }
-    // Evidence for an ambiguous name: what the file imported before this call or its batch, and
-    // the packages of the imports it keeps.
-    Set<String> prior = importsOf(before);
-    prior.addAll(importsOf(Journal.written(project).get(file)));
-    Set<String> packages = new TreeSet<>();
-    for (ImportDeclaration i : imported.values()) {
-      if (!remove.contains(i)) {
-        packages.add(packageOf(i.getName().getFullyQualifiedName()));
-      }
-    }
-    List<String> chose = new ArrayList<>();
-    Set<String> add = toImport(project, file, missing, imported, picks, prior, packages, chose);
-    add.addAll(staticImports(unit, beforeUnit));
-    Set<String> using = new TreeSet<>(add);
-    for (Object o : unit.imports()) {
-      using.add(((ImportDeclaration) o).getName().getFullyQualifiedName());
-    }
-    add.addAll(assertions(project, file, after, unit, beforeUnit, using));
-    // A name in a lambda is reported only once the names around it resolve, so look again with
-    // the imports found so far, until no more are needed.
-    Set<String> found = new TreeSet<>(add);
-    while (!found.isEmpty()) {
-      Set<String> still = unresolved(Jdt.parse(project, file, withImports(after, unit, add)));
-      still.removeAll(unresolvedBefore);
-      found = toImport(project, file, still, imported, picks, prior, packages, chose);
-      found.removeAll(add);
-      add.addAll(found);
-    }
-    if (add.isEmpty() && remove.isEmpty()) {
-      return new Fixed(after, 0, List.of());
-    }
-
-    List<ImportDeclaration> kept = new ArrayList<>();
-    for (Object o : unit.imports()) {
-      if (!remove.contains(o)) {
-        kept.add((ImportDeclaration) o);
-      }
-    }
-    TreeMap<Integer, StringBuilder> inserts = new TreeMap<>();
-    // With every import removed, the new ones take the first removed one's place.
-    int replacing =
-        kept.isEmpty() && !remove.isEmpty()
-            ? Lines.start(after, remove.get(0).getStartPosition())
-            : -1;
-    // Static imports first; where both kinds go at one place, a blank line between them.
-    List<String> ordered = new ArrayList<>(add);
-    ordered.sort(
-        Comparator.comparing((String n) -> !n.startsWith("static ")).thenComparing(n -> n));
-    for (String name : ordered) {
-      int at = replacing >= 0 ? replacing : insertionPoint(after, unit, kept, name);
-      StringBuilder lines = inserts.computeIfAbsent(at, k -> new StringBuilder());
-      if (!name.startsWith("static ")
-          && lines.length() > 0
-          && lines.lastIndexOf("import static ") == lines.lastIndexOf("import ")) {
-        lines.append('\n');
-      }
-      lines.append("import ").append(name).append(";\n");
-    }
-    List<TextEdit> edits = new ArrayList<>();
-    // Imports on one line share its cut.
-    for (ImportDeclaration i : remove) {
-      TextEdit cut =
-          new TextEdit(
-              Lines.start(after, i.getStartPosition()),
-              Lines.end(after, i.getStartPosition() + i.getLength()),
-              "");
-      if (!edits.contains(cut)) {
-        edits.add(cut);
-      }
-    }
-    if (kept.isEmpty() && add.isEmpty() && !edits.isEmpty()) {
-      TextEdit last = edits.get(edits.size() - 1);
-      if (last.end() < after.length() && after.charAt(last.end()) == '\n') {
-        edits.set(edits.size() - 1, new TextEdit(last.start(), last.end() + 1, ""));
-      }
-    }
-    int packageEnd = packageEnd(after, unit);
-    for (Map.Entry<Integer, StringBuilder> e : inserts.entrySet()) {
-      int at = e.getKey();
-      boolean first = kept.isEmpty() && replacing < 0 && at == packageEnd && packageEnd > 0;
-      edits.add(new TextEdit(at, at, (first ? "\n" : "") + e.getValue()));
-    }
-    String fixed = TextEdit.apply(after, edits, 0);
-
-    List<String> notes = new ArrayList<>();
-    if (!add.isEmpty()) {
-      notes.add("imported " + String.join(", ", add));
-    }
-    if (!remove.isEmpty()) {
-      List<String> names = new ArrayList<>();
-      for (ImportDeclaration i : remove) {
-        names.add(i.getName().getFullyQualifiedName());
-      }
-      notes.add("removed import " + String.join(", ", names));
-    }
-    notes.addAll(chose);
-    return new Fixed(fixed, count(fixed) - count(after), notes);
+    return render(after, plan(project, file, before, after, chosen));
   }
 
   /**
@@ -222,21 +90,17 @@ final class Imports {
   }
 
   /**
-   * The fully qualified names to import for the simple {@code names}: the one chosen, the one class
-   * with that name, or, of several, the one {@link #chosen} on the file's evidence ({@code prior},
-   * {@code packages}), said in {@code notes}. Names already imported, or that no class has, are
-   * left out; the names still ambiguous are refused together, a {@code java.*} candidate suggested
-   * first.
+   * The fully qualified names to import for the simple {@code names}: the one picked, the one class
+   * with that name, or, of several, the one {@link #chosen} on the file's {@code evidence}. Names
+   * already imported, or that no class has, are left out; the names still ambiguous are refused
+   * together, a {@code java.*} candidate suggested first.
    */
   private static Set<String> toImport(
       SourceProject project,
       Path file,
       Set<String> names,
       Map<String, ImportDeclaration> imported,
-      Map<String, String> picks,
-      Set<String> prior,
-      Set<String> packages,
-      List<String> notes)
+      Evidence evidence)
       throws IOException {
     Set<String> add = new TreeSet<>();
     List<String> ambiguous = new ArrayList<>();
@@ -245,7 +109,7 @@ final class Imports {
       if (imported.containsKey(name)) {
         continue;
       }
-      String pick = picks.get(name);
+      String pick = evidence.picks().get(name);
       if (pick == null) {
         List<String> candidates = index(project).candidates(name);
         if (candidates.isEmpty()) {
@@ -254,7 +118,7 @@ final class Imports {
         pick =
             candidates.size() == 1
                 ? candidates.get(0)
-                : chosen(project, file, candidates, prior, packages, notes);
+                : chosen(project, file, candidates, evidence);
         if (pick == null) {
           String last = candidates.get(candidates.size() - 1);
           ambiguous.add(
@@ -289,18 +153,13 @@ final class Imports {
 
   /**
    * Of several {@code candidates} for a name, the one the file imported before the call or batch
-   * ({@code prior}), else the one the package's other files import most, else the only one in a
-   * package the file imports from ({@code packages}), else the only one in the project's own
-   * sources, with the reason added to {@code notes}; null when none decides.
+   * (the evidence's prior), else the one the package's other files import most, else the only one
+   * in a package the file imports from (its packages), else the only one in the project's own
+   * sources, with the reason added to its notes; null when none decides.
    */
   private static String chosen(
-      SourceProject project,
-      Path file,
-      List<String> candidates,
-      Set<String> prior,
-      Set<String> packages,
-      List<String> notes) {
-    String pick = candidates.stream().filter(prior::contains).findFirst().orElse(null);
+      SourceProject project, Path file, List<String> candidates, Evidence evidence) {
+    String pick = candidates.stream().filter(evidence.prior()::contains).findFirst().orElse(null);
     String why = "the file imported it before";
     // What the package's other files import is stronger evidence than the packages this file
     // imports from: a file of JDT nodes may still want java.util.regex.Pattern.
@@ -325,7 +184,8 @@ final class Imports {
       }
     }
     if (pick == null) {
-      List<String> near = candidates.stream().filter(c -> packages.contains(packageOf(c))).toList();
+      List<String> near =
+          candidates.stream().filter(c -> evidence.packages().contains(packageOf(c))).toList();
       if (near.size() == 1) {
         pick = near.get(0);
         why = "the file imports from " + packageOf(pick);
@@ -342,6 +202,7 @@ final class Imports {
     List<String> others = new ArrayList<>(candidates);
     others.remove(pick);
     String note = "chose " + pick + " over " + String.join(", ", others) + ": " + why;
+    List<String> notes = evidence.notes();
     if (!notes.contains(note)) {
       notes.add(note);
     }
@@ -379,17 +240,7 @@ final class Imports {
 
   /** The single-type imports of {@code text}, as fully qualified names. */
   private static Set<String> importsOf(String text) {
-    Set<String> out = new TreeSet<>();
-    if (text == null) {
-      return out;
-    }
-    for (Object o : Jdt.parseSyntax(text).imports()) {
-      ImportDeclaration i = (ImportDeclaration) o;
-      if (!i.isStatic() && !i.isOnDemand()) {
-        out.add(i.getName().getFullyQualifiedName());
-      }
-    }
-    return out;
+    return importsOf(Jdt.parseSyntax(text));
   }
 
   /**
@@ -698,5 +549,187 @@ final class Imports {
 
   private static void put(Map<String, List<String>> into, String qualified) {
     into.computeIfAbsent(simpleName(qualified), k -> new ArrayList<>()).add(qualified);
+  }
+
+  /**
+   * The imports an edit of a file needs changed: {@code add}, as fully qualified names ({@code
+   * "static a.B.m"} for a static one), and {@code remove}, imports of {@code unit}, the edited text
+   * parsed; {@code chose} says how each ambiguous name was decided.
+   */
+  record Plan(
+      CompilationUnit unit, Set<String> add, List<ImportDeclaration> remove, List<String> chose) {}
+
+  /**
+   * What decides a name several classes have: the model's {@code picks} by simple name, the imports
+   * the file had before the call or batch ({@code prior}), and the packages of the imports it
+   * keeps; each choice made on it is added to {@code notes}.
+   */
+  private record Evidence(
+      Map<String, String> picks, Set<String> prior, Set<String> packages, List<String> notes) {}
+
+  /**
+   * What {@code after}, the new text of {@code file}, needs imported and no longer imports, against
+   * {@code before}, its text before the edit. {@code chosen} are fully qualified names to use for
+   * ambiguous names.
+   */
+  static Plan plan(
+      SourceProject project, Path file, String before, String after, List<String> chosen)
+      throws IOException {
+    CompilationUnit unit = Jdt.parse(project, file, after);
+    CompilationUnit beforeUnit = Jdt.parse(project, file, before);
+    Set<String> unresolvedBefore = unresolved(beforeUnit);
+    Set<String> missing = unresolved(unit);
+    missing.removeAll(unresolvedBefore);
+    Set<String> usedBefore = names(beforeUnit);
+    Set<String> usedAfter = names(unit);
+
+    Map<String, ImportDeclaration> imported = new HashMap<>();
+    List<ImportDeclaration> remove = new ArrayList<>();
+    // An import this call or its batch added that a type of the file now shadows: a later step
+    // declared the name the import was found for.
+    String start = Journal.written(project).get(file);
+    Set<String> importedBefore = importsOf(beforeUnit);
+    Set<String> importedAtStart = start == null ? importedBefore : importsOf(start);
+    Set<String> declared = new TreeSet<>();
+    for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
+      declared.add(t.getName().getIdentifier());
+    }
+    for (Object o : unit.imports()) {
+      ImportDeclaration i = (ImportDeclaration) o;
+      if (i.isStatic() || i.isOnDemand()) {
+        continue;
+      }
+      String qualified = i.getName().getFullyQualifiedName();
+      String simple = simpleName(qualified);
+      imported.put(simple, i);
+      if ((usedBefore.contains(simple) && !usedAfter.contains(simple))
+          || (declared.contains(simple) && !importedAtStart.contains(qualified))) {
+        remove.add(i);
+      }
+    }
+
+    Map<String, String> picks = new HashMap<>();
+    for (String name : chosen) {
+      picks.put(simpleName(name), name);
+    }
+    // Evidence for an ambiguous name: what the file imported before this call or its batch, and
+    // the packages of the imports it keeps.
+    Set<String> prior = new TreeSet<>(importedBefore);
+    prior.addAll(importedAtStart);
+    Set<String> packages = new TreeSet<>();
+    for (ImportDeclaration i : imported.values()) {
+      if (!remove.contains(i)) {
+        packages.add(packageOf(i.getName().getFullyQualifiedName()));
+      }
+    }
+    Evidence evidence = new Evidence(picks, prior, packages, new ArrayList<>());
+    Set<String> add = toImport(project, file, missing, imported, evidence);
+    add.addAll(staticImports(unit, beforeUnit));
+    Set<String> using = new TreeSet<>(add);
+    for (Object o : unit.imports()) {
+      using.add(((ImportDeclaration) o).getName().getFullyQualifiedName());
+    }
+    add.addAll(assertions(project, file, after, unit, beforeUnit, using));
+    // A name in a lambda is reported only once the names around it resolve, so look again with
+    // the imports found so far, until no more are needed.
+    Set<String> found = new TreeSet<>(add);
+    while (!found.isEmpty()) {
+      Set<String> still = unresolved(Jdt.parse(project, file, withImports(after, unit, add)));
+      still.removeAll(unresolvedBefore);
+      found = toImport(project, file, still, imported, evidence);
+      found.removeAll(add);
+      add.addAll(found);
+    }
+    return new Plan(unit, add, remove, evidence.notes());
+  }
+
+  /**
+   * {@code after}, parsed as {@code plan}'s unit, with {@code plan}'s imports added and removed.
+   */
+  static Fixed render(String after, Plan plan) {
+    CompilationUnit unit = plan.unit();
+    Set<String> add = plan.add();
+    List<ImportDeclaration> remove = plan.remove();
+    if (add.isEmpty() && remove.isEmpty()) {
+      return new Fixed(after, 0, List.of());
+    }
+
+    List<ImportDeclaration> kept = new ArrayList<>();
+    for (Object o : unit.imports()) {
+      if (!remove.contains(o)) {
+        kept.add((ImportDeclaration) o);
+      }
+    }
+    TreeMap<Integer, StringBuilder> inserts = new TreeMap<>();
+    // With every import removed, the new ones take the first removed one's place.
+    int replacing =
+        kept.isEmpty() && !remove.isEmpty()
+            ? Lines.start(after, remove.get(0).getStartPosition())
+            : -1;
+    // Static imports first; where both kinds go at one place, a blank line between them.
+    List<String> ordered = new ArrayList<>(add);
+    ordered.sort(
+        Comparator.comparing((String n) -> !n.startsWith("static ")).thenComparing(n -> n));
+    for (String name : ordered) {
+      int at = replacing >= 0 ? replacing : insertionPoint(after, unit, kept, name);
+      StringBuilder lines = inserts.computeIfAbsent(at, k -> new StringBuilder());
+      if (!name.startsWith("static ")
+          && lines.length() > 0
+          && lines.lastIndexOf("import static ") == lines.lastIndexOf("import ")) {
+        lines.append('\n');
+      }
+      lines.append("import ").append(name).append(";\n");
+    }
+    List<TextEdit> edits = new ArrayList<>();
+    // Imports on one line share its cut.
+    for (ImportDeclaration i : remove) {
+      TextEdit cut =
+          new TextEdit(
+              Lines.start(after, i.getStartPosition()),
+              Lines.end(after, i.getStartPosition() + i.getLength()),
+              "");
+      if (!edits.contains(cut)) {
+        edits.add(cut);
+      }
+    }
+    if (kept.isEmpty() && add.isEmpty() && !edits.isEmpty()) {
+      TextEdit last = edits.get(edits.size() - 1);
+      if (last.end() < after.length() && after.charAt(last.end()) == '\n') {
+        edits.set(edits.size() - 1, new TextEdit(last.start(), last.end() + 1, ""));
+      }
+    }
+    int packageEnd = packageEnd(after, unit);
+    for (Map.Entry<Integer, StringBuilder> e : inserts.entrySet()) {
+      int at = e.getKey();
+      boolean first = kept.isEmpty() && replacing < 0 && at == packageEnd && packageEnd > 0;
+      edits.add(new TextEdit(at, at, (first ? "\n" : "") + e.getValue()));
+    }
+    String fixed = TextEdit.apply(after, edits, 0);
+
+    List<String> notes = new ArrayList<>();
+    if (!add.isEmpty()) {
+      notes.add("imported " + String.join(", ", add));
+    }
+    if (!remove.isEmpty()) {
+      List<String> names = new ArrayList<>();
+      for (ImportDeclaration i : remove) {
+        names.add(i.getName().getFullyQualifiedName());
+      }
+      notes.add("removed import " + String.join(", ", names));
+    }
+    notes.addAll(plan.chose());
+    return new Fixed(fixed, count(fixed) - count(after), notes);
+  }
+
+  /** The single-type imports of {@code unit}, as fully qualified names. */
+  private static Set<String> importsOf(CompilationUnit unit) {
+    Set<String> out = new TreeSet<>();
+    for (Object o : unit.imports()) {
+      ImportDeclaration i = (ImportDeclaration) o;
+      if (!i.isStatic() && !i.isOnDemand()) {
+        out.add(i.getName().getFullyQualifiedName());
+      }
+    }
+    return out;
   }
 }
