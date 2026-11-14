@@ -9,7 +9,6 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BooleanLiteral;
 import org.eclipse.jdt.core.dom.BreakStatement;
-import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.DoStatement;
@@ -19,7 +18,6 @@ import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IBinding;
-import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
@@ -35,13 +33,8 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StringLiteral;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.ThrowStatement;
-import org.eclipse.jdt.core.dom.TryStatement;
-import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.UnionType;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -361,59 +354,8 @@ final class LoopToStream {
 
   /** The first checked exception {@code body} may throw that it does not catch, or null. */
   private static String checkedThrown(Statement body) {
-    for (ASTNode n : Nodes.all(body, ASTNode.class)) {
-      if (Effects.later(n, body) != null) {
-        continue;
-      }
-      List<ITypeBinding> thrown = new ArrayList<>();
-      IMethodBinding m =
-          n instanceof MethodInvocation i
-              ? i.resolveMethodBinding()
-              : n instanceof SuperMethodInvocation s
-                  ? s.resolveMethodBinding()
-                  : n instanceof ClassInstanceCreation c ? c.resolveConstructorBinding() : null;
-      if (m != null) {
-        thrown.addAll(List.of(m.getExceptionTypes()));
-      }
-      if (n instanceof ThrowStatement t && t.getExpression().resolveTypeBinding() != null) {
-        thrown.add(t.getExpression().resolveTypeBinding());
-      }
-      for (ITypeBinding t : thrown) {
-        if (checked(t) && !caught(n, t, body)) {
-          return t.getName();
-        }
-      }
-    }
-    return null;
-  }
-
-  private static boolean checked(ITypeBinding t) {
-    for (ITypeBinding c = t; c != null; c = c.getSuperclass()) {
-      String name = c.getErasure().getQualifiedName();
-      if (name.equals("java.lang.RuntimeException") || name.equals("java.lang.Error")) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /** Whether a try inside {@code body} around {@code n} catches {@code t}. */
-  private static boolean caught(ASTNode n, ITypeBinding t, Statement body) {
-    for (ASTNode p = n.getParent(); p != null && p != body.getParent(); p = p.getParent()) {
-      if (p instanceof TryStatement tr && Nodes.within(n, tr.getBody())) {
-        for (Object o : tr.catchClauses()) {
-          Type caughtType = ((CatchClause) o).getException().getType();
-          List<?> types = caughtType instanceof UnionType u ? u.types() : List.of(caughtType);
-          for (Object each : types) {
-            Type c = (Type) each;
-            if (c.resolveBinding() != null && t.isSubTypeCompatible(c.resolveBinding())) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
+    List<ITypeBinding> thrown = Exceptions.uncaught(List.of(body));
+    return thrown.isEmpty() ? null : thrown.get(0).getName();
   }
 
   /**
