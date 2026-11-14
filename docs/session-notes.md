@@ -497,6 +497,8 @@ Each was chosen from options; the record named beside it has the options it beat
   key it now throws on goes through `Exceptional.change`). Its rules
   are in `docs/sessions/convert-loop-sketch.md`, its target cases in `docs/sessions/loop-examples.md`
   (three from the user's darktable project); `convert_loop` is the statement forms.
+  A new rewrite starts from `declarationBefore`, `segments` and `beforeInitializer`, counts with
+  `uses`, and lays out through `layout` (#516), one rule for every form but `forEach`.
 
 - `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
   `references` (a method reference is kept in `family.references`, not refused; `family.sources`
