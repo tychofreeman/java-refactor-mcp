@@ -52,7 +52,7 @@ class ProbeTest {
     String name = caseDir.getFileName().toString();
     Path work = WORK.resolve(name).resolve("project");
     GoldenTest.deleteTree(WORK.resolve(name));
-    GoldenTest.copyTree(caseDir.resolve("in"), work);
+    TestProjects.copyTree(caseDir.resolve("in"), work);
     Properties args = properties(caseDir.resolve("args.properties"));
     String expect = properties(caseDir.resolve("probe.properties")).getProperty("expect");
     String before = run(work, WORK.resolve(name).resolve("before"));
