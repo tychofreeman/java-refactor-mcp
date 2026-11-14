@@ -1409,7 +1409,10 @@ arguments.
   directly in a block; a type that does not resolve; a new name that a field already has, which
   the local would hide: a field of any type around the expression (a class, an enum, a record, an
   interface, an anonymous class; #469, 2026-11-13) or of one of their superclasses and interfaces
-  (an interface's constant).
+  (an interface's constant); an expression that is not inside a statement (a field's
+  initializer: "is not inside a statement ... Extract it with as=constant", which takes it; #508,
+  2026-11-14, it had thrown a NullPointerException; `as=field` there would be read before it is
+  declared).
   `all_occurrences` is built only with `as=parameter` (below); `pointer` is not built yet.
 - `as` (roadmap #86, 2026-11-04): `constant` adds `private static final T NAME =
   expr;` after the type's fields (its first member when it has none, 2026-11-07), `field`

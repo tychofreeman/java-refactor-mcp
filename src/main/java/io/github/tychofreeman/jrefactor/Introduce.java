@@ -3,15 +3,11 @@ package io.github.tychofreeman.jrefactor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -60,8 +56,8 @@ final class Introduce {
     if (as.equals("parameter")) {
       return parameter(project, opened, e, name, typeName, source, all);
     }
-    AbstractTypeDeclaration owner = enclosing(e, AbstractTypeDeclaration.class);
-    BodyDeclaration member = enclosing(e, BodyDeclaration.class);
+    AbstractTypeDeclaration owner = Nodes.enclosing(e, AbstractTypeDeclaration.class);
+    BodyDeclaration member = Nodes.enclosing(e, BodyDeclaration.class);
     Precondition.require(
         Precondition.that(
             () -> owner != null && owner.resolveBinding() != null,
@@ -141,7 +137,7 @@ final class Introduce {
       String source,
       boolean all)
       throws Exception {
-    MethodDeclaration m = enclosing(e, MethodDeclaration.class);
+    MethodDeclaration m = Nodes.enclosing(e, MethodDeclaration.class);
     Precondition.require(
         Precondition.that(
             () -> m != null && m.resolveBinding() != null,
@@ -272,21 +268,5 @@ final class Introduce {
       }
     }
     return true;
-  }
-
-  /** The nearest {@code type} around {@code n}, or null past a lambda or an anonymous class. */
-  static <T extends ASTNode> T enclosing(ASTNode n, Class<T> type) {
-    for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
-      if (type.isInstance(p)) {
-        return type.cast(p);
-      }
-      if (p instanceof LambdaExpression || p instanceof AnonymousClassDeclaration) {
-        return null;
-      }
-      if (p instanceof CompilationUnit) {
-        return null;
-      }
-    }
-    return null;
   }
 }

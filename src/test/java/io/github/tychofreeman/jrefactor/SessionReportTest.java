@@ -189,4 +189,24 @@ class SessionReportTest {
                 + " characters\n"),
         report);
   }
+
+  /**
+   * The report judges which shell commands read or write Java source as the read and write guards
+   * do ({@link Guard#use}): nl, more and a cat after a cd read it, a pattern naming a .java file
+   * does not, and install writes it.
+   */
+  @Test
+  void shellCommandsAreJudgedAsTheGuardsJudgeThem() {
+    String post = "PostToolUse";
+    call(post, "Bash", "{\"command\": \"nl -ba src/A.java\"}", "");
+    call(post, "Bash", "{\"command\": \"cd src && cat A.java\"}", "");
+    call(post, "Bash", "{\"command\": \"more src/B.java\"}", "");
+    call(post, "Bash", "{\"command\": \"grep -n 'A.java' docs/notes.md\"}", "");
+    call(post, "Bash", "{\"command\": \"cat src/test/resources/golden/c/in/A.java\"}", "");
+    call(post, "Bash", "{\"command\": \"install -m 644 /tmp/A.java src/A.java\"}", "");
+
+    String report = SessionReport.report(log);
+    assertTrue(report.contains("- reads: Bash java 3\n"), report);
+    assertTrue(report.contains("- by hand: 1\n  - Bash: install -m 644"), report);
+  }
 }

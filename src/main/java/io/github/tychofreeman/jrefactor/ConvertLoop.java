@@ -290,7 +290,7 @@ final class ConvertLoop {
       if (parent instanceof ArrayAccess a
           && a.getIndex() == i
           && LoopToStream.sameVariable(text, a.getArray(), of)
-          && !writes(a)) {
+          && !Nodes.written(a)) {
         return a;
       }
       return null;
@@ -304,16 +304,6 @@ final class ConvertLoop {
       return m;
     }
     return null;
-  }
-
-  /** Whether {@code a} is assigned or incremented. */
-  private static boolean writes(ArrayAccess a) {
-    ASTNode p = a.getParent();
-    return (p instanceof Assignment s && s.getLeftHandSide() == a)
-        || p instanceof PostfixExpression
-        || (p instanceof PrefixExpression pre
-            && (pre.getOperator() == PrefixExpression.Operator.INCREMENT
-                || pre.getOperator() == PrefixExpression.Operator.DECREMENT));
   }
 
   /**

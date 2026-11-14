@@ -12,7 +12,6 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.BreakStatement;
@@ -34,8 +33,6 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.PostfixExpression;
-import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
@@ -87,7 +84,7 @@ final class Extraction {
     this.name = name;
     this.doc = doc;
     this.visibility = visibility == null ? "private" : visibility;
-    this.member = Extract.ancestorAbove(sel.list().get(0), BodyDeclaration.class);
+    this.member = Nodes.ancestor(sel.list().get(0), BodyDeclaration.class);
   }
 
   Outcome apply() throws Exception {
@@ -99,20 +96,15 @@ final class Extraction {
     int insertAt = Extract.lineEndOffset(unit, text, line(Nodes.end(member) - 1));
     String callIndent = indentOf(lineStartOffset(sel.statements().get(0).getStartPosition()));
     String callLine = callIndent + c.call().replace("\n", "\n" + callIndent) + "\n";
-    String edited =
-        text.substring(0, sel.startOffset())
-            + callLine
-            + text.substring(sel.endOffset(), insertAt)
-            + method
-            + text.substring(insertAt);
+    List<TextEdit> edits =
+        List.of(
+            new TextEdit(sel.startOffset(), sel.endOffset(), callLine),
+            new TextEdit(insertAt, insertAt, method));
+    String edited = TextEdit.apply(text, edits, 0);
     NameCheck.require(
         project,
         Map.of(path, text),
-        Map.of(
-            path,
-            List.of(
-                new TextEdit(sel.startOffset(), sel.endOffset(), callLine),
-                new TextEdit(insertAt, insertAt, method))),
+        Map.of(path, edits),
         NameCheck.meanings(sel.statements()),
         "extracting " + sel.lines() + " into " + name);
     int methodAt = sel.startOffset() + callLine.length() + (insertAt - sel.endOffset()) + 1;
@@ -431,45 +423,24 @@ final class Extraction {
    */
   void refuseFinalFields() {
     for (Statement s : sel.statements()) {
-      s.accept(
-          new ASTVisitor() {
-            @Override
-            public boolean visit(Assignment a) {
-              check(a.getLeftHandSide());
-              return true;
-            }
-
-            @Override
-            public boolean visit(PrefixExpression p) {
-              if (p.getOperator() == PrefixExpression.Operator.INCREMENT
-                  || p.getOperator() == PrefixExpression.Operator.DECREMENT) {
-                check(p.getOperand());
-              }
-              return true;
-            }
-
-            @Override
-            public boolean visit(PostfixExpression p) {
-              check(p.getOperand());
-              return true;
-            }
-
-            private void check(Expression target) {
-              IVariableBinding field =
-                  target instanceof Name n && n.resolveBinding() instanceof IVariableBinding v
-                      ? v
-                      : target instanceof FieldAccess f ? f.resolveFieldBinding() : null;
-              if (field != null && field.isField() && Modifier.isFinal(field.getModifiers())) {
-                throw new Refusal(
-                    "line "
-                        + line(target)
-                        + " assigns the final field "
-                        + field.getName()
-                        + ", which only a constructor or initializer may do. Leave that line out"
-                        + " of the range.");
-              }
-            }
-          });
+      for (Expression target : Nodes.all(s, Expression.class)) {
+        if (!(target instanceof Name || target instanceof FieldAccess) || !Nodes.written(target)) {
+          continue;
+        }
+        IVariableBinding field =
+            target instanceof Name n && n.resolveBinding() instanceof IVariableBinding v
+                ? v
+                : target instanceof FieldAccess f ? f.resolveFieldBinding() : null;
+        if (field != null && field.isField() && Modifier.isFinal(field.getModifiers())) {
+          throw new Refusal(
+              "line "
+                  + line(target)
+                  + " assigns the final field "
+                  + field.getName()
+                  + ", which only a constructor or initializer may do. Leave that line out"
+                  + " of the range.");
+        }
+      }
     }
   }
 
@@ -487,7 +458,7 @@ final class Extraction {
             c.getLabel() != null ? labeled(c, c.getLabel().getIdentifier()) : nearest(c, false);
       } else if (n instanceof YieldStatement y) {
         what = "yield";
-        target = Extract.ancestorAbove(y, SwitchExpression.class);
+        target = Nodes.ancestor(y, SwitchExpression.class);
       }
       if (target != null && !sel.contains(target)) {
         throw new Refusal(
@@ -633,17 +604,8 @@ final class Extraction {
   /** Whether the statements assign {@code v}. */
   boolean assigned(IVariableBinding v) {
     for (ASTNode n : allNodes()) {
-      ASTNode target = null;
-      if (n instanceof Assignment a) {
-        target = a.getLeftHandSide();
-      } else if (n instanceof PostfixExpression p) {
-        target = p.getOperand();
-      } else if (n instanceof PrefixExpression p
-          && (p.getOperator() == PrefixExpression.Operator.INCREMENT
-              || p.getOperator() == PrefixExpression.Operator.DECREMENT)) {
-        target = p.getOperand();
-      }
-      if (target instanceof SimpleName s
+      if (n instanceof SimpleName s
+          && Nodes.written(s)
           && s.resolveBinding() instanceof IVariableBinding b
           && b.getVariableDeclaration().isEqualTo(v)) {
         return true;
@@ -735,7 +697,7 @@ final class Extraction {
 
   /** The enclosing method's type parameters, as written, or nothing. */
   String typeParameters() {
-    MethodDeclaration m = Extract.ancestorAbove(sel.list().get(0), MethodDeclaration.class);
+    MethodDeclaration m = Nodes.ancestor(sel.list().get(0), MethodDeclaration.class);
     if (m == null || m.typeParameters().isEmpty()) {
       return "";
     }
@@ -959,7 +921,7 @@ final class Extraction {
     if (call.getExpression() != null && !(call.getExpression() instanceof ThisExpression)) {
       return "its receiver may be one";
     }
-    MethodDeclaration around = Extract.ancestorAbove(n, MethodDeclaration.class);
+    MethodDeclaration around = Nodes.ancestor(n, MethodDeclaration.class);
     if (around == null
         || !(around.getParent() instanceof AbstractTypeDeclaration type)
         || type.resolveBinding() == null
