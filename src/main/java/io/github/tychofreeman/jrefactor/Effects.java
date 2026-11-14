@@ -12,6 +12,7 @@ import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.ArrayInitializer;
 import org.eclipse.jdt.core.dom.AssertStatement;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CatchClause;
@@ -501,19 +502,19 @@ final class Effects {
 
           @Override
           public boolean visit(YieldStatement n) {
-            found[0] |= !lands(n, null, false, s);
+            found[0] |= exits(n, s);
             return false;
           }
 
           @Override
           public boolean visit(BreakStatement n) {
-            found[0] |= !lands(n, n.getLabel(), true, s);
+            found[0] |= exits(n, s);
             return false;
           }
 
           @Override
           public boolean visit(ContinueStatement n) {
-            found[0] |= !lands(n, n.getLabel(), false, s);
+            found[0] |= exits(n, s);
             return false;
           }
         });
@@ -524,7 +525,7 @@ final class Effects {
    * Whether the jump {@code n} lands inside {@code s}: on a statement labeled {@code label}, or,
    * unlabeled, on a loop (a switch too for a break; a switch expression for a yield).
    */
-  private static boolean lands(Statement n, SimpleName label, boolean isBreak, Statement s) {
+  private static boolean lands(Statement n, SimpleName label, boolean isBreak, ASTNode s) {
     for (ASTNode p = n.getParent(); p != null; p = p.getParent()) {
       if (n instanceof YieldStatement) {
         if (p instanceof SwitchExpression) {
@@ -620,5 +621,48 @@ final class Effects {
           true;
       default -> false;
     };
+  }
+
+  /**
+   * Whether the jump {@code n} (a return, yield, break or continue) leaves {@code root}, which
+   * holds it: it is in no lambda or class declared inside {@code root}, and lands on no statement
+   * there.
+   */
+  static boolean exits(Statement n, ASTNode root) {
+    for (ASTNode p = n.getParent(); p != null && p != root; p = p.getParent()) {
+      if (p instanceof LambdaExpression
+          || p instanceof AnonymousClassDeclaration
+          || p instanceof TypeDeclarationStatement) {
+        return false;
+      }
+    }
+    return switch (n) {
+      case ReturnStatement r -> true;
+      case YieldStatement y -> !lands(y, null, false, root);
+      case BreakStatement b -> !lands(b, b.getLabel(), true, root);
+      case ContinueStatement c -> !lands(c, c.getLabel(), false, root);
+      default -> false;
+    };
+  }
+
+  /**
+   * Whether {@code s} can complete normally, read from its syntax: it is no return, throw, break,
+   * continue or yield, no block that ends in one, and no if whose two branches each cannot.
+   */
+  static boolean completesNormally(Statement s) {
+    if (s instanceof Block b) {
+      List<?> list = b.statements();
+      return list.isEmpty() || completesNormally((Statement) list.get(list.size() - 1));
+    }
+    if (s instanceof IfStatement i) {
+      return i.getElseStatement() == null
+          || completesNormally(i.getThenStatement())
+          || completesNormally(i.getElseStatement());
+    }
+    return !(s instanceof ReturnStatement
+        || s instanceof ThrowStatement
+        || s instanceof BreakStatement
+        || s instanceof ContinueStatement
+        || s instanceof YieldStatement);
   }
 }

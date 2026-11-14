@@ -346,6 +346,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `remove_parameter` and `move_parameter` judge an argument by `Signatures.acts` (`Effects`'s
   changes, a new array, and a string's `+` of an object, whose `toString` `Effects` does not see) and
   `Signatures.mayThrow` (#475); the old syntax-only `Signatures.pure` is gone.
+- Whether a jump leaves some code is `Effects.exits(jump, root)` (labels, loops, switches, and
+  lambdas and classes declared inside), and whether a statement can complete normally is
+  `Effects.completesNormally` (#515): a tool asks them, not its own parent walk or last-statement test.
 - A refactoring that moves code declares it to `Behavior.check` (a `Move`: the code,
   the root it stays in, where it lands, a label and the edit's verb) with its edits;
   the gate runs the effect, place, copy, exceptional and `NameCheck` rules (#96,
@@ -411,6 +414,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `change_type` with `parameter` or `return_type` (#82, 2026-11-04) is
   `Signatures.changeType`: the family's declarations and typed lambdas, by
   `SignatureChange.replace`; calls are left to the gate.
+
+- An item put into a comma-separated list (arguments, parameters, components, type arguments or
+  parameters) is `SignatureChange.insertAt` (#514, 2026-11-14): `open` is the offset just past the
+  opening bracket, used only for an empty list; the overload without it takes a non-empty one.
 
 - `replace_declaration` with empty content is a safe delete (#83, 2026-11-04):
   `SafeDelete.check` names the uses by binding before the gate, and refuses an

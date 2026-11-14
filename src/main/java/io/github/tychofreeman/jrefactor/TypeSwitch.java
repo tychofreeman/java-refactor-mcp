@@ -14,17 +14,13 @@ import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ContinueStatement;
-import org.eclipse.jdt.core.dom.DoStatement;
-import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
-import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
@@ -42,7 +38,6 @@ import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypePattern;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
-import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
 
 final class TypeSwitch {
@@ -418,7 +413,7 @@ final class TypeSwitch {
               || s instanceof BreakStatement
               || s instanceof ContinueStatement
               || s instanceof YieldStatement;
-      if (jump && leaves(s, e) && !ownYield(s, e)) {
+      if (jump && Effects.exits(s, e) && !ownYield(s, e)) {
         throw new Refusal(
             "the case of "
                 + typeName
@@ -427,29 +422,6 @@ final class TypeSwitch {
                 + ", which in the new method would leave it instead of the code around the switch.");
       }
     }
-  }
-
-  /**
-   * Whether the jump {@code s} leaves {@code body}: no lambda, class, loop or switch inside it
-   * holds the jump (a return, only a lambda or class).
-   */
-  private static boolean leaves(Statement s, ASTNode body) {
-    for (ASTNode p = s.getParent(); p != null && p != body; p = p.getParent()) {
-      if (p instanceof LambdaExpression || p instanceof AnonymousClassDeclaration) {
-        return false;
-      }
-      boolean loop =
-          p instanceof ForStatement
-              || p instanceof EnhancedForStatement
-              || p instanceof WhileStatement
-              || p instanceof DoStatement
-              || p instanceof SwitchStatement
-              || p instanceof SwitchExpression;
-      if (loop && !(s instanceof ReturnStatement)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /** Whether {@code n} is the member part of a name or access qualified by something else. */

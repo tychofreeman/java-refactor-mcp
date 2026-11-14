@@ -5,17 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.BreakStatement;
-import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.IfStatement;
-import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
-import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
  * remove_else: an if whose then-branch cannot finish normally loses its else, and the else's
@@ -49,7 +44,7 @@ final class RemoveElse {
               + " braces). Put braces around that body first, or the else's statements would land"
               + " outside it.");
     }
-    if (canFinish(ifs.getThenStatement())) {
+    if (Effects.completesNormally(ifs.getThenStatement())) {
       throw new Refusal(
           "the then-branch of the if at line "
               + line
@@ -92,21 +87,6 @@ final class RemoveElse {
     return new Outcome(
         "removed the else of the if at line " + line + " in " + rel + written.fixed().said(),
         written.declared());
-  }
-
-  private static boolean canFinish(Statement then) {
-    Statement last = then;
-    if (then instanceof Block block) {
-      if (block.statements().isEmpty()) {
-        return true;
-      }
-      last = (Statement) block.statements().get(block.statements().size() - 1);
-    }
-    return !(last instanceof ReturnStatement
-        || last instanceof ThrowStatement
-        || last instanceof BreakStatement
-        || last instanceof ContinueStatement
-        || last instanceof YieldStatement);
   }
 
   /**

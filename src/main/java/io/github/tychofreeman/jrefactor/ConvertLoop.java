@@ -8,7 +8,6 @@ import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BooleanLiteral;
-import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
@@ -33,13 +32,11 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.QualifiedName;
-import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -618,7 +615,7 @@ final class ConvertLoop {
     }
     String cond = loop.getExpression() == null ? "true" : source(text, loop.getExpression());
     String bodyText =
-        ends(body)
+        !Effects.completesNormally(body)
             ? TextEdit.apply(source(text, body), inBody, body.getStartPosition())
             : last(text, whole, body, updates, step, inBody);
     String label =
@@ -778,24 +775,6 @@ final class ConvertLoop {
   }
 
   /**
-   * Whether the last statement of {@code body} cannot be followed: a return, throw, break or
-   * continue.
-   */
-  private static boolean ends(Statement body) {
-    Statement last = body;
-    if (body instanceof Block block) {
-      if (block.statements().isEmpty()) {
-        return false;
-      }
-      last = (Statement) block.statements().get(block.statements().size() - 1);
-    }
-    return last instanceof ReturnStatement
-        || last instanceof ThrowStatement
-        || last instanceof BreakStatement
-        || last instanceof ContinueStatement;
-  }
-
-  /**
    * {@code body}'s source with {@code edits} applied and {@code statements} last: before the
    * closing brace of a block that has it on a line of its own, else in a new block.
    */
@@ -872,7 +851,7 @@ final class ConvertLoop {
     }
     String exit = "if (" + negated + ") break;";
     String bodyText =
-        ends(body)
+        !Effects.completesNormally(body)
             ? source(text, body)
             : last(text, whole, body, List.of(exit), step(text), List.of());
     edits.add(new TextEdit(loop.getStartPosition(), Nodes.end(loop), "while (true) " + bodyText));
