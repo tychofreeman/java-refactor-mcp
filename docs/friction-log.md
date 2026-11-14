@@ -1318,3 +1318,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - The golden case was renamed and a new one written by `git mv`, `cp` and heredocs: no tool
   copies a case directory (as skeleton-build-blocks logged). `result.txt` was pinned from a run
   with a placeholder.
+
+## 2026-11-13: change-try
+
+- No Java by hand. The golden cases were written by a script (resources). A batch deleting a
+  method before changing its one call was refused; `retry` with `remove` and `after` reordered it.

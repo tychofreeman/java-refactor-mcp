@@ -1441,6 +1441,31 @@ final class Tools {
           Kind.REFACTORING,
           Tools::fold);
 
+  static final Def CHANGE_TRY =
+      new Def(
+          "change_try",
+          """
+          Change the try statement that starts on a line, one change a call. add_catch IOException \
+          adds catch (IOException e) { throw e; }, or its body; it goes before a clause that \
+          catches a supertype, and with join, an existing clause's type, joins that clause as a \
+          multi-catch (catch (IOException | IllegalStateException e)). remove_catch removes a \
+          clause, or one type of a multi-catch. finally adds a finally block of statements; \
+          remove_finally removes it. unwrap puts the try's statements in its place, dropping its \
+          catches. A try left with nothing to catch or finish is unwrapped.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line the try starts on.").required(),
+              Arg.string("add_catch", "An exception type to catch."),
+              Arg.string("body", "With add_catch: the clause's statements; e is the exception."),
+              Arg.string("join", "With add_catch: the type of the clause to join."),
+              Arg.string("remove_catch", "The type whose clause, or multi-catch entry, goes."),
+              Arg.string("finally", "Statements for a new finally block."),
+              Arg.bool("remove_finally", "Remove the finally block."),
+              Arg.bool("unwrap", "Replace the try with its statements."),
+              Arg.IMPORTS),
+          Kind.EDIT,
+          ChangeTry::run);
   static final List<Def> ALL =
       List.of(
           INSPECT,
@@ -1473,6 +1498,7 @@ final class Tools {
           REPLACE_STATEMENTS,
           ADD_CASE,
           ADD_ELEMENT,
+          CHANGE_TRY,
           MOVE_STATEMENT,
           INVERT_IF,
           LOOP_TO_STREAM,

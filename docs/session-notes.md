@@ -521,6 +521,13 @@ Each was chosen from options; the record named beside it has the options it beat
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.
 
+- `change_try` (#199, issue #364, 2026-11-13) is `ChangeTry`: the try by `Opened.startingOn`, one
+  change as a text edit through `Primitives.gated`. `add_catch` resolves its type by
+  `ThrowsCallers.exceptionSupers` (a probe field, shared with `change_signature`'s `callers`) and
+  goes before the first clause catching a supertype; its variable is `ThrowsCallers.freeIn`'s.
+  What Java itself rejects (a never-thrown checked catch, an exception left unhandled) is the
+  gate's. Resources are not built yet.
+
 - `build` (#149, 2026-11-13) is `Build`: `Primitives.built` hands it the argument as sent
   (`Args.raw`), the range it replaces and the indentation; `Build.statements` returns the text
   and what it inferred (`Built.said()`, after the tool's usual line). An entry is an `Entry`

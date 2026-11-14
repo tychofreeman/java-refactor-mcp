@@ -1046,6 +1046,31 @@ in the same turn only if it is sent after it.
     before `default`, else at the end, indented as the other cases.
   - `add_element`: `file`, `line` (an array initializer or an enum), `content`;
     after the last element (on a new line when the elements are one per line).
+- `change_try` (#199, issue #364, 2026-11-13; the user chose one new tool over options on
+  `replace_statements` and over two tools, every change but resources first, and an edit, not a
+  refactoring): `file`, `line` (the try), and exactly one of:
+  - `add_catch` (a type), with `body` (the clause's statements; default `throw e;`, the variable
+    `e`, or with no `body` the first of `e`, `e2`, ... the method does not use) or `join` (the type
+    of an existing clause, which becomes a multi-catch `catch (A | B e)`). Placed before the first
+    clause that catches a supertype, else last. Refused: a clause already catches the type ("the
+    try already catches IOException (line 12). Change that clause's statements with
+    replace_statements."); `join` names no clause ("the try has no catch of X to join; it catches
+    ..."); the type does not resolve to an exception (the import refusal of `change_signature`).
+  - `remove_catch` (a type): its clause, or the type alone from a multi-catch. Refused: no clause
+    catches it ("the try has no catch of X; it catches A and B.").
+  - `finally` (statements): a new finally block. Refused when the try has one.
+  - `remove_finally`: refused when there is none.
+  - `unwrap`: the body's statements, one step out, in the try's place; its catches dropped.
+    Refused with resources ("the try declares resources, which it closes; unwrap takes a try
+    without them.") or a finally ("the try's finally would no longer run. Send remove_finally
+    first, or move its statements after the try.").
+  A `remove_catch` or `remove_finally` that leaves no catch, finally or resource unwraps the try,
+  and the result says so. Result: `added a catch of FileNotFoundException, before the catch of
+  Exception at line 10 of <file>`. None or two changes are refused ("change_try takes one of
+  add_catch, remove_catch, finally, remove_finally and unwrap; got add_catch and unwrap. Send one
+  change a call, or several calls in a batch."). The gate judges the rest: a catch of a checked
+  exception the body cannot throw, one left unhandled once a clause or the try is gone. Not yet:
+  resources of a try-with-resources.
 - `replace_text`: `file`, `old`, `new`, `all_occurrences`, `append`. `old` must occur
   once unless `all_occurrences`; refused with the lines it occurs on. Result:
   `replaced <n> occurrence(s) in <file>, line(s) ...`. Not found exactly, `old` is found
