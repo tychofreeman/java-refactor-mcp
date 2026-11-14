@@ -1627,7 +1627,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   for `CharSequence s` in `s.length()`, roadmap #78), or an argument of a call of a method
   with no overload of its arity in its class and supertypes, not generic or varargs (it
   resolves to the same method; 2026-11-05);
-  a body that names a member of its class when a call is in another class. Each
+  a body that names a static member of its class by its simple name when a call is in another
+  class (a use qualified by a type, `Keys.declared(b)`, means the same there and is inlined as
+  written; issue #621). Each
   argument the behavior gate (below) refuses in place, or that `checkOrder` finds out
   of order, is bound to a local before the call's statement instead (roadmap #102),
   with every earlier argument that is not fixed, so they run once, in order: the

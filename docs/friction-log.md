@@ -1843,3 +1843,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   (`replace_text`), after the first `replace_declaration` was refused for that caller.
 - Deleting one `Precondition.that(...)` among several arguments of `Precondition.require` took a
   `replace_statements` of the whole call: no tool removes one argument of a call.
+
+## 2026-11-14: inline-qualified-static
+
+- No Java by hand: one `batch` (`insert_statements`, `replace_text`). `insert_statements` was sent
+  `position` for `where`; the refusal named `where` and a `retry` fixed it.
