@@ -149,16 +149,10 @@ final class Skeleton {
     for (int i = 0; i < types.length; i++) {
       String name = i < names.length ? names[i] : "";
       if (name.isEmpty() || name.matches("arg\\d+")) {
-        String simple = types[i].getErasure().getName().replace("[]", "s");
-        name =
-            types[i].isPrimitive()
-                ? "value"
-                : Character.toLowerCase(simple.charAt(0)) + simple.substring(1);
+        name = Names.parameterName(types[i]);
       }
-      String base = name;
-      for (int n = 2; !used.add(name); n++) {
-        name = base + n;
-      }
+      name = Names.free(name, used);
+      used.add(name);
       out.add(Extract.typeName(types[i]) + " " + name);
     }
     return out;

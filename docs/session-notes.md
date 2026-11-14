@@ -226,6 +226,11 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Where code goes
 
+- A name a tool declares comes from `Names` (#480, 2026-11-14): `Names.free(name, taken)` adds a
+  number while the name is taken or a keyword, `Names.fresh(name, node)` takes the names of the
+  node's file, `Names.parameterName(type)` names a parameter by its type. A new fresh-name loop
+  should call them; `Stubs`, `ThrowsCallers`, `TestFor`, `InlineFunction`, `Build` and `Surround`
+  still have their own.
 - A Maven project's source roots are `src/main/java` and `src/test/java` whenever either exists
   (`MavenBuild.sourceRoots`, #293): a root that does not exist yet is skipped when walking and
   parsing, so a test created before `src/test/java` is type-checked and gets its stubs. It had

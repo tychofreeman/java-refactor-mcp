@@ -301,7 +301,7 @@ final class ConvertLoop {
       }
     }
     if (name == null) {
-      name = LoopToStream.unused(Names.elementName(indexed.of()), loop);
+      name = Names.fresh(Names.elementName(indexed.of()), loop);
     }
     for (Expression read : reads) {
       edits.add(new Edit(read.getStartPosition(), Nodes.end(read), name));
@@ -499,7 +499,7 @@ final class ConvertLoop {
           source(text, loop.getExpression())
               + " is not an Iterable with a type argument, so the iterator's type is not known.");
     }
-    String it = LoopToStream.unused("it", loop);
+    String it = Names.fresh("it", loop);
     String header =
         "for (Iterator<"
             + Extract.typeName(element)
@@ -541,7 +541,7 @@ final class ConvertLoop {
     if (!array) {
       unchanged(text, of, body, line);
     }
-    String i = LoopToStream.unused("i", loop);
+    String i = Names.fresh("i", loop);
     String primary = LoopToStream.primary(text, of);
     String header =
         "for (int "
