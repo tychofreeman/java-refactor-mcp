@@ -1249,3 +1249,12 @@ and `extract_variable`, `extract_function`, `inline` and `fold` for the refactor
 
 By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build one with `sed` and
 `chmod +x`. The Java and the docs through `bin/jrefactor`.
+
+## 2026-11-13: the generator A/B write-up (`ab-generators`)
+
+- `bin/jrefactor '{"tool":"replace_text",...,"old":"@old"}'` with the `@@` sections on stdin
+  refused "old is not in docs/session-notes.md": with the JSON as an argument, stdin is not read,
+  so `old` was the text `@old`. The sections go after the JSON on stdin (`bin/jrefactor -`). The
+  refusal could say so when `old` is a bare `@name`. A first `append` passed the text as `append`
+  (it takes true, with the text in `new`); its refusal said so. The run's transcripts were tallied
+  by a scratch script, not in the repo.
