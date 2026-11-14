@@ -339,6 +339,14 @@ by the thrown expression's static type against each catch clause's type (a union
 too); a throw a catch takes only by its runtime type counts as leaving. `Effects` also marks an
 `assert`, an integer `/=` or `%=` and an unboxing as may-throw; no golden case or probe changed.
 
+**Default to reopen (2026-11-13, issue #477; the owner said take the smallest fix):** `inline`
+of a method keeps the lines inside a text block as they are when it re-indents the body
+(`InlineFunction.reindent`, given each text block's source from `InlineFunction.textBlocks`, found
+again in the substituted text in order). Options: (a) that, in `InlineFunction` (chosen: the
+smallest, and the way `Extraction.reindent` already does it); (b) the shared `shift(text, from, to,
+protected ranges)` in `Lines` that the review suggests, with `Extraction` moved onto it (the
+Indent issue, a later item); (c) refuse a body with a text block.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
@@ -795,6 +803,7 @@ sections 3 and 4.
 | 201 | 209 | `extract_function` and `extract_variable` checked a new name only against the type and its supertypes: a method of an enclosing type, or a field of an enclosing type, an enum, a record or an interface, was captured silently (issue #469, code review) | Done 2026-11-13 (`Extraction.refuseEnclosing`, from `refuseClash` and `checkOverride`; `ExtractVariable.checkFieldName` walks every `AbstractTypeDeclaration` and anonymous class around the expression, superclasses and interfaces; probes `extract_*_hides_*`, goldens `extract_function_refused_outer_method`, `extract_variable_refused_hides_enum_field`. Default to reopen in Decisions: the walk over a meaning check) | Issue #469; `docs/sessions/fix-extract-name-clash.md` |
 | 203 | 211 | `invert_if` whose else branch is unbraced and ends in an if without an else (`else for (...) if (d) z();`): the swapped `else` attached to that inner if, which type-checked and ran the old then branch per element | Done 2026-11-13: `InvertIf.thenText` puts such a branch in braces (`endsInOpenIf` follows `for`, enhanced `for`, `while`, a label and an if's else). Default to reopen (the owner said take the smallest): braces only where needed, over braces always (it would change every unbraced else) and over refusing (the model would add the braces by hand) | Issue #470 (code review); probe `invert_if_dangling_else` |
 | 206 | 214 | `Effects` had no effect for `throw <variable>` or `assert`, and `Effects.leaves` ignored `throw`: `count++` moved above `if (n == 0) throw err;` (or below it) was neither refused nor reported, and a division moved above such a guard changed which exception came (issue #474, code review) | Done 2026-11-13 (`Effects`: `MAY_THROW` for a `throw`, an `assert`, an integer `/=` or `%=` and an unboxing; `Effects.leaves` true for a throw no try inside catches, by `Effects.caught`, when `throwing` (`LoopToStream` passes false: a lambda may throw). Probes `move_statement_past_throw_guard{,_down}`, `move_statement_division_past_throw_guard`; golden `move_statement_refused_throw_guard`; `EffectsTest`. Every golden case and probe kept its output. Default to reopen in Decisions: refusing as an early exit over reporting) | Issue #474; `docs/sessions/fix-effects-throw.md` |
+| 213 | 222 | `inline` of a method re-indented every line of the moved body, those inside a text block too: a text block whose content or closing delimiter sat left of the body's indentation was shifted unevenly, and the string changed (issue #477, code review) | Done 2026-11-13 (`InlineFunction.reindent` leaves the lines inside each text block of the body as they are, as `Extraction.reindent` does; probes `inline_function_text_block{,_value}`, golden `inline_function_text_block`. The shared helper is the Indent issue. Default to reopen in Decisions) | Issue #477; `docs/sessions/fix-inline-text-block.md` |
 
 ### The 2026-11-04 list
 

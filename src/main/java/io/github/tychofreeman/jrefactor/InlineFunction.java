@@ -41,6 +41,7 @@ import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
@@ -401,7 +402,8 @@ final class InlineFunction {
                   siteText,
                   receiver),
               Lines.indentOf(declaringText, from),
-              Lines.indentOf(siteText, statement.getStartPosition()));
+              Lines.indentOf(siteText, statement.getStartPosition()),
+              textBlocks(whole, declaringText));
       return List.of(
           new TextEdit(at, at, declared + before + "\n" + Lines.indentOf(siteText, at)), call);
     }
@@ -420,7 +422,8 @@ final class InlineFunction {
                 substituted(
                     declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver),
                 Lines.indentOf(declaringText, bodyStart),
-                Lines.indentOf(siteText, stmt.getStartPosition()));
+                Lines.indentOf(siteText, stmt.getStartPosition()),
+                textBlocks(whole, declaringText));
     return List.of(
         new TextEdit(
             stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced));
@@ -957,10 +960,33 @@ final class InlineFunction {
   }
 
   /**
-   * {@code text} with each line after the first indented by {@code to} in place of {@code from}.
+   * {@code text} with each line after the first indented by {@code to} in place of {@code from},
+   * but for the lines inside the text blocks {@code blocks} (their source, in order), which keep
+   * their indentation so that each string keeps its value.
    */
-  private static String reindent(String text, String from, String to) {
-    return text.replace("\n" + from, "\n" + to);
+  private static String reindent(String text, String from, String to, List<String> blocks) {
+    List<int[]> inside = new ArrayList<>();
+    int at = 0;
+    for (String b : blocks) {
+      int start = text.indexOf(b, at);
+      if (start >= 0) {
+        inside.add(new int[] {start, start + b.length()});
+        at = start + b.length();
+      }
+    }
+    StringBuilder out = new StringBuilder();
+    int line = 0;
+    for (int next = text.indexOf('\n'); next >= 0; next = text.indexOf('\n', line)) {
+      out.append(text, line, next + 1);
+      line = next + 1;
+      int lineAt = line;
+      if (text.startsWith(from, line)
+          && inside.stream().noneMatch(r -> lineAt > r[0] && lineAt < r[1])) {
+        out.append(to);
+        line += from.length();
+      }
+    }
+    return out.append(text.substring(line)).toString();
   }
 
   /**
@@ -1218,5 +1244,14 @@ final class InlineFunction {
       todo.addAll(Arrays.asList(t.getInterfaces()));
     }
     return same == 1;
+  }
+
+  /** The source of each text block in {@code body}, in order. */
+  private static List<String> textBlocks(Block body, String text) {
+    List<String> out = new ArrayList<>();
+    for (TextBlock b : Nodes.all(body, TextBlock.class)) {
+      out.add(text.substring(b.getStartPosition(), Nodes.end(b)));
+    }
+    return out;
   }
 }
