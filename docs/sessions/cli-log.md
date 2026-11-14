@@ -1,6 +1,6 @@
 # An opt-in log of bin/jrefactor runs
 
-- **Item:** roadmap #264 (order 254), the owner's request of 2026-11-14: measure agents that
+- **Item:** roadmap #265 (order 255; first numbered 264, which #555 took at the same time), the owner's request of 2026-11-14: measure agents that
   call the tools through `bin/jrefactor` in sessions without the Claude Code hooks.
 - **Date:** 2026-11-14
 - **Branch:** cli-log
