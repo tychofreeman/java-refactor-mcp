@@ -63,7 +63,8 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),
   `replace_statements`, `insert_statements`, `replace_expression`,
-  `add_case`, `add_element`, `replace_text`. `insert_statements`,
+  `add_case`, `add_element`, `change_try` (a catch clause, a multi-catch type
+  or a finally added or removed, or the try unwrapped), `replace_text`. `insert_statements`,
   `replace_statements` and `replace_expression` also take `build`: calls,
   constructions, loops and guards written from names, their types read from
   the code.

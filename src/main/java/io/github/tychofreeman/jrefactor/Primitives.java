@@ -368,7 +368,7 @@ final class Primitives {
         "adding an element");
   }
 
-  private static Outcome gated(
+  static Outcome gated(
       SourceProject project, Opened opened, String after, Args args, String said, String what)
       throws Exception {
     Edits.Written written =
@@ -383,7 +383,7 @@ final class Primitives {
     return new Outcome(said + written.fixed().said(), written.declared());
   }
 
-  private static int line(Args args, String key) {
+  static int line(Args args, String key) {
     Integer line = args.integer(key);
     if (line == null) {
       throw new Refusal(args.tool() + " needs " + key + ", a 1-based line.");

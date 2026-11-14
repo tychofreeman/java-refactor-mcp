@@ -219,17 +219,36 @@ final class ThrowsCallers {
         home = s;
       }
     }
-    ASTNode type = family.target.getParent();
+    return new HashSet<>(
+        exceptionSupers(
+            project, home.file(), home.rel(), home.text(), family.target, name, chosen));
+  }
+
+  /**
+   * The qualified names of the exception {@code name} and its superclasses, nearest first, as it
+   * resolves in the type around {@code at} in {@code file} ({@code text}) with {@code chosen} as
+   * imports: a probe field of that type, parsed with the imports fixed.
+   */
+  static List<String> exceptionSupers(
+      SourceProject project,
+      Path file,
+      String rel,
+      String text,
+      ASTNode at,
+      String name,
+      List<String> chosen)
+      throws Exception {
+    ASTNode type = at.getParent();
     while (!(type instanceof AbstractTypeDeclaration)) {
       type = type.getParent();
     }
-    String text = home.text();
-    int at = text.indexOf('{', Nodes.end(((AbstractTypeDeclaration) type).getName())) + 1;
-    String probe = text.substring(0, at) + "\n" + name + " jrefactorProbe;" + text.substring(at);
-    String fixed = Imports.fix(project, home.file(), text, probe, chosen).text();
-    Set<String> out = new HashSet<>();
+    int open = text.indexOf('{', Nodes.end(((AbstractTypeDeclaration) type).getName())) + 1;
+    String probe =
+        text.substring(0, open) + "\n" + name + " jrefactorProbe;" + text.substring(open);
+    String fixed = Imports.fix(project, file, text, probe, chosen).text();
+    List<String> out = new ArrayList<>();
     for (VariableDeclarationFragment f :
-        Nodes.all(Jdt.parse(project, home.file(), fixed), VariableDeclarationFragment.class)) {
+        Nodes.all(Jdt.parse(project, file, fixed), VariableDeclarationFragment.class)) {
       if (f.getName().getIdentifier().equals("jrefactorProbe") && f.resolveBinding() != null) {
         for (ITypeBinding t = f.resolveBinding().getType(); t != null; t = t.getSuperclass()) {
           if (!t.isRecovered()) {
@@ -242,7 +261,7 @@ final class ThrowsCallers {
       throw new Refusal(
           name
               + " does not resolve to an exception type in "
-              + home.rel()
+              + rel
               + ". Pass its qualified name in imports.");
     }
     return out;
@@ -624,7 +643,7 @@ final class ThrowsCallers {
   }
 
   /** A name for a catch's variable that the method around {@code n} does not use. */
-  private static String freeIn(ASTNode n) {
+  static String freeIn(ASTNode n) {
     ASTNode top = n;
     for (ASTNode p = n; p != null; p = p.getParent()) {
       if (p instanceof MethodDeclaration || p instanceof Initializer) {
@@ -642,7 +661,7 @@ final class ThrowsCallers {
     return var;
   }
 
-  private static String step(String text) {
+  static String step(String text) {
     return " ".repeat(Math.max(Declarations.step(text), 2));
   }
 

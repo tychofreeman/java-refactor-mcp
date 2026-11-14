@@ -495,3 +495,6 @@ write, was checked first with a scratch parse before any of it was built on.
   project's own CLAUDE.md, which had grown from this repo's: the project's file batched three to
   seven times as often for a little less cost, and its batch and refusal rules moved into
   `examples/CLAUDE.md` (`docs/sessions/ab-darktable-md.md`).
+- `change_try` (2026-11-13, issue #364) was the first tool whose shape the user picked from options
+  written into its issue before any code: one tool with one argument per change, over options on
+  an existing tool and over two tools.
