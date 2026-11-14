@@ -236,4 +236,12 @@ class CliTest {
     assertTrue(report.contains("- refused by jrefactor: 1"), report);
     assertTrue(report.contains("1 refactoring step"), report);
   }
+
+  @Test
+  void malformedJsonIsARefusalWithOrWithoutSections() throws Exception {
+    assertEquals(2, run("{\"tool\": \"list\""), out());
+    assertTrue(out().startsWith(Refusal.PREFIX + "the JSON"), out());
+    assertEquals(2, run("inspect", "names=[\"Counter\""), out());
+    assertTrue(out().startsWith(Refusal.PREFIX + "names"), out());
+  }
 }

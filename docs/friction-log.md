@@ -1421,3 +1421,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand: `add_declaration` (the test), `replace_text` (the fix; its first send rethrew
   the union-typed `e`, which the gate refused as an unhandled `Exception`).
+
+## 2026-11-13: fix-cli-malformed-json
+
+- No Java by hand: `add_declaration` (the test), `replace_text` (its second case), one `batch` of
+  two `replace_text`s (the fix).
