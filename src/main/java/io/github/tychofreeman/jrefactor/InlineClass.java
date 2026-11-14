@@ -263,7 +263,7 @@ final class InlineClass {
       if (clash == null) {
         continue;
       }
-      String folded = Signatures.label(b);
+      String folded = Names.methodLabel(b);
       String holderName = holder.getName().getIdentifier();
       if (clash.subtype() == null) {
         throw new Refusal(

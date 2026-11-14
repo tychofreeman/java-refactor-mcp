@@ -32,7 +32,7 @@ final class Overrides {
         theirs.add(p.getErasure().getQualifiedName());
       }
       if (theirs.equals(params)) {
-        return Signatures.label(m);
+        return Names.methodLabel(m);
       }
     }
     return null;

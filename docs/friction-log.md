@@ -1574,3 +1574,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   it had deleted; the edit tools then declared stubs for them (fields and a constructor of
   `TextEdit`, a record), and the batch was refused for that constructor, not for the missing
   locals. A refusal that named the cut statement would have pointed at the range.
+
+## 2026-11-14: one-label
+
+- `rename` of `Names.chain` to `typeLabel` was refused: `Names.typeLabel(ITypeBinding)` has one
+  parameter too, so a call "could resolve to the other", though an `AbstractTypeDeclaration` and
+  an `ITypeBinding` never convert. Named `typeLabelAt` instead (the issue asked for an overload).
+- `move` of `Signatures.label` into `Names` wrote its body four spaces a step and kept the
+  qualifier `Names.typeLabel` inside `Names`; Spotless fixed the first, a `replace_text` the
+  second.
+- `rename` in a batch needs `line`, which a `move` earlier in the same batch had just decided:
+  the moved method's line cannot be named before it lands. Sent as separate calls.
+- Otherwise through the tools: `move` (four), `rename` (two), `replace_declaration`, `inline`,
+  `replace_text`, `create_file` for `NamesTest`. Goldens are resources.

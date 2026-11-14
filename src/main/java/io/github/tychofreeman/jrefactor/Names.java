@@ -1,10 +1,14 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.QualifiedName;
@@ -113,5 +117,52 @@ final class Names {
    */
   static String plural(int n, String what) {
     return n + " " + what + (n == 1 ? "" : "s");
+  }
+
+  /**
+   * "Outer.Cart.add(String, int)": the method's class with its enclosing types, and its parameter
+   * types erased, which {@link Declarations#find} also takes. A declaration's own label, written
+   * types unless two overloads are written alike, is {@link Declarations#methodLabel}.
+   */
+  static String methodLabel(IMethodBinding b) {
+    List<String> types = new ArrayList<>();
+    for (ITypeBinding t : b.getMethodDeclaration().getParameterTypes()) {
+      types.add(t.getErasure().getName());
+    }
+    return typeLabel(b.getDeclaringClass())
+        + "."
+        + b.getName()
+        + "("
+        + String.join(", ", types)
+        + ")";
+  }
+
+  /** "name(Type, Type)" with the parameter types as source names them. */
+  static String signature(IMethodBinding m) {
+    List<String> types = new ArrayList<>();
+    for (ITypeBinding t : m.getParameterTypes()) {
+      types.add(Extract.typeName(t));
+    }
+    return m.getName() + "(" + String.join(", ", types) + ")";
+  }
+
+  /**
+   * "Outer.Inner": the names of the type declarations that hold {@code node}, outermost first, and
+   * its own when it is one; through local and anonymous classes too.
+   */
+  static String typeLabelAt(ASTNode node) {
+    String out = null;
+    for (ASTNode p = node; p != null; p = p.getParent()) {
+      if (p instanceof AbstractTypeDeclaration t) {
+        String name = t.getName().getIdentifier();
+        out = out == null ? name : name + "." + out;
+      }
+    }
+    return out;
+  }
+
+  /** "Base.describe(int, String)": the declaring class, and the method as {@link #signature}. */
+  static String sourceLabel(IMethodBinding m) {
+    return m.getDeclaringClass().getErasure().getName() + "." + signature(m);
   }
 }
