@@ -175,4 +175,17 @@ final class Args {
   Map<String, Object> values() {
     return values;
   }
+
+  /** The names in a comma-separated list, none for null. */
+  static List<String> commaSeparated(String list) {
+    List<String> out = new ArrayList<>();
+    if (list != null) {
+      for (String s : list.split(",")) {
+        if (!s.isBlank()) {
+          out.add(s.strip());
+        }
+      }
+    }
+    return out;
+  }
 }

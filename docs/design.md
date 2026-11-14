@@ -370,6 +370,13 @@ removing a directory.
 Options: (a) that (chosen: an overflow or a full heap ends with its call, whose frames are gone);
 (b) only `StackOverflowError`, as the review's minimum; (c) every `Error`, `InternalError`
 included.
+**Default to reopen (2026-11-14, issue #530; smallest option):** `change_signature`'s list
+arguments (`add_throws`, `remove_throws`, `stop_at`) stay comma-separated strings, read by
+`Args.commaSeparated` (moved from `ChangeSignature.names`). Options: (a) that (chosen: no change
+to the contract, to the description's `add_throws=IOException`, or to the command line's
+`key=value` form); (b) arrays (`Arg.strings`, read by `Args.list`) as the other tools' lists, which
+refuses a call that sends one string unless `Args.list` also takes one; (c) both, an array or a
+comma-separated string.
 
 ## Constructive transformations (2026-11-05)
 
