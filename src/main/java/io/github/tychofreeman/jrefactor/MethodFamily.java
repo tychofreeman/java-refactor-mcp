@@ -341,7 +341,7 @@ final class MethodFamily {
                 public boolean visit(SimpleName n) {
                   if (pb != null && pb.isEqualTo(n.resolveBinding())) {
                     throw new Refusal(
-                        Signatures.label(d.binding())
+                        Names.methodLabel(d.binding())
                             + " reads "
                             + p.getName().getIdentifier()
                             + " ("
@@ -376,7 +376,7 @@ final class MethodFamily {
                       && n.resolveBinding() instanceof IVariableBinding v
                       && v.isField()) {
                     throw new Refusal(
-                        Signatures.label(d.binding())
+                        Names.methodLabel(d.binding())
                             + " reads the field "
                             + name
                             + " ("

@@ -23,7 +23,7 @@ final class TestFor {
 
     /** "Cart.add(int)", or "Cart". */
     String label() {
-      return method == null ? type.getName() : type.getName() + "." + signature(method);
+      return method == null ? type.getName() : type.getName() + "." + Names.signature(method);
     }
   }
 
@@ -82,7 +82,7 @@ final class TestFor {
         if (found.size() > 1) {
           List<String> each = new ArrayList<>();
           for (IMethodBinding m : found) {
-            each.add(b.getName() + "." + signature(m));
+            each.add(b.getName() + "." + Names.signature(m));
           }
           throw new Refusal(
               type
@@ -246,11 +246,6 @@ final class TestFor {
       out.add(Extract.typeName(t));
     }
     return out;
-  }
-
-  /** "add(int)": the name and parameter types as source names them. */
-  private static String signature(IMethodBinding m) {
-    return m.getName() + "(" + String.join(", ", types(m)) + ")";
   }
 
   private static String decapitalize(String name) {

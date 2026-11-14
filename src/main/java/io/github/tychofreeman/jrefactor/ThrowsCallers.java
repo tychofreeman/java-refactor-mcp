@@ -407,12 +407,7 @@ final class ThrowsCallers {
 
   /** The stop_at name that {@code m} is, or null. */
   private String stopOf(MethodDeclaration m) {
-    String label = m.getName().getIdentifier();
-    for (ASTNode p = m.getParent(); p != null; p = p.getParent()) {
-      if (p instanceof AbstractTypeDeclaration t) {
-        label = t.getName().getIdentifier() + "." + label;
-      }
-    }
+    String label = Names.typeLabelAt(m) + "." + m.getName().getIdentifier();
     for (String stop : stops) {
       String s = stop.contains("(") ? stop.substring(0, stop.indexOf('(')) : stop;
       if (label.equals(s) || label.endsWith("." + s)) {

@@ -1511,3 +1511,16 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   method in the same `batch` as the seven `replace_text`s that dropped the callers' `null`.
 - No Java by hand: `replace_declaration`, `add_declaration`, `replace_statements` for each copy,
   `replace_text` for the callers and `inspect`'s loop head, `create_file` for `HoldingTest`.
+
+## 2026-11-14: one-label
+
+- `rename` of `Names.chain` to `typeLabel` was refused: `Names.typeLabel(ITypeBinding)` has one
+  parameter too, so a call "could resolve to the other", though an `AbstractTypeDeclaration` and
+  an `ITypeBinding` never convert. Named `typeLabelAt` instead (the issue asked for an overload).
+- `move` of `Signatures.label` into `Names` wrote its body four spaces a step and kept the
+  qualifier `Names.typeLabel` inside `Names`; Spotless fixed the first, a `replace_text` the
+  second.
+- `rename` in a batch needs `line`, which a `move` earlier in the same batch had just decided:
+  the moved method's line cannot be named before it lands. Sent as separate calls.
+- Otherwise through the tools: `move` (four), `rename` (two), `replace_declaration`, `inline`,
+  `replace_text`, `create_file` for `NamesTest`. Goldens are resources.

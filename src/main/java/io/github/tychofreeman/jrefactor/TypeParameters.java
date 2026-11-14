@@ -855,7 +855,7 @@ final class TypeParameters {
         if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
           throw new Refusal(
               t.isTypeVariable()
-                  ? Signatures.label(d.binding())
+                  ? Names.methodLabel(d.binding())
                       + " already names a type parameter "
                       + parameter
                       + " (line "
@@ -865,7 +865,7 @@ final class TypeParameters {
                       + "). Choose another name."
                   : parameter
                       + " is a type that "
-                      + Signatures.label(d.binding())
+                      + Names.methodLabel(d.binding())
                       + " already names (line "
                       + d.file().line(n)
                       + " of "
@@ -937,7 +937,7 @@ final class TypeParameters {
         }
         if (at < 0) {
           throw new Refusal(
-              Signatures.label(d.binding())
+              Names.methodLabel(d.binding())
                   + " has no type parameter "
                   + beforeName
                   + " to put "

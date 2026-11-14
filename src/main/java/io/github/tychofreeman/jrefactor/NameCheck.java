@@ -206,7 +206,7 @@ final class NameCheck {
                   ? "an anonymous class"
                   : Names.typeLabel(v.getDeclaringClass()));
       case IVariableBinding v -> "the local " + v.getName();
-      case IMethodBinding m -> Signatures.label(m);
+      case IMethodBinding m -> Names.methodLabel(m);
       case ITypeBinding t -> "the type " + Names.typeLabel(t);
       default -> b.getName();
     };
