@@ -1,6 +1,6 @@
 # One probe-field type resolution
 
-- **Item:** issue #493 (code review signatures #6), roadmap order 386 (#396)
+- **Item:** issue #493 (code review signatures #6), roadmap order 390 (#400)
 - **Date:** 2026-11-14
 - **Branch:** probe-type
 

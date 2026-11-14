@@ -163,7 +163,8 @@ final class MemberMove {
 
   /**
    * The edit that removes {@code m}'s lines, and one blank line beside them: the one after it, or
-   * for the last member the one before, so the members left keep one blank line between them.
+   * for the last member the one before, so the members left keep one blank line between them. A
+   * line of only spaces is blank.
    */
   static TextEdit removal(String text, BodyDeclaration m) {
     int start = Lines.start(text, m.getStartPosition());
@@ -171,7 +172,9 @@ final class MemberMove {
     int next = text.indexOf('\n', end);
     if (next >= 0 && text.substring(end, next).isBlank()) {
       end = next + 1;
-    } else if (start >= 1 && text.charAt(start - 1) == '\n') {
+    } else if (text.substring(end).stripLeading().startsWith("}")
+        && start >= 1
+        && text.charAt(start - 1) == '\n') {
       int before = Lines.start(text, start - 1);
       if (text.substring(before, start - 1).isBlank()) {
         start = before;
