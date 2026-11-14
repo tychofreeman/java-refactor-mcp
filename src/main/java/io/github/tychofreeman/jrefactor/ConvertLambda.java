@@ -167,7 +167,9 @@ final class ConvertLambda {
             + " of "
             + rel
             + " to "
-            + (replacement.contains("\n") ? "an anonymous class" : replacement)
+            + (!replacement.contains("\n")
+                ? replacement
+                : to.equals("lambda") ? "a lambda" : "an anonymous class")
             + written.fixed().said(),
         written.declared());
   }

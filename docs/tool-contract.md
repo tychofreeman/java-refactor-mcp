@@ -463,7 +463,9 @@ Roadmap #87, 2026-11-04. Arguments: `file`, `line` (where it starts), `column`
   super, which in a lambda would mean another class's superclass. Keep it."); an anonymous class with
   fields or other methods; a form that does not compile
   there (the gate). Result: `converted the lambda at line 7 of <file> to
-  String::length`.
+  String::length`; a form of several lines is named, not shown (`to a lambda`, `to an anonymous
+  class`; roadmap #331, issue #552, 2026-11-14: an anonymous class to a block lambda had said
+  `to an anonymous class`).
 
 ## `convert_to_record` (built)
 
