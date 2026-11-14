@@ -721,6 +721,13 @@ A member type whose body is on one line (`record Circle(double r) implements Sha
 up with its closing brace at the indentation of its header (`MemberMove.appendTo`, which had put
 it at column 0).
 
+Issue #435, 2026-11-13: a case may be a bare `throw` (`default -> throw new
+IllegalArgumentException(...);`), read as the block `{ throw ...; }`: in the method form the throw
+becomes the body of the enum's own method (a `default`) or of the constant's override. It had
+been refused as "each case must be an arrow case giving an expression". The field form takes it
+as a case that is not a constant: without `as` the method form is chosen, with `as` `field` it is
+refused as any other.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`
