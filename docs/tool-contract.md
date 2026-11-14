@@ -668,6 +668,12 @@ and an `if` chain of `s instanceof T v` make a void method of each case's statem
 `default` (or a chain's final `else`) becomes `S`'s own implementation (a `default` method of
 an interface, a concrete one of an abstract class), the selector name as `this`; a body may
 declare its own locals; a `return`, `break`, `continue` or `yield` leaving a case is refused.
+In an `if` chain the first test that matches wins, where an override runs the most specific
+case: a case whose type is a subtype of an earlier case's type is refused (roadmap #215, issue
+#467, 2026-11-13): "the case if (s instanceof Square q) never runs: Square comes after the case of
+Polygon, one of its supertypes, so the earlier case matches first; as an override on Square it
+would run instead. Delete that case, then call again." A switch cannot hold such a case (Java
+refuses a dominated pattern).
 
 ### Over an enum: the field form
 

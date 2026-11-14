@@ -293,7 +293,23 @@ final class TypeSwitch {
         throw new Refusal(
             "each if of the chain must test " + sel + " instanceof a type with a variable.");
       }
-      out.add(typed(tp, i.getThenStatement(), project, "if (" + p + ")"));
+      Case c = typed(tp, i.getThenStatement(), project, "if (" + p + ")");
+      // The first test that matches wins; an override would run a later case of a subtype instead.
+      for (Case earlier : out) {
+        if (c.type().isSubTypeCompatible(earlier.type())) {
+          throw new Refusal(
+              "the case if ("
+                  + p
+                  + ") never runs: "
+                  + c.type().getName()
+                  + " comes after the case of "
+                  + earlier.type().getName()
+                  + ", one of its supertypes, so the earlier case matches first; as an override on "
+                  + c.type().getName()
+                  + " it would run instead. Delete that case, then call again.");
+        }
+      }
+      out.add(c);
       at = i.getElseStatement();
     }
     return out;
