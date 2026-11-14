@@ -171,9 +171,9 @@ final class NameCheck {
 
   /**
    * Where {@code offset} after {@code sorted} (in order, not overlapping) was before them, for an
-   * offset no edit wrote.
+   * offset no edit wrote or the start of what one wrote.
    */
-  private static int before(List<TextEdit> sorted, int offset) {
+  static int before(List<TextEdit> sorted, int offset) {
     int shift = 0;
     for (TextEdit t : sorted) {
       int end = t.start() + shift + t.text().length();

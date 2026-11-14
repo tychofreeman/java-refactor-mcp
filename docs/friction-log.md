@@ -1511,3 +1511,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   method in the same `batch` as the seven `replace_text`s that dropped the callers' `null`.
 - No Java by hand: `replace_declaration`, `add_declaration`, `replace_statements` for each copy,
   `replace_text` for the callers and `inspect`'s loop head, `create_file` for `HoldingTest`.
+
+## 2026-11-14: rename-uses
+
+- Three loops alike but for a predicate and a per-file check into one helper: `extract_function`
+  of `renameType`'s loop gave a helper for types only (the predicate `refersTo(..., key)` and the
+  file move written in), returning a record of five locals; no tool turns an expression of the
+  extracted body into a function parameter (an "introduce parameter" whose value is a lambda over a
+  local), and `fold` cannot match the other two loops while their predicates differ. Undone; the
+  helper was written with `add_declaration` and each method's loop with `replace_statements`.
+- Otherwise through the tools: `replace_text` (format strings, `all_occurrences` for the two
+  `before` calls), `replace_declaration`, `create_file`, `add_declaration`. Goldens are resources.
