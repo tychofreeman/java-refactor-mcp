@@ -23,4 +23,21 @@ task's typed locals (`Customer customer = order.customer();` before a `return`) 
 
 ## Rerun
 
-The skeleton arm on the depot tasks after merging: see the follow-up below.
+The skeleton arm on the depot tasks, from this branch's commit (the wrapper serves the checkout),
+Sonnet, two runs a task, out `eval-runs/depot-skeleton-blocks`: 6/6 passed, $0.68 ($0.113 a run,
+11.3 turns), the same as the first skeleton run.
+
+| task | cost | turns | before (`ab-generators`) |
+|---|---|---|---|
+| depot-reorders | $0.14 | 15.5 | $0.14, 15.0 |
+| depot-invoice | $0.11 | 12.5 | $0.11, 11.5 |
+| depot-shipping | $0.09 | 6.0 | $0.10, 7.5 |
+
+- **Invoice:** both runs sent the typed block (3 and 4 statements), were refused at statement 1,
+  and sent the suggested `build` unchanged in the next call: two call entries
+  (`order.customer` into `customer`, `customer.account` into `account`) and the rest as strings.
+  Accepted at once.
+- **Reorders:** both runs refused on the loop and followed it, as before (one also missed `line`).
+- **Shipping:** `remove_parameter` with `value`, one call, as before.
+- The refusal is followed when it fires mid-block; it costs one call and changes nothing
+  measurable in cost at two runs.

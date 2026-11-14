@@ -647,6 +647,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The four generator arms ran on 2026-11-13 (`docs/sessions/ab-generators.md`, 24 runs, $2.79):
   all passed, within noise of each other; `build` was used only when the skeleton refusal asked
   for it, the create aliases never, `replace_parameter` by name in place of `remove_parameter` `value`.
+- Skeleton-only checks each statement of the content (2026-11-13, `docs/sessions/skeleton-build-blocks.md`):
+  a block with a typed local is refused with one `build` (entries plus strings); rerun on the depot
+  tasks, both invoice runs followed it unchanged, 6/6, cost as before.
 - The constructive task set is `eval-tasks/library.json` (2026-11-06, `docs/sessions/constructive-tasks.md`):
   four tasks an IDE does with `implement`, `constructor`, `surround` and `test_for`.
 - The library tasks ran on 2026-11-06 (`docs/sessions/ab-library.md`): the constructive options went
