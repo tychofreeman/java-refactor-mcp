@@ -66,17 +66,18 @@ final class Fold {
 
   static Outcome run(SourceProject project, String rel, String name, Integer line, String in)
       throws Exception {
-    int dot = name.lastIndexOf('.');
+    String base = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
+    int dot = base.lastIndexOf('.');
     Precondition.require(
         Precondition.that(
             () -> dot > 0,
             () -> "name the method as Type.method: " + name + " has no type before it."));
-    String typeName = name.substring(name.lastIndexOf('.', dot - 1) + 1, dot);
-    String methodName = name.substring(dot + 1);
+    String typeName = base.substring(base.lastIndexOf('.', dot - 1) + 1, dot);
+    String methodName = base.substring(dot + 1);
     Path file = project.javaFile(rel);
-    MethodDeclaration first = method(Opened.of(project, rel).unit(), typeName, methodName, name);
+    MethodDeclaration first = method(Opened.of(project, rel).unit(), name, rel);
     Holding holding = Holding.of(project, anchor(first), file);
-    MethodDeclaration m = method(holding.units().get(file), typeName, methodName, name);
+    MethodDeclaration m = method(holding.units().get(file), name, rel);
     IMethodBinding mb = m.resolveBinding();
     Precondition.require(
         Precondition.that(
@@ -84,7 +85,7 @@ final class Fold {
             () -> name + " has no body; fold makes calls of a method with one."));
     boolean instance = !Modifier.isStatic(m.getModifiers());
     if (instance) {
-      String overrider = overrider(project, file, typeName, methodName, name);
+      String overrider = overrider(project, file, methodName, name);
       if (overrider != null) {
         throw new Refusal(
             name
@@ -279,17 +280,15 @@ final class Fold {
         declared);
   }
 
-  /** The static method {@code type.method} of {@code unit}, or a refusal. */
-  private static MethodDeclaration method(
-      CompilationUnit unit, String type, String method, String name) {
-    for (MethodDeclaration d : Nodes.all(unit, MethodDeclaration.class)) {
-      if (d.getName().getIdentifier().equals(method)
-          && d.getParent() instanceof AbstractTypeDeclaration t
-          && t.getName().getIdentifier().equals(type)) {
-        return d;
-      }
+  /**
+   * The method {@code name} (Type.method, with its parameter types for an overload) of {@code
+   * unit}, or a refusal.
+   */
+  private static MethodDeclaration method(CompilationUnit unit, String name, String rel) {
+    if (Declarations.find(unit, name, rel).decl() instanceof MethodDeclaration d) {
+      return d;
     }
-    throw new Refusal("no method " + name + " in that file. Name it as Type.method.");
+    throw new Refusal(name + " is not a method. Name it as Type.method.");
   }
 
   /**
@@ -788,11 +787,11 @@ final class Fold {
    * The method of the project that overrides {@code type.method} (Sub.method()), or null; read from
    * one parse of the files that name the method.
    */
-  private static String overrider(
-      SourceProject project, Path file, String type, String method, String name)
+  private static String overrider(SourceProject project, Path file, String method, String name)
       throws IOException {
     Holding named = Holding.of(project, method, file);
-    IMethodBinding mb = method(named.units().get(file), type, method, name).resolveBinding();
+    IMethodBinding mb =
+        method(named.units().get(file), name, project.relative(file)).resolveBinding();
     for (CompilationUnit unit : named.units().values()) {
       for (MethodDeclaration d : Nodes.all(unit, MethodDeclaration.class)) {
         IMethodBinding b = d.resolveBinding();
