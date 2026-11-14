@@ -1361,6 +1361,25 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - CLI: an empty heredoc for `old_file=-` sent an empty `old`, which hit this bug (an
   OutOfMemoryError, files restored); now a refusal.
 
+## 2026-11-13: fix-remove-else-scope
+
+- No Java by hand: one `batch` (`replace_text` twice, `add_declaration`), then `rename`. A `rename`
+  step in the batch was refused for want of `line` (the method's line moved within the batch); it
+  was dropped by `retry` with `remove` and run after, with the line from `inspect` `pattern`.
+  The probe and goldens were written by heredocs (resources).
+
+## 2026-11-13: fix-convert-to-record-equals
+
+- No Java by hand: two `batch`es (`replace_text`, `add_declaration`) sent from a file
+  (`@file`), since the code held a `' '` that closed the shell's single-quoted argument; then
+  `replace_text` for the class comment. The probe and goldens were written by heredocs.
+
+## 2026-11-13: fix-loop-receiver-binding
+
+- No Java by hand: one `batch` from a file (`replace_text`, `replace_declaration`, `add_declaration`
+  across `LoopToStream` and `ConvertLoop`), then `remove_parameter` for the parameter it left unused.
+  The probes and goldens were written by heredocs.
+
 ## 2026-11-13: fix-new-override
 
 - `move` of `FunctionToMethod.clash` and `.below` to the new `Overrides` widened each from private to

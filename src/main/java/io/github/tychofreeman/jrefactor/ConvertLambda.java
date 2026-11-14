@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.ThisExpression;
@@ -424,6 +425,33 @@ final class ConvertLambda {
                       + " would mean another object. Keep it.");
             }
             return false;
+          }
+
+          @Override
+          public boolean visit(SuperMethodInvocation s) {
+            return refuseSuper(s.getQualifier());
+          }
+
+          @Override
+          public boolean visit(SuperFieldAccess s) {
+            return refuseSuper(s.getQualifier());
+          }
+
+          @Override
+          public boolean visit(SuperMethodReference s) {
+            return refuseSuper(s.getQualifier());
+          }
+
+          private boolean refuseSuper(Name qualifier) {
+            if (qualifier == null) {
+              throw new Refusal(
+                  "the "
+                      + from
+                      + " uses super, which in "
+                      + to
+                      + " would mean another class's superclass. Keep it.");
+            }
+            return true;
           }
 
           @Override
