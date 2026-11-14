@@ -303,7 +303,7 @@ package:
 - a read of a record's field across the new boundary (`r.length`, where a
   nested record's fields were visible to the whole top-level type) becomes a
   call of its accessor (`r.length()`), when the accessor is the generated one
-  or only returns the field (roadmap #184, issue #440);
+  or only returns the field (roadmap #192, issue #440);
 - a sealed type with no `permits` clause permits the subtypes of its own file;
   when the move puts the sealed type and some of those in different files, it
   gets an explicit clause listing all of them in their file's order, each
