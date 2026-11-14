@@ -9,8 +9,8 @@ class Ledger {
 
   Money totalFor(String customer) {
     Money total = Money.zero();
-    Money start = Money.zero();
-    total = total.plus(start);
+    total = total.plus(Money.zero());
+    count++;
     for (Order order : orders) {
       total = total.plus(order.amount());
     }

@@ -889,9 +889,12 @@ in the same turn only if it is sent after it.
   Money.zero();`: "Send build: [{"call":"Money.zero","into":"start"}] in place of content"; a
   construction's declared type goes in `type` when it is not the class), a for-each (`loop`,
   `name`, `body` as the statements typed) and an index loop over `n`, `a.length` or
-  `list.size()` (`form` `index`). Content of several statements, a declaration with modifiers or
-  `var`, an assignment, a plain call, a return and a guard pass. Bodies with logic are not
-  refused. With `declaration` (a
+  `list.size()` (`form` `index`). Content of several statements is refused when one of them is
+  such a statement, naming one `build` with an entry for each and the others as typed strings
+  ("statement 1 of 2, a local declared from a call, ... Send build:
+  [{"call":"Money.zero","into":"start"},"total = total.plus(start);"] in place of content, its
+  other statements as typed."; 2026-11-13). A declaration with modifiers or `var`, an
+  assignment, a plain call, a return and a guard pass. Bodies with logic are not refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
   supertypes leave unimplemented, named in the result (`; stubs for what its supertypes
