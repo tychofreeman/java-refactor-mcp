@@ -276,6 +276,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- A tool that creates a new type's file writes it with `Edits.newFile` (imports fixed, through the
+  gate, the caller's last sentence for a refusal) and starts it with `Opened.packageHeader()` (#518).
 - Java's primitive types as tools write them are `JavaTypes` (#530): `BOXED`, `isPrimitive`, `isBox`,
   `zero` (a variable's start value) and `placeholder` (a typed test argument). A member's kind for
   layout is `Placement.Rank`, not an int. `TypeDecidedUses` (was `PrimitiveUses`) is the
@@ -417,6 +419,10 @@ Each was chosen from options; the record named beside it has the options it beat
   top-level type to another package of its source root; package-private
   declarations a use crosses the new boundary with become public, found by
   binding (`findDeclaringNode` by key) in the file its package and name imply.
+
+- `move` of a member type carries what it moves as a `MovedType` (#528): its range in the outer
+  file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
+  `MoveType` that needs them takes it, not the fields one by one.
 
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call

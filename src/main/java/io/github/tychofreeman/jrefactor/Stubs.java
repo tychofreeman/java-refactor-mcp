@@ -522,7 +522,7 @@ final class Stubs {
         return;
       }
       created.add(pkg.isEmpty() ? name : pkg + "." + name);
-      String header = pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
+      String header = Opened.packageHeader(pkg);
       want(
           target,
           new Stub(
