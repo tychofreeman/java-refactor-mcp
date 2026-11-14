@@ -470,11 +470,23 @@ the if starts on" kept, at the cost of a second place to look and wording that d
 (c) leaving the hand-written checks (a required integer arrives as null and each tool must
 remember it). The description is quoted as the schema has it, capital and all, since a model
 reads the same text in the schema; several missing arguments get one sentence each. A blank
-string is not missing (`content` and `new` may be empty), so the checks for a blank value stay
-in their tools (`AddSupertype`, `ChangeType`, `Args.required`, `batch` with no steps). A tool
+string was not missing (`content` and `new` may be empty; changed by #622, below), so the checks
+for a blank value stayed in their tools (`AddSupertype`, `ChangeType`, `Args.required`, `batch` with no steps). A tool
 whose required arguments depend on its route (`move`, `inline`, `add_parameter`,
 `change_signature`, the edits that take `content` or `build`) marks only what every route needs,
 and refuses the rest itself.
+
+**Decided (2026-11-14, the owner, issue #622): a required string sent empty or blank reads as one
+left out.** `Args` keeps the tool's `List<Arg>` (`Tools.call`, and a router's target's through
+`Args.routed`), so `Args.required` refuses in `Arg.missing`'s words, and `Args.check` refuses a
+required string that is empty or blank as it refuses an absent one, before the tool runs. The
+owner asked for the wording; refusing centrally as well is this session's default, to reopen, over
+(a) the wording in `Args.required` alone (a blank `file` or `name` then still reached most tools,
+which refused it in their own words, "'  ' is not a Java file" or "name is Type.method, ... not
+  ", as `RequiredArgsTest` found) and (c) a flag on each `Arg` saying it may be empty
+(a schema change for two names). #620's decision stands: `content` and `new` may be empty, by name
+(`Args.MAY_BE_EMPTY`), and their tools judge them; `Args.required` refuses them blank where a tool
+reads them so (`insert_statements` `content`, `replace_expression` `new`).
 
 ## Constructive transformations (2026-11-05)
 

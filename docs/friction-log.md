@@ -1848,3 +1848,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand: one `batch` (`insert_statements`, `replace_text`). `insert_statements` was sent
   `position` for `where`; the refusal named `where` and a `retry` fixed it.
+
+## 2026-11-14: required-blank-wording
+
+- No Java by hand. The test batch's `add_declaration` declared the stub `Args.routed(String,
+  List<Arg>)` the test called, and `replace_declaration` by that signature replaced it. `replace_text`
+  of a line that occurs three times was refused naming the lines; `retry` with `all_occurrences`.

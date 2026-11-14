@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -118,5 +119,51 @@ class RequiredArgsTest {
                 "step 1 of 1 (invert_if) refused: invert_if needs line: The 1-based line the if"
                     + " starts on. Pass line."),
         refused.getMessage());
+  }
+
+  @Test
+  void aRequiredStringSentEmptyOrBlankIsRefusedAsOneLeftOut(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    List<String> wrong = new ArrayList<>();
+    for (Tools.Def d : Tools.ALL) {
+      for (Arg blank : d.arguments()) {
+        if (!blank.mandatory()
+            || !blank.schema().path("type").asString("").equals("string")
+            || blank.name().equals("content")
+            || blank.name().equals("new")) {
+          continue;
+        }
+        for (String value : List.of("", "  ")) {
+          Map<String, Object> values = new HashMap<>();
+          for (Arg a : d.arguments()) {
+            if (a.mandatory()) {
+              values.put(a.name(), a == blank ? value : sample(a));
+            }
+          }
+          String expected = blank.missing(d.name());
+          try {
+            Tools.call(d, project, values);
+            wrong.add(d.name() + " with " + blank.name() + " \"" + value + "\": ran");
+          } catch (Exception e) {
+            if (!expected.equals(e.getMessage())) {
+              wrong.add(
+                  d.name() + " with " + blank.name() + " \"" + value + "\": " + e.getMessage());
+            }
+          }
+        }
+      }
+    }
+    assertEquals(List.of(), wrong);
+  }
+
+  @Test
+  void contentAndNewMayBeEmpty(@TempDir Path root) throws Exception {
+    SourceProject project = SourceProject.of(root);
+    Files.writeString(root.resolve("notes.txt"), "keep drop\n");
+    Tools.call(
+        Tools.named("replace_text"),
+        project,
+        Map.of("file", "notes.txt", "old", " drop", "new", ""));
+    assertEquals("keep\n", Files.readString(root.resolve("notes.txt")));
   }
 }

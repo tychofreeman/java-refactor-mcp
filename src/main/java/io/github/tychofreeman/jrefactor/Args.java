@@ -6,16 +6,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /** A tool call's arguments, read with refusals that say what to send. */
 final class Args {
 
+  /** The arguments that may be sent empty: an empty content deletes, an empty new removes. */
+  private static final Set<String> MAY_BE_EMPTY = Set.of("content", "new");
+
   private final String tool;
   private final Map<String, Object> values;
+  private final List<Arg> arguments;
 
   Args(String tool, Map<String, Object> values) {
+    this(tool, values, List.of());
+  }
+
+  /** {@code values}, read with the words of {@code arguments}, the tool's, in refusals. */
+  Args(String tool, Map<String, Object> values, List<Arg> arguments) {
     this.tool = tool;
     this.values = values == null ? Map.of() : values;
+    this.arguments = arguments;
   }
 
   /**
@@ -40,7 +51,7 @@ final class Args {
     }
     List<String> missing = new ArrayList<>();
     for (Arg a : arguments) {
-      if (a.mandatory() && values.get(a.name()) == null) {
+      if (a.mandatory() && unset(a.name())) {
         missing.add(a.missing(tool));
       }
     }
@@ -57,11 +68,11 @@ final class Args {
     throw new Refusal(key + " must be a string; got " + value + ".");
   }
 
-  /** A string that must be given and not empty. */
+  /** A string that must be given and not blank, refused in the words of {@link Arg#missing}. */
   String required(String key) {
     String value = string(key);
-    if (value == null || value.isEmpty()) {
-      throw new Refusal(tool + " needs " + key + ".");
+    if (value == null || value.isBlank()) {
+      throw new Refusal(argument(key).missing(tool));
     }
     return value;
   }
@@ -135,21 +146,21 @@ final class Args {
         out.put(r.getValue(), out.remove(r.getKey()));
       }
     }
-    return new Args(tool, out);
+    return new Args(tool, out, arguments);
   }
 
   /** These arguments without {@code names}: ones a tool still accepts and ignores. */
   Args without(Set<String> names) {
     Map<String, Object> out = new java.util.LinkedHashMap<>(values);
     out.keySet().removeAll(names);
-    return new Args(tool, out);
+    return new Args(tool, out, arguments);
   }
 
   /** These arguments with {@code key} set to {@code value}. */
   Args with(String key, Object value) {
     Map<String, Object> out = new java.util.LinkedHashMap<>(values);
     out.put(key, value);
-    return new Args(tool, out);
+    return new Args(tool, out, arguments);
   }
 
   /** The value of {@code key} as it was sent (a list, an object), or null when not given. */
@@ -184,7 +195,7 @@ final class Args {
     Map<String, Object> out = new java.util.LinkedHashMap<>(values);
     out.keySet().retainAll(takes);
     out.values().removeIf(v -> v == null);
-    return new Args(tool, out);
+    return new Args(tool, out, arguments.stream().filter(a -> takes.contains(a.name())).toList());
   }
 
   /** The arguments as sent, by name. */
@@ -203,5 +214,28 @@ final class Args {
       }
     }
     return out;
+  }
+
+  /**
+   * These arguments for {@code tool}, which takes {@code takes}: as the other routed, in its words.
+   */
+  Args routed(String tool, List<Arg> takes) {
+    Args out = routed(tool, takes.stream().map(Arg::name).collect(Collectors.toSet()));
+    return new Args(tool, out.values, takes);
+  }
+
+  /** Whether {@code key} is not given, or given blank when it is not one that may be empty. */
+  private boolean unset(String key) {
+    Object value = values.get(key);
+    return value == null
+        || (value instanceof String s && s.isBlank() && !MAY_BE_EMPTY.contains(key));
+  }
+
+  /** The tool's argument {@code key}; one without a description when the tool's are not known. */
+  private Arg argument(String key) {
+    return arguments.stream()
+        .filter(a -> a.name().equals(key))
+        .findFirst()
+        .orElse(Arg.string(key, ""));
   }
 }
