@@ -95,7 +95,7 @@ final class CallTargets {
           IMethodBinding d = b.getMethodDeclaration();
           List<String> overrides = new ArrayList<>();
           if (n instanceof MethodInvocation && !Modifier.isStatic(d.getModifiers())) {
-            for (IMethodBinding o : overridden(d)) {
+            for (IMethodBinding o : Hierarchy.overridden(d)) {
               overrides.add(place(o.getMethodDeclaration(), places));
             }
           }
@@ -236,28 +236,6 @@ final class CallTargets {
     }
   }
 
-  /** The methods of {@code m}'s class's supertypes, transitively, that {@code m} overrides. */
-  static List<IMethodBinding> overridden(IMethodBinding m) {
-    List<IMethodBinding> out = new ArrayList<>();
-    List<ITypeBinding> todo = new ArrayList<>(List.of(m.getDeclaringClass()));
-    for (int k = 0; k < todo.size(); k++) {
-      ITypeBinding type = todo.get(k);
-      if (type.getSuperclass() != null) {
-        todo.add(type.getSuperclass());
-      }
-      todo.addAll(List.of(type.getInterfaces()));
-      if (k == 0) {
-        continue;
-      }
-      for (IMethodBinding other : type.getDeclaredMethods()) {
-        if (m.overrides(other)) {
-          out.add(other);
-        }
-      }
-    }
-    return out;
-  }
-
   /**
    * As {@link #require(SourceProject, Collection, String, String)}, a change of override refused
    * with the fix of changing one of the two signatures.
@@ -280,7 +258,7 @@ final class CallTargets {
         if (b == null || b.isConstructor() || Modifier.isStatic(b.getModifiers())) {
           continue;
         }
-        for (IMethodBinding o : overridden(b)) {
+        for (IMethodBinding o : Hierarchy.overridden(b)) {
           IMethodBinding d = o.getMethodDeclaration();
           out.put(
               places.get(b.getKey()) + " > " + place(d, places),

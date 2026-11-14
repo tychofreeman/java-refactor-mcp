@@ -185,14 +185,7 @@ final class EnumField {
         throw new Refusal(simple + " already has a method " + parameter + "().");
       }
     }
-    List<ITypeBinding> supertypes = new ArrayList<>();
-    supertypes.add(type.getSuperclass());
-    supertypes.addAll(List.of(type.getInterfaces()));
-    for (int i = 0; i < supertypes.size(); i++) {
-      ITypeBinding s = supertypes.get(i);
-      if (s == null) {
-        continue;
-      }
+    for (ITypeBinding s : Hierarchy.supertypes(type, false)) {
       for (IMethodBinding m : s.getDeclaredMethods()) {
         if (m.getName().equals(parameter) && m.getParameterTypes().length == 0) {
           throw new Refusal(
@@ -204,8 +197,6 @@ final class EnumField {
                   + "; choose another name.");
         }
       }
-      supertypes.add(s.getSuperclass());
-      supertypes.addAll(List.of(s.getInterfaces()));
     }
   }
 

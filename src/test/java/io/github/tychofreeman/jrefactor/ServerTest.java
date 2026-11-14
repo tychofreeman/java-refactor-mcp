@@ -460,4 +460,19 @@ class ServerTest {
     }
     assertEquals(List.of(), over);
   }
+
+  @Test
+  void aStackOverflowIsAnEngineErrorAndTheServerAnswersAfter() {
+    Server.Quiet quiet = new Server.Quiet();
+    CallToolResult result =
+        Server.answer(
+            quiet,
+            () -> {
+              throw new StackOverflowError();
+            });
+    assertTrue(result.isError());
+    String text = ((TextContent) result.content().get(0)).text();
+    assertTrue(text.contains("engine error") && text.contains("StackOverflowError"), text);
+    assertEquals("ok", ((TextContent) Server.answer(quiet, () -> "ok").content().get(0)).text());
+  }
 }

@@ -287,6 +287,14 @@ final class TypeSwitch {
       IfStatement first, String text, Expression selector, SourceProject project)
       throws IOException {
     String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+    // Each if of the chain evaluates the selector again; the call that replaces them, once.
+    if (first.getElseStatement() instanceof IfStatement && Names.variable(selector) == null) {
+      throw new Refusal(
+          "the chain evaluates "
+              + sel
+              + " once in each if, and the call that replaces it would evaluate it once. Put it in a"
+              + " local before the if first (extract_variable), then call again.");
+    }
     List<Case> out = new ArrayList<>();
     for (Statement at = first; at != null; ) {
       if (!(at instanceof IfStatement i)) {
@@ -297,8 +305,7 @@ final class TypeSwitch {
       }
       if (!(i.getExpression() instanceof PatternInstanceofExpression p)
           || !(p.getPattern() instanceof TypePattern tp)
-          || !text.substring(p.getLeftOperand().getStartPosition(), Nodes.end(p.getLeftOperand()))
-              .equals(sel)) {
+          || !LoopToStream.sameVariable(text, p.getLeftOperand(), selector)) {
         throw new Refusal(
             "each if of the chain must test " + sel + " instanceof a type with a variable.");
       }

@@ -6,8 +6,10 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.ThisExpression;
 
 /**
  * How the tools name things: a type in messages and stubs, by its simple name with its enclosing
@@ -90,5 +92,18 @@ final class Names {
       top = top.getDeclaringClass();
     }
     return top;
+  }
+
+  /** The variable {@code e} names, as a name or {@code this.f}; null for any other expression. */
+  static IVariableBinding variable(Expression e) {
+    if (e instanceof SimpleName n && n.resolveBinding() instanceof IVariableBinding v) {
+      return v;
+    }
+    if (e instanceof FieldAccess f
+        && f.getExpression() instanceof ThisExpression t
+        && t.getQualifier() == null) {
+      return f.resolveFieldBinding();
+    }
+    return null;
   }
 }

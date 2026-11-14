@@ -449,18 +449,7 @@ final class LoopToStream {
 
   /** Whether {@code t} is a {@code java.util.Collection}, which has {@code stream()}. */
   static boolean collection(ITypeBinding t) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals("java.util.Collection")) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (collection(i)) {
-        return true;
-      }
-    }
-    return collection(t.getSuperclass());
+    return Hierarchy.isA(t, "java.util.Collection");
   }
 
   private static boolean declaredIn(Opened opened, IVariableBinding v, Statement body) {
@@ -1235,18 +1224,7 @@ final class LoopToStream {
 
   /** Whether {@code t} is a {@code java.util.Map}. */
   private static boolean map(ITypeBinding t) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals("java.util.Map")) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (map(i)) {
-        return true;
-      }
-    }
-    return map(t.getSuperclass());
+    return Hierarchy.isA(t, "java.util.Map");
   }
 
   /**
@@ -1407,23 +1385,11 @@ final class LoopToStream {
    * this.f} ({@code this.items} and {@code items}), else by their text.
    */
   static boolean sameVariable(String text, Expression a, Expression b) {
-    IVariableBinding x = variable(a);
-    IVariableBinding y = variable(b);
+    IVariableBinding x = Names.variable(a);
+    IVariableBinding y = Names.variable(b);
     if (x != null && y != null) {
       return x.getKey().equals(y.getKey());
     }
     return source(text, a).equals(source(text, b));
-  }
-
-  private static IVariableBinding variable(Expression e) {
-    if (e instanceof SimpleName n && n.resolveBinding() instanceof IVariableBinding v) {
-      return v;
-    }
-    if (e instanceof FieldAccess f
-        && f.getExpression() instanceof ThisExpression t
-        && t.getQualifier() == null) {
-      return f.resolveFieldBinding();
-    }
-    return null;
   }
 }

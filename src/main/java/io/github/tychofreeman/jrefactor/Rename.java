@@ -875,9 +875,7 @@ public final class Rename {
       }
     }
     int arity = b.getParameterTypes().length;
-    List<ITypeBinding> todo = new ArrayList<>(List.of(b.getDeclaringClass()));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
+    for (ITypeBinding t : Hierarchy.supertypes(b.getDeclaringClass(), true)) {
       for (IMethodBinding other : t.getDeclaredMethods()) {
         if (other.getName().equals(newName)
             && !other.isConstructor()
@@ -895,10 +893,6 @@ public final class Rename {
                   + " name.");
         }
       }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
     }
   }
 
