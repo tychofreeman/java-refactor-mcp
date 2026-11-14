@@ -1,0 +1,5 @@
+[
+  {"tool": "replace_declaration", "args": {"file": "com/example/Walk.java", "name": "Walk.first", "content": ""}},
+  {"tool": "replace_declaration", "args": {"file": "com/example/Walk.java", "name": "Walk.third", "content": ""}},
+  {"tool": "replace_declaration", "args": {"file": "com/example/Steps.java", "name": "Steps.second", "content": ""}}
+]

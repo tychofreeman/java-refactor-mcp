@@ -1280,7 +1280,17 @@ in the same turn only if it is sent after it.
   parameters in order, or is the same as that method's (#322, 2026-11-10: names compared by
   binding in one parse, a parameter by position, a method called on this by override; not when
   only the override is synchronized). Then its calls are not checked: they run the inherited
-  method, which does the same. The old Javadoc stays unless content has its own. Refused: several
+  method, which does the same. Inside a `batch` (issue #623, 2026-11-14), a use inside a
+  declaration that a later step deletes (`replace_declaration` with empty content) does not count:
+  it does not survive the batch. Members that only call each other are deleted in one batch, in
+  any order; one also used from outside the deleted set is still refused at its step, naming only
+  that use ("Pure.pure(Object) is used in com/example/Check.java line 5. ..."). The rule holds
+  under both checks, but under `check` `"each"` (the default) each step must still compile alone,
+  so deleting a member whose remaining callers are deleted later is refused by the type check,
+  with the batch's hint to send it with check `"end"`; under `"end"` the batch passes when the end
+  state compiles. Uses removed by other kinds of steps (`replace_text`, a `replace_declaration`
+  with new content) still count. A delete outside a batch is unchanged. The old Javadoc stays
+  unless content has its own. Refused: several
   members of that name (with their signatures), no such member (with the
   members there), a field declared with others in one statement. gorefactor's
   `line`/`column` addressing and `imports` are not built.

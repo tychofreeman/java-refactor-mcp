@@ -494,6 +494,11 @@ Each was chosen from options; the record named beside it has the options it beat
   override of a concrete method unless it only calls super or has the same body
   (`SafeDelete.SameMeaning`, #322). The stub goldens that deleted a used member
   (`stub_after_delete_*`) are now refused there, before the stubs run.
+  Inside a `batch` (#623, 2026-11-14, the owner's choice, options in `docs/design.md`): `Batch.steps`
+  sets `Session.deletedLater` to the later steps' deletes (`Batch.deletes`) around each step, and
+  `SafeDelete.deletedLater` resolves them in the file being scanned (by `Declarations.find`, one not
+  found is skipped, so its uses count) and drops the uses inside them. Members that only call each
+  other need check `"end"`: under `"each"` the type check refuses the first delete.
 
 - `extract_supertype` (#85, 2026-11-04) is `ExtractSupertype`, composed in one call
   from the gate (the new file), `AddSupertype`, and `PullUp` per member. A member

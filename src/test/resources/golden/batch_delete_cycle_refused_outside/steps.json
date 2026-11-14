@@ -1,0 +1,4 @@
+[
+  {"tool": "replace_declaration", "args": {"file": "com/example/Pure.java", "name": "Pure.pure", "content": ""}},
+  {"tool": "replace_declaration", "args": {"file": "com/example/Pure.java", "name": "Pure.allPure", "content": ""}}
+]

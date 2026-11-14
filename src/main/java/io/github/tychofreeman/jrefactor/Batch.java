@@ -208,6 +208,7 @@ final class Batch {
       Path path = rel == null ? null : project.file(rel);
       String before = path != null && Files.isRegularFile(path) ? Files.readString(path) : null;
       String text;
+      project.session().deletedLater = deletes(steps.subList(i + 1, steps.size()), project);
       try {
         text = Tools.call(def, project, stepArgs).render();
       } catch (Refusal refusal) {
@@ -226,6 +227,8 @@ final class Batch {
                 + refusal.getMessage()
                 + "\nNothing was changed."
                 + hint);
+      } finally {
+        project.session().deletedLater = List.of();
       }
       String after = path != null && Files.isRegularFile(path) ? Files.readString(path) : null;
       Object id = step.get("id");
@@ -538,5 +541,32 @@ final class Batch {
               + Names.listed(moved)
               + ": their arguments beside \"tool\" were read as their \"args\".";
     }
+  }
+
+  /**
+   * The declarations {@code steps} delete: each replace_declaration with empty content. A step
+   * whose tool is unknown is left to its turn.
+   */
+  private static List<SafeDelete.Deletion> deletes(
+      List<Map<String, Object>> steps, SourceProject project) {
+    List<SafeDelete.Deletion> out = new ArrayList<>();
+    for (Map<String, Object> step : steps) {
+      String tool = step.get("tool") instanceof String s ? s : "";
+      boolean deletes;
+      try {
+        deletes = Tools.named(tool, project.session()).name().equals("replace_declaration");
+      } catch (Refusal unknown) {
+        deletes = false;
+      }
+      if (deletes
+          && step.get("args") instanceof Map<?, ?> args
+          && args.get("file") instanceof String file
+          && args.get("name") instanceof String name
+          && args.get("content") instanceof String content
+          && content.isBlank()) {
+        out.add(new SafeDelete.Deletion(file, name));
+      }
+    }
+    return out;
   }
 }
