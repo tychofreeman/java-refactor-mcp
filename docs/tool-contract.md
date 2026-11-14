@@ -1839,7 +1839,9 @@ the if, at its indentation. Arguments: `file`, `line` (the line the if starts on
 Result: `removed the else of the if at line L in file`, with `; imported ...` when an import is added.
 Refusals: no if on the line, several on it, an if with no else, an if not directly in a block, a
 then-branch that can finish normally (it does not end in return, throw, break, continue or yield),
-and the gate's "would add compile errors".
+a local or class the else block declares that a statement after the if names (it would take the
+place of a field of that name there; rename the local first), and the gate's "would add compile
+errors".
 
 ## `move_member` (built)
 
