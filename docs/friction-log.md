@@ -1430,3 +1430,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   The batch's `retry` with `line` fixed it.
 - Rebasing onto `main` met `Stubs.removedInSupertypes` changed by #556 (`project.fileOf`); the
   conflict was resolved by hand, keeping both.
+## 2026-11-13: fix-journal-parent-dirs
+
+- No Java by hand. One `batch` (check `"end"`): three `add_parameter`s threading the project into
+  `Journal.put` and both `restore`s, and two `replace_text`s declaring a `project` in the tests
+  the value named. Its first send used `position`, which `add_parameter` does not take (`before`
+  does); `retry` with three `step` changes fixed it without resending the rest.

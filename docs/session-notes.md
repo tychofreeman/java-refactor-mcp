@@ -275,7 +275,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
 - `Journal.put` and `Journal.restore` are the one writer of project files; the
   journal also keeps a file's mode (`Journal.mode`, `copyMode`), so undo puts back
-  an executable file executable.
+  an executable file executable. Both take the project: a deletion removes the directories it
+  empties up to a source root or the project's root, never those (#479, `Journal.removable`).
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
