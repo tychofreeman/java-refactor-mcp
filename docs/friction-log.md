@@ -1332,3 +1332,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - Not a tool: #461 merged while #460's run on `main` was building, which cancelled #460's release;
   rerun by hand (v0.33.0). Recorded as a trap in the session notes.
+
+## 2026-11-13: fix-push-down-override
+
+- No Java by hand: `replace_declaration`, `replace_text`, `remove_parameter`. The probe and goldens
+  were written by heredocs (resources).

@@ -36,7 +36,7 @@ final class PushDown {
     BodyDeclaration moved = MemberMove.member(sub, subName, member, rel, "push_down");
     ITypeBinding subType = sub.resolveBinding();
     if (moved instanceof MethodDeclaration m) {
-      refuseOverride(m, subName, member, subType);
+      refuseOverride(m, subName, member);
     }
 
     Holding holding = Holding.of(project, subType.getErasure().getName(), file);
@@ -106,9 +106,9 @@ final class PushDown {
 
   /**
    * Refuses a method that overrides a supertype's: moving it would change what {@code sub} runs.
+   * Any supertype counts, the superclass's superclasses and interfaces (a default method) too.
    */
-  private static void refuseOverride(
-      MethodDeclaration m, String subName, String method, ITypeBinding subType) {
+  private static void refuseOverride(MethodDeclaration m, String subName, String method) {
     for (Object o : m.modifiers()) {
       if (o instanceof MarkerAnnotation a
           && a.getTypeName().getFullyQualifiedName().equals("Override")) {
@@ -119,27 +119,23 @@ final class PushDown {
                 + " runs; leave it where it is.");
       }
     }
-    ITypeBinding superclass = subType.getSuperclass();
     IMethodBinding mine = m.resolveBinding();
-    if (mine != null
-        && superclass != null
-        && !"java.lang.Object".equals(superclass.getQualifiedName())) {
-      for (IMethodBinding b : superclass.getDeclaredMethods()) {
-        if (b.getName().equals(method)
-            && MemberMove.erasedParams(b).equals(MemberMove.erasedParams(mine))) {
-          throw new Refusal(
-              superclass.getErasure().getName()
-                  + " declares "
-                  + method
-                  + ", so pushing "
-                  + subName
-                  + "."
-                  + method
-                  + " down would change what "
-                  + subName
-                  + " runs. Leave it where it is.");
-        }
-      }
+    if (mine == null) {
+      return;
+    }
+    List<IMethodBinding> overridden = CallTargets.overridden(mine);
+    if (!overridden.isEmpty()) {
+      throw new Refusal(
+          overridden.get(0).getDeclaringClass().getErasure().getName()
+              + " declares "
+              + method
+              + ", so pushing "
+              + subName
+              + "."
+              + method
+              + " down would change what "
+              + subName
+              + " runs. Leave it where it is.");
     }
   }
 }
