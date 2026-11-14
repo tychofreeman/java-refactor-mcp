@@ -1249,3 +1249,11 @@ and `extract_variable`, `extract_function`, `inline` and `fold` for the refactor
 
 By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build one with `sed` and
 `chmod +x`. The Java and the docs through `bin/jrefactor`.
+
+## 2026-11-13: named-module
+
+- `create_file` of `module-info.java` (`module m {}`) is refused: "module-info.java does not parse:
+  Syntax error on token "module", module expected". `Edits.parses` parses without a unit name, so
+  JDT reads it as an ordinary unit. Met while writing a golden case; the case became a unit test
+  (`TypeCheckTest.aModuleInfoAddedOrRemovedRecountsEveryFile`), written by `add_declaration`.
+  No hand edit of Java.

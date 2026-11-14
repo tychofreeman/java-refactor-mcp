@@ -231,6 +231,24 @@ The erasure is read from the syntax, as `find` is syntax-only: a type variable o
 type around it, by name. `MemberMove.member` (`pull_up`, `push_down`, `move` of a member) keeps
 its own resolver and does not take erased names yet.
 
+**Decided 2026-11-13 (the owner's brief, smallest option; a default to reopen): in a named module
+the gate does not count a sealed type's permitted class in another package** (roadmap #180,
+issue #438). JDT's headless parser checks every file as the unnamed module: `ASTParser.setEnvironment`
+takes a classpath and a source path, no module path, and `CompilationUnitResolver` builds each
+unit with the batch `CompilationUnit(char[], String, String)`, whose module name is null (checked
+with `javap` on JDT 3.47.0). So `permits b.Circle` from package `a`, legal in a named module, is
+error 1859 (`IProblem.SealedPermittedTypeOutsideOfPackage`) before any edit, and a `rename` or
+`move` of the sealed type's file carried it to a new key and was refused. Now `TypeCheck.counts`
+drops that one problem when a source root holds `module-info.java` (`SourceProject.namedModule`);
+a single-module project is one module, so the rule it stands for (same module) always holds.
+Over (b) checking as the named module through JDT internals (the resolver and `FileSystem` with
+module names, which the public API does not reach and a JDT bump could break), and over (c) a gate
+rule that an error the project had before, carried by a rename or move to a new file or name, is
+not new (general, but it would also pass a real error so carried, and it needs the gate to know
+what a tool moved). Left as they are: `module-info.java`'s own errors (each exported package reads
+as missing, pre-existing so never new) and `create_file` of a `module-info.java`, refused as not
+parsing (the syntax parse has no unit name).
+
 **Decided 2026-11-13 (the user): the new parameter goes right after the last one the
 expression reads** (roadmap #172). `extract_variable` `as=parameter` refused a call with an
 argument that has effects after one the expression reads (`run(step, tick())` for `q * 3 + 1`:
@@ -702,6 +720,7 @@ sections 3 and 4.
 | 175 | 182 | The A/B arm without `build` (issue #376's "mcp today"): under `JREFACTOR_NO_BUILD=1` the server publishes `insert_statements`, `replace_statements` and `replace_expression` as they were before #149, and refuses the create aliases | Done 2026-11-13 (`Tools.published` and `Tools.named(name, session)`, the typed `Def`s in `Tools.TYPED`; `eval-tasks/jrefactor-ab-server-no-build`) | Issue #376; the user's choice of 2026-11-13, a server flag over a jar from before #149; `docs/sessions/no-build-arm.md` |
 | 176 | 183 | The A/B arm with gorefactor's names published (issue #376, the sketch's question 2c: is an option or a published tool found more readily): under `JREFACTOR_PUBLISH_ALIASES=1` the server publishes `create_loop`, `create_call`, `create_guard` and `replace_parameter` after the tools | Done 2026-11-13 (`Tools.PUBLISHABLE_ALIASES` in `Tools.published`; with `JREFACTOR_NO_BUILD` too, only `replace_parameter`; `eval-tasks/jrefactor-ab-server-aliases`) | Issue #376; the user's choice of 2026-11-13, a server flag; `docs/sessions/alias-arm.md` |
 | 177 | 184 | `move` of a member record whose fields the outer type reads (`r.length`, allowed while nested) was refused by the gate, the fix text saying to rename a clashing type (issue #440, from the Java 17 stress run) | Done 2026-11-13 (`MoveType.qualifyAndWiden`'s `accessorCall`: a read of a record's field across the new boundary, either way, becomes a call of its accessor when `returnsField` says the accessor is the generated one or only returns the field; otherwise refused naming the field and the accessor. A default to reopen (the smallest, the owner's rule): refuse when the accessor does more, over writing the call anyway and reporting it, and over refusing every such read. `NameCheck` finds a record's field by its component (JDT finds no node for it), so a moved record whose explicit accessor reads its field passes, and skips a package's name, which `package p;` had matched with a local `p`) | The Java 17 stress run, `docs/sessions/stress-enum-switch.md`; `docs/sessions/move-record-fields.md` |
+| 180 | 187 | A project with `module-info.java` was checked as the unnamed module, so a sealed type permitting a class of another package was an error before any edit, and a `rename` or `move` of its file was refused (issue #438, from the jdk-classfile-backport stress run) | Done 2026-11-13 (`TypeCheck.counts` drops `IProblem.SealedPermittedTypeOutsideOfPackage` when `SourceProject.namedModule`; the narrowed check counts from scratch when a `module-info.java` appears or goes; `FORMAT` 4, so saved counts are made again. A default to reopen, "Decided 2026-11-13: in a named module the gate does not count a sealed type's permitted class in another package" above; `requires`, `exports` and `create_file` of a `module-info.java` left as they were) | `docs/sessions/stress-enum-switch.md`; `docs/sessions/named-module.md` |
 
 ### The 2026-11-04 list
 
@@ -765,3 +784,8 @@ random declaration edits to a real project and compares each (roadmap #16):
 a first version, which followed names only, missed three of 60 on Commons
 Math, all through inheritance, and the rule above missed none of 240 there
 and 100 on Commons Lang.
+
+What is counted is every error JDT reports but one: in a named module, a sealed type's permitted
+class in another package (roadmap #180, Decisions). A count made with a `module-info.java` and
+one made without differ in files that did not change, so the narrowed check counts from scratch
+when one appears or goes.

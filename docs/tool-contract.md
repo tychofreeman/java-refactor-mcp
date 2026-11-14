@@ -93,6 +93,13 @@ class without one (2026-11-07), and fix imports; lines are 1-based.
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+The compile errors are JDT's, which checks every file as the unnamed module (2026-11-13, #438).
+In a project with `module-info.java` in a source root, the one error that reading adds and javac
+does not report, a sealed type permitting a class of another package ("Permitted type X in an
+unnamed module should be declared in the same package"), is not counted, so a `rename` or `move`
+that carries it to another file or name is not refused for it. Nothing else of the module is
+checked: `requires` and `exports` are not enforced.
+
 When the JDT compiler itself throws while type-checking (ECJ fails this way on some code that does
 not compile, issue #405), the call is refused, every file put back: "The Java compiler (ECJ) failed
 while type-checking, so nothing was changed: <exception> (in <where in ECJ>). It fails this way on

@@ -163,4 +163,12 @@ public record SourceProject(
         .toString()
         .replace(File.separatorChar, '/');
   }
+
+  /**
+   * Whether a source root holds {@code module-info.java}: the project is a named module, though JDT
+   * checks it as the unnamed one (see {@link TypeCheck}).
+   */
+  public boolean namedModule() {
+    return sourceRoots.stream().anyMatch(r -> Files.isRegularFile(r.resolve("module-info.java")));
+  }
 }
