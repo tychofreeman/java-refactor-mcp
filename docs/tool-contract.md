@@ -1547,8 +1547,11 @@ first version takes `file` (the file that declares the field), `name` (`Type.fie
 and `type` (the new type as written).
 
 - Result: `changed the type of Type.field from <old> to <new> in <file>`.
-- Refuses: a name that is not a field of the top-level class; a declaration of several
-  fields; a change that adds compile errors (the gate names them, nothing changes).
+- Refuses: a `type` that does not parse ("type long) does not parse: ...", #492, as for a
+  method); a name that is not a field of the top-level class; a declaration of several
+  fields; a field that writes its `[]` after its name ("Tally.counts writes its [] after its
+  name. Write it after the type first.", #492: `int counts[]` to `long[]` had become
+  `long[][]`); a change that adds compile errors (the gate names them, nothing changes).
 - A method (roadmap #82, 2026-11-04): `name` is `Type.method` (with parameter types for
   an overload) and `parameter` (whose type changes) or `return_type: true`; optional
   `imports`. Every declaration in the method's family (overrides, implementations)

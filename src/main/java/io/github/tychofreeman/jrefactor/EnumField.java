@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
@@ -49,10 +48,7 @@ final class EnumField {
     }
     String parameter = args.required("parameter");
     String type = args.required("type");
-    if (!SourceVersion.isName(parameter)) {
-      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
-    }
-    Signatures.parsesAs("type", type, "class X { " + type + " x; }");
+    Signatures.checkNewParameter(parameter, type);
     Map<String, String> passed = passed(target, name, args);
     String text = opened.text();
     String before = args.string("before");

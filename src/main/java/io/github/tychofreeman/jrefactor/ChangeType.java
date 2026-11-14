@@ -26,6 +26,7 @@ final class ChangeType {
         Precondition.that(
             () -> type != null && !type.isBlank(),
             () -> "change_type needs type, the new type as written, such as long."));
+    Signatures.parsesAs("type", type, "class X { " + type + " x; }");
     Qualified q = Qualified.of(name, "Type.field, the class and the field whose type to change");
     String typeName = q.type();
     String field = q.member();
@@ -55,6 +56,9 @@ final class ChangeType {
           "the declaration of "
               + field
               + " declares several fields. Split it into one declaration per field first.");
+    }
+    if (!((VariableDeclarationFragment) decl.fragments().get(0)).extraDimensions().isEmpty()) {
+      throw new Refusal(name + " writes its [] after its name. Write it after the type first.");
     }
     checkUses(project, file, decl, field, type);
     CallTargets targets = CallTargets.of(Holding.of(project, field, file).units().values());

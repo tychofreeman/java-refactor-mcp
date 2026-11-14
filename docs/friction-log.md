@@ -1391,3 +1391,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 ## 2026-11-13: fix-batch-client-name
 
 - No Java by hand: one `replace_text`. The golden case is resources.
+
+## 2026-11-13: fix-field-change-type
+
+- No Java by hand. `extract_function` twice (the new parameter's checks, the return type's
+  preconditions), then one `batch`: `replace_text` for the doc comments and the visibility, and
+  `fold` of each. `fold Signatures.checkNewParameter` missed `EnumField`'s copy, which writes
+  `Signatures.parsesAs(...)` where the body has `parsesAs(...)`: the qualifier of a static call
+  in the same class is not matched to the bare name. Tried: `fold` alone (1 match). Done with
+  `replace_text` instead. `fold` could match a call qualified by the method's own class.
+- `extract_function` writes a private method; making it package-private for `fold` across
+  classes took a `replace_text` (no visibility option on `fold`).

@@ -111,9 +111,7 @@ final class TypeParameters {
     String rel = args.required("file");
     String name = args.required("name");
     Path file = project.javaFile(rel);
-    if (Files.isRegularFile(file)
-        && Declarations.find(Jdt.parseSyntax(Files.readString(file)), name, rel).decl()
-            instanceof MethodDeclaration) {
+    if (namesMethod(file, name, rel)) {
       return toMethod(project, args, written, parameter, value);
     }
     String simple = name.substring(name.lastIndexOf('.') + 1);
@@ -1164,10 +1162,7 @@ final class TypeParameters {
     Map<Path, List<TypeParameter>> declared = new LinkedHashMap<>();
     Map<Path, Map<String, List<String>>> calls = null;
     int declarations = 1;
-    if (Files.isRegularFile(file)
-        && Declarations.find(Jdt.parseSyntax(Files.readString(file)), args.required("name"), rel)
-                .decl()
-            instanceof MethodDeclaration) {
+    if (namesMethod(file, args.required("name"), rel)) {
       MethodFamily family =
           MethodFamily.of(project, args, true, "so its type parameters cannot change.");
       label = family.label;
@@ -1363,5 +1358,12 @@ final class TypeParameters {
 
   private static String simpleName(String qualified) {
     return qualified.substring(qualified.lastIndexOf('.') + 1);
+  }
+
+  /** Whether {@code name} names a method declared in {@code file}, by a syntax-only parse. */
+  private static boolean namesMethod(Path file, String name, String rel) throws IOException {
+    return Files.isRegularFile(file)
+        && Declarations.find(Jdt.parseSyntax(Files.readString(file)), name, rel).decl()
+            instanceof MethodDeclaration;
   }
 }
