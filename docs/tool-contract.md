@@ -270,7 +270,7 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   Javadoc references, and the file of a top-level type (`Plant.java` becomes
   `Herb.java`; one `undo` moves it back). Prose in comments is not changed.
 - Result: `renamed total to runningSum in <file>: <n> occurrences, lines a,
-  b` for a local; `renamed the field Item.price to cost in 2 files: 4
+  b` for a local (`1 occurrence, line a` for one: a name nothing uses); `renamed the field Item.price to cost in 2 files: 4
   occurrences, a/Cart.java lines 5, 10; a/Item.java lines 4, 7`; `renamed the
   method Square.area() and Shape.area() to surface in ...`; `renamed the type
   com.example.Plant to Herb, and a/Plant.java to a/Herb.java, in ...`.

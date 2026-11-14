@@ -1556,3 +1556,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   five copies of `l.length() - l.stripLeading().length()`), `replace_declaration` to a delegate
   then `inline` (`RemoveElse.indentWidth`, `leadingWhitespace`, `Declarations.leadingSpaces`,
   `memberIndent`), `add_parameter`, `replace_text` for the step fallbacks and the two fixes.
+
+## 2026-11-14: rename-uses
+
+- Three loops alike but for a predicate and a per-file check into one helper: `extract_function`
+  of `renameType`'s loop gave a helper for types only (the predicate `refersTo(..., key)` and the
+  file move written in), returning a record of five locals; no tool turns an expression of the
+  extracted body into a function parameter (an "introduce parameter" whose value is a lambda over a
+  local), and `fold` cannot match the other two loops while their predicates differ. Undone; the
+  helper was written with `add_declaration` and each method's loop with `replace_statements`.
+- Otherwise through the tools: `replace_text` (format strings, `all_occurrences` for the two
+  `before` calls), `replace_declaration`, `create_file`, `add_declaration`. Goldens are resources.

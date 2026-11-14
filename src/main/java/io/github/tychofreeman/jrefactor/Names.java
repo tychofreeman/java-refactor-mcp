@@ -106,4 +106,12 @@ final class Names {
     }
     return null;
   }
+
+  /**
+   * {@code n} and {@code what}, made plural unless n is 1: {@code 1 occurrence}, {@code 2
+   * occurrences}.
+   */
+  static String plural(int n, String what) {
+    return n + " " + what + (n == 1 ? "" : "s");
+  }
 }

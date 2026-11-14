@@ -606,6 +606,10 @@ Each was chosen from options; the record named beside it has the options it beat
   On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
   expression and finds it again by offset (the import fix changes only lines above it).
 
+- `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
+  2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
+  result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the
