@@ -1319,9 +1319,11 @@ too (`ByLine.named`).
   reads that has effects ("... passes next() for width, and width * height would then be
   computed from one next() where the call ran two. Put next() in a local first."), or that is
   a primitive of another type than its parameter ("... passes w (int) for width (long): the
-  call computed w * h in that type ..."); an argument with effects between the arguments the
-  value reads and the removed one, or, when the value reads a field that is not a constant,
-  after them ("... passes raise() after n * factor; in the method, amount * factor would be
+  call computed w * h in that type ..."); an argument with effects between an argument the
+  value reads and the removed one that could change what that argument reads (a field, an array
+  element, or a local it assigns: "... runs x++ between x, which a * 2 is computed from, and
+  x * 2, ..."), or, when the value reads a field that is not a constant, after the removed one
+  ("... passes raise() after n * factor; in the method, amount * factor would be
   computed after raise(), not before it. Put raise() in a local first, or move the parameter
   last (move_parameter)."); a name that is not another parameter, a field or a constant in the
   method ("value may use Box.fits's other parameters (width, height), fields, constants and

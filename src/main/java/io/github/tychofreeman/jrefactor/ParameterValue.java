@@ -123,90 +123,6 @@ final class ParameterValue {
     return new PerCall(project, v);
   }
 
-  /** The argument {@code c} passes for {@code v}, as {@link #perCall} returns it. */
-  private static String passed(
-      InMethod v, Signatures.Call c, SourceProject project, Map<Signatures.Call, Refusal> probed) {
-    for (int i : v.uses()) {
-      Expression arg = (Expression) c.arguments().get(i);
-      String passed = Nodes.source(c.file().text(), arg);
-      String name =
-          ((SingleVariableDeclaration) v.method().parameters().get(i)).getName().getIdentifier();
-      if (!quiet(arg)) {
-        throw new Refusal(
-            "a call passes "
-                + passed
-                + " for "
-                + name
-                + ", which has effects, and passing "
-                + v.text()
-                + " with it would run them twice. Put it in a local first.");
-      }
-      ITypeBinding declared =
-          ((SingleVariableDeclaration) v.method().parameters().get(i)).getType().resolveBinding();
-      ITypeBinding given = arg.resolveTypeBinding();
-      if (cast(declared, given) == null) {
-        throw new Refusal(
-            "the call at "
-                + c.where(arg)
-                + " passes "
-                + passed
-                + (given == null ? "" : " (" + given.getName() + ")")
-                + " for "
-                + name
-                + " ("
-                + declared.getName()
-                + "): the method computed "
-                + v.text()
-                + " in the parameter's type, and a call computes it in the argument's unless cast,"
-                + " but this tool casts only to a primitive or an unparameterized java.lang type."
-                + " Pass "
-                + name
-                + " in its own type first, or extract it as a variable instead.");
-      }
-      boolean fixed = Effects.of(arg).fixed();
-      if (v.acts() && !fixed && !v.readsFirst(i)) {
-        throw new Refusal(
-            "the call at "
-                + c.where(arg)
-                + " passes "
-                + passed
-                + " for "
-                + name
-                + ", and would now pass "
-                + v.at(c)
-                + ", reading "
-                + passed
-                + " again after a call in it that could change it. Put "
-                + passed
-                + " in a local first.");
-      }
-      for (int j = i + 1; j < Math.min(v.at(), c.arguments().size()); j++) {
-        Expression other = (Expression) c.arguments().get(j);
-        if (!quiet(other) && (!fixed || writes(other, arg))) {
-          throw new Refusal(
-              "the call at "
-                  + c.where(other)
-                  + " runs "
-                  + other
-                  + " after "
-                  + passed
-                  + ", and would now pass "
-                  + v.at(c)
-                  + (v.at() < c.arguments().size() ? " after it" : " last")
-                  + ", reading "
-                  + passed
-                  + " again after "
-                  + other
-                  + " could change it. Put "
-                  + other
-                  + " in a local first.");
-        }
-      }
-    }
-    sameTargets(project, v, c, probed);
-    return v.at(c);
-  }
-
   /** Where {@code e} names a parameter of {@code m}, the last first. */
   private static List<Occurrence> occurrences(Expression e, MethodDeclaration m) {
     List<Occurrence> uses = new ArrayList<>();
@@ -532,8 +448,8 @@ final class ParameterValue {
       }
       return other instanceof SimpleName o
           && o.getIdentifier().equals(p.getIdentifier())
-          && Bindings.erasedKey(b) != null
-          && Bindings.erasedKey(b).equals(Bindings.erasedKey(o.resolveBinding()));
+          && Bindings.declarationKey(b) != null
+          && Bindings.declarationKey(b).equals(Bindings.declarationKey(o.resolveBinding()));
     }
 
     @Override
@@ -604,7 +520,7 @@ final class ParameterValue {
       boolean isStatic = Modifier.isStatic(mine.getModifiers());
       boolean own =
           !isStatic && (p.getExpression() == null || p.getExpression() instanceof ThisExpression);
-      boolean same = Bindings.erasedKey(mine).equals(Bindings.erasedKey(theirs));
+      boolean same = Bindings.declarationKey(mine).equals(Bindings.declarationKey(theirs));
       if (!same && (isStatic || own || !overrides(theirs, mine))) {
         return false;
       }
@@ -710,9 +626,9 @@ final class ParameterValue {
       if (!(b instanceof IVariableBinding o)) {
         return false;
       }
-      return Bindings.erasedKey(v) == null
-          ? Bindings.erasedKey(o) == null && v.getName().equals(o.getName())
-          : Bindings.erasedKey(v).equals(Bindings.erasedKey(o));
+      return Bindings.declarationKey(v) == null
+          ? Bindings.declarationKey(o) == null && v.getName().equals(o.getName())
+          : Bindings.declarationKey(v).equals(Bindings.declarationKey(o));
     }
   }
 
@@ -737,9 +653,9 @@ final class ParameterValue {
           public boolean match(SimpleName p, Object other) {
             return other instanceof SimpleName o
                 && o.getIdentifier().equals(p.getIdentifier())
-                && Bindings.erasedKey(p.resolveBinding()) != null
-                && Bindings.erasedKey(p.resolveBinding())
-                    .equals(Bindings.erasedKey(o.resolveBinding()));
+                && Bindings.declarationKey(p.resolveBinding()) != null
+                && Bindings.declarationKey(p.resolveBinding())
+                    .equals(Bindings.declarationKey(o.resolveBinding()));
           }
         };
     List<Expression> out = new ArrayList<>();
@@ -831,7 +747,7 @@ final class ParameterValue {
         for (MethodDeclaration d : Nodes.all(u, MethodDeclaration.class)) {
           IMethodBinding o = d.resolveBinding();
           if (o != null
-              && !Bindings.erasedKey(o).equals(Bindings.erasedKey(b))
+              && !Bindings.declarationKey(o).equals(Bindings.declarationKey(b))
               && Instance.overrides(o, b)
               && Hierarchy.isSubtype(o.getDeclaringClass(), site)) {
             return true;
@@ -1088,7 +1004,7 @@ final class ParameterValue {
       IMethodBinding theirs = there.get(i).resolveMethodBinding();
       if (mine == null
           || theirs == null
-          || Bindings.erasedKey(mine).equals(Bindings.erasedKey(theirs))
+          || Bindings.declarationKey(mine).equals(Bindings.declarationKey(theirs))
           || !Modifier.isStatic(mine.getModifiers()) && Instance.overrides(theirs, mine)) {
         continue;
       }
@@ -1129,7 +1045,9 @@ final class ParameterValue {
 
     @Override
     public String apply(Signatures.Call c) {
-      return passed(v, c, project, probed);
+      checkCall(v, c, Direction.TO_CALLS);
+      sameTargets(project, v, c, probed);
+      return v.at(c);
     }
   }
 
@@ -1138,4 +1056,207 @@ final class ParameterValue {
    * the parameter's index, and whether it is a receiver (of a call, a field or an element).
    */
   private record Occurrence(int offset, int length, int parameter, boolean receiver) {}
+
+  /** Which way {@link #checkCall} moves a value between a call's arguments and its method. */
+  enum Direction {
+    /**
+     * {@code extract_variable} with {@code as=parameter}: the method computed it, each call passes
+     * it.
+     */
+    TO_CALLS,
+    /** {@code remove_parameter} with {@code value}: each call passed it, the method computes it. */
+    TO_METHOD
+  }
+
+  /**
+   * Refuses when {@code c} and its method would compute {@code v} differently once it moves the
+   * {@code d} way: an argument the value reads that has effects, or is of another type than its
+   * parameter (only the calls can cast it, {@link Direction#TO_CALLS}), or is read again across a
+   * call in the value or another argument that could change it; or an argument after the value that
+   * a call in it could change, or that could change what the value reads. The two directions differ
+   * only in that cast and in where the value stands: at {@code v.at()} among the arguments, which
+   * for {@link Direction#TO_CALLS} is still the call's argument there.
+   */
+  static void checkCall(InMethod v, Signatures.Call c, Direction d) {
+    boolean toCalls = d == Direction.TO_CALLS;
+    String text = c.file().text();
+    int at = v.at();
+    int size = c.arguments().size();
+    int first = toCalls ? at : at + 1;
+    String computed = toCalls ? v.at(c) : Nodes.source(text, (Expression) c.arguments().get(at));
+    for (int i : v.uses()) {
+      Expression arg = (Expression) c.arguments().get(i);
+      String passed = Nodes.source(text, arg);
+      SingleVariableDeclaration p = (SingleVariableDeclaration) v.method().parameters().get(i);
+      String name = p.getName().getIdentifier();
+      if (!quiet(arg)) {
+        throw new Refusal(
+            toCalls
+                ? "a call passes "
+                    + passed
+                    + " for "
+                    + name
+                    + ", which has effects, and passing "
+                    + v.text()
+                    + " with it would run them twice. Put it in a local first."
+                : "the call at "
+                    + c.where(arg)
+                    + " passes "
+                    + passed
+                    + " for "
+                    + name
+                    + ", and "
+                    + v.text()
+                    + " would then be computed from one "
+                    + passed
+                    + " where the call ran two. Put "
+                    + passed
+                    + " in a local first.");
+      }
+      ITypeBinding declared = p.getType().resolveBinding();
+      ITypeBinding given = arg.resolveTypeBinding();
+      String cast = cast(declared, given);
+      if (cast == null || !toCalls && !cast.isEmpty()) {
+        String types =
+            "the call at "
+                + c.where(arg)
+                + " passes "
+                + passed
+                + (given == null ? "" : " (" + given.getName() + ")")
+                + " for "
+                + name
+                + " ("
+                + declared.getName()
+                + "): ";
+        throw new Refusal(
+            toCalls
+                ? types
+                    + "the method computed "
+                    + v.text()
+                    + " in the parameter's type, and a call computes it in the argument's unless"
+                    + " cast, but this tool casts only to a primitive or an unparameterized"
+                    + " java.lang type. Pass "
+                    + name
+                    + " in its own type first, or extract it as a variable instead."
+                : types
+                    + "the call computed "
+                    + computed
+                    + " in that type, and the method would compute "
+                    + v.text()
+                    + " in the parameter's. Keep the parameter, or pass "
+                    + name
+                    + " in its own type first.");
+      }
+      boolean fixed = Effects.of(arg).fixed();
+      if (v.acts() && !fixed && (i >= first || !v.readsFirst(i))) {
+        throw new Refusal(
+            toCalls
+                ? "the call at "
+                    + c.where(arg)
+                    + " passes "
+                    + passed
+                    + " for "
+                    + name
+                    + ", and would now pass "
+                    + computed
+                    + ", reading "
+                    + passed
+                    + " again after a call in it that could change it. Put "
+                    + passed
+                    + " in a local first."
+                : "the call at "
+                    + c.where(arg)
+                    + " passes "
+                    + passed
+                    + " for "
+                    + name
+                    + ", which a call in "
+                    + v.text()
+                    + " could change: the call read it again as it computed "
+                    + computed
+                    + ", and the method would compute "
+                    + v.text()
+                    + " from the one read. Put "
+                    + passed
+                    + " in a local first.");
+      }
+      int from = i < at ? i + 1 : first;
+      int to = i < at ? Math.min(at, size) : i;
+      for (int j = from; j < to; j++) {
+        Expression other = (Expression) c.arguments().get(j);
+        String runs = Nodes.source(text, other);
+        if (!quiet(other) && (!fixed || writes(other, arg))) {
+          throw new Refusal(
+              toCalls
+                  ? "the call at "
+                      + c.where(other)
+                      + " runs "
+                      + runs
+                      + " after "
+                      + passed
+                      + ", and would now pass "
+                      + computed
+                      + (at < size ? " after it" : " last")
+                      + ", reading "
+                      + passed
+                      + " again after "
+                      + runs
+                      + " could change it. Put "
+                      + runs
+                      + " in a local first."
+                  : "the call at "
+                      + c.where(other)
+                      + " runs "
+                      + runs
+                      + " between "
+                      + passed
+                      + ", which "
+                      + v.text()
+                      + " is computed from, and "
+                      + computed
+                      + ", which could then differ from "
+                      + v.text()
+                      + " computed in the method. Put "
+                      + runs
+                      + " in a local first.");
+        }
+      }
+    }
+    for (int j = first; j < size; j++) {
+      if (v.uses().contains(j)) {
+        continue;
+      }
+      Expression other = (Expression) c.arguments().get(j);
+      String runs = Nodes.source(text, other);
+      boolean late = v.acts() ? !Effects.of(other).fixed() : !quiet(other) && !v.fixed();
+      if (late) {
+        throw new Refusal(
+            toCalls
+                ? "the call at "
+                    + c.where(other)
+                    + " passes "
+                    + runs
+                    + ", which would run after "
+                    + computed
+                    + ", where the method computed "
+                    + v.text()
+                    + " after it. Put "
+                    + runs
+                    + " in a local first."
+                : "the call at "
+                    + c.where(other)
+                    + " passes "
+                    + runs
+                    + " after "
+                    + computed
+                    + "; in the method, "
+                    + v.text()
+                    + (v.acts() ? " would run after " : " would be computed after ")
+                    + runs
+                    + ", not before it. Put "
+                    + runs
+                    + " in a local first, or move the parameter last (move_parameter).");
+      }
+    }
+  }
 }

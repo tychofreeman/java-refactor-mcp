@@ -27,21 +27,6 @@ final class Bindings {
     };
   }
 
-  /**
-   * {@link #declarationKey}, but a type by its erasure: a type variable has its bound's erased key
-   * ({@code T extends Number} is {@code Number}'s). {@link ParameterValue} compares names so;
-   * whether it should is open (issue #500).
-   */
-  static String erasedKey(IBinding b) {
-    return switch (b) {
-      case null -> null;
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case ITypeBinding t -> t.getErasure().getKey();
-      default -> b.getKey();
-    };
-  }
-
   /** Whether {@code a} and {@code b}, from one parse or two, name the same declaration. */
   static boolean same(IBinding a, IBinding b) {
     String key = declarationKey(a);

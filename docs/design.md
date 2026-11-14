@@ -432,6 +432,35 @@ would have to take erased names), and over (c) keeping both forms, documented (a
 prints might not be the one another prints). `MoveType.label` (the owner after a move) and
 `Rename.describe` (prose) keep their own forms.
 
+**Decided (2026-11-14, the owner, issue #500): one rule set for a parameter expression's calls**,
+`ParameterValue.checkCall` with the direction (`TO_CALLS` for `extract_variable` `as=parameter`,
+`TO_METHOD` for `remove_parameter` `value`) as its parameter, option (a), over (b) keeping two
+copies and only correcting the session note that called them one set. Each disagreement between
+the copies was probed both ways and settled by behavior:
+- The type rule: the copies agreed on when a conversion is involved (`cast` is not empty exactly
+  when `remove_parameter` refused), and differ only in that a cast can reproduce the call's
+  computation at the calls but not in the method (#171's decision above); `TO_CALLS` casts,
+  `TO_METHOD` refuses. Kept as the one true difference.
+- The re-read rule (an argument read again across a call in the value): `remove_parameter` also
+  refused an argument after the value's place (`i > at`), `extract_variable` did not. The rule is
+  right both ways, so it is one rule; for `extract_variable` it never fires, since #172 places
+  the parameter after every one the value reads, and last when the value calls (probe
+  `extract_variable_parameter_call_placed_last`).
+- The other arguments: `remove_parameter` refused any argument with effects between the ones the
+  value reads and the removed one; `extract_variable` only one that could change the argument read
+  again (it reads a field or an element, or the other argument assigns a local it reads). The
+  second is right: `sum(x, tick(), y, x + y)` for `a + b` keeps its output with `x` and `y` locals
+  (probe `remove_parameter_value_argument_between_locals`, refused before). What the broader rule
+  also caught, a value that reads a field with an argument after its place that has effects, is
+  the rule for arguments after the value, which now starts right after the value's place and not
+  after the last argument it reads (probe `remove_parameter_value_field_between_effect`).
+Names in the value are compared by `Bindings.declarationKey`, as everywhere else, not by the
+erased key `ParameterValue` had kept (a type variable keyed as its bound's erasure): no golden or
+probe needed it, and the two differ only for a type variable named in the value, where the erased
+key matched another type variable with the same bound (`(U) x` passed for `(T) a`); that call is
+now refused (golden `remove_parameter_value_refused_type_variable`). The cost: such a call, rare,
+is refused where at run time the two casts did the same.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

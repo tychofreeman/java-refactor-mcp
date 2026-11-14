@@ -1820,3 +1820,17 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand. `inline` of `MoveType.unqualified` (`return !Nodes.qualified(n);`) into
   `inside && unqualified(n)` wrote `inside && (!Nodes.qualified(n))`: a prefix `!` needs no
   parentheses after `&&`. One `replace_text` removed them.
+
+## 2026-11-14: one-parameter-rules
+
+- No Java by hand. `inline` of `Bindings.erasedKey` (its body made `return
+  Bindings.declarationKey(b);`) into `ParameterValue` was refused: "the body uses a member of
+  Bindings, and the call ... is in another class", though the use is qualified by the class name.
+  `InlineFunction.usesMembersOf` counts every name that binds to a static member of the class,
+  qualified or not; `Nodes.qualified` would skip `Bindings.declarationKey`. Sequence that worked:
+  `move` of the method to `ParameterValue`, then `inline` there, in one batch.
+- `inline` of the static `ParameterValue.passed(v, c, project, probed)` into `PerCall.apply`, whose
+  arguments are the instance's fields, wrote a local per field (`ParameterValue.InMethod v2 = v;`
+  ...), and `inline` of those locals was refused, since the call between could change a non-final
+  field. One `replace_statements` wrote the three statements on the fields; a field no statement
+  of the body assigns could be passed as it is.

@@ -1,0 +1,1 @@
+runs x++ between x, which a * 2 is computed from, and x * 2, which could then differ from a * 2 computed in the method. Put x++ in a local first
