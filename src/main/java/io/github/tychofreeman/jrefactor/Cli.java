@@ -9,11 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +32,7 @@ final class Cli {
 
   private Cli() {}
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = Json.MAPPER;
 
   static final String USAGE =
       """
@@ -396,14 +393,9 @@ final class Cli {
    * and last type check): its name and a hash of its path.
    */
   private static String cacheName(Path root) {
-    try {
-      byte[] hash =
-          MessageDigest.getInstance("SHA-256")
-              .digest(root.toString().getBytes(StandardCharsets.UTF_8));
-      return root.getFileName() + "-" + HexFormat.of().formatHex(hash, 0, 8);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
-    }
+    return root.getFileName()
+        + "-"
+        + Hashes.sha256Hex(root.toString().getBytes(StandardCharsets.UTF_8)).substring(0, 16);
   }
 
   /** The file that keeps the classpath of the project at {@code root} in {@code cacheDir}. */

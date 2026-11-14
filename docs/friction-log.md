@@ -1752,3 +1752,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   across five classes and five tests took one `batch` of `replace_text` steps: `change_type` with
   `return_type` changes the declarations but not the locals and parameters that receive the
   result, which a "follow the type" option would have carried.
+
+## 2026-11-14: small-helpers
+
+- All through the tools: `move` of three helpers into `Names`, `fold` of each (and of
+  `Journal.read` once widened, and of a new `Nodes.at`), `replace_declaration` to a delegate then
+  `inline` for the copies `fold` could not match (the list joins written with an `if`), and
+  `replace_text` in a batch for the seven mappers.
+- `fold` of `Names.listed` was refused: its body declares a local before the return. The copies
+  were made delegates and inlined instead.
+- `create_file` of `Json` with `com.fasterxml.jackson` was refused: the project uses Jackson 3
+  (`tools.jackson`). The refusal named the import; the second call passed.

@@ -98,7 +98,7 @@ final class ExtractType {
         Precondition.that(
             () -> last - first == at.size() - 1,
             () ->
-                Extract.and(chosen)
+                Names.listed(chosen)
                     + " are not next to each other in "
                     + family.label
                     + ", and grouped at one place their arguments would run in another order."
@@ -197,7 +197,7 @@ final class ExtractType {
     return change.apply(
         project,
         "grouped "
-            + Extract.and(chosen)
+            + Names.listed(chosen)
             + " of "
             + family.label
             + " into "
@@ -443,7 +443,7 @@ final class ExtractType {
             "Nothing was changed.");
     return new Outcome(
         "moved "
-            + Extract.and(chosen)
+            + Names.listed(chosen)
             + " of "
             + ownerName
             + " into "
@@ -516,7 +516,7 @@ final class ExtractType {
         Precondition.that(
             () -> last - first == at.size() - 1,
             () ->
-                Extract.and(chosen)
+                Names.listed(chosen)
                     + " are not next to each other in "
                     + ownerName
                     + ", and grouped at one place the arguments of each construction would run"
@@ -540,7 +540,7 @@ final class ExtractType {
                     + "="
                     + struct
                     + "[...] where it printed "
-                    + Extract.and(chosen)
+                    + Names.listed(chosen)
                     + ". Pass value_semantics=true to accept that, or define toString first."));
     List<String> components = new ArrayList<>();
     for (int i = first; i <= last; i++) {
@@ -666,7 +666,7 @@ final class ExtractType {
     }
     return new Outcome(
         "moved "
-            + Extract.and(chosen)
+            + Names.listed(chosen)
             + " of "
             + ownerName
             + " into "
@@ -793,7 +793,7 @@ final class ExtractType {
               "the constructor at line "
                   + line
                   + " reads one of "
-                  + Extract.and(chosen)
+                  + Names.listed(chosen)
                   + " between setting them (line "
                   + unit.getLineNumber(between.getStartPosition())
                   + "), and the holder sets them all at once. Move that statement first.");

@@ -10,7 +10,6 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
@@ -38,8 +37,7 @@ final class FieldOrder {
       if (p.getID() != IProblem.ReferenceToForwardField) {
         continue;
       }
-      ASTNode node =
-          NodeFinder.perform(unit, p.getSourceStart(), p.getSourceEnd() - p.getSourceStart() + 1);
+      ASTNode node = Nodes.at(unit, p);
       if (!(node instanceof SimpleName n)
           || !(n.resolveBinding() instanceof IVariableBinding v)
           || !(unit.findDeclaringNode(v) instanceof VariableDeclarationFragment f)

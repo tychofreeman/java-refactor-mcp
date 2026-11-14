@@ -301,6 +301,10 @@ Each was chosen from options; the record named beside it has the options it beat
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
+- Small string helpers are in `Names` (#511): `simpleName` of a qualified name, `packageOf` a
+  unit, `plural` ("1 occurrence"), `listed` ("a, b and c"). One JSON mapper, `Json.MAPPER`;
+  SHA-256 hex through `Hashes.sha256Hex` (cache keys keep their lengths by `substring`);
+  `Journal.read` for a file's text or null; `Nodes.at(unit, problem)` for a problem's node.
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.source(text, node)` (its text as
   written, #507), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:

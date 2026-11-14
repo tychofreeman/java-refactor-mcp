@@ -150,7 +150,7 @@ final class Gate {
     Map<TypeCheck.Problem, Integer> before = TypeCheck.errors(project);
     Map<Path, String> old = new LinkedHashMap<>();
     for (Path file : texts.keySet()) {
-      old.put(file, Files.exists(file) ? Files.readString(file) : null);
+      old.put(file, Journal.read(file));
     }
     try {
       for (Map.Entry<Path, String> change : texts.entrySet()) {
@@ -184,7 +184,7 @@ final class Gate {
 
   /** Writes a file that is not Java, which the gate does not check, creating its directories. */
   static void write(SourceProject project, Path file, String text) throws IOException {
-    String before = Files.exists(file) ? Files.readString(file) : null;
+    String before = Journal.read(file);
     String mode = Journal.modeOf(file);
     Journal.put(project, file, text);
     Journal.wrote(project, file, before, text);
@@ -195,7 +195,7 @@ final class Gate {
   static void journal(SourceProject project, Map<Path, String> old) throws IOException {
     for (Map.Entry<Path, String> file : old.entrySet()) {
       Path f = file.getKey();
-      Journal.wrote(project, f, file.getValue(), Files.exists(f) ? Files.readString(f) : null);
+      Journal.wrote(project, f, file.getValue(), Journal.read(f));
     }
   }
 

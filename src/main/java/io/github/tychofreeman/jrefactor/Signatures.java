@@ -764,7 +764,7 @@ final class Signatures {
         }
       }
     } else {
-      String simple = name.substring(name.lastIndexOf('.') + 1);
+      String simple = Names.simpleName(name);
       String type = name.substring(0, name.lastIndexOf('.'));
       for (Call c : family.calls) {
         if (c.arguments().get(at) instanceof Name n

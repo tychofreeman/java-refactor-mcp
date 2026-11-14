@@ -40,7 +40,6 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
@@ -256,8 +255,7 @@ final class Stubs {
         if (!p.isError()) {
           continue;
         }
-        ASTNode node =
-            NodeFinder.perform(unit, p.getSourceStart(), p.getSourceEnd() - p.getSourceStart() + 1);
+        ASTNode node = Nodes.at(unit, p);
         switch (p.getID()) {
           // A call that fits no overload of a project method: the stub is an overload, typed from
           // the call.
@@ -538,7 +536,7 @@ final class Stubs {
 
     /** Writes {@code stubs} into {@code file}, keeping its old text in {@code old}. */
     void write(Path file, List<Stub> stubs, Map<Path, String> old) throws IOException {
-      String before = Files.exists(file) ? Files.readString(file) : null;
+      String before = Journal.read(file);
       if (!old.containsKey(file)) {
         old.put(file, before); // putIfAbsent would replace a null: a file that did not exist
       }
@@ -821,8 +819,7 @@ final class Stubs {
 
   /** "public " when {@code owner} is in another package than {@code unit}, else nothing. */
   private static String visibility(CompilationUnit unit, ITypeBinding owner) {
-    String here =
-        unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
+    String here = Names.packageOf(unit);
     return owner.getPackage().getName().equals(here) ? "" : "public ";
   }
 
@@ -839,7 +836,7 @@ final class Stubs {
         };
     if (name == null) {
       String simple = type.replaceAll("<.*", "").replace("[]", "s");
-      simple = simple.substring(simple.lastIndexOf('.') + 1);
+      simple = Names.simpleName(simple);
       name =
           Character.isLowerCase(simple.charAt(0))
               ? simple.substring(0, 1)

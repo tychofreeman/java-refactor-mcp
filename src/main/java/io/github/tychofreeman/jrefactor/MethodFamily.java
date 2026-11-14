@@ -166,7 +166,7 @@ final class MethodFamily {
    */
   static String simpleName(String name) {
     String head = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
-    return head.substring(head.lastIndexOf('.') + 1);
+    return Names.simpleName(head);
   }
 
   /** Adds the calls in {@code s} of the methods with {@code keys}; refuses method references. */

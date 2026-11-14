@@ -4,11 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -116,17 +113,13 @@ final class MavenBuild {
    * dependency versions are part of the build; a parent outside the tree is covered by its version.
    */
   private static String pomHash(Path root) throws IOException {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      Path pom = root.resolve("pom.xml");
-      for (int depth = 0; pom != null && Files.isRegularFile(pom) && depth < PARENTS; depth++) {
-        digest.update(Files.readAllBytes(pom));
-        pom = parentPom(pom);
-      }
-      return "pom " + HexFormat.of().formatHex(digest.digest());
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
+    List<byte[]> poms = new ArrayList<>();
+    Path pom = root.resolve("pom.xml");
+    for (int depth = 0; pom != null && Files.isRegularFile(pom) && depth < PARENTS; depth++) {
+      poms.add(Files.readAllBytes(pom));
+      pom = parentPom(pom);
     }
+    return "pom " + Hashes.sha256Hex(poms.toArray(byte[][]::new));
   }
 
   /** How many parent poms a build may name before the hash stops following them. */

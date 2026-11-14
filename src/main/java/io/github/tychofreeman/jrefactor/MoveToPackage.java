@@ -45,8 +45,7 @@ final class MoveToPackage {
     Opened opened = Opened.of(project, rel);
     CompilationUnit unit = opened.unit();
     AbstractTypeDeclaration type = Declarations.typePath(unit, new String[] {name});
-    String old =
-        unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
+    String old = Names.packageOf(unit);
     Precondition.require(
         Precondition.that(
             () -> type != null && type.resolveBinding() != null,
@@ -86,8 +85,7 @@ final class MoveToPackage {
       Path f = e.getKey();
       CompilationUnit u = e.getValue();
       String text = texts.get(f);
-      String filePkg =
-          u.getPackage() == null ? "" : u.getPackage().getName().getFullyQualifiedName();
+      String filePkg = Names.packageOf(u);
       boolean self = f.equals(opened.file());
       List<TextEdit> list = edits.computeIfAbsent(f, k -> new ArrayList<>());
       List<Integer> hits = new ArrayList<>();
@@ -185,8 +183,7 @@ final class MoveToPackage {
             withoutOwnPackage(Imports.fix(project, target, text, after, List.of()).text(), pkg));
         continue;
       }
-      String filePkg =
-          u.getPackage() == null ? "" : u.getPackage().getName().getFullyQualifiedName();
+      String filePkg = Names.packageOf(u);
       String after = TextEdit.apply(text, list, 0);
       if (filePkg.equals(old) && lines.containsKey(project.relative(f).toString())) {
         after = Imports.adding(after, Jdt.parseSyntax(after), newName);
@@ -220,10 +217,7 @@ final class MoveToPackage {
     }
     if (!widened.isEmpty()) {
       List<String> all = new ArrayList<>(widened);
-      String joined =
-          all.size() == 1
-              ? all.get(0)
-              : String.join(", ", all.subList(0, all.size() - 1)) + " and " + all.getLast();
+      String joined = Names.listed(all);
       result += "; widened " + joined + " to public";
     }
     return new Outcome(result, declared);

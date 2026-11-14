@@ -4,14 +4,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -155,13 +152,8 @@ final class TypeCheck {
   /** A SHA-256 of each file's bytes, to tell whether any changed since a count. */
   private static Map<Path, String> hashes(List<Path> files) throws IOException {
     Map<Path, String> out = new HashMap<>();
-    try {
-      for (Path file : files) {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        out.put(file, HexFormat.of().formatHex(digest.digest(Files.readAllBytes(file))));
-      }
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
+    for (Path file : files) {
+      out.put(file, Hashes.sha256Hex(Files.readAllBytes(file)));
     }
     return out;
   }
@@ -291,7 +283,7 @@ final class TypeCheck {
     project.session().lastCount = new Counted(project, hashes, headers, counts);
   }
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = Json.MAPPER;
 
   /** The version of what {@link #save} writes; a file of another version is not loaded. */
   private static final int FORMAT = 5;

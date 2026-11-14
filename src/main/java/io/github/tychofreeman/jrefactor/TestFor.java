@@ -55,7 +55,7 @@ final class TestFor {
             ? path.substring(0, dot)
             : path;
     String member = type.equals(path) ? null : path.substring(dot + 1);
-    String simple = type.substring(type.lastIndexOf('.') + 1);
+    String simple = Names.simpleName(type);
     Holding holding = Holding.of(project, simple);
     for (CompilationUnit unit : holding.units().values()) {
       for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
@@ -143,7 +143,7 @@ final class TestFor {
           .append(call)
           .append(";\n");
     }
-    String fail = staticFail ? "fail" : simpleName(f.assertions()) + ".fail";
+    String fail = staticFail ? "fail" : Names.simpleName(f.assertions()) + ".fail";
     body.append("    ").append(fail).append("(\"write the assertion\");\n");
     return "  @Test\n  "
         + (f.isPublic() ? "public " : "")
@@ -240,9 +240,5 @@ final class TestFor {
 
   private static String decapitalize(String name) {
     return Character.toLowerCase(name.charAt(0)) + name.substring(1);
-  }
-
-  private static String simpleName(String qualified) {
-    return qualified.substring(qualified.lastIndexOf('.') + 1);
   }
 }
