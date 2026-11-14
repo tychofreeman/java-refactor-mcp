@@ -1416,3 +1416,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `Journal.put` and both `restore`s, and two `replace_text`s declaring a `project` in the tests
   the value named. Its first send used `position`, which `add_parameter` does not take (`before`
   does); `retry` with three `step` changes fixed it without resending the rest.
+
+## 2026-11-13: fix-server-catch-error
+
+- No Java by hand: `add_declaration` (the test), `replace_text` (the fix; its first send rethrew
+  the union-typed `e`, which the gate refused as an unhandled `Exception`).

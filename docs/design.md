@@ -363,6 +363,12 @@ project's root (`Journal.removable`; `put` and `restore` take the project). Opti
 directories each call creates, so a directory the user made empty elsewhere stays (the review's
 second half; needs the journal's entries, saved by the command line, to carry them); (c) never
 removing a directory.
+**Default to reopen (2026-11-13, issue #490; the owner said take the smallest fix):**
+`Server.answerAll` reports every `Error` of a call as an engine error and keeps serving, except a
+`VirtualMachineError` other than `StackOverflowError` and `OutOfMemoryError`, which it rethrows.
+Options: (a) that (chosen: an overflow or a full heap ends with its call, whose frames are gone);
+(b) only `StackOverflowError`, as the review's minimum; (c) every `Error`, `InternalError`
+included.
 
 ## Constructive transformations (2026-11-05)
 
@@ -836,6 +842,7 @@ sections 3 and 4.
 | 253 | 263 | The file that declares a type was looked up seven ways; `TypeSwitch.fileOf` matched a path suffix over every file, so `inline` of a class field took `a/com/example/Address.java` for `com.example.Address` and refused, and `move` with `to=com.example.shop.Tax` refused "several files declare Tax" naming the decoy `a/com/example/shop/Tax.java` (issue #482, code review) | Done 2026-11-13: `SourceProject.fileDeclaring(qualified)` and `fileOf(ITypeBinding)` (by the implied path), `Names.outermost`; `TypeSwitch.fileAround`, `Stubs.Round.sourceOf`, `ByLine.topLevel` and `MoveMember.outermost` inlined into them; `Signatures.projects`, `Imports.own`, `Rename`, `Jdt.staticImported`, `ChangeSignature.referenced` (now with the local and anonymous check), `Fold`, `MoveToPackage` call them. `move` takes a qualified `to` as the import where a simple name is ambiguous. `inspect`'s package uses `packageOf`; its looser file rule is documented. Goldens `inline_class_same_suffix`, `move_member_qualified_same_suffix` | Issue #482; `docs/sessions/file-declaring-type.md` |
 | 255 | 265 | Agents that call the tools through `bin/jrefactor` in a session without the Claude Code hooks left no session log, so their tool use could not be measured | Done 2026-11-14: `JREFACTOR_LOG=<file>` makes each `Cli` run append one line in `SessionLog.entry`'s format, a Bash call of `bin/jrefactor` with JSON arguments written out as their objects, which `bin/session-report <file>` reads unchanged (`Cli.logLine`, `CliTest`); a failure to log changes nothing | The owner, 2026-11-14; `docs/sessions/cli-log.md` |
 | 226 | 234 | `Journal.put` removed every directory a deletion left empty with no bound: `move` with `delete=true` of a plain project's only file deleted the project's root, and an undone or refused `create_file` in an empty `src/test/java` deleted that source root (issue #479, code review) | Done 2026-11-13 (`Journal.removable` stops at a source root and the project's root; `put` and `restore` take the project, added by `add_parameter`. `JournalTest`. Default to reopen in Decisions: no record of created directories) | Issue #479; `docs/sessions/fix-journal-parent-dirs.md` |
+| 227 | 235 | `Server.answerAll` caught `Refusal` and `Exception` only: a `StackOverflowError` from deep recursion, or an `OutOfMemoryError`, left the answer to the MCP SDK (issue #490, code review) | Done 2026-11-13 (`answerAll` catches `Error` too and reports it as an engine error, rethrowing other `VirtualMachineError`s; `ServerTest.aStackOverflowIsAnEngineErrorAndTheServerAnswersAfter`. Default to reopen in Decisions) | Issue #490; `docs/sessions/fix-server-catch-error.md` |
 
 ### The 2026-11-04 list
 
