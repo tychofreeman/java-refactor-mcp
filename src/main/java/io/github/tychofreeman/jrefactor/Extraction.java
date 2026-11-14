@@ -87,7 +87,7 @@ final class Extraction {
     this.name = name;
     this.doc = doc;
     this.visibility = visibility == null ? "private" : visibility;
-    this.member = Extract.ancestorAbove(sel.list().get(0), BodyDeclaration.class);
+    this.member = Nodes.ancestor(sel.list().get(0), BodyDeclaration.class);
   }
 
   Outcome apply() throws Exception {
@@ -482,7 +482,7 @@ final class Extraction {
             c.getLabel() != null ? labeled(c, c.getLabel().getIdentifier()) : nearest(c, false);
       } else if (n instanceof YieldStatement y) {
         what = "yield";
-        target = Extract.ancestorAbove(y, SwitchExpression.class);
+        target = Nodes.ancestor(y, SwitchExpression.class);
       }
       if (target != null && !sel.contains(target)) {
         throw new Refusal(
@@ -730,7 +730,7 @@ final class Extraction {
 
   /** The enclosing method's type parameters, as written, or nothing. */
   String typeParameters() {
-    MethodDeclaration m = Extract.ancestorAbove(sel.list().get(0), MethodDeclaration.class);
+    MethodDeclaration m = Nodes.ancestor(sel.list().get(0), MethodDeclaration.class);
     if (m == null || m.typeParameters().isEmpty()) {
       return "";
     }
@@ -954,7 +954,7 @@ final class Extraction {
     if (call.getExpression() != null && !(call.getExpression() instanceof ThisExpression)) {
       return "its receiver may be one";
     }
-    MethodDeclaration around = Extract.ancestorAbove(n, MethodDeclaration.class);
+    MethodDeclaration around = Nodes.ancestor(n, MethodDeclaration.class);
     if (around == null
         || !(around.getParent() instanceof AbstractTypeDeclaration type)
         || type.resolveBinding() == null

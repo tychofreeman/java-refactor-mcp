@@ -8,12 +8,10 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -24,13 +22,10 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.ThrowStatement;
-import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
  * type_switch_to_method over an enum of the project: each constant takes its case. When every case
@@ -81,6 +76,20 @@ final class EnumSwitch {
     /** The end of the result: where the switch was, and what it is now. */
     String now() {
       return "; the code at line " + line + " of " + opened.rel() + " is now " + call();
+    }
+
+    /**
+     * The edits of the switch's file when it is not the enum's: the switch replaced by {@link
+     * #call}; else none, and the replacement joins {@code eEdits}, the enum file's edits.
+     */
+    Map<Path, List<TextEdit>> placeCall(List<TextEdit> eEdits) {
+      Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
+      if (eFile.equals(opened.file())) {
+        eEdits.add(replaced());
+      } else {
+        edits.put(opened.file(), List.of(replaced()));
+      }
+      return edits;
     }
   }
 
@@ -180,12 +189,7 @@ final class EnumSwitch {
         "moving the cases' values into " + at.e().getName());
 
     List<TextEdit> eEdits = new ArrayList<>(field.edits());
-    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
-    if (eFile.equals(at.opened().file())) {
-      eEdits.add(at.replaced());
-    } else {
-      edits.put(at.opened().file(), List.of(at.replaced()));
-    }
+    Map<Path, List<TextEdit>> edits = at.placeCall(eEdits);
     String withValues = TextEdit.apply(eText, eEdits, 0);
     String out =
         Declarations.plan(
@@ -303,12 +307,7 @@ final class EnumSwitch {
       eEdits.add(inBody(eText, c, k, method, in));
       overridden.add(k);
     }
-    Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
-    if (eFile.equals(at.opened().file())) {
-      eEdits.add(at.replaced());
-    } else {
-      edits.put(at.opened().file(), List.of(at.replaced()));
-    }
+    Map<Path, List<TextEdit>> edits = at.placeCall(eEdits);
     NameCheck.require(
         at.project(),
         texts,
@@ -402,23 +401,7 @@ final class EnumSwitch {
       if (!(statements.get(i) instanceof SwitchCase c)) {
         continue;
       }
-      Object next = i + 1 < statements.size() ? statements.get(i + 1) : null;
-      ASTNode body =
-          next instanceof YieldStatement y && y.getExpression() != null
-              ? y.getExpression()
-              : !value && next instanceof ExpressionStatement s
-                  ? s.getExpression()
-                  : next instanceof Block || next instanceof ThrowStatement
-                      ? (Statement) next
-                      : null;
-      if (!c.isSwitchLabeledRule() || body == null) {
-        throw new Refusal(
-            "each case must be an arrow case giving "
-                + (value ? "an expression" : "a statement or a block")
-                + "; the one at "
-                + c.toString().strip()
-                + " is not.");
-      }
+      ASTNode body = TypeSwitch.armBody(statements, i, value, true);
       Arm a = new Arm(constants(c, e, name), body);
       TypeSwitch.usesOnly(body, v, a.label(), "the switch's value");
       checkStatics(body, a.label(), e);

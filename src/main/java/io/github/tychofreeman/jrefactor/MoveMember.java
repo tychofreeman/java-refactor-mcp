@@ -929,7 +929,7 @@ final class MoveMember {
       if (n.resolveBinding() instanceof IMethodBinding b
           && b.getMethodDeclaration().getKey().equals(key)
           && n != c.getName()) {
-        MethodDeclaration around = Extract.ancestorAbove(n, MethodDeclaration.class);
+        MethodDeclaration around = Nodes.ancestor(n, MethodDeclaration.class);
         if (around == null
             || around.resolveBinding() == null
             || !callers.contains(around.resolveBinding().getKey())) {

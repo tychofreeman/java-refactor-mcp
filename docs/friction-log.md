@@ -1595,6 +1595,24 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
   two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.
 
+## 2026-11-14: switch-arms
+
+- `At.placeCall` from the block written twice in `EnumSwitch`: `extract_function` of the first copy
+  worked (a static `placeCall(Path eFile, At at, List<TextEdit> eEdits)`). Then:
+  - `remove_parameter` `eFile` with `value=at.eFile()` was refused: the call passes the local
+    `eFile`, which holds `at.eFile()`; the tool compares the argument's text, not what a local
+    initialized to it holds. Followed its fix (`replace_expression` of the argument first), in a batch.
+  - `function_to_method` was refused (the first parameter, `At`, is not of the method's class), and
+    its fix, `move` to `EnumSwitch.At`, was refused too: `move` takes a top-level class only, and
+    `At` is a nested record. The method was moved by hand: `add_declaration` of the instance form
+    to `EnumSwitch.At`, `replace_text` of the call, `replace_declaration` deleting the static one.
+    A `move` to a member type (or a record), or `function_to_method` onto a parameter's nested type,
+    would be one step.
+  - `fold` of `At.placeCall` over the second copy was refused: it folds only a method that is one
+    return or a void method's statements, and this one builds a map and returns it. Replaced by
+    `replace_text`. A fold of "statements, then return a local they built" into `T x = m(...)`
+    would have done it.
+
 ## 2026-11-14: probe-type
 
 - `add_declaration` of the `Jdt.probeType` tests before the method existed was refused: the stub
@@ -1603,3 +1621,21 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   CLAUDE.md allows when the change is not yet easy).
 - No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
   one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.
+
+## 2026-11-14: nodes-ancestor
+
+- `fold` of `Nodes.ancestor` (a loop, then `return null`) was refused: fold matches one return
+  or a void method's statements. Tried next: `replace_declaration` of
+  `SubclassToStrategy.ancestor` with a delegate, then `inline`: refused, "varargs or generic,
+  which inline does not inline yet". Done instead with `replace_text` of its four calls
+  (`all_occurrences`) and `replace_declaration` with empty content, one batch.
+- `inline` of `FieldOrder.ancestor` made a delegate was refused: "argument n has type
+  SimpleName, and the parameter is ASTNode ... the body would not" convert. Widening a
+  `SimpleName` to `ASTNode` cannot change what `Nodes.ancestorOrSelf(n, ...)` does; the call
+  was swapped with `replace_text`.
+- `rename` of `Nodes.ancestorAbove` with `name` and no `line` was refused ("rename needs line"),
+  the third session to meet it.
+- `replace_text` with `old` ` ancestor(st, ` and `all_occurrences` missed the occurrence that
+  starts its line (the space is indentation there) and the batch's delete then refused; `old`
+  without the space fixed it.
+- No Java by hand but the rebase's merge of `Nodes` and `NodesTest` with #526's `Nodes.show`.
