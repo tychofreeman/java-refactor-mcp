@@ -416,7 +416,9 @@ Each was chosen from options; the record named beside it has the options it beat
   text into `EnumField.field`, checks them with `NameCheck`, and applies the members by
   `Declarations.plan` onto the edited enum text (one whole-file edit for the enum's file, the
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
-  name its refusal gives the case's variable ("the switch's value" for an enum).
+  name its refusal gives the case's variable ("the switch's value" for an enum). A bare `throw`
+  after the arrow is a body as a block is (`EnumSwitch.arms`, #435); `TypeSwitch.switchCases`
+  still refuses one.
   The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
   enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added
   by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
