@@ -1692,3 +1692,10 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - `move` of `GoldenTest.copyTree` onto the stub of the same name was not possible: deleting the
   stub first is refused while the test uses it (a `move` onto the stub itself was not tried).
   Worked instead: replace the stub with the body, make the old method a delegate, `inline` it.
+
+## 2026-11-14: problem-record
+
+- Changing the key of the type check's map (`Map<String, Integer>` to `Map<Problem, Integer>`)
+  across five classes and five tests took one `batch` of `replace_text` steps: `change_type` with
+  `return_type` changes the declarations but not the locals and parameters that receive the
+  result, which a "follow the type" option would have carried.
