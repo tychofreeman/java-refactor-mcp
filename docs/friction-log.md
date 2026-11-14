@@ -1581,6 +1581,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Otherwise through the tools: `move` (four), `rename` (two), `replace_declaration`, `inline`,
   `replace_text`, `create_file` for `NamesTest`. Goldens are resources.
 
+## 2026-11-14: list-insert
+
+- No Java by hand. Three copies onto one helper: the new `SignatureChange.insertAt` by
+  `add_declaration`, each copy made a delegate by `replace_declaration` in one batch, then `inline`
+  of each delegate. `inline` wrote the argument `open - 1` into `open + 1` as `(open - 1) + 1`;
+  two `replace_text`s folded it. An inline that simplified `x - 1 + 1` would have saved them.
+
 ## 2026-11-14: nodes-ancestor
 
 - `fold` of `Nodes.ancestor` (a loop, then `return null`) was refused: fold matches one return
