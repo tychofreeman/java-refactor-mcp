@@ -19,6 +19,7 @@ import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.ObjectMapper;
 
 /** Drives the server over in-process pipes, as Claude Code would over stdin and stdout. */
 @Timeout(30)
@@ -45,6 +47,33 @@ class ServerTest {
   private OutputStream toServer;
   private BufferedReader fromServer;
   private McpSyncServer server;
+
+  /** The most characters a tool's definition may take. */
+  static final int DEFINITION_LIMIT = 1700;
+
+  /**
+   * Tools allowed more than {@link #DEFINITION_LIMIT}: those over it when the test was written
+   * (2026-11-13, #420, the user's choice of a ratchet over one looser limit and over trimming them
+   * all first), each at its size then. A definition may shrink, not grow: lower its number when it
+   * does, and drop it once it fits the limit.
+   */
+  static final Map<String, Integer> DEFINITION_OVER =
+      Map.ofEntries(
+          Map.entry("add_parameter", 3374),
+          Map.entry("change_signature", 2596),
+          Map.entry("insert_statements", 2518),
+          Map.entry("remove_parameter", 2349),
+          Map.entry("change_type", 2257),
+          Map.entry("type_switch_to_method", 2154),
+          Map.entry("replace_statements", 2114),
+          Map.entry("extract_type", 2048),
+          Map.entry("extract_variable", 2029),
+          Map.entry("move", 1976),
+          Map.entry("fold", 1897),
+          Map.entry("extract_function", 1852),
+          Map.entry("batch", 1801),
+          Map.entry("add_declaration", 1776),
+          Map.entry("inline", 1760));
 
   @BeforeEach
   void start() throws IOException {
@@ -410,5 +439,25 @@ class ServerTest {
     assertTrue(
         Files.readString(project.resolve("com/example/Totals.java"))
             .contains("        int width = label.length();\n        total += width;\n"));
+  }
+
+  /**
+   * Each tool's definition, as a client is sent it, stays small: every request carries every loaded
+   * definition (gorefactor's TestLoadedToolsStaySmall). A tool over the limit is named in OVER,
+   * with its own limit and the reason.
+   */
+  @Test
+  void definitionsStaySmall() throws IOException {
+    List<?> tools = (List<?>) result(request(11, "tools/list", Map.of())).get("tools");
+    List<String> over = new ArrayList<>();
+    for (Object tool : tools) {
+      String name = (String) ((Map<?, ?>) tool).get("name");
+      int size = new ObjectMapper().writeValueAsString(tool).length();
+      int limit = DEFINITION_OVER.getOrDefault(name, DEFINITION_LIMIT);
+      if (size > limit) {
+        over.add(name + " is " + size + " characters, more than " + limit);
+      }
+    }
+    assertEquals(List.of(), over);
   }
 }
