@@ -10,8 +10,9 @@ Judgments are Claude's; figures are from the records named beside them.
 Extend it in the PR that changes a decision, as gorefactor's was: add a line to
 the arc, and a dated section in order when the decision needs its reasons.
 
-`#N` is a pull request of this repository; `roadmap #N` is a row of the roadmap in
-`docs/design.md` (its `#` column); a gorefactor PR is named as such.
+`#N` is a pull request of this repository; `roadmap #N` is an item of the roadmap, its
+`item` number (a file `docs/roadmap/N-*.md` since 2026-11-14; before, the `#` column of the
+table in `docs/design.md`); a gorefactor PR is named as such.
 
 ## The arc in brief
 
@@ -108,6 +109,9 @@ the arc, and a dated section in order when the decision needs its reasons.
     descriptions were so long, and changed the rule: refusals explain themselves,
     and what every tool shares is said once, in the server's instructions (#256-#259;
     below).
+19. **2026-11-14: one file per roadmap item.** With five agents working at once, the roadmap
+    table in `docs/design.md` was the one place every PR wrote; it moved to `docs/roadmap/`,
+    numbers checked by a test (below).
 
 ## Why `replace_text` carried so much (2026-11-04)
 
@@ -471,6 +475,26 @@ argument on the edit tools, since every earlier option hidden in a description w
 until a refusal named it, and since a list nests where a tool per statement cannot. The
 sketch's one unchecked assumption, that a `var` draft parsed with bindings gives the type to
 write, was checked first with a scratch parse before any of it was built on.
+
+## One file per roadmap item (2026-11-14)
+
+From 2026-11-13 up to five agents built at once, and each PR appended its row to the end of the
+same table in `docs/design.md`. Every merge to `main` put the other open PRs in conflict there:
+some needed three or four merges of `main` before they could land. Resolving those conflicts by
+hand went wrong twice (a row another PR added was deleted, and a row `main` had removed came
+back), and the next free order or item number was taken twice several times (175-177 among
+them), each found by hand. A rule in the agents' brief for resolving the conflicts, with a
+`grep` to check the numbers, did not stop it.
+
+The user chose one file per item (`docs/roadmap/<item>-<slug>.md`, its numbers in a header),
+over running fewer agents at once (slower, and the table would still conflict) and over keeping
+the table with a stricter procedure (the procedure was what had failed). Files that do not share
+lines do not conflict; `bin/roadmap` prints the table again, sorted by order; and a number taken
+twice fails `RoadmapTest` in CI, which runs it even when only `docs/roadmap/` changed. A clash
+still shows only once both files are in one tree, so a branch merges `main` in before it merges.
+The 272 rows were split by a script and checked by rebuilding each row from its file: all but
+five came back unchanged, and those five had a `|` inside code that split the row's cells, or
+a cell after the last one; their text is kept.
 
 ## Open at the time of writing (2026-11-06)
 

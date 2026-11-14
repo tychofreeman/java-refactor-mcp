@@ -37,7 +37,7 @@ latest run, down from 32% more in the first. On three tasks that write
 statements inside existing methods (2026-11-13, two runs each, tools only),
 every run passed, and `build` was the cheapest way, $0.109 a run against
 $0.129 without it; but a model chose it only when a refusal asked for it. See
-`docs/design.md` (roadmap row 13) and `docs/sessions/`.
+`docs/roadmap/11-a-b-harness-run-on-a-small-java-task-set.md` and `docs/sessions/`.
 
 ## The tools
 
@@ -260,7 +260,8 @@ and `-Djrefactor.probe=...` for the behavior probes). How the server is built, t
 working in this repo, and the roadmap:
 
 - [CLAUDE.md](CLAUDE.md): how Claude Code works in this repo
-- [docs/design.md](docs/design.md): architecture, decisions and the roadmap
+- [docs/design.md](docs/design.md): architecture and decisions; [docs/roadmap/](docs/roadmap/):
+  the roadmap, one file per item (`bin/roadmap` prints it as a table)
 - [docs/tool-contract.md](docs/tool-contract.md): tool names, arguments and results
 - [docs/session-notes.md](docs/session-notes.md): what past sessions learned
 - [docs/how-this-project-was-built.md](docs/how-this-project-was-built.md): the arc of the project

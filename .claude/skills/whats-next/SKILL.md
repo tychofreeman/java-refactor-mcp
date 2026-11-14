@@ -18,7 +18,7 @@ Quietly, without reading Java:
 - **Open PRs** (`gh pr list`, or `git branch -r` when the API is closed):
   work waiting for the user to merge is not a candidate, and a later item
   that builds on one waits too.
-- **The roadmap** (the table under "Roadmap" in `docs/design.md`): rows
+- **The roadmap** (`bin/roadmap --open`: one file per item in `docs/roadmap/`): items
   whose status is not *Done*, with *Next* first, then *Planned* items
   whose prerequisites are done.
 - **The open questions** in `docs/design.md` that a roadmap item waits on.

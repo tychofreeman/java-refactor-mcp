@@ -5,7 +5,7 @@ the other docs do not record: the user's preferences and decisions, rules for
 where code goes, and traps. Every session reads this (CLAUDE.md imports it), so
 keep it to what a session needs now: facts, with the reason, not a diary. History
 and measurements go in the item's record (`docs/sessions/`) and in
-`docs/how-this-project-was-built.md`; the roadmap is in `docs/design.md`. When a
+`docs/how-this-project-was-built.md`; the roadmap is in `docs/roadmap/`. When a
 fact here becomes wrong, fix or remove it in the same PR.
 
 ## Working with the user
@@ -65,13 +65,19 @@ fact here becomes wrong, fix or remove it in the same PR.
   unchanged. A JSON argument (`-`, `@file`, inline) is logged as its object with sections filled
   in, `;`, `&`, `|` and `'` written as JSON escapes, so the report's step parsing sees the steps;
   `key_file=-` text is not logged. Logging never changes a run's output or exit status.
-- Before fixing a roadmap row, check `main` and the open branches for the same
-  row: two sessions once fixed #67 at once, and one PR (#118) was closed.
+- Before fixing a roadmap item, check `main` and the open branches for the same
+  item: two sessions once fixed #67 at once, and one PR (#118) was closed.
+- The roadmap is one file per item in `docs/roadmap/` (2026-11-14, the user, over fewer agents
+  at once and over keeping the table in `docs/design.md`): every PR appended a row to one table,
+  so each merge put the other open PRs in conflict, and resolving them twice deleted or brought
+  back rows. `bin/roadmap` prints the table (`--open`, `next`); `RoadmapTest` fails on a number
+  two files share, and CI runs it (the `roadmap` job) even when only `docs/roadmap/` changed.
+  gorefactor, the companion repo, may want the same; it was not changed.
 - gorefactor's `docs/parity.md` (Go, TypeScript and Java at parity) is the source of roadmap
   #119-#130 (2026-11-06, the user asked for it to be merged with this repo's next items); the
   merged order is "Next, in order" in `docs/design.md`. When an item there is done, mark it
   in parity.md too (gorefactor's repo, its own PR).
-- Every open issue has a roadmap row (2026-11-13, #200-#206 for #364's rest and #367-#372), and
+- Every open issue has a roadmap item (2026-11-13, #200-#206 for #364's rest and #367-#372), and
   a new issue gets one in the PR that files or first touches it.
 - The roadmap's open items are ordered by evidence (gorefactor's, then this
   repo's friction log), not only by what unblocks what; the reasons are under
@@ -484,7 +490,7 @@ Each was chosen from options; the record named beside it has the options it beat
   new class is abstract when the old superclass leaves an abstract method no member implements
   (`Skeleton.leftAbstract`, which `unimplemented` now calls) or a member is abstract, and passes
   through each old-superclass constructor the class's `super(...)` calls use
-  (`ExtractSupertype.constructors`); the defaults chosen are in the roadmap row.
+  (`ExtractSupertype.constructors`); the defaults chosen are in its roadmap item (`docs/roadmap/179-*`).
 
 - A type written into code names a member type of the type around that code, or of one around
   that, by its simple name: `Extract.typeName(b, at)` (#328, 2026-11-10; `extract_function`
@@ -863,8 +869,10 @@ Each was chosen from options; the record named beside it has the options it beat
 ## Traps
 
 - Parallel branches each took the next free roadmap number, and three numbers were used twice
-  (175-177, 2026-11-13; renumbered to 182, 184 and 185). Before taking a number, check `main` and
-  the open branches' `docs/design.md`, and check again when rebasing.
+  (175-177, 2026-11-13; renumbered to 182, 184 and 185). Take the numbers from `bin/roadmap next`
+  on a fresh `main`; `RoadmapTest` refuses a clash once both files are in one tree, so before
+  merging, merge `main` in when it gained roadmap files since your branch, and let CI run again.
+  On a clash, renumber your own file (its name, `order` and `item`), never another PR's.
 - A push to `main` cancels the run still going on the one before (`ci.yml`'s `concurrency`),
   release job included: merging a docs-only PR minutes after a code PR left the code unreleased
   (2026-11-13, #460 behind #461; the docs run releases nothing). Wait for a code PR's release

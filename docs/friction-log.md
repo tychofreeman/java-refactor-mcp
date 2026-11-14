@@ -18,8 +18,8 @@ first), so parallel PRs do not conflict at the same place:
 Before writing that no tool covers a change, look for a sequence of two or three
 tools that composes to it, and name the sequences tried and why each failed.
 When a later PR closes an entry, mark it *Follow-up: done* with the PR.
-In markers, `#N` is a pull request and `roadmap #N` a row of the roadmap in
-`docs/design.md`; older entries write rows as `#N` too.
+In markers, `#N` is a pull request and `roadmap #N` an item of the roadmap (`docs/roadmap/N-*.md`;
+a row of a table in `docs/design.md` until 2026-11-14); older entries write items as `#N` too.
 
 ## 2026-11-02: the first server and `inspect`, all by hand
 - Task: roadmap #5, the MCP server over STDIO with `inspect`
