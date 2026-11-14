@@ -932,23 +932,13 @@ final class Tools {
     String name = args.string("name");
     String to = args.string("to");
     String pkg = args.string("package");
-    Map<String, Object> values = new LinkedHashMap<>();
-    values.put("file", args.required("file"));
+    args.required("file");
     Def target;
     if (name == null) {
       if (pkg != null) {
         throw new Refusal("package moves a type: give name, the file's top-level type.");
       }
       target = MOVE_FILE;
-      if (to != null) {
-        values.put("to", to);
-      }
-      if (args.flag("copy")) {
-        values.put("copy", true);
-      }
-      if (args.flag("delete")) {
-        values.put("delete", true);
-      }
     } else {
       if (args.flag("copy") || args.flag("delete")) {
         throw new Refusal(
@@ -959,30 +949,13 @@ final class Tools {
             "give to (the class a member moves to) or package (where the file's type moves), not"
                 + " both.");
       }
-      values.put("name", name);
-      if (to != null) {
-        target = MOVE_MEMBER;
-        values.put("to", to);
-        if (!args.list("imports").isEmpty()) {
-          values.put("imports", args.list("imports"));
-        }
-      } else {
-        target = MOVE_TYPE;
-        if (pkg != null) {
-          values.put("package", pkg);
-        }
-      }
-      if (args.flag(Exceptional.FLAG)) {
-        values.put(Exceptional.FLAG, true);
-      }
+      target = to != null ? MOVE_MEMBER : MOVE_TYPE;
     }
     if (target != MOVE_MEMBER && !args.list("imports").isEmpty()) {
       throw new Refusal(
           "imports is for moving a member (name Type.member with to), whose import fix takes it.");
     }
-    Args routed = new Args(target.name(), values);
-    routed.check(target.args());
-    return target.handler().run(project, routed);
+    return target.handler().run(project, args.routed(target.name(), target.args()));
   }
 
   /**
@@ -1081,16 +1054,10 @@ final class Tools {
       }
       return InlineClass.run(project, args.required("file"), name, args.string("field"));
     }
-    Map<String, Object> values = new LinkedHashMap<>();
-    values.put("file", args.required("file"));
-    values.put("name", name);
+    args.required("file");
     Def target;
     if (args.integer("line") != null) {
       target = INLINE_VARIABLE;
-      values.put("line", args.integer("line"));
-      if (args.integer("column") != null) {
-        values.put("column", args.integer("column"));
-      }
     } else if (name.contains(".")) {
       if (args.integer("column") != null) {
         throw new Refusal("column is for a variable, with line; a method is named Type.method.");
@@ -1104,12 +1071,7 @@ final class Tools {
               + name
               + " to inline every call of it.");
     }
-    if (args.flag(Exceptional.FLAG)) {
-      values.put(Exceptional.FLAG, true);
-    }
-    Args routed = new Args(target.name(), values);
-    routed.check(target.args());
-    return target.handler().run(project, routed);
+    return target.handler().run(project, args.routed(target.name(), target.args()));
   }
 
   static final Def REPLACE_TEXT =
@@ -1581,13 +1543,7 @@ final class Tools {
                   """),
               Arg.IMPORTS),
           Kind.EDIT,
-          (project, args) ->
-              insertOne(
-                  project,
-                  args,
-                  Map.of(
-                      "over", "loop", "name", "name", "form", "form", "type", "type", "body",
-                      "body")));
+          (project, args) -> insertOne(project, args, Map.of("over", "loop")));
 
   /** insert_statements with one build call or construction, by gorefactor's name: an alias. */
   static final Def CREATE_CALL =
@@ -1608,13 +1564,7 @@ final class Tools {
               Arg.string("type", "The type to declare into with."),
               Arg.IMPORTS),
           Kind.EDIT,
-          (project, args) ->
-              insertOne(
-                  project,
-                  args,
-                  Map.of(
-                      "call", "call", "new", "new", "args", "args", "into", "into", "type",
-                      "type")));
+          (project, args) -> insertOne(project, args, Map.of()));
 
   /**
    * insert_statements with one build guard, by gorefactor's name: an alias (#376's arm publishes
@@ -1639,21 +1589,7 @@ final class Tools {
               Arg.string("message", "The exception's message, for throw or require."),
               Arg.IMPORTS),
           Kind.EDIT,
-          (project, args) ->
-              insertOne(
-                  project,
-                  args,
-                  Map.of(
-                      "guard",
-                      "guard",
-                      "guard_null",
-                      "guard_null",
-                      "exit",
-                      "exit",
-                      "value",
-                      "value",
-                      "message",
-                      "message")));
+          (project, args) -> insertOne(project, args, Map.of()));
 
   /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
@@ -2022,6 +1958,9 @@ final class Tools {
   static final List<Def> PUBLISHABLE_ALIASES =
       List.of(CREATE_LOOP, CREATE_CALL, CREATE_GUARD, REPLACE_PARAMETER);
 
+  /** The arguments of insert_statements that say where, which the create aliases pass as given. */
+  private static final Set<String> PLACEMENT = Set.of("file", "line", "where", "imports");
+
   private static Outcome loopToStream(SourceProject project, Args args) throws Exception {
     return LoopToStream.run(project, args.required("file"), args.integer("line"));
   }
@@ -2041,25 +1980,15 @@ final class Tools {
   }
 
   /**
-   * insert_statements with one build entry: each argument {@code entry} names, under its key there,
-   * and the placement arguments as given.
+   * insert_statements with one build entry: every argument but the placement ones, under its name
+   * or the one {@code renames} gives it, and the placement arguments as given.
    */
-  private static Outcome insertOne(SourceProject project, Args args, Map<String, String> entry)
+  private static Outcome insertOne(SourceProject project, Args args, Map<String, String> renames)
       throws Exception {
-    Map<String, Object> built = new LinkedHashMap<>();
-    entry.forEach((arg, key) -> {
-      if (args.has(arg)) {
-        built.put(key, args.raw(arg));
-      }
-    });
-    Map<String, Object> values = new LinkedHashMap<>();
-    for (String key : List.of("file", "line", "where", "imports")) {
-      if (args.has(key)) {
-        values.put(key, args.raw(key));
-      }
-    }
-    values.put("build", List.of(built));
-    return Primitives.insertStatements(project, new Args(args.tool(), values));
+    Map<String, Object> entry =
+        new LinkedHashMap<>(args.without(PLACEMENT).renamed(renames).values());
+    return Primitives.insertStatements(
+        project, args.routed(args.tool(), PLACEMENT).with("build", List.of(entry)));
   }
 
   /**
