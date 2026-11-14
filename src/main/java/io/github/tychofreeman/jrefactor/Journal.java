@@ -63,7 +63,7 @@ final class Journal {
   /** How many changes {@link #save} keeps: the newest. */
   static final int KEPT = 20;
 
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = Json.MAPPER;
 
   /**
    * Writes {@code project}'s undo history to {@code file}, the newest {@link #KEPT} changes, so a
@@ -267,7 +267,8 @@ final class Journal {
     }
   }
 
-  private static String read(Path file) throws IOException {
+  /** The text of {@code file}, or null when there is none. */
+  static String read(Path file) throws IOException {
     return Files.exists(file) ? Files.readString(file) : null;
   }
 

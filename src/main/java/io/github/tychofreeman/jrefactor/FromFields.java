@@ -130,7 +130,7 @@ final class FromFields {
       try {
         String content = constructor(text, rel, type, fields);
         text = Declarations.plan(text, rel, type, content).text();
-        String simple = type.substring(type.lastIndexOf('.') + 1);
+        String simple = Names.simpleName(type);
         notes.add(
             "added constructor "
                 + content.substring(content.indexOf(simple + "("), content.indexOf(')') + 1)

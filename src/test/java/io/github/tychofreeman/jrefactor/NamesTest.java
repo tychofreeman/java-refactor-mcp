@@ -71,4 +71,23 @@ class NamesTest {
     List<MethodDeclaration> all = Nodes.all(unit, MethodDeclaration.class);
     return all.stream().filter(m -> m.getName().getIdentifier().equals(name)).findFirst().get();
   }
+
+  @Test
+  void aListNamesItsItemsWithAndBeforeTheLast() {
+    assertEquals("a", Names.listed(List.of("a")));
+    assertEquals("a and b", Names.listed(List.of("a", "b")));
+    assertEquals("a, b and c", Names.listed(List.of("a", "b", "c")));
+  }
+
+  @Test
+  void aSimpleNameIsWhatFollowsTheLastDot() {
+    assertEquals("Map", Names.simpleName("java.util.Map"));
+    assertEquals("Map", Names.simpleName("Map"));
+  }
+
+  @Test
+  void aUnitsPackageIsItsDeclarationOrEmpty() {
+    assertEquals("a.b", Names.packageOf(Jdt.parseSyntax("package a.b; class C {}")));
+    assertEquals("", Names.packageOf(Jdt.parseSyntax("class C {}")));
+  }
 }

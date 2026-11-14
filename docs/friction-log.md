@@ -1733,6 +1733,37 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Otherwise through the tools: `move`, `rename`, `add_parameter` (three), `replace_statements`,
   `replace_declaration`, `add_declaration`, `extract_variable`. The roadmap row went in by hand.
 
+## 2026-11-14: moved-type-context
+
+- `move` of the static `MoveType.label` (whose first parameter was by then the new record
+  `MovedType`) to `MovedType` was refused: "MovedType is not a class ... that resolves"; `move`
+  takes a top-level class, not a record (`Opened.topLevel`). `function_to_method` in place needs
+  the first parameter to be of the method's own class. Tried: `move` then `function_to_method`
+  (refused at the move). Done by hand: `add_declaration` of the instance methods on the record,
+  `replace_text` of the calls, `replace_declaration` deleting the statics. `move` to a record would
+  make it two calls.
+- The `new MovedType(...)` `extract_type` wrote into a call inside a loop, hoisted to before the
+  loop: `extract_variable` declares it just before the call's statement, inside the loop, and
+  `move_statement` stops at the block. Done with `insert_statements` and `replace_expression`.
+
+## 2026-11-14: problem-record
+
+- Changing the key of the type check's map (`Map<String, Integer>` to `Map<Problem, Integer>`)
+  across five classes and five tests took one `batch` of `replace_text` steps: `change_type` with
+  `return_type` changes the declarations but not the locals and parameters that receive the
+  result, which a "follow the type" option would have carried.
+
+## 2026-11-14: small-helpers
+
+- All through the tools: `move` of three helpers into `Names`, `fold` of each (and of
+  `Journal.read` once widened, and of a new `Nodes.at`), `replace_declaration` to a delegate then
+  `inline` for the copies `fold` could not match (the list joins written with an `if`), and
+  `replace_text` in a batch for the seven mappers.
+- `fold` of `Names.listed` was refused: its body declares a local before the return. The copies
+  were made delegates and inlined instead.
+- `create_file` of `Json` with `com.fasterxml.jackson` was refused: the project uses Jackson 3
+  (`tools.jackson`). The refusal named the import; the second call passed.
+
 ## 2026-11-14: loop-stream-scaffolding
 
 - `fold` of `LoopToStream.uses(scope, binding)` and `beforeInitializer(text, d, init)` left most

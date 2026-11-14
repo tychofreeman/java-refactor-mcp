@@ -84,8 +84,7 @@ final class Edits {
     if (rel.endsWith(".java")) {
       CompilationUnit unit = parses(content, rel);
       String expected = project.packageOf(path);
-      String declared =
-          unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
+      String declared = Names.packageOf(unit);
       if (expected != null && !expected.equals(declared)) {
         throw new Refusal(
             "content declares package "

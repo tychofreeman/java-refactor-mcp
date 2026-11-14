@@ -66,7 +66,7 @@ final class MoveMember {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     TypeDeclaration source = opened.topLevel(typeName);
-    String toName = to.substring(to.lastIndexOf('.') + 1);
+    String toName = Names.simpleName(to);
     Path targetFile =
         !to.contains(".") && MemberMove.typeNamed(unit, to) != null
             ? file
@@ -435,7 +435,7 @@ final class MoveMember {
    * com.example.Tax} when several do), or a refusal naming what to pass.
    */
   private static Path targetFile(SourceProject project, String to, String rel) throws IOException {
-    String simple = to.substring(to.lastIndexOf('.') + 1);
+    String simple = Names.simpleName(to);
     List<Path> found = new ArrayList<>();
     if (to.contains(".")) {
       Path declaring = project.fileDeclaring(to);

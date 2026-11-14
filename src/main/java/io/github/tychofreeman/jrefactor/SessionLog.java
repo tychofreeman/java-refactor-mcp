@@ -28,7 +28,7 @@ final class SessionLog {
   static final int MAX_RESULT = 50_000;
 
   /** The mapper of the session log and of its report: one set of JSON settings for both. */
-  static final ObjectMapper JSON = new ObjectMapper();
+  static final ObjectMapper JSON = Json.MAPPER;
 
   /** The hook's input fields a line keeps, beside the time and the result. */
   private static final List<String> KEPT =

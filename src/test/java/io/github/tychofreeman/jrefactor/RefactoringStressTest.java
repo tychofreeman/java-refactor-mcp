@@ -115,7 +115,7 @@ class RefactoringStressTest {
     StressSnapshot.recover(project.root());
     List<Path> files = project.javaFiles();
     StressSnapshot.take(project.root(), files);
-    Map<String, Integer> first = TypeCheck.errors(project);
+    Map<TypeCheck.Problem, Integer> first = TypeCheck.errors(project);
     Map<Path, String> texts = texts(files);
     System.out.printf("stress: %d files, %d calls, seed %d%n", files.size(), calls, seed);
 
@@ -188,8 +188,8 @@ class RefactoringStressTest {
         continue;
       }
       tally.merge("applied", 1, Integer::sum);
-      Map<String, Integer> full = TypeCheck.uncached(project);
-      List<String> added = TypeCheck.introduced(first, full);
+      Map<TypeCheck.Problem, Integer> full = TypeCheck.uncached(project);
+      List<TypeCheck.Added> added = TypeCheck.introduced(first, full);
       if (!added.isEmpty()) {
         failures.add(what + ": added " + added);
       }
@@ -748,7 +748,7 @@ class RefactoringStressTest {
 
     private static String simple(Type type) {
       String name = type.toString().replaceAll("<.*", "");
-      return name.substring(name.lastIndexOf('.') + 1);
+      return Names.simpleName(name);
     }
   }
 

@@ -223,7 +223,7 @@ public final class Rename {
             + "' on line "
             + line
             + " is "
-            + joinAnd(there)
+            + Names.listed(there)
             + ", not "
             + query.text()
             + ". Pass name "
@@ -363,19 +363,9 @@ public final class Rename {
             + " names "
             + nodes.size()
             + " declarations: "
-            + joinAnd(each)
+            + Names.listed(each)
             + ". "
             + pass);
-  }
-
-  /** "a", "a and b", "a, b and c". */
-  private static String joinAnd(List<String> items) {
-    if (items.size() == 1) {
-      return items.get(0);
-    }
-    return String.join(", ", items.subList(0, items.size() - 1))
-        + " and "
-        + items.get(items.size() - 1);
   }
 
   /**
@@ -496,7 +486,7 @@ public final class Rename {
     others.remove(names.get(0));
     names.addAll(others);
     return summary(
-        "renamed the method " + joinAnd(names) + " to " + newName,
+        "renamed the method " + Names.listed(names) + " to " + newName,
         written.lines(),
         written.occurrences(),
         stubs);
