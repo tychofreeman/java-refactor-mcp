@@ -59,14 +59,14 @@ final class AddSupertype {
     String insert;
     if (!interfaces.isEmpty() && (isInterface || "implements".equals(relation))) {
       Type last = interfaces.get(interfaces.size() - 1);
-      at = last.getStartPosition() + last.getLength();
+      at = Nodes.end(last);
       insert = ", " + supertype;
     } else if (!interfaces.isEmpty()) {
       at = text.lastIndexOf("implements", interfaces.get(0).getStartPosition());
       insert = "extends " + supertype + " ";
     } else {
       SimpleName nameNode = owner.getName();
-      int brace = text.indexOf('{', nameNode.getStartPosition() + nameNode.getLength());
+      int brace = text.indexOf('{', Nodes.end(nameNode));
       at =
           owner.permittedTypes().isEmpty()
               ? brace

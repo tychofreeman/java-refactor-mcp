@@ -704,7 +704,7 @@ final class Extraction {
     List<String> out = new ArrayList<>();
     for (Object o : m.typeParameters()) {
       TypeParameter p = (TypeParameter) o;
-      out.add(text.substring(p.getStartPosition(), Nodes.end(p)));
+      out.add(Nodes.source(text, p));
     }
     return "<" + String.join(", ", out) + "> ";
   }
