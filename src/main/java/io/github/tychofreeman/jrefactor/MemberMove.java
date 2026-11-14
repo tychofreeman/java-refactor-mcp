@@ -235,13 +235,14 @@ final class MemberMove {
   }
 
   /**
-   * The edits that add {@code moved}, a member of {@code rank} ({@link Declarations#rank}), to
-   * {@code type} where {@code add_declaration} puts one: a field after the type's fields, a
-   * constructor after its constructors or fields, either before its first member when it has none
-   * of those, and any other member at its end ({@link #appendTo}). {@code moved} is its source as
-   * written, its lines after the first at their old indentation; they are moved to the type's.
+   * The edits that add {@code moved}, a member of {@code rank} ({@link Placement#rank}), to {@code
+   * type} where {@code add_declaration} puts one: a field after the type's fields, a constructor
+   * after its constructors or fields, either before its first member when it has none of those, and
+   * any other member at its end ({@link #appendTo}). {@code moved} is its source as written, its
+   * lines after the first at their old indentation; they are moved to the type's.
    */
-  static List<TextEdit> addTo(String text, AbstractTypeDeclaration type, String moved, int rank) {
+  static List<TextEdit> addTo(
+      String text, AbstractTypeDeclaration type, String moved, Placement.Rank rank) {
     Place place = Placement.place(type, rank);
     if (place.member() == null) {
       return appendTo(text, type, moved);
