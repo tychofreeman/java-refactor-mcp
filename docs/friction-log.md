@@ -1343,3 +1343,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - The fix was first written by a Python script before the red run; reverted, the red run seen, and
   rewritten through one `batch` (`replace_text`, two `add_declaration`s). The probe and golden are
   resources, written by heredoc. Nothing by hand in Java.
+
+## 2026-11-13: fix-parameter-argument-exceptions
+
+- Safe delete of `Signatures.pure` and `allPure`, which only call each other: `replace_declaration`
+  with empty content refused either one first, naming the other's use. Tried: the two deletes in
+  either order in one `batch` (each refused). Done as one `replace_text` of both methods' text.
+- `rename` with `name=ChangeSignature.pure` alone refused ("rename needs line"); `inspect` gave the
+  line. A `Type.member` name could find the declaration as `replace_declaration` does.

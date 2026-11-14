@@ -1,0 +1,1 @@
+may throw, and removing it drops that. preserve_exceptions is set, so nothing was changed: assign it to a variable before the call, or keep the parameter.
