@@ -1493,6 +1493,17 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   by `replace_expression`, the type by `replace_text` with `all_occurrences`; no tool changes a
   record's components and its constructions together (`change_signature` takes methods only).
 
+## 2026-11-13: binding-keys
+
+- `fold` of `Bindings.declarationKey` folded only `Fold.key`: the copies in `SafeDelete` and
+  `Rename` list the same switch cases in another order, and `MoveToPackage`'s has no `case null`.
+  Each was made a delegate by `replace_declaration` and then `inline`d. A fold that took switch
+  cases in any order (when no case falls through) would have found them.
+- The raw `getKey()` comparisons were swapped by `replace_text` with `all_occurrences`, one text
+  per pattern: no tool rewrites "an expression of this shape" across a file.
+- Otherwise through the tools: `create_file`, `move` (twice), `rename` (twice), `fold`, `inline`
+  (six), `add_declaration`. Goldens are resources.
+
 ## 2026-11-14: holding-names
 
 - `change_type` of `Holding.of`'s `also` to `Path...` was refused: "type Path... does not

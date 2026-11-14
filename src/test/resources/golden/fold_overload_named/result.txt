@@ -1,0 +1,1 @@
+folded 1 match of Util.twice(long) into calls: com/example/Util.java line 13

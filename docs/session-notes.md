@@ -824,6 +824,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `parseAll`'s) do not compare: `overrides`, `isSubTypeCompatible` and `isEqualTo`
   return false. Compare keys or qualified names, or take both from one parse (hit
   twice on 2026-11-04: `inline_function`'s override check, `function_to_method`'s).
+  Compare a use with a declaration by `Bindings.declarationKey` or `Bindings.same`, not
+  `getKey()`: a call of a generic method, a member read through `Box<String>`, or a static method
+  of a generic class called as `Box.twice(3)` has a key of its own, and `move`, `encapsulate_field`
+  and `inline` missed such uses (#496). `Bindings.erasedKey` is `ParameterValue`'s variant (a
+  type variable keyed as its bound's erasure); whether it should stay is issue #500.
 - `bin/jrefactor` rebuilds its jar only for a commit newer than the jar; probing
   uncommitted server code takes a temporary commit (roadmap #79).
 - To test a server change from Claude Code without registering it, write a

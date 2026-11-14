@@ -513,17 +513,6 @@ final class ParameterValue {
     return o;
   }
 
-  /** The key that names what {@code b} declares in every parse, or null. */
-  private static String key(IBinding b) {
-    return switch (b) {
-      case null -> null;
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case ITypeBinding t -> t.getErasure().getKey();
-      default -> b.getKey();
-    };
-  }
-
   /** The matcher of {@link #passes}: the pattern is the value, the other side the argument. */
   private static final class Instance extends ASTMatcher {
     final MethodDeclaration method;
@@ -549,8 +538,8 @@ final class ParameterValue {
       }
       return other instanceof SimpleName o
           && o.getIdentifier().equals(p.getIdentifier())
-          && key(b) != null
-          && key(b).equals(key(o.resolveBinding()));
+          && Bindings.erasedKey(b) != null
+          && Bindings.erasedKey(b).equals(Bindings.erasedKey(o.resolveBinding()));
     }
 
     @Override
@@ -621,7 +610,7 @@ final class ParameterValue {
       boolean isStatic = Modifier.isStatic(mine.getModifiers());
       boolean own =
           !isStatic && (p.getExpression() == null || p.getExpression() instanceof ThisExpression);
-      boolean same = key(mine).equals(key(theirs));
+      boolean same = Bindings.erasedKey(mine).equals(Bindings.erasedKey(theirs));
       if (!same && (isStatic || own || !overrides(theirs, mine))) {
         return false;
       }
@@ -727,9 +716,9 @@ final class ParameterValue {
       if (!(b instanceof IVariableBinding o)) {
         return false;
       }
-      return key(v) == null
-          ? key(o) == null && v.getName().equals(o.getName())
-          : key(v).equals(key(o));
+      return Bindings.erasedKey(v) == null
+          ? Bindings.erasedKey(o) == null && v.getName().equals(o.getName())
+          : Bindings.erasedKey(v).equals(Bindings.erasedKey(o));
     }
   }
 
@@ -754,8 +743,9 @@ final class ParameterValue {
           public boolean match(SimpleName p, Object other) {
             return other instanceof SimpleName o
                 && o.getIdentifier().equals(p.getIdentifier())
-                && key(p.resolveBinding()) != null
-                && key(p.resolveBinding()).equals(key(o.resolveBinding()));
+                && Bindings.erasedKey(p.resolveBinding()) != null
+                && Bindings.erasedKey(p.resolveBinding())
+                    .equals(Bindings.erasedKey(o.resolveBinding()));
           }
         };
     List<Expression> out = new ArrayList<>();
@@ -847,7 +837,7 @@ final class ParameterValue {
         for (MethodDeclaration d : Nodes.all(u, MethodDeclaration.class)) {
           IMethodBinding o = d.resolveBinding();
           if (o != null
-              && !key(o).equals(key(b))
+              && !Bindings.erasedKey(o).equals(Bindings.erasedKey(b))
               && Instance.overrides(o, b)
               && Hierarchy.isSubtype(o.getDeclaringClass(), site)) {
             return true;
@@ -1003,7 +993,7 @@ final class ParameterValue {
       IMethodBinding theirs = there.get(i).resolveMethodBinding();
       if (mine == null
           || theirs == null
-          || key(mine).equals(key(theirs))
+          || Bindings.erasedKey(mine).equals(Bindings.erasedKey(theirs))
           || !Modifier.isStatic(mine.getModifiers()) && Instance.overrides(theirs, mine)) {
         continue;
       }

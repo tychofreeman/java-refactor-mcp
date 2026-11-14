@@ -66,17 +66,18 @@ final class Fold {
 
   static Outcome run(SourceProject project, String rel, String name, Integer line, String in)
       throws Exception {
-    int dot = name.lastIndexOf('.');
+    String base = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
+    int dot = base.lastIndexOf('.');
     Precondition.require(
         Precondition.that(
             () -> dot > 0,
             () -> "name the method as Type.method: " + name + " has no type before it."));
-    String typeName = name.substring(name.lastIndexOf('.', dot - 1) + 1, dot);
-    String methodName = name.substring(dot + 1);
+    String typeName = base.substring(base.lastIndexOf('.', dot - 1) + 1, dot);
+    String methodName = base.substring(dot + 1);
     Path file = project.javaFile(rel);
-    MethodDeclaration first = method(Opened.of(project, rel).unit(), typeName, methodName, name);
+    MethodDeclaration first = method(Opened.of(project, rel).unit(), name, rel);
     Holding holding = Holding.of(project, anchor(first), file);
-    MethodDeclaration m = method(holding.units().get(file), typeName, methodName, name);
+    MethodDeclaration m = method(holding.units().get(file), name, rel);
     IMethodBinding mb = m.resolveBinding();
     Precondition.require(
         Precondition.that(
@@ -84,7 +85,7 @@ final class Fold {
             () -> name + " has no body; fold makes calls of a method with one."));
     boolean instance = !Modifier.isStatic(m.getModifiers());
     if (instance) {
-      String overrider = overrider(project, file, typeName, methodName, name);
+      String overrider = overrider(project, file, methodName, name);
       if (overrider != null) {
         throw new Refusal(
             name
@@ -101,7 +102,7 @@ final class Fold {
       if (p.isVarargs()) {
         throw new Refusal(name + " takes varargs, which fold does not match. Use a list.");
       }
-      params.add(key(p.resolveBinding()));
+      params.add(Bindings.declarationKey(p.resolveBinding()));
     }
     boolean returns = !"void".equals(mb.getReturnType().getName());
     List<ASTNode> pattern = new ArrayList<>();
@@ -132,10 +133,10 @@ final class Fold {
     Set<String> bodyLocals = new HashSet<>();
     for (ASTNode p : pattern) {
       for (VariableDeclaration d : Nodes.all(p, VariableDeclaration.class)) {
-        bodyLocals.add(key(d.resolveBinding()));
+        bodyLocals.add(Bindings.declarationKey(d.resolveBinding()));
       }
       for (SimpleName n : Nodes.all(p, SimpleName.class)) {
-        int i = params.indexOf(key(n.resolveBinding()));
+        int i = params.indexOf(Bindings.declarationKey(n.resolveBinding()));
         if (i >= 0) {
           if (uses[i]++ == 0) {
             firstEnd[i] = Nodes.end(n);
@@ -160,7 +161,7 @@ final class Fold {
       }
     }
     for (IVariableBinding w : Effects.of(m.getBody()).written()) {
-      if (params.contains(key(w))) {
+      if (params.contains(Bindings.declarationKey(w))) {
         throw new Refusal(
             name
                 + " assigns its parameter "
@@ -168,7 +169,7 @@ final class Fold {
                 + ", which no expression can stand for.");
       }
     }
-    if (returns && params.contains(key(identifier(pattern.get(0))))) {
+    if (returns && params.contains(Bindings.declarationKey(identifier(pattern.get(0))))) {
       throw new Refusal(name + " returns its parameter, which every expression would match.");
     }
 
@@ -279,17 +280,15 @@ final class Fold {
         declared);
   }
 
-  /** The static method {@code type.method} of {@code unit}, or a refusal. */
-  private static MethodDeclaration method(
-      CompilationUnit unit, String type, String method, String name) {
-    for (MethodDeclaration d : Nodes.all(unit, MethodDeclaration.class)) {
-      if (d.getName().getIdentifier().equals(method)
-          && d.getParent() instanceof AbstractTypeDeclaration t
-          && t.getName().getIdentifier().equals(type)) {
-        return d;
-      }
+  /**
+   * The method {@code name} (Type.method, with its parameter types for an overload) of {@code
+   * unit}, or a refusal.
+   */
+  private static MethodDeclaration method(CompilationUnit unit, String name, String rel) {
+    if (Declarations.find(unit, name, rel).decl() instanceof MethodDeclaration d) {
+      return d;
     }
-    throw new Refusal("no method " + name + " in that file. Name it as Type.method.");
+    throw new Refusal(name + " is not a method. Name it as Type.method.");
   }
 
   /**
@@ -320,12 +319,12 @@ final class Fold {
       Set<String> bodyLocals,
       boolean returns,
       List<Candidate> found) {
-    String mKey = key(m.resolveBinding());
+    String mKey = Bindings.declarationKey(m.resolveBinding());
     unit.accept(
         new ASTVisitor() {
           @Override
           public boolean visit(MethodDeclaration d) {
-            return !mKey.equals(key(d.resolveBinding()));
+            return !mKey.equals(Bindings.declarationKey(d.resolveBinding()));
           }
 
           @Override
@@ -510,7 +509,7 @@ final class Fold {
       List<?> s = c.block().statements();
       for (int i = c.after(); i < s.size(); i++) {
         for (SimpleName n : Nodes.all((ASTNode) s.get(i), SimpleName.class)) {
-          if (c.locals().contains(key(n.resolveBinding()))) {
+          if (c.locals().contains(Bindings.declarationKey(n.resolveBinding()))) {
             return n.getIdentifier() + " is declared by the code and used after it";
           }
         }
@@ -576,7 +575,7 @@ final class Fold {
 
     @Override
     public boolean match(SimpleName p, Object other) {
-      String key = key(p.resolveBinding());
+      String key = Bindings.declarationKey(p.resolveBinding());
       int i = key == null ? -1 : params.indexOf(key);
       if (i >= 0) {
         if (!(other instanceof Expression x)) {
@@ -591,7 +590,7 @@ final class Fold {
       if (!(other instanceof SimpleName o)) {
         return false;
       }
-      String theirs = key(o.resolveBinding());
+      String theirs = Bindings.declarationKey(o.resolveBinding());
       if (key != null && bodyLocals.contains(key)) {
         if (theirs == null) {
           return false;
@@ -673,7 +672,7 @@ final class Fold {
               s.equals("%s")
                   && at < pa.size()
                   && pa.get(at) instanceof SimpleName n
-                  && params.contains(key(n.resolveBinding()));
+                  && params.contains(Bindings.declarationKey(n.resolveBinding()));
           // A hole's %s stays a %s with its argument, or is constant text in its place.
           regex.append(hole ? "(%s|[^%]*)" : Pattern.quote(s));
           if (hole) {
@@ -695,7 +694,7 @@ final class Fold {
         Object pk = pa.get(f + 1 + k);
         String captured = relaxed.contains(k) ? text.group(++group) : null;
         if (captured != null && !captured.equals("%s")) {
-          int i = params.indexOf(key(((SimpleName) pk).resolveBinding()));
+          int i = params.indexOf(Bindings.declarationKey(((SimpleName) pk).resolveBinding()));
           StringLiteral made = o.getAST().newStringLiteral();
           made.setLiteralValue(captured);
           if (args[i] == null) {
@@ -784,25 +783,15 @@ final class Fold {
     return x.getStartPosition() < 0;
   }
 
-  private static String key(IBinding b) {
-    return switch (b) {
-      case null -> null;
-      case ITypeBinding t -> t.getTypeDeclaration().getKey();
-      case IMethodBinding mb -> mb.getMethodDeclaration().getKey();
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      default -> b.getKey();
-    };
-  }
-
   /**
    * The method of the project that overrides {@code type.method} (Sub.method()), or null; read from
    * one parse of the files that name the method.
    */
-  private static String overrider(
-      SourceProject project, Path file, String type, String method, String name)
+  private static String overrider(SourceProject project, Path file, String method, String name)
       throws IOException {
     Holding named = Holding.of(project, method, file);
-    IMethodBinding mb = method(named.units().get(file), type, method, name).resolveBinding();
+    IMethodBinding mb =
+        method(named.units().get(file), name, project.relative(file)).resolveBinding();
     for (CompilationUnit unit : named.units().values()) {
       for (MethodDeclaration d : Nodes.all(unit, MethodDeclaration.class)) {
         IMethodBinding b = d.resolveBinding();

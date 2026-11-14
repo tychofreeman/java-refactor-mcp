@@ -544,7 +544,7 @@ public final class Rename {
     Holding holding = Holding.of(project, newName);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
-        String key = meaning(n.resolveBinding());
+        String key = Bindings.declarationKey(n.resolveBinding());
         if (n.getIdentifier().equals(newName) && key != null) {
           out.computeIfAbsent(e.getKey(), k -> new HashMap<>()).put(n.getStartPosition(), key);
         }
@@ -583,7 +583,7 @@ public final class Rename {
         if (declares
             && n.getIdentifier().equals(newName)
             && at.contains(before(at, n.getStartPosition(), delta))) {
-          renamed.add(meaning(n.resolveBinding()));
+          renamed.add(Bindings.declarationKey(n.resolveBinding()));
         }
       }
     }
@@ -592,7 +592,7 @@ public final class Rename {
       List<Integer> at = renamedAt.getOrDefault(e.getKey(), List.of());
       Map<Integer, String> was = existing.getOrDefault(e.getKey(), Map.of());
       for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
-        String key = meaning(n.resolveBinding());
+        String key = Bindings.declarationKey(n.resolveBinding());
         if (!n.getIdentifier().equals(newName) || key == null) {
           continue;
         }
@@ -637,17 +637,6 @@ public final class Rename {
       }
     }
     return after - k * delta;
-  }
-
-  /** The key that names what {@code b} refers to, in every parse; null for none. */
-  private static String meaning(IBinding b) {
-    return switch (b) {
-      case null -> null;
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case ITypeBinding t -> t.getTypeDeclaration().getKey();
-      default -> b.getKey();
-    };
   }
 
   /**

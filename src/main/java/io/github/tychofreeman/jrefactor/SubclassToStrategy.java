@@ -548,7 +548,7 @@ final class SubclassToStrategy {
     for (MethodDeclaration c : constructors) {
       if (called != null
           && c.resolveBinding() != null
-          && c.resolveBinding().getKey().equals(called.getKey())) {
+          && Bindings.same(c.resolveBinding(), called)) {
         ctor = c;
       }
     }

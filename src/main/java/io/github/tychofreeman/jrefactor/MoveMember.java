@@ -105,8 +105,8 @@ final class MoveMember {
     checkBody(m, method, name);
 
     boolean isStatic = Modifier.isStatic(m.getModifiers());
-    String key = method.getKey();
-    String sourceKey = source.resolveBinding().getKey();
+    String key = Bindings.declarationKey(method);
+    String sourceKey = Bindings.declarationKey(source.resolveBinding());
     String base = member.contains("(") ? member.substring(0, member.indexOf('(')).strip() : member;
 
     Holding holding = Holding.of(project, base, file, targetFile);
@@ -150,7 +150,7 @@ final class MoveMember {
               IMethodBinding b = node.resolveMethodBinding();
               // A call in the moved method itself moves with it: movedEdits writes it.
               if (b != null
-                  && b.getKey().equals(key)
+                  && key.equals(Bindings.declarationKey(b))
                   && !(p.equals(file) && Nodes.within(node, m))) {
                 sites.add(node);
               }
@@ -161,7 +161,7 @@ final class MoveMember {
             public boolean preVisit2(ASTNode node) {
               if (node instanceof MethodReference r
                   && r.resolveMethodBinding() != null
-                  && r.resolveMethodBinding().getKey().equals(key)) {
+                  && key.equals(Bindings.declarationKey(r.resolveMethodBinding()))) {
                 throw new Refusal(
                     name
                         + " is used as a method reference in "
@@ -174,7 +174,7 @@ final class MoveMember {
           });
       for (MethodDeclaration d : decls) {
         IMethodBinding b = d.resolveBinding();
-        if (b != null && !b.getKey().equals(key) && b.overrides(method)) {
+        if (b != null && !key.equals(Bindings.declarationKey(b)) && b.overrides(method)) {
           throw new Refusal(
               name
                   + " is overridden by "
@@ -541,7 +541,7 @@ final class MoveMember {
               @Override
               public boolean visit(MethodInvocation node) {
                 IMethodBinding b = node.resolveMethodBinding();
-                if (instance && b != null && b.getKey().equals(method.getKey())) {
+                if (instance && b != null && Bindings.same(b, method)) {
                   throw new Refusal(
                       name
                           + " calls itself. A recursive call would go through the receiver; move it"
@@ -639,7 +639,7 @@ final class MoveMember {
                 IMethodBinding b = node.resolveMethodBinding();
                 if (node.getExpression() == null
                     && b != null
-                    && !b.getKey().equals(m.resolveBinding().getKey())
+                    && !Bindings.same(b, m.resolveBinding())
                     && reached(b.getDeclaringClass(), m)) {
                   int s = node.getStartPosition();
                   if (Modifier.isStatic(b.getModifiers())) {
@@ -652,7 +652,7 @@ final class MoveMember {
                 if (node.getExpression() != null
                     && b != null
                     && isStatic
-                    && b.getKey().equals(m.resolveBinding().getKey())) {
+                    && Bindings.same(b, m.resolveBinding())) {
                   out.add(
                       new TextEdit(
                           node.getExpression().getStartPosition(),
@@ -749,7 +749,7 @@ final class MoveMember {
   private static boolean callsMember(Expression arg, String key) {
     for (MethodInvocation node : Nodes.all(arg, MethodInvocation.class)) {
       IMethodBinding b = node.resolveMethodBinding();
-      if (b != null && b.getKey().equals(key)) {
+      if (b != null && key.equals(Bindings.declarationKey(b))) {
         return true;
       }
     }
@@ -776,16 +776,16 @@ final class MoveMember {
    */
   private static void checkPrivateUses(
       MethodDeclaration m, IMethodBinding method, String typeName, String to, String name) {
-    String sourceKey = method.getDeclaringClass().getKey();
+    String sourceKey = Bindings.declarationKey(method.getDeclaringClass());
     java.util.Set<String> methods = new java.util.LinkedHashSet<>();
     java.util.Set<String> fields = new java.util.LinkedHashSet<>();
     for (MethodInvocation call : Nodes.all(m.getBody(), MethodInvocation.class)) {
       IMethodBinding b = call.resolveMethodBinding();
       if (b != null
-          && !b.getKey().equals(method.getKey())
+          && !Bindings.same(b, method)
           && Modifier.isPrivate(b.getModifiers())
           && b.getDeclaringClass() != null
-          && b.getDeclaringClass().getKey().equals(sourceKey)) {
+          && sourceKey.equals(Bindings.declarationKey(b.getDeclaringClass()))) {
         methods.add(typeName + "." + b.getName());
       }
     }
@@ -794,7 +794,7 @@ final class MoveMember {
           && v.isField()
           && Modifier.isPrivate(v.getModifiers())
           && v.getDeclaringClass() != null
-          && v.getDeclaringClass().getKey().equals(sourceKey)) {
+          && sourceKey.equals(Bindings.declarationKey(v.getDeclaringClass()))) {
         fields.add(typeName + "." + v.getName());
       }
     }
@@ -864,7 +864,7 @@ final class MoveMember {
    * only callers of each, and they call each other in no cycle.
    */
   private static List<MethodDeclaration> along(TypeDeclaration source, MethodDeclaration m) {
-    String sourceKey = source.resolveBinding().getKey();
+    String sourceKey = Bindings.declarationKey(source.resolveBinding());
     Map<String, MethodDeclaration> reached = new LinkedHashMap<>();
     List<MethodDeclaration> work = new ArrayList<>(List.of(m));
     for (int i = 0; i < work.size(); i++) {
@@ -911,7 +911,7 @@ final class MoveMember {
       if (b != null
           && Modifier.isPrivate(b.getModifiers())
           && b.getDeclaringClass() != null
-          && b.getDeclaringClass().getKey().equals(sourceKey)
+          && sourceKey.equals(Bindings.declarationKey(b.getDeclaringClass()))
           && d.getRoot() instanceof CompilationUnit u
           && u.findDeclaringNode(b.getMethodDeclaration().getKey()) instanceof MethodDeclaration c
           && c != d

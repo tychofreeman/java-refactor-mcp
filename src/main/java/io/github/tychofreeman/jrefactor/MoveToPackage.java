@@ -275,7 +275,7 @@ final class MoveToPackage {
       if (!widened.add(label)) {
         continue;
       }
-      ASTNode node = units.get(file).findDeclaringNode(declarationKey(each));
+      ASTNode node = units.get(file).findDeclaringNode(Bindings.declarationKey(each));
       BodyDeclaration d =
           node instanceof BodyDeclaration bd
               ? bd
@@ -301,15 +301,6 @@ final class MoveToPackage {
       at++;
     }
     return at;
-  }
-
-  private static String declarationKey(IBinding b) {
-    return switch (b) {
-      case ITypeBinding t -> t.getTypeDeclaration().getKey();
-      case IMethodBinding m -> m.getMethodDeclaration().getKey();
-      case IVariableBinding v -> v.getVariableDeclaration().getKey();
-      default -> b.getKey();
-    };
   }
 
   /** "Helper", "Helper.TAX", "Shop.price()": a widened declaration, as the result names it. */
