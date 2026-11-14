@@ -97,7 +97,7 @@ final class ChangeType {
 
   /**
    * Refuses a change of or to a primitive or boxed type when a use of the field in the project is
-   * one whose result the type decides ({@link PrimitiveUses}).
+   * one whose result the type decides ({@link TypeDecidedUses}).
    */
   private static void checkUses(
       SourceProject project, Path file, FieldDeclaration decl, String field, String type)
@@ -105,10 +105,10 @@ final class ChangeType {
     ITypeBinding before = decl.getType().resolveBinding();
     IVariableBinding binding =
         ((VariableDeclarationFragment) decl.fragments().get(0)).resolveBinding();
-    if (binding == null || !PrimitiveUses.applies(before, type)) {
+    if (binding == null || !TypeDecidedUses.applies(before, type)) {
       return;
     }
-    boolean boxed = PrimitiveUses.anyBoxed(before, type);
+    boolean boxed = TypeDecidedUses.anyBoxed(before, type);
     String key = binding.getVariableDeclaration().getKey();
     Holding holding = Holding.of(project, field, file);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
@@ -116,8 +116,8 @@ final class ChangeType {
         if (!n.isDeclaration()
             && n.resolveBinding() instanceof IVariableBinding v
             && v.getVariableDeclaration().getKey().equals(key)) {
-          PrimitiveUses.check(
-              PrimitiveUses.value(n),
+          TypeDecidedUses.check(
+              TypeDecidedUses.value(n),
               field,
               before.getName(),
               type,

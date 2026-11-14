@@ -225,17 +225,7 @@ final class TestFor {
     }
     List<String> out = new ArrayList<>();
     for (ITypeBinding t : m.getParameterTypes()) {
-      out.add(
-          switch (t.getName()) {
-            case "boolean" -> "false";
-            case "char" -> "'0'";
-            case "long" -> "0L";
-            case "float" -> "0f";
-            case "double" -> "0.0";
-            case "byte", "short", "int" -> "0";
-            case "String" -> "\"\"";
-            default -> "null";
-          });
+      out.add(JavaTypes.placeholder(t.getName()));
     }
     return String.join(", ", out);
   }
