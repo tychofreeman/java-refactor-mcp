@@ -10,7 +10,6 @@ import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
-import org.eclipse.jdt.core.dom.MarkerAnnotation;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
@@ -111,15 +110,12 @@ final class PushDown {
    * Any supertype counts, the superclass's superclasses and interfaces (a default method) too.
    */
   private static void refuseOverride(MethodDeclaration m, String subName, String method) {
-    for (Object o : m.modifiers()) {
-      if (o instanceof MarkerAnnotation a
-          && a.getTypeName().getFullyQualifiedName().equals("Override")) {
-        throw new Refusal(
-            method
-                + " overrides a method of a supertype. Pushing it down would change what "
-                + subName
-                + " runs; leave it where it is.");
-      }
+    if (Nodes.overrideAnnotation(m) != null) {
+      throw new Refusal(
+          method
+              + " overrides a method of a supertype. Pushing it down would change what "
+              + subName
+              + " runs; leave it where it is.");
     }
     IMethodBinding mine = m.resolveBinding();
     if (mine == null) {

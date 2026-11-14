@@ -1714,6 +1714,15 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   that a getter is pure would have taken them.
 - `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.
 
+## 2026-11-14: override-annotation
+
+- No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
+  `replace_statements`, three private helpers made delegates by `replace_declaration` and
+  `inline`d. `inline` wrote `overrides(m)` as `(Nodes.overrideAnnotation(m) != null)` and `!overrides(m)`
+  as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
+  dropped needless parentheses and negated a comparison would have saved them.
+- `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.
+
 ## 2026-11-14: extract-type-sibling
 
 - `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`
