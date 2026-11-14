@@ -713,6 +713,10 @@ for an enum's case too (roadmap #240, issue #472): "the case of Circle uses supe
 would mean its own superclass. Keep the switch as it is." A field read through the pattern variable (`c.radius`) becomes `this.radius`
 where the body declares a variable of that name, else `radius`. A body's own locals are told by
 binding, so a field of the method's class named as a local of another scope is refused as a field.
+The pattern variable used inside an anonymous or local class of a case body is refused (roadmap
+#330, issue #551, 2026-11-14), since `this` there would be that class's object: "the case uses c
+inside a class it declares, where this would be that class's object, not Circle's. Declare a local
+for it before that class (Circle circle = c;) and use the local inside the class, then call again."
 
 ### Over an enum: the field form
 
