@@ -12,6 +12,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -27,7 +28,9 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
  * its one constructor (which only assigns each field from its parameter, in order) is the canonical
  * one and goes; the rest stays, and an accessor ({@code x()}) becomes public. A record generates
  * value-based equals, hashCode and toString for those the class does not define, which changes
- * behavior, so that needs {@code value_semantics}.
+ * behavior, so that needs {@code value_semantics}; an {@code equals} that does not take an Object
+ * is an overload and does not count. Field annotations go onto the components; a transient field,
+ * and a constructor less visible than the class, are refused.
  */
 final class ConvertToRecord {
 
@@ -57,11 +60,17 @@ final class ConvertToRecord {
       BodyDeclaration d = (BodyDeclaration) o;
       boolean isStatic = Modifier.isStatic(d.getModifiers());
       if (d instanceof FieldDeclaration f && !isStatic) {
-        String fieldType = source(text, f.getType());
+        String fieldType = annotations(text, f) + source(text, f.getType());
         for (Object v : f.fragments()) {
           VariableDeclarationFragment frag = (VariableDeclarationFragment) v;
           String field = frag.getName().getIdentifier();
           Precondition.require(
+              Precondition.that(
+                  () -> !Modifier.isTransient(f.getModifiers()),
+                  () ->
+                      field
+                          + " is transient, and a record serializes every component. Remove"
+                          + " transient first, if that is wanted."),
               Precondition.that(
                   () -> Modifier.isFinal(f.getModifiers()),
                   () ->
@@ -74,7 +83,7 @@ final class ConvertToRecord {
                           + " is set by its constructor. Set it there first."));
           components.add(new Component(fieldType, field));
         }
-        edits.add(MemberMove.removal(text, f));
+        remove(edits, MemberMove.removal(text, f));
       } else if (d instanceof Initializer && !isStatic) {
         throw new Refusal(name + " has an instance initializer, which a record cannot have.");
       } else if (d instanceof MethodDeclaration m && m.isConstructor()) {
@@ -101,11 +110,21 @@ final class ConvertToRecord {
                     + name
                     + " does more than assign each field from its parameter, in field order, so it"
                     + " is not a record's canonical constructor. Make it do only that first."));
-    edits.add(MemberMove.removal(text, ctor));
+    Precondition.require(
+        Precondition.that(
+            () -> access(ctor.getModifiers()) >= access(type.getModifiers()),
+            () ->
+                "the constructor of "
+                    + name
+                    + " is "
+                    + accessWord(ctor.getModifiers())
+                    + ", and a record's canonical constructor is as visible as the record. Make it"
+                    + " as visible as the class first, if that is wanted."));
+    remove(edits, MemberMove.removal(text, ctor));
     refuseSubclasses(project, opened.file(), binding, name);
 
     List<String> missing = new ArrayList<>();
-    if (!declares(type, "equals", 1)) {
+    if (!definesEquals(type)) {
       missing.add("equals");
     }
     if (!declares(type, "hashCode", 0)) {
@@ -119,6 +138,7 @@ final class ConvertToRecord {
           name
               + " does not define "
               + Extract.and(missing)
+              + overload(type)
               + ", which a record generates from its components: equality would compare values,"
               + " not identity, and toString would list them. Pass value_semantics=true if that is"
               + " wanted, or define them first.");
@@ -292,5 +312,72 @@ final class ConvertToRecord {
 
   private static String source(String text, ASTNode n) {
     return text.substring(n.getStartPosition(), Nodes.end(n));
+  }
+
+  /** Whether {@code type} declares equals(Object), the method a record would generate. */
+  private static boolean definesEquals(TypeDeclaration type) {
+    for (MethodDeclaration m : type.getMethods()) {
+      IMethodBinding b = m.resolveBinding();
+      if (m.getName().getIdentifier().equals("equals")
+          && b != null
+          && b.getParameterTypes().length == 1
+          && b.getParameterTypes()[0].getQualifiedName().equals("java.lang.Object")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** " (its equals(T) does not override Object.equals)" for an equals overload, else "". */
+  private static String overload(TypeDeclaration type) {
+    for (MethodDeclaration m : type.getMethods()) {
+      if (m.getName().getIdentifier().equals("equals")
+          && m.parameters().size() == 1
+          && !definesEquals(type)) {
+        SingleVariableDeclaration p = (SingleVariableDeclaration) m.parameters().get(0);
+        return " (its equals(" + p.getType() + ") does not override Object.equals)";
+      }
+    }
+    return "";
+  }
+
+  /** The field's annotations, each followed by a space, for its component. */
+  private static String annotations(String text, FieldDeclaration f) {
+    StringBuilder out = new StringBuilder();
+    for (Object o : f.modifiers()) {
+      if (o instanceof Annotation a) {
+        out.append(source(text, a)).append(' ');
+      }
+    }
+    return out.toString();
+  }
+
+  /** Access as a rank: private 0, package 1, protected 2, public 3. */
+  private static int access(int modifiers) {
+    if (Modifier.isPublic(modifiers)) {
+      return 3;
+    }
+    if (Modifier.isProtected(modifiers)) {
+      return 2;
+    }
+    return Modifier.isPrivate(modifiers) ? 0 : 1;
+  }
+
+  private static String accessWord(int modifiers) {
+    return List.of("private", "package-private", "protected", "public").get(access(modifiers));
+  }
+
+  /**
+   * Adds {@code removal} to {@code edits}, less the part an earlier removal takes: the constructor
+   * as the last member takes the blank line before it, which the field before it took too.
+   */
+  private static void remove(List<TextEdit> edits, TextEdit removal) {
+    int start = removal.start();
+    for (TextEdit e : edits) {
+      if (e.start() <= start && start < e.end()) {
+        start = e.end();
+      }
+    }
+    edits.add(new TextEdit(Math.min(start, removal.end()), removal.end(), ""));
   }
 }

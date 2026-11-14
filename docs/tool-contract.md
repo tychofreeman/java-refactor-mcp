@@ -467,9 +467,17 @@ Roadmap #88, 2026-11-04. Arguments: `file`, `name` (a top-level class),
   the class does not define, which changes behavior: refused without
   `value_semantics=true` ("Pass value_semantics=true if that is wanted, or
   define them first").
+- An `equals` whose parameter is not `Object` (`equals(Point)`) is an overload,
+  not the record's `equals(Object)`: it does not count as defining it, and the
+  refusal says so. A field's annotations go onto its component (where their
+  targets allow, a record also puts them on the accessor and the constructor's
+  parameter).
 - Refused also: a superclass; a class of the project that extends it; an
-  abstract class; a field that is not final or has an initializer; an instance
-  initializer; other constructors. Result: `converted Point to a record (x, y)
+  abstract class; a field that is not final or has an initializer; a transient
+  field (a record serializes every component); an instance initializer; other
+  constructors; a constructor less visible than the class (a record's canonical
+  constructor is as visible as the record, so a factory-only class would get a
+  public constructor). Result: `converted Point to a record (x, y)
   in <file>; it now has the record's equals, hashCode and toString; made x()
   public`.
 
