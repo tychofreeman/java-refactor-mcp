@@ -648,6 +648,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `src/main` during a run: the wrapper rebuilds the jar from this checkout. The
   tools appear as `mcp__gorefactor__*` there. The fixture's checks run Maven
   offline (`-o`), so `~/.m2` must hold JUnit 6.1.3 and the plugins.
+- `examples/CLAUDE.md` against a project's CLAUDE.md (darktable's, 2026-11-13,
+  `docs/sessions/ab-darktable-md.md`, shop and warehouse, 32 runs, $4.95): all passed, the
+  project's file a little cheaper, with three to seven times the batches; its batch and refusal
+  rules were added to `examples/CLAUDE.md` and `eval-tasks/claude-md/mcp.md` (the user's choice).
 - The merged list (one `move`, one `inline`, `extract_function`) was A/B-checked on 2026-11-06
   (`docs/sessions/ab-merged-tools.md`): every run passed, cost as the baselines; the mcp arm alone
   was run, as the manual arm does not see the tool list.

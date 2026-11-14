@@ -151,7 +151,9 @@ tools to extract the validation in OrderService into its own method"*. Run
 - **Work as a derivation.** Write the change as operations that keep
   behavior, ending in the one small edit that changes it, and send them as
   one `batch`. Near-duplicates: write the shared method (or extract it from
-  one copy), then `fold` the copies onto it. One parameter: `add_parameter`,
+  one copy), then `fold` the copies onto it. Dependent steps (a signature, then its
+  callers) go in one `batch` with check `"end"`; a refusal changes nothing and says what to
+  send instead. One parameter: `add_parameter`,
   `remove_parameter`, `move_parameter` or `change_type`, every call and
   override included.
 - **Look for a sequence before editing by hand.** When no tool seems to
