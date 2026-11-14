@@ -252,16 +252,42 @@ final class Generated {
   }
 
   /**
-   * Refuses, under skeleton-only creation, statement content that is one statement build writes
-   * from names: a local declared from a call or a construction, a for-each, or an index loop. The
-   * refusal names the build to send in its place.
+   * Refuses, under skeleton-only creation, statement content with a statement build writes from
+   * names: a local declared from a call or a construction, a for-each, or an index loop. The
+   * refusal names the build to send in its place, the content's other statements in it as typed.
    */
   static void checkBuild(String content) {
     String text = "class X { void m() {\n" + content + "\n}}";
-    Statement s = only(text);
-    if (s == null) {
+    List<?> statements = statements(text);
+    List<Object> build = new ArrayList<>();
+    String what = null;
+    int first = 0;
+    for (int i = 0; i < statements.size(); i++) {
+      Statement s = (Statement) statements.get(i);
+      Built b = built(text, s);
+      build.add(b == null ? source(text, s) : b.entry());
+      if (b != null && what == null) {
+        what = b.what();
+        first = i + 1;
+      }
+    }
+    if (what == null) {
       return;
     }
+    throw new Refusal(
+        ON
+            + (build.size() > 1 ? "statement " + first + " of " + build.size() + ", " : "")
+            + what
+            + " is what build writes"
+            + (what.contains("typed") ? " with the type read from the code" : "")
+            + ". Send build: "
+            + new ObjectMapper().writeValueAsString(build)
+            + " in place of content"
+            + (build.size() > 1 ? ", its other statements as typed." : "."));
+  }
+
+  /** The build entry for {@code s} and what it is; null for a statement build does not write. */
+  private static Built built(String text, Statement s) {
     Map<String, Object> entry = new LinkedHashMap<>();
     String what;
     if (s instanceof VariableDeclarationStatement v
@@ -291,7 +317,7 @@ final class Generated {
         arguments = c.arguments();
         what = "a local declared from a construction, its type typed,";
       } else {
-        return;
+        return null;
       }
       List<String> args = new ArrayList<>();
       for (Object a : arguments) {
@@ -326,16 +352,9 @@ final class Generated {
       body(text, b, entry);
       what = "an index loop";
     } else {
-      return;
+      return null;
     }
-    throw new Refusal(
-        ON
-            + what
-            + " is what build writes"
-            + (what.contains("typed") ? " with the type read from the code" : "")
-            + ". Send build: ["
-            + new ObjectMapper().writeValueAsString(entry)
-            + "] in place of content.");
+    return new Built(entry, what);
   }
 
   /** The source of {@code n} in {@code text}. */
@@ -417,5 +436,19 @@ final class Generated {
     List<?> statements =
         ((TypeDeclaration) unit.types().get(0)).getMethods()[0].getBody().statements();
     return statements.size() == 1 ? (Statement) statements.get(0) : null;
+  }
+
+  /** A build entry for a statement, and what the statement is, for the refusal. */
+  private record Built(Map<String, Object> entry, String what) {}
+
+  /** The statements of {@code text}, content in a method; none when it does not parse as that. */
+  private static List<?> statements(String text) {
+    CompilationUnit unit = Jdt.parseSyntax(text);
+    if (unit.getProblems().length > 0
+        || unit.types().isEmpty()
+        || ((TypeDeclaration) unit.types().get(0)).getMethods().length != 1) {
+      return List.of();
+    }
+    return ((TypeDeclaration) unit.types().get(0)).getMethods()[0].getBody().statements();
   }
 }

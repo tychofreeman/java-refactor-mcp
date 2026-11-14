@@ -436,8 +436,17 @@ a name, a call or an access; a guard adds nothing to the result's `built` list, 
 nothing. Under skeleton-only (#167), what is refused is one statement whose
 types `build` reads from the code: a declared local from a call or construction, a for-each, an
 index loop. Assignments, plain calls, returns and guards pass (they type no type), as does
-content of several statements and a declaration with modifiers or `var`; the suggested `build`
+a declaration with modifiers or `var`; the suggested `build`
 puts a construction's declared type in `type` when it differs from the class, never a call's.
+Content of several statements first passed too; reopened 2026-11-13 by the user, below.
+
+**Decided 2026-11-13 (the user): skeleton-only checks each statement of the content.** The
+generator A/B (`docs/sessions/ab-generators.md`) showed the rule never fired on the invoice task,
+whose typed locals came in a block with a `return`. Content of several statements is refused
+when one of them is a statement `build` writes from names; the suggested `build` holds an entry
+for each such statement and the others as typed strings, so it is sent in one call. Chosen over
+suggesting a `build` only when every statement is an entry (which would not fit that block), and
+over leaving the rule as it was (the A/B then says nothing about the refusal on call chains).
 
 ## Questions (all answered)
 
@@ -728,6 +737,7 @@ sections 3 and 4.
 | 178 | 185 | A project type a `Jdt.parseAll` batch read from the source path answered no methods to `getDeclaredMethods()` once the batch ended (JDT freed its scope and logged "Could not retrieve declared methods"), so a tool deciding on that list decided on an empty one, silently (issue #431; `Jdt.parse` of one file was not affected) | Done 2026-11-13 (`Jdt.completeMembers`: in `acceptAST`, each project type a unit's names bind to (a type, a method's or a variable's declaring class, a variable's type), with its member types, supertypes and declaring class, is asked for its fields, methods and member types while the batch runs, each type once per batch. Default to reopen (the owner said take the smallest): the issue's third option, one place in `Jdt` and no tool changed, over parsing the declaring files with the batch (which needs a first pass to know them) and over reading the members from each declaring file's own parse by key (each of the ~40 callers changed). A type reached only through another binding (a method's return or parameter type) is not completed) | The Commons Lang stress run of `change_type_bound`, `docs/sessions/fix-gate-jdt-errors.md`; `docs/sessions/fix-declared-methods.md` |
 | 181 | 188 | The A/B run of issue #376: the four arms (no `build`, `build`, skeleton-only, aliases published) on the depot tasks, Sonnet, two runs a task | Done 2026-11-13 (24/24 passed, $2.79; `build` used only when the skeleton refusal asked for it, the create aliases never, `replace_parameter` found by name) | Issue #376; `docs/sessions/ab-generators.md` |
 | 183 | 190 | `move` of a member type out of a sealed hierarchy whose permits are implicit (the sealed type, or one of its subtypes, out of their shared file) was refused by the gate, the fix text saying to rename a clashing type (issue #441, from the Java 17 stress run) | Done 2026-11-13 (`MoveType.permits`: each sealed type of the file without a clause whose subtypes the move splits from it gets `permits` with all of them, in the file's order, named from the package as after the move; a private subtype named from the other file is widened to package-private, as other members the move crosses. The gate's fix line for `move` now says to fix what the errors name, a clash being one case. Defaults to reopen (the owner said take the smallest): names from the package (`Options.Debug`) over the shortest name in scope; widening over refusing a private subtype; writing the clause over refusing with the reason. Across packages of a named module is #438's) | The Java 17 stress run, `docs/sessions/stress-enum-switch.md`; `docs/sessions/move-sealed-permits.md` |
+| 186 | 193 | Skeleton-only refuses content of several statements when one is a statement `build` writes from names, suggesting one `build` with the others as typed strings | Done 2026-11-13 (`Generated.checkBuild` over `Generated.statements`, an entry each by `Generated.built`; content that does not parse is not checked) | The user's choice of 2026-11-13, after `docs/sessions/ab-generators.md`; `docs/sessions/skeleton-build-blocks.md` |
 
 ### The 2026-11-04 list
 

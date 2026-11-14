@@ -1275,3 +1275,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   refusal could say so when `old` is a bare `@name`. A first `append` passed the text as `append`
   (it takes true, with the text in `new`); its refusal said so. The run's transcripts were tallied
   by a scratch script, not in the repo.
+
+## 2026-11-13: skeleton-build-blocks
+
+- The golden case `insert_statements_skeleton_only_refused_in_block` copied from
+  `..._passes_two_statements` with `cp -r`, and that case's `content.txt` and `out` Ledger edited
+  with `printf` and `sed`: no tool copies a directory, and the golden `out` files are not edited
+  through the tools. The Java went through one `bin/jrefactor` batch.
+- A `batch` with `retry: true` in a second `bin/jrefactor` run was refused ("there is no refused
+  batch since the last one passed"), though the run before was refused: the CLI does not keep the
+  refused batch between runs, while the refusal offered `retry`. Resent whole.

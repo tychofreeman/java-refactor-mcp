@@ -1,2 +1,2 @@
-Money start = Money.zero();
-total = total.plus(start);
+total = total.plus(Money.zero());
+count++;
