@@ -1773,3 +1773,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `replace_statements`.
 - `fold` of a method that builds a list in statements and returns it is refused (one return or a
   void method only): the four `segments` sites went through `replace_statements`.
+
+## 2026-11-14: session-scope
+
+- A `replace_text` that wrapped `Fold`'s loop body in a lambda (`Exceptional.trial`) named a new
+  local `left`, already a local there: the end check caught it. No tool turns a try/catch into a
+  call with a lambda; `replace_text` of the whole block was the way.
+- `Gate.deferred` as a try-with-resources failed `-Xlint:try` (the resource is never named in the
+  body), which the batch's gate does not see: only Maven's `-Werror` compile does. Rewritten as
+  try/finally after the build failed.
+- No Java by hand.
