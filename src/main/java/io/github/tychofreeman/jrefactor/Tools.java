@@ -35,7 +35,7 @@ final class Tools {
       Kind kind,
       Handler handler) {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = Json.MAPPER;
 
     /** Every refactoring takes preserve_exceptions: its schema and its arguments gain it here. */
     Def {

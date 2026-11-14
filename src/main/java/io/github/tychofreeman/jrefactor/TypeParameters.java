@@ -100,7 +100,7 @@ final class TypeParameters {
     if (namesMethod(file, name, rel)) {
       return toMethod(project, args, written, parameter, value);
     }
-    String simple = name.substring(name.lastIndexOf('.') + 1);
+    String simple = Names.simpleName(name);
     Holding holding = Holding.of(project, simple, file);
     CompilationUnit home = holding.units().get(file);
     if (home == null) {
@@ -319,7 +319,7 @@ final class TypeParameters {
             + label
             + (members.isEmpty()
                 ? ""
-                : "; " + v.text() + " became " + parameter + " in " + Extract.and(members))
+                : "; " + v.text() + " became " + parameter + " in " + Names.listed(members))
             + "; "
             + outside
             + (outside == 1 ? " use passes " : " uses pass ")
@@ -1229,11 +1229,11 @@ final class TypeParameters {
                 + " at "
                 + at
                 + " now checks for "
-                + simpleName(now)
+                + Names.simpleName(now)
                 + ", where it "
                 + (erasure.equals("java.lang.Object")
                     ? "checked nothing"
-                    : "checked for " + simpleName(erasure))
+                    : "checked for " + Names.simpleName(erasure))
                 + ": it throws ClassCastException for a value that is not one",
             "write the bound as \"Object & " + type + "\", which keeps " + name + "'s erasure.");
       }
@@ -1290,10 +1290,6 @@ final class TypeParameters {
       }
     }
     return null;
-  }
-
-  private static String simpleName(String qualified) {
-    return qualified.substring(qualified.lastIndexOf('.') + 1);
   }
 
   /** Whether {@code name} names a method declared in {@code file}, by a syntax-only parse. */

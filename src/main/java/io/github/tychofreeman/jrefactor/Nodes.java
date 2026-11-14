@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -14,6 +15,7 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
@@ -48,10 +50,7 @@ final class Nodes {
     for (ASTNode n : nodes) {
       out.add(String.valueOf(n.getStartPosition() - lineStart + 1));
     }
-    if (out.size() == 1) {
-      return out.get(0);
-    }
-    return String.join(", ", out.subList(0, out.size() - 1)) + " and " + out.get(out.size() - 1);
+    return Names.listed(out);
   }
 
   /** The nodes of {@code type} in {@code root}, itself included, in source order. */
@@ -187,5 +186,11 @@ final class Nodes {
   /** The source of {@code n} in {@code text}. */
   static String source(String text, ASTNode n) {
     return text.substring(n.getStartPosition(), Nodes.end(n));
+  }
+
+  /** The node in {@code unit} that {@code problem} marks. */
+  static ASTNode at(CompilationUnit unit, IProblem problem) {
+    return NodeFinder.perform(
+        unit, problem.getSourceStart(), problem.getSourceEnd() - problem.getSourceStart() + 1);
   }
 }

@@ -40,7 +40,6 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
@@ -80,16 +79,17 @@ final class Stubs {
   }
 
   /** The compile errors a change left beyond the ones before it, and the stubs it declared. */
-  record Check(List<String> introduced, Declared declared) {}
+  record Check(List<TypeCheck.Added> introduced, Declared declared) {}
 
   /**
    * Declares stubs until the project has no compile errors beyond {@code before}, or none can be
    * declared. Writes each file it changes, first putting its old text (null for a new file) in
    * {@code old} when it is not there yet. Returns the errors left.
    */
-  static Check declare(SourceProject project, Map<String, Integer> before, Map<Path, String> old)
+  static Check declare(
+      SourceProject project, Map<TypeCheck.Problem, Integer> before, Map<Path, String> old)
       throws IOException {
-    List<String> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
+    List<TypeCheck.Added> introduced = TypeCheck.introduced(before, TypeCheck.errors(project));
     if (!project.session().editing) {
       return new Check(introduced, Declared.NONE);
     }
@@ -138,10 +138,10 @@ final class Stubs {
   private record Setting(String code, List<String> fields) {}
 
   /** The project's files with errors in {@code introduced}, in order. */
-  private static Set<Path> files(SourceProject project, List<String> introduced) {
+  private static Set<Path> files(SourceProject project, List<TypeCheck.Added> introduced) {
     Set<Path> files = new LinkedHashSet<>();
-    for (String error : introduced) {
-      Path file = project.file(error.substring(0, error.indexOf(" | ")));
+    for (TypeCheck.Added error : introduced) {
+      Path file = project.file(error.problem().rel());
       if (file.toString().endsWith(".java") && Files.isRegularFile(file)) {
         files.add(file);
       }
@@ -255,8 +255,7 @@ final class Stubs {
         if (!p.isError()) {
           continue;
         }
-        ASTNode node =
-            NodeFinder.perform(unit, p.getSourceStart(), p.getSourceEnd() - p.getSourceStart() + 1);
+        ASTNode node = Nodes.at(unit, p);
         switch (p.getID()) {
           // A call that fits no overload of a project method: the stub is an overload, typed from
           // the call.
@@ -537,7 +536,7 @@ final class Stubs {
 
     /** Writes {@code stubs} into {@code file}, keeping its old text in {@code old}. */
     void write(Path file, List<Stub> stubs, Map<Path, String> old) throws IOException {
-      String before = Files.exists(file) ? Files.readString(file) : null;
+      String before = Journal.read(file);
       if (!old.containsKey(file)) {
         old.put(file, before); // putIfAbsent would replace a null: a file that did not exist
       }
@@ -820,8 +819,7 @@ final class Stubs {
 
   /** "public " when {@code owner} is in another package than {@code unit}, else nothing. */
   private static String visibility(CompilationUnit unit, ITypeBinding owner) {
-    String here =
-        unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
+    String here = Names.packageOf(unit);
     return owner.getPackage().getName().equals(here) ? "" : "public ";
   }
 
@@ -838,7 +836,7 @@ final class Stubs {
         };
     if (name == null) {
       String simple = type.replaceAll("<.*", "").replace("[]", "s");
-      simple = simple.substring(simple.lastIndexOf('.') + 1);
+      simple = Names.simpleName(simple);
       name =
           Character.isLowerCase(simple.charAt(0))
               ? simple.substring(0, 1)

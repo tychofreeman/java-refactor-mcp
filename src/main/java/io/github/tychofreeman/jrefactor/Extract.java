@@ -325,15 +325,6 @@ final class Extract {
     return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
   }
 
-  static String and(List<String> names) {
-    if (names.size() == 1) {
-      return names.get(0);
-    }
-    return String.join(", ", names.subList(0, names.size() - 1))
-        + " and "
-        + names.get(names.size() - 1);
-  }
-
   private static List<Statement> asStatements(List<?> list) {
     List<Statement> out = new ArrayList<>();
     for (Object o : list) {

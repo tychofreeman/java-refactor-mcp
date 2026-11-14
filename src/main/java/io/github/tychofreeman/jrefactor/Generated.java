@@ -39,7 +39,6 @@ import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
-import tools.jackson.databind.ObjectMapper;
 
 final class Generated {
   private Generated() {}
@@ -262,7 +261,7 @@ final class Generated {
             + " is what build writes"
             + (what.contains("typed") ? " with the type read from the code" : "")
             + ". Send build: "
-            + new ObjectMapper().writeValueAsString(build)
+            + Json.MAPPER.writeValueAsString(build)
             + " in place of content"
             + (build.size() > 1 ? ", its other statements as typed." : "."));
   }
