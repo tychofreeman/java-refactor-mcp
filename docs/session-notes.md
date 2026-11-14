@@ -298,7 +298,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
   a lambda or an anonymous class), `Nodes.typeAround(n)` (the binding of the named or anonymous
   class whose body holds `n`), and `Nodes.unparenthesized(e)` (#508), not a new parent loop.
-- A name as a type's members would resolve it is `Jdt.probeType` (#493): a probe field declared
+  Whether an expression is written (an assignment's target, `++`, `--`, also inside parentheses):
+  `Nodes.written` (#510), not a new copy; a copy missed `(a)++` and changed behavior.- A name as a type's members would resolve it is `Jdt.probeType` (#493): a probe field declared
   as a member (`Jdt.withProbe`: before the first member, or after an enum's constants), imports
   fixed, parsed. Not a new copy that inserts the field itself.
 - Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
