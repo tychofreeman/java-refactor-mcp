@@ -1,0 +1,1 @@
+FileRenamer.move uses super::move (line 12), a member of the instance

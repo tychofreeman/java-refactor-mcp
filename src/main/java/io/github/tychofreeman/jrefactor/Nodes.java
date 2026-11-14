@@ -12,13 +12,25 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionMethodReference;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.NameQualifiedType;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
+import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.QualifiedType;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.SuperMethodReference;
+import org.eclipse.jdt.core.dom.TypeMethodReference;
 
 /** Where syntax nodes are in their source text. */
 final class Nodes {
@@ -192,5 +204,26 @@ final class Nodes {
   static ASTNode at(CompilationUnit unit, IProblem problem) {
     return NodeFinder.perform(
         unit, problem.getSourceStart(), problem.getSourceEnd() - problem.getSourceStart() + 1);
+  }
+
+  /**
+   * Whether {@code n} is the name after a qualifier: {@code a.n}, {@code e.n}, {@code e.n()},
+   * {@code super.n}, {@code super.n()}, a qualified type's {@code a.N}, or a method reference's
+   * {@code e::n}, {@code T::n}, {@code super::n}.
+   */
+  static boolean qualified(SimpleName n) {
+    StructuralPropertyDescriptor where = n.getLocationInParent();
+    if (where == MethodInvocation.NAME_PROPERTY) {
+      return ((MethodInvocation) n.getParent()).getExpression() != null;
+    }
+    return where == QualifiedName.NAME_PROPERTY
+        || where == FieldAccess.NAME_PROPERTY
+        || where == SuperFieldAccess.NAME_PROPERTY
+        || where == SuperMethodInvocation.NAME_PROPERTY
+        || where == QualifiedType.NAME_PROPERTY
+        || where == NameQualifiedType.NAME_PROPERTY
+        || where == ExpressionMethodReference.NAME_PROPERTY
+        || where == TypeMethodReference.NAME_PROPERTY
+        || where == SuperMethodReference.NAME_PROPERTY;
   }
 }

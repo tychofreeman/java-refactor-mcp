@@ -19,7 +19,6 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -32,13 +31,13 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
-import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
@@ -645,7 +644,7 @@ final class InlineFunction {
           @Override
           public boolean visit(SimpleName n) {
             if (!n.isDeclaration()
-                && !qualified(n)
+                && !Nodes.qualified(n)
                 && hidden.contains(n.getIdentifier())
                 && n.resolveBinding() instanceof IVariableBinding v
                 && v.isField()
@@ -699,6 +698,11 @@ final class InlineFunction {
             throw superRefusal();
           }
 
+          @Override
+          public boolean visit(SuperMethodReference s) {
+            throw superRefusal();
+          }
+
           private Refusal superRefusal() {
             return new Refusal(
                 "the body of "
@@ -710,7 +714,7 @@ final class InlineFunction {
 
           @Override
           public boolean visit(SimpleName n) {
-            if (n.isDeclaration() || qualified(n)) {
+            if (n.isDeclaration() || Nodes.qualified(n)) {
               return true;
             }
             IBinding b = n.resolveBinding();
@@ -730,14 +734,6 @@ final class InlineFunction {
             return true;
           }
         });
-  }
-
-  /** Whether {@code n} has a qualifier before it: {@code a.n}, {@code e.n}, {@code e.n()}. */
-  private static boolean qualified(SimpleName n) {
-    ASTNode p = n.getParent();
-    return (p instanceof QualifiedName q && q.getName() == n)
-        || (p instanceof FieldAccess f && f.getName() == n)
-        || (p instanceof MethodInvocation mi && mi.getName() == n && mi.getExpression() != null);
   }
 
   /**

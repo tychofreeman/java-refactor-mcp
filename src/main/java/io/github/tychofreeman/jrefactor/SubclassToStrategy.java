@@ -20,7 +20,6 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NullLiteral;
@@ -33,6 +32,7 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeLiteral;
@@ -556,17 +556,12 @@ final class SubclassToStrategy {
       }
       if (n instanceof ThisExpression
           || n instanceof SuperMethodInvocation
-          || n instanceof SuperFieldAccess) {
+          || n instanceof SuperFieldAccess
+          || n instanceof SuperMethodReference) {
         use = n.toString();
         at = n;
       } else if (n instanceof SimpleName s && !s.isDeclaration()) {
-        boolean bare =
-            !(s.getParent() instanceof org.eclipse.jdt.core.dom.QualifiedName q && q.getName() == s)
-                && !(s.getParent() instanceof org.eclipse.jdt.core.dom.FieldAccess f
-                    && f.getName() == s)
-                && !(s.getParent() instanceof MethodInvocation call
-                    && call.getName() == s
-                    && call.getExpression() != null);
+        boolean bare = !Nodes.qualified(s);
         boolean member =
             (s.resolveBinding() instanceof IVariableBinding v
                     && v.isField()
