@@ -488,6 +488,19 @@ which refused it in their own words, "'  ' is not a Java file" or "name is Type.
 (`Args.MAY_BE_EMPTY`), and their tools judge them; `Args.required` refuses them blank where a tool
 reads them so (`insert_statements` `content`, `replace_expression` `new`).
 
+**Decided (2026-11-14, the owner, issue #623): safe delete inside a batch counts only the uses
+that survive it.** A use inside a declaration a later step of the same `batch` deletes does not
+count (`Session.deletedLater`, `SafeDelete.deletedLater`), so members that only call each other
+(`Signatures.pure` and `allPure`) are deleted in one batch, in either order, with no new argument.
+Over (b) a list of names on `replace_declaration` (one call deleting several, a second way to
+delete and a new argument) and (c) a cascade flag that deletes the members only the target uses
+(deletes what the model did not name). Defaults of this session, to reopen: "survives" is read
+from the later steps' deletes only (a use a later `replace_text` or a replacing
+`replace_declaration` removes still counts: knowing it means running the steps first); the rule
+applies under both checks, and under `"each"` the type check still refuses a step whose remaining
+callers go later, with the batch's hint toward `"end"`, over relaxing the per-step type check for
+deletes.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

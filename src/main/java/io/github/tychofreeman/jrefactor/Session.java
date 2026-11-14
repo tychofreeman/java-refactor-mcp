@@ -88,6 +88,12 @@ final class Session {
   /** How many calls are running, one inside another (a batch's steps inside the batch). */
   private int depth;
 
+  /**
+   * The declarations the running batch's later steps delete (replace_declaration with empty
+   * content): a use inside one does not survive the batch, so {@link SafeDelete} does not count it.
+   */
+  List<SafeDelete.Deletion> deletedLater = List.of();
+
   /** What {@link #deferring} and the like return: closing it puts back what it changed. */
   interface Restore extends AutoCloseable {
     @Override

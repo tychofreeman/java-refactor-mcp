@@ -1854,3 +1854,10 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand. The test batch's `add_declaration` declared the stub `Args.routed(String,
   List<Arg>)` the test called, and `replace_declaration` by that signature replaced it. `replace_text`
   of a line that occurs three times was refused naming the lines; `retry` with `all_occurrences`.
+
+## 2026-11-14: safe-delete-batch
+
+- No Java by hand. A `replace_text` whose `old` was inline JSON ending in `\n` and whose `new` was
+  an `@@` section (its last newline dropped) joined two lines, three times in one batch; two more
+  `replace_text` calls split them. Nothing flagged it: the result could say when `old` ends in a
+  newline and `new` does not.

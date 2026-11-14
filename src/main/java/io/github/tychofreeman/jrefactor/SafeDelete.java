@@ -108,6 +108,7 @@ final class SafeDelete {
       Path f = e.getKey();
       CompilationUnit u = e.getValue();
       boolean self = f.equals(opened.file());
+      List<int[]> later = deletedLater(project, f, u);
       u.accept(
           new ASTVisitor() {
             @Override
@@ -148,6 +149,10 @@ final class SafeDelete {
 
             private void use(ASTNode n) {
               if (self && n.getStartPosition() >= start && n.getStartPosition() < end) {
+                return;
+              }
+              int at = n.getStartPosition();
+              if (later.stream().anyMatch(r -> at >= r[0] && at < r[1])) {
                 return;
               }
               uses.computeIfAbsent(project.relative(f).toString(), k -> new TreeSet<>())
@@ -319,5 +324,28 @@ final class SafeDelete {
       }
       return -1;
     }
+  }
+
+  /** A declaration a step of the running batch deletes: replace_declaration of name in file. */
+  record Deletion(String file, String name) {}
+
+  /**
+   * The ranges of {@code unit}, the file {@code file}, that a later step of the running batch
+   * deletes ({@link Session#deletedLater}); none outside a batch.
+   */
+  private static List<int[]> deletedLater(SourceProject project, Path file, CompilationUnit unit) {
+    List<int[]> ranges = new ArrayList<>();
+    for (Deletion d : project.session().deletedLater) {
+      if (!project.file(d.file()).toAbsolutePath().normalize().equals(file)) {
+        continue;
+      }
+      try {
+        BodyDeclaration decl = Declarations.find(unit, d.name(), d.file()).decl();
+        ranges.add(new int[] {decl.getStartPosition(), decl.getStartPosition() + decl.getLength()});
+      } catch (Refusal notFound) {
+        // The step will refuse it in its turn; until then, the uses there count.
+      }
+    }
+    return ranges;
   }
 }
