@@ -59,7 +59,7 @@ final class Skeleton {
     for (int i = 0; i < missing.size(); i++) {
       IMethodBinding m = missing.get(i);
       text.append(i == 0 ? "" : "\n").append(stub(m));
-      stubbed.add(m.getDeclaringClass().getErasure().getName() + "." + signature(m));
+      stubbed.add(Names.sourceLabel(m));
     }
     return new Made(text.append("}\n").toString(), stubbed);
   }
@@ -149,15 +149,6 @@ final class Skeleton {
       out.add(Extract.typeName(types[i]) + " " + name);
     }
     return out;
-  }
-
-  /** "name(Type, Type)" with the parameter types as source names them. */
-  private static String signature(IMethodBinding m) {
-    List<String> types = new ArrayList<>();
-    for (ITypeBinding t : m.getParameterTypes()) {
-      types.add(Extract.typeName(t));
-    }
-    return m.getName() + "(" + String.join(", ", types) + ")";
   }
 
   /**

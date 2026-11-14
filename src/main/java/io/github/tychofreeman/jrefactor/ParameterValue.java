@@ -1005,9 +1005,9 @@ final class ParameterValue {
               + ", where "
               + calls.get(i).getName()
               + " calls "
-              + Signatures.label(theirs)
+              + Names.methodLabel(theirs)
               + ", not "
-              + Signatures.label(mine)
+              + Names.methodLabel(mine)
               + " or an override of it. Rename one of them first, or extract it as a variable"
               + " instead.");
     }

@@ -213,7 +213,7 @@ public final class Inspect {
         List<String> lines = text.lines().toList();
         String rel = project.relative(file).toString();
         for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
-          String chain = chain(t);
+          String chain = Names.typeLabelAt(t);
           if (!chain.equals(type) && !chain.endsWith("." + type)) {
             continue;
           }
@@ -266,17 +266,6 @@ public final class Inspect {
       }
     }
     return out.toString();
-  }
-
-  /** "Outer.Inner": the names of {@code t} and the types around it. */
-  private static String chain(AbstractTypeDeclaration t) {
-    String out = t.getName().getIdentifier();
-    for (ASTNode p = t.getParent(); p != null; p = p.getParent()) {
-      if (p instanceof AbstractTypeDeclaration outer) {
-        out = outer.getName().getIdentifier() + "." + out;
-      }
-    }
-    return out;
   }
 
   /** Appends {@code node}'s lines in full, under a header naming them. */

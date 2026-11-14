@@ -482,7 +482,7 @@ public final class Rename {
               for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
                 IMethodBinding b = m.resolveBinding();
                 if (b != null && keys.contains(b.getMethodDeclaration().getKey())) {
-                  others.add(Signatures.label(b));
+                  others.add(Names.methodLabel(b));
                   refuseMethodClash(unit, b, newName);
                 }
               }
@@ -492,7 +492,7 @@ public final class Rename {
 
     Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
     checkMeanings(project, written.renamedAt(), existing, oldName, newName);
-    List<String> names = new ArrayList<>(List.of(Signatures.label(method)));
+    List<String> names = new ArrayList<>(List.of(Names.methodLabel(method)));
     others.remove(names.get(0));
     names.addAll(others);
     return summary(
@@ -779,7 +779,7 @@ public final class Rename {
       }
       if (other.getName().equals(newName) && otherTypes.equals(types)) {
         ASTNode at = unit.findDeclaringNode(other.getKey());
-        String label = Signatures.label(other);
+        String label = Names.methodLabel(other);
         throw new Refusal(
             Names.typeLabel(b.getDeclaringClass())
                 + " already has a method "
@@ -797,7 +797,7 @@ public final class Rename {
           throw new Refusal(
               Names.typeLabel(t)
                   + " has "
-                  + Signatures.label(other)
+                  + Names.methodLabel(other)
                   + ", another method "
                   + newName
                   + " of "

@@ -608,7 +608,7 @@ final class Build {
       if (e.assigns() && result.isPrimitive() && result.getName().equals("void")) {
         IMethodBinding m = call.resolveMethodBinding();
         throw new Refusal(
-            (m == null ? e.target : Signatures.label(m))
+            (m == null ? e.target : Names.methodLabel(m))
                 + " returns nothing, so there is nothing to put in "
                 + e.into
                 + ". Send the call without into.");
@@ -1013,7 +1013,7 @@ final class Build {
     String label =
         m == null
             ? "the code there"
-            : owner instanceof LambdaExpression ? "the lambda" : Signatures.label(m);
+            : owner instanceof LambdaExpression ? "the lambda" : Names.methodLabel(m);
     String when = e.kind.equals("guard") ? e.target : e.target + " is null";
     if (e.exit.equals(RETURN) && m != null) {
       ITypeBinding r = m.getReturnType();

@@ -366,7 +366,7 @@ package-private declaration that a use crosses the new boundary with becomes
 public: the type and its members used from another package, and what of
 package `a` the type uses. Result: `moved Shop to package b (b/Shop.java),
 with N references in M files: <file> <lines>; ...; widened Helper, Helper.TAX
-and Shop.price() to public`. A type of the default package gets a package line
+and Shop.price(int) to public` (a method with its parameter types erased, #501). A type of the default package gets a package line
 and its file moves (#292); a file of the default package that names it gains
 the import, and what it uses of the default package, which a package cannot
 import, is refused by the type check, whose fix says to move those types in the
@@ -1184,7 +1184,7 @@ in the same turn only if it is sent after it.
   a method's name (`describe`, `Base.describe`, `describe(int)`), from the supertypes nearest
   first, `Object`'s included, adds that one: a stub if abstract, else an override whose body
   calls it (`return super.describe(n);`, `I.super.m()` for a default method). Refused: `*` with
-  nothing left, a name no supertype declares (listing what it can take), several overloads.
+  nothing left, a name no supertype declares (listing what it can take, `Base.describe(int, String)`), several overloads (listed alike).
   Private, static and final methods are not offered.
   `constructor` (field names, in order) in place of `content`: a constructor with a parameter
   per field, of its type as written, assigning each (`this.owner = owner;`), with the class's
