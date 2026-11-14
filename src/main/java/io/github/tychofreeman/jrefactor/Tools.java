@@ -156,12 +156,10 @@ final class Tools {
           gives int subtotal = price * qty; return subtotal + tax;.
           Identify the expression by file, the line it starts on and its exact source text. When \
           the text occurs twice on that line, pass column, the 1-based column where it starts.
-          as=constant, field or parameter makes it a private static final constant or private \
-          final field of the type, or a new parameter of the method that every call passes it \
-          to, instead of a local; it must then be literals and constants only, or, as a \
-          parameter, also the method's parameters and calls on them or on a class: each call \
-          passes it with its own arguments in their place (qty / 10 becomes bonus, and \
-          total(n + 1, 3) passes (n + 1) / 10).\
+          as=constant, field or parameter makes it a constant or field of the type, or a new \
+          parameter of the method, instead of a local; as a parameter, each call passes it with \
+          its own arguments in their place (qty / 10 becomes bonus, and total(n + 1, 3) passes \
+          (n + 1) / 10).\
           """,
           List.of(
               Arg.FILE,
@@ -610,16 +608,12 @@ final class Tools {
           """
           Swap a statement with the one before it (direction up) or after it (direction down), in \
           the same block. Identify the statement by the line it starts on.
-          The two statements must be independent. Strict (the default): they share no name that \
-          one of them writes, and at most one of them has a side effect (a call, an assignment, a \
-          new object). names_only=true relaxes that to the shared-name rule only, so two calls can \
-          swap order: pass it only when the order of the calls does not matter.
-          A return, break, continue, throw or yield never moves, and neither a statement with a \
-          side effect nor one that may throw moves past one that may leave the block early (an \
-          if that returns), nor a call past a read of what it could change. past_try=true moves \
-          a statement past a try next to it though their effects are ordered (they still share \
-          no written name): below the try it then runs only when the try completes normally, \
-          and the result says so.\
+          The two statements must be independent: by default they share no name that one of \
+          them writes, and at most one of them has a side effect (a call, an assignment, a new \
+          object). names_only=true keeps only the shared-name rule, so two calls can swap: pass \
+          it only when the order of the calls does not matter. past_try=true swaps a statement \
+          with a try next to it though their effects are ordered: below the try it then runs \
+          only when the try completes normally, and the result says so.\
           """,
           List.of(
               Arg.FILE,
@@ -675,17 +669,18 @@ final class Tools {
       new Def(
           "convert_loop",
           """
-          Rewrite a loop as another statement form that runs the same code in the same order: \
-          to=for_each turns an index for over a list or an array, for (int i = 0; i < \
-          names.size(); i++) { print(names.get(i)); }, into for (String name : names) { \
-          print(name); }, and a for over an iterator whose body starts with T e = it.next() \
-          into for (T e : source); to=iterator and to=for turn an enhanced for into a for over \
-          its iterator, or over the index of a list or an array, the element read first in the \
-          body. to=while writes a for's init before a while and its update last in the body and \
-          before each continue; to=for turns a while back into a for, the local declared just \
-          before it and the body's last assignment taking their places. to=while turns do { body \
-          } while (c); into while (true) { body if (!c) break; }, and to=do_while a while into \
-          if (c) { do { body } while (c); }. Identify the loop by the line it starts on.\
+          Rewrite a loop as another statement form that runs the same code in the same order. \
+          Identify the loop by the line it starts on; to is the form to write:
+          - for_each: from an index for over a list or an array, for (int i = 0; i < \
+          names.size(); i++) { print(names.get(i)); } becomes for (String name : names) { \
+          print(name); }; or from a for over an iterator whose body starts with T e = it.next().
+          - iterator, or for: from an enhanced for, a for over its iterator, or over the index of \
+          a list or an array, the element read first in the body.
+          - while: from a for, its init before the while and its update last in the body (and \
+          before each continue); from a do-while, while (true) { body if (!c) break; }.
+          - for: from a while, the local declared just before it and the body's last assignment \
+          taking the init's and update's places.
+          - do_while: from a while, if (c) { do { body } while (c); }.\
           """,
           List.of(
               Arg.FILE,
@@ -813,13 +808,14 @@ final class Tools {
       new Def(
           "pull_up",
           """
-          Move a method or field from its class to its direct superclass, or to a direct supertype named by \
-          to: the member leaves Sub and is added to Base, a field after its fields and a method at its \
-          end. Every call still compiles, since Sub inherits the method. name is Sub.method.\
+          Move a method or field up from a class to its direct superclass, or to a direct \
+          supertype named by to: with name Circle.describe, describe() leaves Circle and is added \
+          to its superclass Shape, where every Shape then has it. Calls need no change, since \
+          Circle inherits it.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
-              Arg.string("name", "The class and the method, as Sub.method.").required(),
+              Arg.string("name", "The class and its method or field, as Class.member.").required(),
               Arg.string(
                   "to",
                   "Optional simple name of a direct supertype, when the superclass is not "
@@ -831,13 +827,13 @@ final class Tools {
       new Def(
           "push_down",
           """
-          Move a method or field from its class to each direct subclass in the project: the member leaves \
-          Sub and is added to each subclass, a field after its fields and a method at its end. name is \
-          Sub.method.\
+          Move a method or field down from a class to each of its direct subclasses in the \
+          project: with name Shape.describe, describe() leaves Shape and is added to Circle and \
+          to Square.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the class."),
-              Arg.string("name", "The class and the method, as Sub.method.").required()),
+              Arg.string("name", "The class and its method or field, as Class.member.").required()),
           Kind.REFACTORING,
           Tools::pushDown);
 
@@ -854,9 +850,7 @@ final class Tools {
           method its supertypes leave abstract; add members after with add_declaration.
           With test_for in place of content (Cart.total, Cart.add(int) for one overload), a test \
           file starts from its target: JUnit's imports, and a red test method that builds the \
-          receiver, calls the method and ends in fail; type the assertion in place of fail.
-          When the server runs skeleton-only (JREFACTOR_SKELETON_ONLY=1), Java content may hold \
-          only a type's header: start from declaration or test_for, and add members after.\
+          receiver, calls the method and ends in fail; type the assertion in place of fail.\
           """,
           List.of(
               Arg.FILE.described("Path of the file."),
@@ -1003,10 +997,11 @@ final class Tools {
           - with line, the local variable name declared or used there: its initializer replaces \
           every use (int subtotal = price * qty; return subtotal + tax; becomes return (price * \
           qty) + tax;); column when the line has two of that name.
-          - without line, name Type.method: every call of the static method becomes its body, \
-          the arguments in place of the parameters, and the method is deleted (return a + \
-          tax(a) with static double tax(double x) { return x * 0.2; } becomes return a + (a * \
-          0.2);); an argument whose effects would run in another order is bound to a local first.
+          - without line, name Type.method: every call of the method becomes its body, the \
+          arguments in place of the parameters (and, for an instance method, the call's receiver \
+          in place of this), and the method is deleted (return a + tax(a) with static double \
+          tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);); an argument whose \
+          effects would run in another order is bound to a local first.
           - with field, name a class (Person) and field its field (home) holding a class only it \
           uses (Address): Address's members take the field's place, home.street becomes street, \
           and Address.java is deleted.\
@@ -1014,7 +1009,7 @@ final class Tools {
           List.of(
               Arg.FILE.described(
                   "Java file path: the variable's, or the file that" + " declares the method."),
-              Arg.string("name", "The variable, or Type.method for a static method.").required(),
+              Arg.string("name", "The variable, or Type.method for a method.").required(),
               Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
               Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
               Arg.string(
@@ -1205,29 +1200,19 @@ final class Tools {
           declaration it overrides or that overrides it changes too, and every lambda that \
           implements it ((a, b) -> a becomes (a, b, retries) -> a). The body does not use it \
           yet, so behavior is unchanged; add it, then change the body.
-          With type_parameter (T, or T extends Comparable<T>) in place of parameter and type, a \
-          class gets a type parameter, and value is the type argument every use passes: class \
-          Box becomes class Box<T>, and Box b = new Box(x) becomes Box<String> b = new Box<>(x). \
-          Inside the class's own instance code a use becomes Box<T>. before names the type \
-          parameter to put it ahead of. members names the fields, methods and constructors of the \
-          class (value, Box(String), get) whose declared types become T where they name value: \
-          private final String value becomes private final T value, and String get() T get(). \
-          Their bodies are not changed. With name a method, the method and every declaration it \
-          overrides or that overrides it get the type parameter, and value becomes T in their \
-          parameter and return types: static String first(List<String> xs) becomes static <T> T \
-          first(List<T> xs). Calls are not changed; each still infers value.
           name finds the method as replace_declaration does (Type.member, member, m(int, String) \
-          for an overload; a constructor by its type's name); or, in place of name, line finds it \
-          from its declaration or a call on that line of file, in any file (column picks one of two \
-          calls). value is a Java expression every call can see, with no side effects. before puts the parameter ahead of that one \
-          (default: last).
-          With name a record (Line) whose canonical constructor is implicit or compact, it adds a \
-          component, and every new Line(...) passes value.
-          With name an enum (Color), it adds a field: private final, set by the enum's constructor \
-          (written when the enum has none) and read by an accessor of the parameter's name, and \
-          each constant passes its entry of values, else value: with parameter hex and values \
-          {"RED": "\\"#f00\\""}, RED becomes RED("#f00"). A parameter of the constructor alone is \
-          added by its line, or by name as Color(String).\
+          for an overload; a constructor by its type's name); or line, in place of name: its \
+          declaration, or a call of it in any file. value is a Java expression every call can \
+          see, with no side effects.
+          name may also be:
+          - a record (Line): it gets a component, and every new Line(...) passes value.
+          - an enum (Color): it gets a private final field with an accessor; each constant passes \
+          its entry of values, else value (values {"RED": "\\"#f00\\""} gives RED("#f00")).
+          - a class or method, with type_parameter (T, or T extends Comparable<T>) in place of \
+          parameter and type: class Box becomes class Box<T> and Box b = new Box(x) becomes \
+          Box<String> b = new Box<>(x), value being the type argument each use passes; members \
+          names the members whose declared types become T. For a method, static String \
+          first(List<String> xs) becomes static <T> T first(List<T> xs).\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
@@ -1242,8 +1227,9 @@ final class Tools {
                       + " for the class or method name names."),
               Arg.strings(
                   "members",
-                  "With type_parameter: the fields, methods and constructors (Box(String)) whose"
-                      + " declared types become it where they name value."),
+                  "With type_parameter: the fields, methods and constructors (value, get,"
+                      + " Box(String)) whose declared types become it where they name value;"
+                      + " their bodies are not changed."),
               Arg.string(
                   "value",
                   "The Java expression each call passes; with type_parameter, the type"
@@ -1255,7 +1241,9 @@ final class Tools {
                   expression it passes; the other constants pass value.", \
                   "additionalProperties": {"type": "string"}}\
                   """),
-              Arg.string("before", "Optional: the parameter to put it before; default last."),
+              Arg.string(
+                  "before",
+                  "Optional: the parameter, or type parameter, to put it before; default last."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           (project, args) ->
@@ -1439,13 +1427,9 @@ final class Tools {
           statements match the same statements in any block, a local it declares standing for a \
           local the code declares and does not use after them. Every other name must mean what it \
           means in the body. So near-duplicates become calls: write the method with the \
-          differences as parameters, then fold it. In a String.format of the body, a %s whose \
-          argument is a parameter also matches constant text: "%s: %s", room, what matches \
-          "%s: temp", room, and the call passes "temp".
-          With line (and in), only the matches that start on that line are folded.
-          A match the call would not reproduce is left, and the result says why: arguments run in \
-          another order or another number of times, one moved out of a branch or past an effect, \
-          a private method called from another class.\
+          differences as parameters, then fold it.
+          With line (and in), only the matches that start on that line are folded. A match the \
+          call would not reproduce is left, and the result says why.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
@@ -1781,7 +1765,7 @@ final class Tools {
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
     if (args.has("type_parameter")) {
-      return TypeParameters.bound(project, args);
+      return TypeParameters.bound(project, args.has("line") ? ByLine.named(project, args) : args);
     }
     if (args.has("parameter") || args.flag("return_type")) {
       return Signatures.changeType(project, ByLine.named(project, args));

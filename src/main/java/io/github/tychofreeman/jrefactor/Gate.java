@@ -44,7 +44,13 @@ final class Gate {
     Map<String, Integer> before = TypeCheck.errors(project);
     T result = deferred(project, body);
     Map<Path, String> old = Journal.written(project);
-    Stubs.Check declaring = Stubs.declare(project, before, old);
+    Stubs.Check declaring;
+    try {
+      declaring = Stubs.declare(project, before, old);
+    } catch (IOException | RuntimeException e) {
+      Journal.restore(old); // the stubs it wrote too, which the call's journal does not hold
+      throw e;
+    }
     if (!declaring.introduced().isEmpty()) {
       Journal.restore(old);
       throw refusal(project, declaring.introduced(), what, fix);

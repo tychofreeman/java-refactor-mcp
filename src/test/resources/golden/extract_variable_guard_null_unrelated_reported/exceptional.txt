@@ -1,0 +1,2 @@
+exceptional behavior changed (pass preserve_exceptions=true to keep it, or to be refused):
+- p.cost may throw (p.cost) and runs only sometimes where it is (to the right of && or ||), under a condition that does not test what it divides by or dereferences; extracting p.cost moves it out from under that condition: it would now throw where the condition skipped it

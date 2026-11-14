@@ -1,10 +1,17 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -24,6 +31,10 @@ final class Jdt {
 
   /** The property of a unit parsed from a project's file that holds the file's absolute path. */
   static final String FILE = "jrefactor.file";
+
+  /** A single static import; group 1 is the imported name, qualified. */
+  private static final Pattern STATIC_IMPORT =
+      Pattern.compile("^\\s*import\\s+static\\s+([\\w.]+)\\s*;", Pattern.MULTILINE);
 
   /** The file {@code unit} was parsed from, or null for text parsed alone. */
   static Path fileOf(CompilationUnit unit) {
@@ -66,7 +77,12 @@ final class Jdt {
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setSource(source.toCharArray());
     parser.setUnitName(project.relative(file));
-    CompilationUnit unit = (CompilationUnit) parser.createAST(null);
+    CompilationUnit unit;
+    try {
+      unit = (CompilationUnit) parser.createAST(null);
+    } catch (RuntimeException e) {
+      throw compilerFailed(e);
+    }
     unit.setProperty(FILE, file.toAbsolutePath().normalize());
     return unit;
   }
@@ -75,26 +91,46 @@ final class Jdt {
    * Parses {@code files} of {@code project} as they are on disk, in one batch that shares one
    * environment, and hands each unit to {@code each} as it is done. The same units as {@link
    * #parse} of each file, many times faster on a large project: each type is resolved once, not
-   * once per file that uses it.
+   * once per file that uses it. The files that declare a type they import a single static member of
+   * are parsed with them, and not handed to {@code each}.
    */
   static void parseAll(
       SourceProject project, List<Path> files, BiConsumer<Path, CompilationUnit> each) {
-    String[] paths = files.stream().map(Path::toString).toArray(String[]::new);
+    Set<Path> wanted = new HashSet<>(files);
+    List<Path> batch = new ArrayList<>(files);
+    batch.addAll(staticImported(project, files));
+    String[] paths = batch.stream().map(Path::toString).toArray(String[]::new);
     String[] encodings = new String[paths.length];
     java.util.Arrays.fill(encodings, "UTF-8");
-    parser(project)
-        .createASTs(
-            paths,
-            encodings,
-            new String[0],
-            new FileASTRequestor() {
-              @Override
-              public void acceptAST(String sourceFilePath, CompilationUnit ast) {
-                ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
-                each.accept(Path.of(sourceFilePath), ast);
-              }
-            },
-            null);
+    RuntimeException[] fromEach = new RuntimeException[1];
+    try {
+      parser(project)
+          .createASTs(
+              paths,
+              encodings,
+              new String[0],
+              new FileASTRequestor() {
+                @Override
+                public void acceptAST(String sourceFilePath, CompilationUnit ast) {
+                  if (!wanted.contains(Path.of(sourceFilePath))) {
+                    return;
+                  }
+                  ast.setProperty(FILE, Path.of(sourceFilePath).toAbsolutePath().normalize());
+                  try {
+                    each.accept(Path.of(sourceFilePath), ast);
+                  } catch (RuntimeException e) {
+                    fromEach[0] = e;
+                    throw e;
+                  }
+                }
+              },
+              null);
+    } catch (RuntimeException e) {
+      if (e == fromEach[0]) {
+        throw e;
+      }
+      throw compilerFailed(e);
+    }
   }
 
   /**
@@ -128,5 +164,71 @@ final class Jdt {
     java.util.Arrays.fill(encodings, "UTF-8"); // one per source path entry, or JDT throws
     parser.setEnvironment(project.classpath().toArray(String[]::new), sourcepath, encodings, true);
     return parser;
+  }
+
+  /**
+   * The refusal for an exception the compiler threw while resolving: ECJ fails this way on some
+   * code that does not compile, which it should have reported as a problem. Names the exception and
+   * where in the compiler it was thrown.
+   */
+  static Refusal compilerFailed(RuntimeException e) {
+    StackTraceElement[] trace = e.getStackTrace();
+    String where =
+        trace.length == 0
+            ? ""
+            : " (in " + trace[0].getClassName() + "." + trace[0].getMethodName() + ")";
+    return new Refusal(
+        "The Java compiler (ECJ) failed while type-checking, so nothing was changed: "
+            + e
+            + where
+            + ". It fails this way on some code that does not compile, such as a lambda or method"
+            + " reference whose target type no longer fits its type parameter's bounds. Change the"
+            + " edit so the code it writes type-checks (another type, bound or argument); if every"
+            + " edit fails this way, the project as it is trips the compiler: fix the code there"
+            + " first.");
+  }
+
+  /**
+   * The project's files, other than {@code files}, that declare a type {@code files} import a
+   * single static member of. JDT looks up the binding of such an import only when it is asked for,
+   * after the batch, and then needs every member of the imported type resolved; it has resolved
+   * them only for a type of the batch, and for a type it read from the source path it throws
+   * (#411).
+   */
+  static Set<Path> staticImported(SourceProject project, List<Path> files) {
+    Set<Path> given = new HashSet<>();
+    for (Path file : files) {
+      given.add(file.toAbsolutePath().normalize());
+    }
+    Set<Path> out = new LinkedHashSet<>();
+    for (Path file : files) {
+      String text;
+      try {
+        text = Files.readString(file);
+      } catch (IOException e) {
+        continue; // the parse reports it
+      }
+      Matcher m = STATIC_IMPORT.matcher(text);
+      while (m.find()) {
+        List<String> parts = List.of(m.group(1).split("\\."));
+        // The member's type is the longest prefix that names a file: p.Outer.Inner.m is in p/Outer.
+        for (int k = parts.size() - 1; k > 0; k--) {
+          String rel = String.join("/", parts.subList(0, k)) + ".java";
+          Path declaring =
+              project.sourceRoots().stream()
+                  .map(r -> r.resolve(rel).toAbsolutePath().normalize())
+                  .filter(Files::isRegularFile)
+                  .findFirst()
+                  .orElse(null);
+          if (declaring != null) {
+            if (!given.contains(declaring)) {
+              out.add(declaring);
+            }
+            break;
+          }
+        }
+      }
+    }
+    return out;
   }
 }

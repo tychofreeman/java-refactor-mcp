@@ -158,7 +158,10 @@ final class Introduce {
         new java.util.HashMap<>(
             Map.of(
                 "file", opened.rel(),
-                "name", Signatures.label(m.resolveBinding()),
+                "name",
+                    Names.typeLabel(m.resolveBinding().getDeclaringClass())
+                        + "."
+                        + MemberMove.label(m),
                 "parameter", name,
                 "type", typeName,
                 "value", source));
