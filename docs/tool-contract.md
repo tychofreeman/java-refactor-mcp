@@ -677,6 +677,12 @@ case: a case whose type is a subtype of an earlier case's type is refused (roadm
 Polygon, one of its supertypes, so the earlier case matches first; as an override on Square it
 would run instead. Delete that case, then call again." A switch cannot hold such a case (Java
 refuses a dominated pattern).
+Each case's body passes `NameCheck` (roadmap #223, issue #468, 2026-11-13): a name that its case's
+type would resolve to another declaration is refused ("moving the cases into their types would
+make K at line 8 of com/example/Circle.java mean the field K of Circle, not what it meant where it
+was written: ..."). A field read through the pattern variable (`c.radius`) becomes `this.radius`
+where the body declares a variable of that name, else `radius`. A body's own locals are told by
+binding, so a field of the method's class named as a local of another scope is refused as a field.
 
 ### Over an enum: the field form
 
