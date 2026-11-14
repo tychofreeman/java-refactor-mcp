@@ -30,11 +30,14 @@ What you get:
   (fields with fields, constructors after them, the rest at the end).
 - **Undo** for every call and every batch.
 
-What is not proven: that it saves tokens. On the one task set measured so
-far (four small refactoring tasks, Sonnet, four runs per arm), every run
-passed both with the tools and by hand, and the tools cost about the same:
-$0.095 a run against $0.093 in the latest run, down from 32% more in the
-first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
+What is not proven: that it saves tokens. On four small refactoring tasks
+(Sonnet, four runs per arm), every run passed both with the tools and by
+hand, and the tools cost about the same: $0.095 a run against $0.093 in the
+latest run, down from 32% more in the first. On three tasks that write
+statements inside existing methods (2026-11-13, two runs each, tools only),
+every run passed, and `build` was the cheapest way, $0.109 a run against
+$0.129 without it; but a model chose it only when a refusal asked for it. See
+`docs/design.md` (roadmap row 13) and `docs/sessions/`.
 
 ## The tools
 
@@ -42,7 +45,7 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   will change.
 - **Refactorings:** `rename` (any kind of name); `extract_function`,
   `extract_variable` (also as a constant, field or parameter),
-  `inline` (a local variable, or a static method's calls); `add_parameter`, `remove_parameter`,
+  `inline` (a local variable, or a method's calls); `add_parameter`, `remove_parameter`,
   `move_parameter`, `add_result`, `change_type`, `extract_type` (a parameter object, or
   extract class); `move` (a nested type to its own file, a type to a package, a method or
   static field to another class, a file),
@@ -60,9 +63,10 @@ first. See `docs/design.md` (roadmap row 13) and `docs/sessions/`.
   and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),
   `replace_statements`, `insert_statements`, `replace_expression`,
-  `add_case`, `add_element`, `replace_text`. `insert_statements` and
-  `replace_statements` also take `build`: calls, constructions and loops written
-  from names, their types read from the code.
+  `add_case`, `add_element`, `replace_text`. `insert_statements`,
+  `replace_statements` and `replace_expression` also take `build`: calls,
+  constructions, loops and guards written from names, their types read from
+  the code.
 - **Plumbing:** `batch` and `undo`.
 
 The arguments and results of each are in
