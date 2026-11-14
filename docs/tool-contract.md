@@ -153,7 +153,10 @@ its first bound's erasure, or `Object`, and type arguments are dropped (`raise(O
 #177, 2026-11-13, issue #408). The refusal for several members of a name lists each by the form
 that names it: "Ex has 2 members named raise: raise(Object), raise(Throwable). Name one with its
 parameter types, as raise(Throwable)." (it listed `raise(T), raise(T)` and suggested `raise(T)`,
-which it then refused again). `line` turns into the same name (`ByLine.named`).
+which it then refused again). `line` turns into the same name (`ByLine.named`). `move`, `pull_up`,
+`push_down` and `extract_supertype` take the same names (`MemberMove.member`, issue #483): their
+several-methods refusal suggests the erased form too ("Pick one: name one with its parameter
+types, as Ex.raise(Object)."), where it suggested `Ex.raise(T)` and refused that again.
 
 ## Names shared with gorefactor
 

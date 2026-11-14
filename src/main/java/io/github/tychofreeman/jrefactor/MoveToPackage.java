@@ -44,13 +44,7 @@ final class MoveToPackage {
             () -> SourceVersion.isName(pkg), () -> pkg + " is not a package name, such as a.b."));
     Opened opened = Opened.of(project, rel);
     CompilationUnit unit = opened.unit();
-    AbstractTypeDeclaration decl = null;
-    for (Object o : unit.types()) {
-      if (o instanceof AbstractTypeDeclaration t && t.getName().getIdentifier().equals(name)) {
-        decl = t;
-      }
-    }
-    AbstractTypeDeclaration type = decl;
+    AbstractTypeDeclaration type = Declarations.typePath(unit, new String[] {name});
     String old =
         unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
     Precondition.require(

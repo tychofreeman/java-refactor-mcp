@@ -37,32 +37,16 @@ final class MemberMove {
    */
   static BodyDeclaration member(
       AbstractTypeDeclaration t, String subName, String name, String rel, String tool) {
-    String base = name;
-    List<String> params = null;
-    int paren = name.indexOf('(');
-    if (paren >= 0) {
-      if (!name.endsWith(")")) {
-        throw new Refusal("name " + name + " has an unclosed parenthesis.");
-      }
-      base = name.substring(0, paren).strip();
-      String inside = name.substring(paren + 1, name.length() - 1).strip();
-      params = new ArrayList<>();
-      for (String p : inside.isEmpty() ? List.<String>of() : Declarations.topLevelCommas(inside)) {
-        params.add(p.replace(" ", ""));
-      }
-    }
+    Declarations.MemberName memberName = Declarations.memberName(name);
+    String base = memberName.base();
+    List<String> params = memberName.params();
     List<MethodDeclaration> named = new ArrayList<>();
     for (Object o : t.bodyDeclarations()) {
       if (o instanceof MethodDeclaration m && m.getName().getIdentifier().equals(base)) {
         named.add(m);
       }
     }
-    List<MethodDeclaration> methods = new ArrayList<>();
-    for (MethodDeclaration m : named) {
-      if (params == null || Declarations.types(m).equals(params)) {
-        methods.add(m);
-      }
-    }
+    List<MethodDeclaration> methods = Declarations.overloads(named, params);
     List<FieldDeclaration> fields = new ArrayList<>();
     if (params == null) {
       for (Object o : t.bodyDeclarations()) {
@@ -104,7 +88,7 @@ final class MemberMove {
               + ". Pick one: name one with its parameter types, as "
               + subName
               + "."
-              + label(methods.get(0))
+              + Declarations.methodLabel(methods.get(0))
               + ".");
     }
     if (!methods.isEmpty()) {
@@ -161,15 +145,10 @@ final class MemberMove {
     return out;
   }
 
-  /** "m(int)" for a method, as {@code member} reads a name. */
-  static String label(MethodDeclaration m) {
-    return m.getName().getIdentifier() + "(" + String.join(", ", Declarations.types(m)) + ")";
-  }
-
   private static String labels(List<MethodDeclaration> methods) {
     List<String> out = new ArrayList<>();
     for (MethodDeclaration m : methods) {
-      out.add(label(m));
+      out.add(Declarations.methodLabel(m));
     }
     return String.join(", ", out);
   }
