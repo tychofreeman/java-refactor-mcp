@@ -299,7 +299,8 @@ Each was chosen from options; the record named beside it has the options it beat
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
   (`Nodes.columns`, #101): models count indentation wrong, and so did a session.
-- Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
+- Offsets and lines: `Nodes.end` (just past a node), `Nodes.source(text, node)` (its text as
+  written, #507), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98). The node around one:
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
@@ -647,6 +648,9 @@ Each was chosen from options; the record named beside it has the options it beat
   entry whose body is the replaced lines (`Build.around`).
   On `replace_expression` (#165), `Build.expression` drafts one entry in place of the
   expression and finds it again by offset (the import fix changes only lines above it).
+
+- A member's `@Override` is `Nodes.overrideAnnotation` (#506, 2026-11-14): `java.lang.Override` by
+  binding, or by name when the annotation does not resolve; not a name ending in `Override`.
 
 - `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
   2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a

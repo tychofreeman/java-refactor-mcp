@@ -124,7 +124,7 @@ final class InlineFunction {
     }
     ASTNode bodyNode = value != null ? value : body;
     int bodyStart = value != null ? value.getStartPosition() : statements.get(0).getStartPosition();
-    int bodyEnd = bodyNode.getStartPosition() + bodyNode.getLength();
+    int bodyEnd = Nodes.end(bodyNode);
     List<ParamUse> uses = paramUsesIn(m.getBody(), paramBindings);
     checkNotAssigned(uses, unit, params, name);
     // A parameter used only as a call's receiver dispatches on the argument's own type, and one
@@ -367,9 +367,7 @@ final class InlineFunction {
       if (!entire && InlineVariable.needsParentheses(value)) {
         replaced = "(" + replaced + ")";
       }
-      TextEdit call =
-          new TextEdit(
-              site.getStartPosition(), site.getStartPosition() + site.getLength(), replaced);
+      TextEdit call = new TextEdit(site.getStartPosition(), Nodes.end(site), replaced);
       if (prefix.isEmpty() && !any(local)) {
         return List.of(call);
       }
@@ -385,14 +383,7 @@ final class InlineFunction {
       String before =
           reindent(
               substituted(
-                  declaringText,
-                  from,
-                  end.getStartPosition() + end.getLength(),
-                  uses,
-                  args,
-                  local,
-                  siteText,
-                  receiver),
+                  declaringText, from, Nodes.end(end), uses, args, local, siteText, receiver),
               Lines.indentOf(declaringText, from),
               Lines.indentOf(siteText, statement.getStartPosition()),
               textBlocks(whole, declaringText));
@@ -416,9 +407,7 @@ final class InlineFunction {
                 Lines.indentOf(declaringText, bodyStart),
                 Lines.indentOf(siteText, stmt.getStartPosition()),
                 textBlocks(whole, declaringText));
-    return List.of(
-        new TextEdit(
-            stmt.getStartPosition(), stmt.getStartPosition() + stmt.getLength(), replaced));
+    return List.of(new TextEdit(stmt.getStartPosition(), Nodes.end(stmt), replaced));
   }
 
   /** "the argument next() for x": argument {@code i} in a refusal. */
@@ -426,7 +415,7 @@ final class InlineFunction {
       List<Expression> args, List<SingleVariableDeclaration> params, int i, String siteText) {
     Expression arg = args.get(i);
     return "the argument "
-        + siteText.substring(arg.getStartPosition(), Nodes.end(arg))
+        + Nodes.source(siteText, arg)
         + " for "
         + params.get(i).getName().getIdentifier();
   }
@@ -576,8 +565,7 @@ final class InlineFunction {
     List<TextEdit> all = new ArrayList<>(receiver);
     for (ParamUse u : uses) {
       Expression arg = args.get(u.index());
-      String argText =
-          siteText.substring(arg.getStartPosition(), arg.getStartPosition() + arg.getLength());
+      String argText = Nodes.source(siteText, arg);
       if (local[u.index()] != null) {
         argText = local[u.index()];
       } else if (!u.alone() && InlineVariable.needsParentheses(arg)) {
@@ -619,9 +607,7 @@ final class InlineFunction {
     if (receiver == null || receiver instanceof ThisExpression) {
       return List.of();
     }
-    String text =
-        siteText.substring(
-            receiver.getStartPosition(), receiver.getStartPosition() + receiver.getLength());
+    String text = Nodes.source(siteText, receiver);
     if (!thisUses.isEmpty() || !implicit.isEmpty()) {
       Precondition.require(
           Precondition.that(
@@ -637,7 +623,7 @@ final class InlineFunction {
     String as = InlineVariable.needsParentheses(receiver) ? "(" + text + ")" : text;
     List<TextEdit> edits = new ArrayList<>();
     for (ASTNode t : thisUses) {
-      edits.add(new TextEdit(t.getStartPosition(), t.getStartPosition() + t.getLength(), as));
+      edits.add(new TextEdit(t.getStartPosition(), Nodes.end(t), as));
     }
     for (SimpleName n : implicit) {
       edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), as + "."));
@@ -1096,12 +1082,7 @@ final class InlineFunction {
             if (n.resolveBinding() instanceof IVariableBinding v) {
               for (int i = 0; i < params.size(); i++) {
                 if (params.get(i) != null && params.get(i).isEqualTo(v)) {
-                  uses.add(
-                      new ParamUse(
-                          n.getStartPosition(),
-                          n.getStartPosition() + n.getLength(),
-                          i,
-                          standsAlone(n)));
+                  uses.add(new ParamUse(n.getStartPosition(), Nodes.end(n), i, standsAlone(n)));
                 }
               }
             }
@@ -1168,7 +1149,7 @@ final class InlineFunction {
   private static List<String> textBlocks(Block body, String text) {
     List<String> out = new ArrayList<>();
     for (TextBlock b : Nodes.all(body, TextBlock.class)) {
-      out.add(text.substring(b.getStartPosition(), Nodes.end(b)));
+      out.add(Nodes.source(text, b));
     }
     return out;
   }

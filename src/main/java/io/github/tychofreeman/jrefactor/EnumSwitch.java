@@ -59,7 +59,7 @@ final class EnumSwitch {
     /** The call the switch becomes. */
     String call() {
       String text = opened.text();
-      String sel = text.substring(selector.getStartPosition(), Nodes.end(selector));
+      String sel = Nodes.source(text, selector);
       return (selector instanceof ThisExpression
               ? ""
               : (selector instanceof Name ? sel : "(" + sel + ")") + ".")
@@ -139,7 +139,7 @@ final class EnumSwitch {
               "the case of "
                   + a.label()
                   + " gives "
-                  + opened.text().substring(a.body().getStartPosition(), Nodes.end(a.body()))
+                  + Nodes.source(opened.text(), a.body())
                   + ", which is not a constant, so it cannot be a field's value. Leave out as, or"
                   + " pass as method, for a method in each constant.");
         }
@@ -176,7 +176,7 @@ final class EnumSwitch {
     for (Object o : target.enumConstants()) {
       String k = ((EnumConstantDeclaration) o).getName().getIdentifier();
       ASTNode x = cases.getOrDefault(k, fallback);
-      values.put(k, text.substring(x.getStartPosition(), Nodes.end(x)));
+      values.put(k, Nodes.source(text, x));
     }
     Path eFile = at.eFile();
     String eText = texts.get(eFile);

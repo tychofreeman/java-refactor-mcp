@@ -92,7 +92,7 @@ final class Introduce {
     String text = opened.text();
     List<TextEdit> edits =
         new ArrayList<>(MemberMove.addTo(text, owner, decl, Placement.Rank.FIELD));
-    edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
+    edits.add(new TextEdit(e.getStartPosition(), Nodes.end(e), name));
     String after = TextEdit.apply(text, edits, 0);
     Edits.Written written =
         Edits.gated(

@@ -45,14 +45,12 @@ final class Primitives {
                 project,
                 opened,
                 e.getStartPosition(),
-                e.getStartPosition() + e.getLength(),
+                Nodes.end(e),
                 args.raw("build"),
                 args.list("imports"))
             : args.required("new");
     String after =
-        text.substring(0, e.getStartPosition())
-            + replacement
-            + text.substring(e.getStartPosition() + e.getLength());
+        text.substring(0, e.getStartPosition()) + replacement + text.substring(Nodes.end(e));
     if (project.session().skeletonOnly) {
       Generated.checkChanged(text, after, rel, "replace_expression");
     }
@@ -224,7 +222,7 @@ final class Primitives {
               text.substring(start, end).stripTrailing(),
               step,
               statements,
-              text.substring(method.getStartPosition(), Nodes.end(method)));
+              Nodes.source(text, method));
     }
     if (project.session().skeletonOnly && around == null && !content.isBlank()) {
       Generated.checkSurround(text.substring(start, end), content);

@@ -1702,6 +1702,27 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `replace_text`s in `substituted`. An "array to record" refactoring (name each index, rewrite each
   `a[i]` read and each `new T[] {...}`) would have been one call.
 
+## 2026-11-14: node-text
+
+- All through the tools: `move` of `Generated.source` to `Nodes`, `fold` of `Nodes.end` and of
+  `Nodes.source` over the project, then `inline` of each of the eleven private copies, which
+  `fold` had turned into delegates. One call per copy, in a shell loop: a batch would have done
+  it in one, but each copy's file had to be named.
+- `rename` of `Nodes.source` to `text` was refused: its parameter is named `text`. Kept `source`.
+- `fold` left ten sites where the node expression is a getter called twice (`d.getJavadoc()`):
+  "a call would evaluate it once". A getter of an AST node has no effect; a way to tell `fold`
+  that a getter is pure would have taken them.
+- `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.
+
+## 2026-11-14: override-annotation
+
+- No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
+  `replace_statements`, three private helpers made delegates by `replace_declaration` and
+  `inline`d. `inline` wrote `overrides(m)` as `(Nodes.overrideAnnotation(m) != null)` and `!overrides(m)`
+  as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
+  dropped needless parentheses and negated a comparison would have saved them.
+- `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.
+
 ## 2026-11-14: problem-record
 
 - Changing the key of the type check's map (`Map<String, Integer>` to `Map<Problem, Integer>`)

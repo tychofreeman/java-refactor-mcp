@@ -128,7 +128,7 @@ final class ParameterValue {
       InMethod v, Signatures.Call c, SourceProject project, Map<Signatures.Call, Refusal> probed) {
     for (int i : v.uses()) {
       Expression arg = (Expression) c.arguments().get(i);
-      String passed = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
+      String passed = Nodes.source(c.file().text(), arg);
       String name =
           ((SingleVariableDeclaration) v.method().parameters().get(i)).getName().getIdentifier();
       if (!quiet(arg)) {
@@ -247,7 +247,7 @@ final class ParameterValue {
     List<TextEdit> swaps = new ArrayList<>(more);
     for (Occurrence u : uses) {
       Expression arg = (Expression) c.arguments().get(u.parameter());
-      String text = c.file().text().substring(arg.getStartPosition(), Nodes.end(arg));
+      String text = Nodes.source(c.file().text(), arg);
       boolean plain =
           arg instanceof Name || arg instanceof NumberLiteral || arg instanceof StringLiteral;
       String passed = plain ? text : "(" + text + ")";
@@ -363,7 +363,7 @@ final class ParameterValue {
                         && !(mi.getExpression() instanceof ThisExpression t
                             && t.getQualifier() == null) -> {
                   Expression r = mi.getExpression();
-                  String text = c.file().text().substring(r.getStartPosition(), Nodes.end(r));
+                  String text = Nodes.source(c.file().text(), r);
                   yield r instanceof Name || r instanceof ThisExpression || r instanceof FieldAccess
                       ? text
                       : "(" + text + ")";
@@ -925,7 +925,7 @@ final class ParameterValue {
             assigned |= writes((Expression) a, on);
           }
           if (!steady(on) || assigned) {
-            String text = c.file().text().substring(on.getStartPosition(), Nodes.end(on));
+            String text = Nodes.source(c.file().text(), on);
             throw new Refusal(
                 "the call at "
                     + c.where(mi)

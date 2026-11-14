@@ -216,7 +216,7 @@ final class ConvertLoop {
   private static String indexToEach(String text, Indexed indexed, List<TextEdit> edits) {
     ForStatement loop = indexed.loop();
     int line = Lines.number(text, loop.getStartPosition());
-    String of = source(text, indexed.of());
+    String of = Nodes.source(text, indexed.of());
     Statement body = loop.getBody();
     stable(text, indexed.of(), body, line);
     if (!indexed.array()) {
@@ -237,7 +237,7 @@ final class ConvertLoop {
                 + " other than as "
                 + (indexed.array() ? of + "[" + n + "]" : of + ".get(" + n + ")")
                 + " ("
-                + source(text, n.getParent())
+                + Nodes.source(text, n.getParent())
                 + "), and an enhanced for has no index.");
       }
       reads.add(read);
@@ -326,12 +326,13 @@ final class ConvertLoop {
           "the loop at line "
               + line
               + " reads "
-              + source(text, of)
+              + Nodes.source(text, of)
               + " on each pass, and an enhanced for once."
               + hint);
     }
     if (written(body, v)) {
-      throw new Refusal(source(text, of) + " is assigned in the loop at line " + line + "." + hint);
+      throw new Refusal(
+          Nodes.source(text, of) + " is assigned in the loop at line " + line + "." + hint);
     }
     if (v.isField() && !Modifier.isFinal(v.getModifiers())) {
       for (MethodInvocation m : Nodes.all(body, MethodInvocation.class)) {
@@ -363,9 +364,9 @@ final class ConvertLoop {
             "the loop at line "
                 + line
                 + " changes "
-                + source(text, m.getExpression())
+                + Nodes.source(text, m.getExpression())
                 + " ("
-                + source(text, m)
+                + Nodes.source(text, m)
                 + "), which an enhanced for over it would fail on.");
       }
     }
@@ -423,13 +424,13 @@ final class ConvertLoop {
                 + " uses "
                 + n
                 + " other than in its first next() ("
-                + source(text, n.getParent())
+                + Nodes.source(text, n.getParent())
                 + "), and an enhanced for has no iterator to call.");
       }
     }
     VariableDeclarationFragment element = (VariableDeclarationFragment) first.fragments().get(0);
     String type = text.substring(first.getStartPosition(), element.getStartPosition()).strip();
-    String of = source(text, start.getExpression());
+    String of = Nodes.source(text, start.getExpression());
     String header = "for (" + type + " " + element.getName() + " : " + of + ")";
     edits.add(
         new TextEdit(
@@ -456,7 +457,7 @@ final class ConvertLoop {
     ITypeBinding element = LoopToStream.elementOf(sourceType);
     if (element == null) {
       throw new Refusal(
-          source(text, loop.getExpression())
+          Nodes.source(text, loop.getExpression())
               + " is not an Iterable with a type argument, so the iterator's type is not known.");
     }
     String it = Names.fresh("it", loop);
@@ -475,7 +476,7 @@ final class ConvertLoop {
         text,
         loop,
         loop.getBody(),
-        source(text, loop.getParameter()) + " = " + it + ".next();",
+        Nodes.source(text, loop.getParameter()) + " = " + it + ".next();",
         edits);
     edits.add(
         new TextEdit(loop.getStartPosition(), loop.getBody().getStartPosition(), header + " "));
@@ -493,12 +494,12 @@ final class ConvertLoop {
           "the loop at line "
               + line
               + " walks "
-              + source(text, of)
+              + Nodes.source(text, of)
               + ", which is not a List or an array, so it has no index; to=iterator takes it.");
     }
     Statement body = loop.getBody();
     stable(text, of, body, line);
-    String from = source(text, of);
+    String from = Nodes.source(text, of);
     if (!array) {
       unchanged(text, of, body, line);
     }
@@ -516,7 +517,7 @@ final class ConvertLoop {
             + i
             + "++)";
     String read = array ? primary + "[" + i + "]" : primary + ".get(" + i + ")";
-    first(text, loop, body, source(text, loop.getParameter()) + " = " + read + ";", edits);
+    first(text, loop, body, Nodes.source(text, loop.getParameter()) + " = " + read + ";", edits);
     edits.add(new TextEdit(loop.getStartPosition(), body.getStartPosition(), header + " "));
     String note =
         !array && !Hierarchy.isA(t, "java.util.RandomAccess")
@@ -549,7 +550,7 @@ final class ConvertLoop {
     }
     List<String> lines = new ArrayList<>();
     for (Object s : body instanceof Block block ? block.statements() : List.of(body)) {
-      lines.add(Indent.reindent(source(text, (ASTNode) s), inner));
+      lines.add(Indent.reindent(Nodes.source(text, (ASTNode) s), inner));
     }
     String rest = String.join("\n", lines);
     edits.add(
@@ -557,10 +558,6 @@ final class ConvertLoop {
             body.getStartPosition(),
             Nodes.end(body),
             "{\n" + inner + statement + (rest.isEmpty() ? "" : "\n" + rest) + "\n" + indent + "}"));
-  }
-
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), Nodes.end(node));
   }
 
   /**
@@ -575,12 +572,12 @@ final class ConvertLoop {
     int step = step(text);
     List<String> updates = new ArrayList<>();
     for (Object u : loop.updaters()) {
-      updates.add(source(text, (ASTNode) u) + ";");
+      updates.add(Nodes.source(text, (ASTNode) u) + ";");
     }
     List<String> inits = new ArrayList<>();
     List<String> declared = new ArrayList<>();
     for (Object i : loop.initializers()) {
-      inits.add(source(text, (ASTNode) i) + ";");
+      inits.add(Nodes.source(text, (ASTNode) i) + ";");
       if (i instanceof VariableDeclarationExpression d) {
         for (Object f : d.fragments()) {
           declared.add(((VariableDeclarationFragment) f).getName().getIdentifier());
@@ -603,10 +600,10 @@ final class ConvertLoop {
         before(text, c, updates, step, inBody);
       }
     }
-    String cond = loop.getExpression() == null ? "true" : source(text, loop.getExpression());
+    String cond = loop.getExpression() == null ? "true" : Nodes.source(text, loop.getExpression());
     String bodyText =
         !Effects.completesNormally(body)
-            ? TextEdit.apply(source(text, body), inBody, body.getStartPosition())
+            ? TextEdit.apply(Nodes.source(text, body), inBody, body.getStartPosition())
             : last(text, whole, body, updates, step, inBody);
     String label =
         whole instanceof LabeledStatement l
@@ -642,7 +639,7 @@ final class ConvertLoop {
    */
   private static String whileToFor(String text, WhileStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
-    String cond = source(text, loop.getExpression());
+    String cond = Nodes.source(text, loop.getExpression());
     String init = "";
     if (whole.getParent() instanceof Block block) {
       int at = block.statements().indexOf(whole);
@@ -656,7 +653,7 @@ final class ConvertLoop {
           read |= Bindings.same(n.resolveBinding(), f.resolveBinding());
         }
         if (read && f.getInitializer() != null && !namedAfter(whole, List.of(name))) {
-          String s = source(text, before);
+          String s = Nodes.source(text, before);
           init = s.substring(0, s.length() - 1).strip();
           edits.add(
               new TextEdit(
@@ -677,7 +674,7 @@ final class ConvertLoop {
                   && (p.getOperator() == PrefixExpression.Operator.INCREMENT
                       || p.getOperator() == PrefixExpression.Operator.DECREMENT)))) {
         if (continues(body, loop).isEmpty()) {
-          update = source(text, e.getExpression());
+          update = Nodes.source(text, e.getExpression());
           edits.add(
               new TextEdit(
                   Lines.start(text, e.getStartPosition()), Lines.end(text, Nodes.end(e) - 1), ""));
@@ -760,7 +757,7 @@ final class ConvertLoop {
     for (String s : statements) {
       b.append(inner).append(s).append('\n');
     }
-    b.append(inner).append(source(text, c)).append('\n').append(outer).append('}');
+    b.append(inner).append(Nodes.source(text, c)).append('\n').append(outer).append('}');
     edits.add(new TextEdit(c.getStartPosition(), Nodes.end(c), b.toString()));
   }
 
@@ -777,7 +774,7 @@ final class ConvertLoop {
       List<TextEdit> edits) {
     String indent = Lines.indentOf(text, whole.getStartPosition());
     String inner = indent + " ".repeat(step);
-    String applied = TextEdit.apply(source(text, body), edits, body.getStartPosition());
+    String applied = TextEdit.apply(Nodes.source(text, body), edits, body.getStartPosition());
     StringBuilder add = new StringBuilder();
     if (body instanceof Block block
         && !block.statements().isEmpty()
@@ -837,12 +834,12 @@ final class ConvertLoop {
     try {
       negated = InvertIf.negate(text, loop.getExpression(), line);
     } catch (Refusal nan) {
-      negated = "!(" + source(text, loop.getExpression()) + ")";
+      negated = "!(" + Nodes.source(text, loop.getExpression()) + ")";
     }
     String exit = "if (" + negated + ") break;";
     String bodyText =
         !Effects.completesNormally(body)
-            ? source(text, body)
+            ? Nodes.source(text, body)
             : last(text, whole, body, List.of(exit), step(text), List.of());
     edits.add(new TextEdit(loop.getStartPosition(), Nodes.end(loop), "while (true) " + bodyText));
     return "a while (true) that ends in " + exit;
@@ -855,14 +852,14 @@ final class ConvertLoop {
   private static String whileToDo(String text, WhileStatement loop, List<TextEdit> edits) {
     Statement whole = loop.getParent() instanceof LabeledStatement l ? l : loop;
     int line = Lines.number(text, loop.getStartPosition());
-    String cond = source(text, loop.getExpression());
+    String cond = Nodes.source(text, loop.getExpression());
     ASTNode other = notALocalRead(loop.getExpression());
     if (other != null) {
       throw new Refusal(
           "the condition of the while at line "
               + line
               + " would be read twice on the first pass, by an if and by the do-while, and "
-              + source(text, other)
+              + Nodes.source(text, other)
               + " does more than read a local. Put the condition in a local first.");
     }
     if (!Nodes.all(loop.getBody(), TextBlock.class).isEmpty()) {

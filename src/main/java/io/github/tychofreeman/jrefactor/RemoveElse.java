@@ -68,9 +68,9 @@ final class RemoveElse {
     String base = Lines.indentOf(text, Lines.start(text, start));
     String replacement =
         "if ("
-            + source(text, ifs.getExpression())
+            + Nodes.source(text, ifs.getExpression())
             + ") "
-            + source(text, ifs.getThenStatement())
+            + Nodes.source(text, ifs.getThenStatement())
             + "\n"
             + elseStatements(text, elseBranch, base);
     String updated = text.substring(0, start) + replacement + text.substring(end);
@@ -95,9 +95,9 @@ final class RemoveElse {
    */
   private static String elseStatements(String text, Statement elseBranch, String base) {
     if (!(elseBranch instanceof Block)) {
-      return base + source(text, elseBranch);
+      return base + Nodes.source(text, elseBranch);
     }
-    String inner = source(text, elseBranch);
+    String inner = Nodes.source(text, elseBranch);
     String body = inner.substring(1, inner.length() - 1);
     if (!body.contains("\n")) {
       return base + body.strip();
@@ -125,10 +125,6 @@ final class RemoveElse {
       }
     }
     return String.join("\n", out);
-  }
-
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
   }
 
   /** A local or class the else block declares that a statement after the if names, or null. */
