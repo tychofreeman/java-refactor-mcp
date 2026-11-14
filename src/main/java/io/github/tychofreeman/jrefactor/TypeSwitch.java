@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
@@ -69,9 +68,7 @@ final class TypeSwitch {
     Precondition.require(
         Precondition.that(
             () -> line != null, () -> "type_switch_to_method needs line, where the switch starts."),
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
-            () -> name + " is not a valid method name."));
+        Precondition.identifier(name, "the new method"));
     Opened opened = Opened.of(project, rel);
     String text = opened.text();
     ASTNode node =
@@ -482,6 +479,22 @@ final class TypeSwitch {
       if (c.variable() == null || !isVariable(n, c.variable())) {
         continue;
       }
+      if (inClass(n, e)) {
+        String t = n.resolveTypeBinding().getName();
+        String local = Names.parameterName(n.resolveTypeBinding());
+        throw new Refusal(
+            "the case uses "
+                + n.getIdentifier()
+                + " inside a class it declares, where this would be that class's object, not "
+                + t
+                + "'s. Declare a local for it before that class ("
+                + t
+                + " "
+                + local
+                + " = "
+                + n.getIdentifier()
+                + ";) and use the local inside the class, then call again.");
+      }
       ASTNode p = n.getParent();
       boolean receiver =
           (p instanceof MethodInvocation m && m.getExpression() == n)
@@ -503,7 +516,6 @@ final class TypeSwitch {
         edits.add(new TextEdit(s, s + "yield".length(), "return"));
       }
     }
-    edits.sort((a, b) -> b.start() - a.start());
     return TextEdit.apply(text.substring(base, Nodes.end(e)), edits, 0);
   }
 
@@ -547,5 +559,15 @@ final class TypeSwitch {
       p = p.getParent();
     }
     return p == sw;
+  }
+
+  /** Whether {@code n} is inside an anonymous or local class declared within {@code body}. */
+  private static boolean inClass(ASTNode n, ASTNode body) {
+    for (ASTNode p = n.getParent(); p != null && p != body; p = p.getParent()) {
+      if (p instanceof AnonymousClassDeclaration || p instanceof AbstractTypeDeclaration) {
+        return true;
+      }
+    }
+    return false;
   }
 }

@@ -135,6 +135,15 @@ declaring them ("The method price() of type Cart must override or implement a su
 it names `add_supertype` for that type, before the methods in one batch (2026-11-06). Other errors
 with these keep the edit's own advice after the hints.
 
+A new name a tool is given for one declaration (`rename`'s `new_name`, `extract_function`'s and
+`type_switch_to_method`'s `name`, `extract_variable`'s `name`, `add_parameter`'s `parameter`,
+`extract_type`'s and `extract_supertype`'s type and field, `add_result`'s `result`) must be one
+Java identifier, not a keyword: "a.b is not a valid Java name for the new method: use letters,
+digits, '_' or '$', not starting with a digit, and not a keyword." (`Precondition.identifier`,
+2026-11-13, issue #494: `extract_function`, `add_parameter` and an enum's or record's new
+parameter took a dotted name, which then failed to parse or compile). A package name (`move`'s
+`package`) takes dots.
+
 A member named by `name` (`Type.member`, `member`) is an overload's when its parameter types
 follow, as written (`raise(T)`, `put(List<String>)`, spaces ignored). Two overloads written alike
 that erase differently (`<T> T raise(T t)` and `<T extends Throwable> T raise(T t)`) are named by
@@ -706,6 +715,10 @@ for an enum's case too (roadmap #240, issue #472): "the case of Circle uses supe
 would mean its own superclass. Keep the switch as it is." A field read through the pattern variable (`c.radius`) becomes `this.radius`
 where the body declares a variable of that name, else `radius`. A body's own locals are told by
 binding, so a field of the method's class named as a local of another scope is refused as a field.
+The pattern variable used inside an anonymous or local class of a case body is refused (roadmap
+#330, issue #551, 2026-11-14), since `this` there would be that class's object: "the case uses c
+inside a class it declares, where this would be that class's object, not Circle's. Declare a local
+for it before that class (Circle circle = c;) and use the local inside the class, then call again."
 
 ### Over an enum: the field form
 
@@ -1682,7 +1695,9 @@ the same batch as this step, with check "end"."
 ## `add_supertype` (built)
 Adds a supertype to a top-level class or interface, in its header. Arguments: `file`, `name`
 (the top-level type), `relation` (`extends` or `implements`, the clause the supertype goes in)
-and `supertype` (as written, such as `Base` or `List<String>`).
+and `supertype` (as written, such as `Base` or `List<String>`). A new clause goes before a
+`permits` clause (`sealed class Shape implements Named permits Circle`; #484, it had gone after
+it and did not parse).
 
 Result: `added S as a supertype of T (relation) in file`, with `; imported ...` when the edit
 adds an import. Refusals: a relation other than `extends` or `implements`; a name that is not a

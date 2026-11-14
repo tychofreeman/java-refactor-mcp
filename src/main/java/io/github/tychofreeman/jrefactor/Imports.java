@@ -154,37 +154,31 @@ final class Imports {
       }
       lines.append("import ").append(name).append(";\n");
     }
-    List<int[]> cuts = new ArrayList<>();
+    List<TextEdit> edits = new ArrayList<>();
+    // Imports on one line share its cut.
     for (ImportDeclaration i : remove) {
-      cuts.add(
-          new int[] {
-            Lines.start(after, i.getStartPosition()),
-            Lines.end(after, i.getStartPosition() + i.getLength())
-          });
-    }
-    if (kept.isEmpty() && add.isEmpty() && !cuts.isEmpty()) {
-      int[] last = cuts.get(cuts.size() - 1);
-      if (last[1] < after.length() && after.charAt(last[1]) == '\n') {
-        last[1]++;
+      TextEdit cut =
+          new TextEdit(
+              Lines.start(after, i.getStartPosition()),
+              Lines.end(after, i.getStartPosition() + i.getLength()),
+              "");
+      if (!edits.contains(cut)) {
+        edits.add(cut);
       }
     }
-    // Apply from the end, so earlier offsets still hold; at one offset, cut before inserting.
-    List<int[]> edits = new ArrayList<>(cuts);
-    for (int at : inserts.keySet()) {
-      edits.add(new int[] {at, at, -1});
+    if (kept.isEmpty() && add.isEmpty() && !edits.isEmpty()) {
+      TextEdit last = edits.get(edits.size() - 1);
+      if (last.end() < after.length() && after.charAt(last.end()) == '\n') {
+        edits.set(edits.size() - 1, new TextEdit(last.start(), last.end() + 1, ""));
+      }
     }
-    edits.sort((a, b) -> b[0] != a[0] ? Integer.compare(b[0], a[0]) : Integer.compare(b[1], a[1]));
-    StringBuilder text = new StringBuilder(after);
     int packageEnd = packageEnd(after, unit);
-    for (int[] edit : edits) {
-      if (edit.length == 3) {
-        String lines = inserts.get(edit[0]).toString();
-        boolean first = kept.isEmpty() && replacing < 0 && edit[0] == packageEnd && packageEnd > 0;
-        text.insert(edit[0], first ? "\n" + lines : lines);
-      } else {
-        text.delete(edit[0], edit[1]);
-      }
+    for (Map.Entry<Integer, StringBuilder> e : inserts.entrySet()) {
+      int at = e.getKey();
+      boolean first = kept.isEmpty() && replacing < 0 && at == packageEnd && packageEnd > 0;
+      edits.add(new TextEdit(at, at, (first ? "\n" : "") + e.getValue()));
     }
+    String fixed = TextEdit.apply(after, edits, 0);
 
     List<String> notes = new ArrayList<>();
     if (!add.isEmpty()) {
@@ -198,7 +192,6 @@ final class Imports {
       notes.add("removed import " + String.join(", ", names));
     }
     notes.addAll(chose);
-    String fixed = text.toString();
     return new Fixed(fixed, count(fixed) - count(after), notes);
   }
 

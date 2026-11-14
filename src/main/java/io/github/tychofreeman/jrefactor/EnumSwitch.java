@@ -186,7 +186,6 @@ final class EnumSwitch {
     } else {
       edits.put(at.opened().file(), List.of(at.replaced()));
     }
-    eEdits.sort((a, b) -> b.start() - a.start());
     String withValues = TextEdit.apply(eText, eEdits, 0);
     String out =
         Declarations.plan(
@@ -315,7 +314,6 @@ final class EnumSwitch {
         Map.of(eFile, eEdits),
         NameCheck.meanings(arms.stream().map(Arm::body).toList()),
         "moving the cases into " + at.e().getName());
-    eEdits.sort((a, b) -> b.start() - a.start());
     String bodies = TextEdit.apply(eText, eEdits, 0);
 
     String own =
@@ -342,9 +340,7 @@ final class EnumSwitch {
           NameCheck.meanings(List.of(fallback.body())),
           "moving the default case into " + at.e().getName());
     }
-    List<TextEdit> sorted = new ArrayList<>(appended);
-    sorted.sort((a, b) -> b.start() - a.start());
-    String out = TextEdit.apply(bodies, sorted, 0);
+    String out = TextEdit.apply(bodies, appended, 0);
     edits.put(eFile, List.of(new TextEdit(0, eText.length(), out)));
     Stubs.Declared declared =
         MemberMove.gate(

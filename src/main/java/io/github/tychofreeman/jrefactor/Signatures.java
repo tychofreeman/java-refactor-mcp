@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -123,9 +122,7 @@ final class Signatures {
    * Refuses a new parameter's name {@code parameter} or its {@code type} when it does not parse.
    */
   static void checkNewParameter(String parameter, String type) {
-    if (!SourceVersion.isName(parameter)) {
-      throw new Refusal("parameter " + parameter + " is not a valid Java name.");
-    }
+    Precondition.require(Precondition.identifier(parameter, "the new parameter"));
     parsesAs("type", type, "class X { " + type + " x; }");
   }
 

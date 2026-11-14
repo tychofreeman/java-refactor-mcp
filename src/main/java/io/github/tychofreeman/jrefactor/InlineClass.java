@@ -195,7 +195,6 @@ final class InlineClass {
             Lines.start(text, homeDecl.getStartPosition()),
             Lines.end(text, Nodes.end(homeDecl) - 1),
             body));
-    edits.sort((a, b) -> b.start() - a.start());
     String after = TextEdit.apply(text, edits, 0);
     Map<Path, String> changed = new java.util.HashMap<>();
     changed.put(opened.file(), Imports.fix(project, opened.file(), text, after, List.of()).text());

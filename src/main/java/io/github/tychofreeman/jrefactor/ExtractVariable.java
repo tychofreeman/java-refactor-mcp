@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
@@ -38,10 +37,7 @@ final class ExtractVariable {
       String as,
       boolean all)
       throws Exception {
-    Precondition.require(
-        Precondition.that(
-            () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
-            () -> name + " is not a valid Java name for the new variable."));
+    Precondition.require(Precondition.identifier(name, "the new variable"));
     if (all && !"parameter".equals(as)) {
       throw new Refusal(
           "all_occurrences is built for as=parameter, where each occurrence of "

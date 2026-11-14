@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import javax.lang.model.SourceVersion;
 
 /**
  * Something a refactoring needs before it plans an edit, as a value: whether it holds, and the
@@ -21,5 +22,19 @@ record Precondition(BooleanSupplier holds, Supplier<String> refusal) {
         throw new Refusal(check.refusal().get());
       }
     }
+  }
+
+  /**
+   * Holds when {@code name} is one Java identifier, not a keyword: the name of {@code what}, such
+   * as "the new method".
+   */
+  static Precondition identifier(String name, String what) {
+    return that(
+        () -> SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name),
+        () ->
+            name
+                + " is not a valid Java name for "
+                + what
+                + ": use letters, digits, '_' or '$', not starting with a digit, and not a keyword.");
   }
 }
