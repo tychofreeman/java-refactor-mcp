@@ -559,6 +559,12 @@ Each was chosen from options; the record named beside it has the options it beat
   and type variables, and compares a method's name only with methods' (`NameCheck.spaced`, #344:
   `skipped(skipped)` was taken for a capture).
 
+- A tool that adds an instance method to a type asks `Overrides.of` (#466, 2026-11-13) whether it
+  would override a supertype's method or be overridden by a project subtype's, by name and erased
+  parameter types, and words its own refusal: `function_to_method`, `encapsulate_field`'s
+  accessors, `inline` with `field`'s folded methods. `push_down` asks `CallTargets.overridden` of
+  the method's binding (#465), not a name: a `name` may carry its parameter list.
+
 - `CallTargets` (roadmap #146, 2026-11-13) is the check that a change keeps what every call runs:
   `CallTargets.of(units)` before the write (units of one parse of the project's files), `require`
   after it, which parses the files again and refuses when a call, `new`, `this(...)`, `super(...)`

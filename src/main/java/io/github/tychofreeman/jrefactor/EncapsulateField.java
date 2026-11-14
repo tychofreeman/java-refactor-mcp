@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,6 +87,13 @@ final class EncapsulateField {
     String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
     String fieldKey = fieldBinding.getKey();
     String typeText = source(text, fd.getType());
+    if (!isStatic) {
+      refuseOverride(project, file, owner, getter, List.of(), "getter", field);
+      if (!isFinal) {
+        String param = fieldBinding.getType().getErasure().getQualifiedName();
+        refuseOverride(project, file, owner, setter, List.of(param), "setter", field);
+      }
+    }
 
     List<Path> candidates =
         project.javaFiles().stream().map(p -> p.toAbsolutePath().normalize()).distinct().toList();
@@ -381,5 +389,53 @@ final class EncapsulateField {
             || e instanceof MethodInvocation
             || e instanceof FieldAccess;
     return bare ? text : "(" + text + ")";
+  }
+
+  /**
+   * Refuses an instance accessor that would override a supertype's method, or be overridden by a
+   * subtype's: a call or a read of the field would then run another body than before.
+   */
+  private static void refuseOverride(
+      SourceProject project,
+      Path file,
+      TypeDeclaration owner,
+      String accessor,
+      List<String> params,
+      String label,
+      String field)
+      throws IOException {
+    Overrides.Clash clash = Overrides.of(project, file, owner.resolveBinding(), accessor, params);
+    if (clash == null) {
+      return;
+    }
+    String fix = " Pass " + label + " with another name, or rename " + clash.method() + " first.";
+    if (clash.subtype() == null) {
+      throw new Refusal(
+          "the "
+              + label
+              + " "
+              + accessor
+              + "("
+              + String.join(
+                  ", ", params.stream().map(p -> p.substring(p.lastIndexOf('.') + 1)).toList())
+              + ") would override "
+              + clash.method()
+              + ", so a call of it on a "
+              + owner.getName().getIdentifier()
+              + " would use the field."
+              + fix);
+    }
+    throw new Refusal(
+        clash.method()
+            + " would then override the "
+            + label
+            + " "
+            + accessor
+            + ", so a use of "
+            + field
+            + " on a "
+            + clash.subtype().getName()
+            + " would run that body."
+            + fix);
   }
 }

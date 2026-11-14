@@ -1360,3 +1360,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   the JSON comes from stdin too (`bin/jrefactor -`, JSON first). Either form could say so.
 - CLI: an empty heredoc for `old_file=-` sent an empty `old`, which hit this bug (an
   OutOfMemoryError, files restored); now a refusal.
+
+## 2026-11-13: fix-new-override
+
+- `move` of `FunctionToMethod.clash` and `.below` to the new `Overrides` widened each from private to
+  package access, though the only callers then were in `Overrides` itself (after `Overrides.of` was
+  added). Narrowed back by `sed`: no tool narrows a member's visibility, and `replace_declaration`
+  of each would resend the whole method for one word. Sequences tried: none composes (`change_type`
+  changes types, not modifiers).

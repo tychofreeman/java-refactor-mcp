@@ -179,7 +179,8 @@ members take the field's place, `home.x` becomes `x` (`this.x` where a local hid
 `home.m()` becomes `m()`, and the class's file is deleted (the inverse of `extract_type`
 on a class). Refused: the class used elsewhere, a superclass or interfaces, a constructor with
 work, an initializer other than `new Address()`, the field used other than to reach a member, a
-name the holder has. gorefactor's edit
+name the holder has, an instance method that folded in would override a method of the holder's
+supertypes or be overridden by one of its subtypes' (issue #466). gorefactor's edit
 primitives are built with its names (`replace_expression`, `insert_statements`,
 `replace_statements`, `add_case`, `add_element`, roadmap #91).
 
@@ -808,7 +809,8 @@ Roadmap #90, 2026-11-04 (gorefactor's `method_to_function`, `function_to_method`
   not static, a first parameter of another type or varargs, a body that assigns
   it, lambdas or method references of it, an instance method of the new signature
   in a subclass ("Square.area(int) would then override it") or a supertype,
-  libraries included (roadmap #92).
+  libraries included (roadmap #92), a superinterface's superinterfaces too (`Overrides`, shared
+  with `encapsulate_field` and `inline` with `field` since issue #466).
 
 ## `push_down` (built)
 
@@ -1888,7 +1890,9 @@ with getX and setX; N uses rewritten in K files`.
 Refusals: a name that is not a field, a declaration of several fields, a final field that is written, a
 write inside an expression (`int was = x++;`), a compound write through a receiver that is not a
 name or `this` (`next().x += 1`, which would run twice), a plain assignment that also reads the
-field, and the gate's "would add compile errors".
+field, an instance getter or setter that would override a method of the class's supertypes
+("the getter getName() would override Base.getName()") or be overridden by a subtype's (issue
+#466; a static field's accessors are not checked), and the gate's "would add compile errors".
 
 ## `batch` (built)
 
