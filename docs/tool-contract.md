@@ -1170,7 +1170,8 @@ too (`ByLine.named`).
   2026-11-11, the user's choice over a `parameter_to_field` tool): a field (`out`, `this.out`,
   `Config.OUT`) or a literal that every call passes; the body may then read the parameter, and
   each read becomes the field (by its name, or `this.out` / `Config.OUT` when the body declares
-  that name) or the literal. When the field's type, or the literal's at a call, is not the
+  that name or the name finds another field there: a constant of another class is written
+  `Config.OUT` unless the method's class or a superclass declares it first, #464) or the literal. When the field's type, or the literal's at a call, is not the
   parameter's (an `int` constant for a `long`, `5L` for a `double`), each read would compute in
   that type, so the body starts with a local of the parameter's type instead, as for an
   expression below (`long seconds = STEP;`; #463, 2026-11-13). An instance field must be passed unqualified or through `this`, on
