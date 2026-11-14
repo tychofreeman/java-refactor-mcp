@@ -1,6 +1,5 @@
 package io.github.tychofreeman.jrefactor;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,26 +71,14 @@ final class MethodFamily {
       throws Exception {
     String rel = args.required("file");
     Path path = project.javaFile(rel);
-    Map<Path, String> texts = new LinkedHashMap<>();
-    for (Path f : project.javaFiles()) {
-      texts.put(f, Files.readString(f));
-    }
-    if (!texts.containsKey(path)) {
-      throw new Refusal(rel + " is not a Java file under a source root.");
-    }
     // A family member and a call of one have the method's simple name, so a file without that
     // name cannot hold either: only the files with it are parsed.
-    String simple = simpleName(args.required("name"));
-    List<Path> files = new ArrayList<>();
-    for (Map.Entry<Path, String> e : texts.entrySet()) {
-      if (e.getKey().equals(path) || e.getValue().contains(simple)) {
-        files.add(e.getKey());
-      }
-    }
+    Holding holding = Holding.of(project, simpleName(args.required("name")), path);
     Map<Path, Signatures.Source> sources = new LinkedHashMap<>();
-    Map<Path, CompilationUnit> units = Jdt.parseAll(project, files);
-    for (Path f : files) {
-      sources.put(f, new Signatures.Source(f, project.relative(f), texts.get(f), units.get(f)));
+    for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+      Path f = e.getKey();
+      sources.put(
+          f, new Signatures.Source(f, project.relative(f), holding.texts().get(f), e.getValue()));
     }
     Signatures.Source home = sources.get(path);
     if (home == null) {
@@ -157,17 +144,15 @@ final class MethodFamily {
     if (functional) {
       // A lambda implements an interface's method without naming it, so the files above can miss
       // it: look in every other file that has one.
-      List<Path> lambdas = new ArrayList<>();
-      for (Map.Entry<Path, String> e : texts.entrySet()) {
-        if (!sources.containsKey(e.getKey())
-            && (e.getValue().contains("->") || references && e.getValue().contains("::"))) {
-          lambdas.add(e.getKey());
-        }
-      }
-      Map<Path, CompilationUnit> more = Jdt.parseAll(project, lambdas);
-      for (Path f : lambdas) {
+      Holding lambdas =
+          Holding.where(
+              project,
+              (f, t) ->
+                  !sources.containsKey(f) && (t.contains("->") || references && t.contains("::")));
+      for (Map.Entry<Path, CompilationUnit> e : lambdas.units().entrySet()) {
+        Path f = e.getKey();
         Signatures.Source s =
-            new Signatures.Source(f, project.relative(f), texts.get(f), more.get(f));
+            new Signatures.Source(f, project.relative(f), lambdas.texts().get(f), e.getValue());
         family.sources.put(f, s);
         family.findCalls(s, keys);
       }

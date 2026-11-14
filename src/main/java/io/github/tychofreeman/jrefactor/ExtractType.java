@@ -583,16 +583,15 @@ final class ExtractType {
       components.add(text.substring(c.getStartPosition(), Nodes.end(c)));
     }
 
-    Map<Path, String> texts = new LinkedHashMap<>();
-    for (Path f : project.javaFiles()) {
-      String t = Files.readString(f);
-      if (f.equals(opened.file())
-          || t.contains(ownerName)
-          || chosen.stream().anyMatch(t::contains)) {
-        texts.put(f, t);
-      }
-    }
-    Map<Path, CompilationUnit> units = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
+    Holding holding =
+        Holding.where(
+            project,
+            (p, t) ->
+                p.equals(opened.file())
+                    || t.contains(ownerName)
+                    || chosen.stream().anyMatch(t::contains));
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> units = holding.units();
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     List<String> refused = new ArrayList<>();
     for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {

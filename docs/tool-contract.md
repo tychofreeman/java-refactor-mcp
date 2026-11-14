@@ -1468,7 +1468,9 @@ and `column` (only when the line has two variables of that name).
 
 Replaces code that does what an existing method does with calls of it (roadmap
 #103, gorefactor's `fold`). Arguments: `file` (declares the method), `name`
-(`Type.method`), `line` and `in` (optional: fold only the matches that start on that line
+(`Type.method`; an overload by its parameter types, `Util.twice(long)`, as every tool names one:
+with two overloads and none named, it is refused with each one's name, #486, where it had folded
+the first), `line` and `in` (optional: fold only the matches that start on that line
 of `in`, or of `file`). The method stays.
 
 - The body is the pattern: one `return e;` matches expressions; a void method's

@@ -2,7 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -85,7 +84,7 @@ final class EncapsulateField {
     String cap = Character.toUpperCase(field.charAt(0)) + field.substring(1);
     String getter = getterArg != null && !getterArg.isBlank() ? getterArg : "get" + cap;
     String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
-    String fieldKey = fieldBinding.getKey();
+    String fieldKey = Bindings.declarationKey(fieldBinding);
     String typeText = source(text, fd.getType());
     if (!isStatic) {
       refuseOverride(project, file, owner, getter, List.of(), "getter", field);
@@ -95,18 +94,9 @@ final class EncapsulateField {
       }
     }
 
-    List<Path> candidates =
-        project.javaFiles().stream().map(p -> p.toAbsolutePath().normalize()).distinct().toList();
-    Map<Path, String> texts = new LinkedHashMap<>();
-    List<Path> toParse = new ArrayList<>();
-    for (Path p : candidates) {
-      String content = p.equals(file) ? text : Files.readString(p);
-      if (p.equals(file) || content.contains(field)) {
-        texts.put(p, content);
-        toParse.add(p);
-      }
-    }
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, toParse);
+    Holding holding = Holding.of(project, field, file);
+    Map<Path, String> texts = holding.texts();
+    Map<Path, CompilationUnit> parsed = holding.units();
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Set<Path> usedIn = new LinkedHashSet<>();
@@ -121,7 +111,7 @@ final class EncapsulateField {
             public boolean visit(SimpleName node) {
               if (node.resolveBinding() instanceof IVariableBinding v
                   && v.isField()
-                  && v.getKey().equals(fieldKey)
+                  && fieldKey.equals(Bindings.declarationKey(v))
                   && !(node.getParent() instanceof VariableDeclarationFragment)) {
                 refs.add(node);
               }
@@ -322,7 +312,8 @@ final class EncapsulateField {
         new ASTVisitor() {
           @Override
           public boolean visit(SimpleName node) {
-            if (node.resolveBinding() instanceof IVariableBinding v && v.getKey().equals(key)) {
+            if (node.resolveBinding() instanceof IVariableBinding v
+                && key.equals(Bindings.declarationKey(v))) {
               found[0] = true;
             }
             return true;

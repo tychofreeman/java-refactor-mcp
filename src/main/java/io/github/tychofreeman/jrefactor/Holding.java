@@ -6,6 +6,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
 /**
@@ -14,12 +18,22 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
  */
 record Holding(Map<Path, String> texts, Map<Path, CompilationUnit> units) {
 
-  /** The files that hold {@code name}, and {@code also} (none when null) whatever it holds. */
-  static Holding of(SourceProject project, String name, Path also) throws IOException {
+  /** The files that hold {@code name}, and each of {@code also} whatever it holds. */
+  static Holding of(SourceProject project, String name, Path... also) throws IOException {
+    Set<Path> given =
+        Stream.of(also).map(p -> p.toAbsolutePath().normalize()).collect(Collectors.toSet());
+    return where(project, (file, text) -> given.contains(file) || text.contains(name));
+  }
+
+  /**
+   * The files whose path and text {@code holds} accepts, in file order. Their units are parsed from
+   * disk, so the texts are the files' own.
+   */
+  static Holding where(SourceProject project, BiPredicate<Path, String> holds) throws IOException {
     Map<Path, String> texts = new LinkedHashMap<>();
     for (Path f : project.javaFiles()) {
       String text = Files.readString(f);
-      if (f.equals(also) || text.contains(name)) {
+      if (holds.test(f, text)) {
         texts.put(f, text);
       }
     }

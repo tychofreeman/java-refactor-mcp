@@ -201,13 +201,17 @@ public final class Inspect {
       int dot = name.lastIndexOf('.');
       String type = dot > 0 ? name.substring(0, dot) : name;
       String member = dot > 0 ? name.substring(dot + 1) : null;
-      Holding holding = Holding.of(project, type.substring(type.lastIndexOf('.') + 1), null);
+      String simple = type.substring(type.lastIndexOf('.') + 1);
       boolean typeFound = false;
       int before = out.length();
-      for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-        CompilationUnit unit = e.getValue();
-        List<String> lines = holding.texts().get(e.getKey()).lines().toList();
-        String rel = project.relative(e.getKey()).toString();
+      for (Path file : project.javaFiles()) {
+        String text = Files.readString(file);
+        if (!text.contains(simple)) {
+          continue;
+        }
+        CompilationUnit unit = Jdt.parseSyntax(text);
+        List<String> lines = text.lines().toList();
+        String rel = project.relative(file).toString();
         for (AbstractTypeDeclaration t : Nodes.all(unit, AbstractTypeDeclaration.class)) {
           String chain = chain(t);
           if (!chain.equals(type) && !chain.endsWith("." + type)) {

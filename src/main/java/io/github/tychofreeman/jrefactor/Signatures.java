@@ -828,7 +828,7 @@ final class Signatures {
           case FieldAccess f -> f.resolveFieldBinding();
           default -> null;
         };
-    if (!(b instanceof IVariableBinding v) || !v.getKey().equals(field.getKey())) {
+    if (!(b instanceof IVariableBinding v) || !Bindings.same(v, field)) {
       return false;
     }
     if (Modifier.isStatic(field.getModifiers())) {
