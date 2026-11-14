@@ -66,7 +66,7 @@ final class ByLine {
       hits.add(new Hit(c, c.resolveConstructorBinding(), false));
     }
     Map<String, List<Hit>> methods = new LinkedHashMap<>();
-    Hit declared = null;
+    List<Hit> declared = new ArrayList<>();
     for (Hit h : hits) {
       int start = h.at().getStartPosition();
       if (h.method() == null
@@ -76,14 +76,30 @@ final class ByLine {
         continue;
       }
       if (h.declaration()) {
-        declared = h;
+        declared.add(h);
       }
       methods
           .computeIfAbsent(h.method().getMethodDeclaration().getKey(), k -> new ArrayList<>())
           .add(h);
     }
-    if (declared == null && methods.size() != 1) {
-      String where = "line " + line + (column == null ? "" : ", column " + column) + " of " + rel;
+    String where = "line " + line + (column == null ? "" : ", column " + column) + " of " + rel;
+    if (declared.size() > 1) {
+      List<String> each = new ArrayList<>();
+      for (Hit h : declared) {
+        each.add(
+            Signatures.label(h.method())
+                + " at column "
+                + Nodes.columns(List.of(h.at()), lineStart));
+      }
+      throw new Refusal(
+          where
+              + " declares "
+              + declared.size()
+              + " methods: "
+              + String.join("; ", each)
+              + ". Pass column, or name.");
+    }
+    if (declared.isEmpty() && methods.size() != 1) {
       if (methods.isEmpty()) {
         throw new Refusal(
             where
@@ -107,7 +123,7 @@ final class ByLine {
               + ". Pass column, or name.");
     }
     IMethodBinding method =
-        (declared != null ? declared : methods.values().iterator().next().get(0))
+        (declared.isEmpty() ? methods.values().iterator().next().get(0) : declared.get(0))
             .method()
             .getMethodDeclaration();
     Path file = TypeSwitch.fileOf(project, topLevel(method.getDeclaringClass()));
