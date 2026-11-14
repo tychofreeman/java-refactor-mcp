@@ -1606,3 +1606,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
     `replace_text`. A fold of "statements, then return a local they built" into `T x = m(...)`
     would have done it.
 
+## 2026-11-14: probe-type
+
+- `add_declaration` of the `Jdt.probeType` tests before the method existed was refused: the stub
+  it would declare is typed from the use, and `probeType(...).getQualifiedName()` gives no return
+  type to type it by (`Object`). Added the helper first, then the tests (a refactoring first, as
+  CLAUDE.md allows when the change is not yet easy).
+- No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
+  one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.

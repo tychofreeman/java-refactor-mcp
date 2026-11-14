@@ -292,6 +292,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - Offsets and lines: `Nodes.end` (just past a node), `Nodes.within`, `Lines`
   (`number`, `start`, `end`, `offsetOf`, `indentOf`). Nodes of one type:
   `Nodes.all(root, Type.class)`, not a new anonymous `ASTVisitor` (#98).
+- A name as a type's members would resolve it is `Jdt.probeType` (#493): a probe field declared
+  as a member (`Jdt.withProbe`: before the first member, or after an enum's constants), imports
+  fixed, parsed. Not a new copy that inserts the field itself.
 - Indentation goes through `Indent` (#499): `width` of a line, a file's `step` (`step(text, 2)`
   where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
   `restep` for a member moved between files (each step becomes the target's) and `member` for the
@@ -470,13 +473,13 @@ Each was chosen from options; the record named beside it has the options it beat
   indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either
   handled already (`catches`, `allows`), declared further (`declare`, by `Signatures.family`) or
   caught (`catchAt`); `write` emits the clauses and the tries as inserts, so they do not overlap
-  other edits. The exception's supertypes come from a probe field parsed in the target's file.
+  other edits. The exception's supertypes come from `Jdt.probeType` in the target's file.
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
   of the files that name the subclass and the superclass's file, text edits per file, each
   through `Imports.fix` (the subclass's imports as the chosen ones) and all through
   `Gate.applyOrRefuse`, the subclass's file as null. `usesInstance` refuses a body that needs the
   instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
-  `samOf` finds a named type's method by parsing the superclass with a probe field.
+  `samOf` finds a named type's method through `Jdt.probeType` on the superclass.
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
