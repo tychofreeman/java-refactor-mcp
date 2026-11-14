@@ -16,12 +16,15 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FileASTRequestor;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
  * Headless JDT Core parsing with bindings resolved. No workspace, no OSGi runtime. Validated by
@@ -42,6 +45,9 @@ final class Jdt {
 
   /** The property of a unit that holds the text it was parsed from, when the parse was given it. */
   static final String SOURCE = "jrefactor.source";
+
+  /** The name of the field {@link #withProbe} declares, which no source uses. */
+  static final String PROBE = "jrefactorProbe";
 
   /** The file {@code unit} was parsed from, or null for text parsed alone. */
   static Path fileOf(CompilationUnit unit) {
@@ -302,5 +308,47 @@ final class Jdt {
     } catch (IOException e) {
       return null;
     }
+  }
+
+  /**
+   * The type {@code typeText} names in the body of {@code type} in {@code file} ({@code text}),
+   * with {@code chosen} for ambiguous imports: a probe field of it ({@link #withProbe}), parsed
+   * with the imports fixed. Null when the field has no binding; a name that does not resolve gives
+   * a recovered type.
+   */
+  static ITypeBinding probeType(
+      SourceProject project,
+      Path file,
+      String text,
+      AbstractTypeDeclaration type,
+      String typeText,
+      List<String> chosen)
+      throws IOException {
+    String probe = withProbe(text, type, typeText);
+    String fixed = Imports.fix(project, file, text, probe, chosen).text();
+    for (VariableDeclarationFragment f :
+        Nodes.all(parse(project, file, fixed), VariableDeclarationFragment.class)) {
+      if (f.getName().getIdentifier().equals(PROBE) && f.resolveBinding() != null) {
+        return f.resolveBinding().getType();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * {@code text} with a field {@code typeText jrefactorProbe;} declared as a member of {@code
+   * type}: before its first member, else at the end of its body, after a {@code ;} that ends an
+   * enum's constants.
+   */
+  static String withProbe(String text, AbstractTypeDeclaration type, String typeText) {
+    String field = typeText + " " + PROBE + "; ";
+    List<?> members = type.bodyDeclarations();
+    if (!members.isEmpty()) {
+      int at = ((ASTNode) members.get(0)).getStartPosition();
+      return text.substring(0, at) + field + text.substring(at);
+    }
+    int close = Nodes.end(type) - 1;
+    String end = type instanceof EnumDeclaration ? "; " : " ";
+    return text.substring(0, close) + end + field + text.substring(close);
   }
 }
