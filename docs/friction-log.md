@@ -1732,3 +1732,13 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   `MoveType`, which test only `isEmpty()`: `replace_expression` at each.
 - Otherwise through the tools: `move`, `rename`, `add_parameter` (three), `replace_statements`,
   `replace_declaration`, `add_declaration`, `extract_variable`. The roadmap row went in by hand.
+
+## 2026-11-14: loop-stream-scaffolding
+
+- `fold` of `LoopToStream.uses(scope, binding)` and `beforeInitializer(text, d, init)` left most
+  copies: an argument such as `out.resolveBinding()` or `v.getInitializer()` "calls", so folding
+  it would move it past another call. Both are getters. Tried `fold`, then `remove_parameter`
+  with `value` (refused: one call passed a local holding the value); did the rest with
+  `replace_statements`.
+- `fold` of a method that builds a list in statements and returns it is refused (one return or a
+  void method only): the four `segments` sites went through `replace_statements`.
