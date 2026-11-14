@@ -93,6 +93,7 @@ final class MoveType {
     int references = 0;
     TreeMap<Integer, String> widened = new TreeMap<>();
     Set<String> accessed = new TreeSet<>();
+    List<String> sealed = new ArrayList<>();
     for (Map.Entry<Path, String> e : held.entrySet()) {
       Path f = e.getKey();
       String text = e.getValue();
@@ -148,6 +149,20 @@ final class MoveType {
           widened,
           accessed,
           qualifiers);
+      permits(
+          u,
+          text,
+          start,
+          end,
+          pkg,
+          name,
+          simple,
+          key,
+          outerKey,
+          outerLabel,
+          edits,
+          widened,
+          sealed);
       for (Object o : decl.modifiers()) {
         if (o instanceof Modifier m && (m.isStatic() || m.isPrivate() || m.isProtected())) {
           edits.add(dropModifier(text, m));
@@ -221,8 +236,8 @@ final class MoveType {
             project,
             changed,
             "moving " + name + " to " + project.relative(target),
-            "Rename one of the clashing types, or choose another name for the moved type, then"
-                + " move it again.");
+            "Fix what the errors name, then move it again; when the moved type's name clashes"
+                + " with another type's, rename one of them first.");
     String result =
         "moved "
             + name
@@ -247,6 +262,12 @@ final class MoveType {
     }
     if (!accessed.isEmpty()) {
       result += "; reads of " + joinAnd(new ArrayList<>(accessed)) + " became accessor calls";
+    }
+    if (!sealed.isEmpty()) {
+      result +=
+          "; wrote a permits clause on "
+              + joinAnd(sealed)
+              + ", as the move put permitted subtypes in another file";
     }
     return new Outcome(result, declared);
   }
@@ -711,5 +732,111 @@ final class MoveType {
               && f.getName().getIdentifier().equals(name));
     }
     return true;
+  }
+
+  /**
+   * Adds to {@code edits} an explicit permits clause on each sealed type of {@code u} that has none
+   * and whose permitted subtypes (the types of {@code u} that extend or implement it) the move from
+   * {@code start}-{@code end} puts in another file than it, each named from its package as after
+   * the move; a private subtype the clause names from the other file becomes package-private, in
+   * {@code widened}. Names in {@code sealed} each type that gets a clause.
+   */
+  private static void permits(
+      CompilationUnit u,
+      String text,
+      int start,
+      int end,
+      String pkg,
+      String name,
+      String simple,
+      String key,
+      String outerKey,
+      String outerLabel,
+      List<TextEdit> edits,
+      Map<Integer, String> widened,
+      List<String> sealed) {
+    List<AbstractTypeDeclaration> types = Nodes.all(u, AbstractTypeDeclaration.class);
+    for (AbstractTypeDeclaration a : types) {
+      ITypeBinding t = a.resolveBinding();
+      if (!(a instanceof TypeDeclaration td)
+          || !Modifier.isSealed(td.getModifiers())
+          || !td.permittedTypes().isEmpty()
+          || t == null) {
+        continue;
+      }
+      boolean in = a.getStartPosition() >= start && a.getStartPosition() < end;
+      List<AbstractTypeDeclaration> subtypes = new ArrayList<>();
+      boolean split = false;
+      for (AbstractTypeDeclaration s : types) {
+        ITypeBinding b = s.resolveBinding();
+        if (b != null && extendsDirectly(b, t.getTypeDeclaration().getKey())) {
+          subtypes.add(s);
+          split |= (s.getStartPosition() >= start && s.getStartPosition() < end) != in;
+        }
+      }
+      if (!split) {
+        continue;
+      }
+      List<String> names = new ArrayList<>();
+      for (AbstractTypeDeclaration s : subtypes) {
+        ITypeBinding b = s.resolveBinding().getTypeDeclaration();
+        names.add(movedName(b, pkg, name, simple));
+        boolean sIn = s.getStartPosition() >= start && s.getStartPosition() < end;
+        if (sIn != in
+            && s.getStartPosition() != start
+            && !widened.containsKey(s.getStartPosition())) {
+          for (Object o : s.modifiers()) {
+            if (o instanceof Modifier m && m.isPrivate()) {
+              edits.add(dropModifier(text, m));
+              widened.put(s.getStartPosition(), label(b, key, outerKey, outerLabel, simple));
+            }
+          }
+        }
+      }
+      int at = headerEnd(text, td);
+      edits.add(new TextEdit(at, at, " permits " + String.join(", ", names)));
+      sealed.add(movedName(t.getTypeDeclaration(), pkg, name, simple));
+    }
+  }
+
+  /** Whether {@code b}'s superclass or one of its interfaces is the type with key {@code key}. */
+  private static boolean extendsDirectly(ITypeBinding b, String key) {
+    if (declaredBy(b.getSuperclass(), key)) {
+      return true;
+    }
+    for (ITypeBinding i : b.getInterfaces()) {
+      if (declaredBy(i, key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * {@code b}'s name from its package once the type {@code name} ("Outer.Inner") is top-level as
+   * {@code simple}: "Outer.Other", "Inner", "Inner.Nested".
+   */
+  private static String movedName(ITypeBinding b, String pkg, String name, String simple) {
+    String q = b.getQualifiedName();
+    String rel = pkg.isEmpty() ? q : q.substring(pkg.length() + 1);
+    return rel.equals(name) || rel.startsWith(name + ".")
+        ? simple + rel.substring(name.length())
+        : rel;
+  }
+
+  /** Where {@code t}'s header ends: after its last supertype, type parameters or name. */
+  private static int headerEnd(String text, TypeDeclaration t) {
+    if (!t.superInterfaceTypes().isEmpty()) {
+      return Nodes.end((ASTNode) t.superInterfaceTypes().get(t.superInterfaceTypes().size() - 1));
+    }
+    if (t.getSuperclassType() != null) {
+      return Nodes.end(t.getSuperclassType());
+    }
+    if (!t.typeParameters().isEmpty()) {
+      return text.indexOf(
+              '>', Nodes.end((ASTNode) t.typeParameters().get(t.typeParameters().size() - 1)))
+          + 1;
+    }
+    return Nodes.end(t.getName());
   }
 }

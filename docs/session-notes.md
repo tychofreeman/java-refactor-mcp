@@ -322,9 +322,13 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call
-  (#184, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
+  (#192, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
   the field (`returnsField`). JDT's `findDeclaringNode` gives null for a record's field:
   `NameCheck.declaration` takes the component of that name.
+
+- `move` of a member type writes an explicit `permits` on a sealed type of the file that has none
+  when the move splits it from subtypes it permitted implicitly (#190, issue #441,
+  `MoveType.permits`): a sealed type without a clause permits only the subtypes of its own file.
 
 - `move_file` (#81, 2026-11-04) is `MoveFile`: each file through `Gate.write` (a null
   text deletes), so a move, copy or delete is one undo. Text only; Java under a
@@ -424,7 +428,8 @@ Each was chosen from options; the record named beside it has the options it beat
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
   name its refusal gives the case's variable ("the switch's value" for an enum). A bare `throw`
   after the arrow is a body as a block is (`EnumSwitch.arms`, #435); `TypeSwitch.switchCases`
-  still refuses one.
+  still refuses one. A bare static in a case is refused unless `EnumSwitch.sees` it from the enum
+  (its own, or an enclosing type's that nothing on the way out hides; #436).
   The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
   enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added
   by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
@@ -685,6 +690,9 @@ Each was chosen from options; the record named beside it has the options it beat
 
 ## Traps
 
+- Parallel branches each took the next free roadmap number, and three numbers were used twice
+  (175-177, 2026-11-13; renumbered to 182, 184 and 185). Before taking a number, check `main` and
+  the open branches' `docs/design.md`, and check again when rebasing.
 - `gh pr checks` right after `gh pr create` can say "no checks reported" before
   CI registers, and `--watch` then returns at once. Wait for the run. A PR that
   conflicts with `main` gets no run at all: check its `mergeable` state.

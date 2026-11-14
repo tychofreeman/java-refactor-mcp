@@ -1,6 +1,6 @@
 # `move` of a member record whose fields the outer type reads
 
-- **Item:** issue #440 (the Java 17 stress run, `docs/sessions/stress-enum-switch.md`), roadmap #184
+- **Item:** issue #440 (the Java 17 stress run, `docs/sessions/stress-enum-switch.md`), roadmap #192
 - **Date:** 2026-11-13
 - **Branch:** move-record-fields
 
@@ -38,4 +38,4 @@ did not show.
 
 ## Follow-ups
 
-- The gate's fix line for `move` ("Rename one of the clashing types") still fits only a clash; #441's PR.
+- The gate's fix line for `move` ("Rename one of the clashing types") fitted only a clash: replaced in #441's branch, `move-sealed-permits`.

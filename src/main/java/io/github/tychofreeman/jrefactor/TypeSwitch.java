@@ -91,24 +91,13 @@ final class TypeSwitch {
     if (over != null && over.resolveTypeBinding() instanceof ITypeBinding e && e.isEnum()) {
       return EnumSwitch.run(project, opened, node, over, e, name, line, args.string("as"));
     }
-    Expression selector;
-    ITypeBinding result = null;
-    List<Case> cases;
-    if (node instanceof SwitchExpression sw) {
-      selector = sw.getExpression();
-      result = sw.resolveTypeBinding();
-      cases = switchCases(sw.statements(), selector, project, true);
-    } else if (node instanceof SwitchStatement ss) {
-      selector = ss.getExpression();
-      cases = switchCases(ss.statements(), selector, project, false);
-    } else {
-      IfStatement first = (IfStatement) node;
-      selector = ((PatternInstanceofExpression) first.getExpression()).getLeftOperand();
-      cases = chain(first, text, selector, project);
-    }
+    // The selector's type first: over an int or a String no case could be read as a type.
+    Expression selector =
+        over != null
+            ? over
+            : ((PatternInstanceofExpression) ((IfStatement) node).getExpression()).getLeftOperand();
     ITypeBinding s = selector.resolveTypeBinding();
     Path sFile = s == null ? null : fileAround(project, s);
-    ITypeBinding r0 = result;
     Precondition.require(
         Precondition.that(
             () ->
@@ -118,9 +107,23 @@ final class TypeSwitch {
             () ->
                 "the switch is over "
                     + (s == null ? "a value that does not resolve" : s.getName())
-                    + ", which is not an interface or abstract class of the project to declare "
+                    + ", which is not an enum, interface or abstract class of the project, so there"
+                    + " is no type to declare "
                     + name
-                    + " on."),
+                    + "() on. Leave the switch as it is, or extract_function it to name it as a"
+                    + " method here."));
+    ITypeBinding result = null;
+    List<Case> cases;
+    if (node instanceof SwitchExpression sw) {
+      result = sw.resolveTypeBinding();
+      cases = switchCases(sw.statements(), selector, project, true);
+    } else if (node instanceof SwitchStatement ss) {
+      cases = switchCases(ss.statements(), selector, project, false);
+    } else {
+      cases = chain((IfStatement) node, text, selector, project);
+    }
+    ITypeBinding r0 = result;
+    Precondition.require(
         Precondition.that(
             () -> !(node instanceof SwitchExpression) || r0 != null,
             () -> "the switch's type does not resolve."));

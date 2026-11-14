@@ -303,13 +303,21 @@ package:
 - a read of a record's field across the new boundary (`r.length`, where a
   nested record's fields were visible to the whole top-level type) becomes a
   call of its accessor (`r.length()`), when the accessor is the generated one
-  or only returns the field (roadmap #184, issue #440).
+  or only returns the field (roadmap #192, issue #440);
+- a sealed type with no `permits` clause permits the subtypes of its own file;
+  when the move puts the sealed type and some of those in different files, it
+  gets an explicit clause listing all of them in their file's order, each
+  named from the package as after the move (`permits Options.Debug,
+  Options.Level`, `permits Shapes.Circle, Square`), and a private subtype the
+  clause names from the other file becomes package-private (roadmap #190,
+  issue #441).
 
 Result: `moved Shop.Line to com/example/Line.java (18 lines), with 3 references
 in 3 files: com/example/Receipt.java line 4; com/example/Shop.java line 7;
 com/example/report/Report.java line 3; widened Shop.label(String) and
 Line.price to package-private`; then `; reads of Range.array and Range.length
-became accessor calls` when there were such reads. Lines are those of the files
+became accessor calls` when there were such reads, and `; wrote a permits
+clause on Option, as the move put permitted subtypes in another file`. Lines are those of the files
 before the move.
 
 Refusals: a top-level type ("Shop is a top-level type already ... name it as
@@ -320,7 +328,9 @@ field across the boundary whose accessor does more than return it ("Helper reads
 the field Range.length, which is private once Range is top-level, and
 Range.length() does more than return it. Replace each read with a call of
 Range.length() if that is what it should mean, then move it again."); a move
-that adds compile errors, with them.
+that adds compile errors, with them ("Fix what the errors name, then move it
+again; when the moved type's name clashes with another type's, rename one of
+them first."; until 2026-11-13 it said only to rename a clashing type).
 
 With `package` (roadmap #80, 2026-11-04), `name` is the file's only top-level
 type, and it moves to that package in the same source root: the file moves
@@ -727,6 +737,23 @@ becomes the body of the enum's own method (a `default`) or of the constant's ove
 been refused as "each case must be an arrow case giving an expression". The field form takes it
 as a case that is not a constant: without `as` the method form is chosen, with `as` `field` it is
 refused as any other.
+
+Issue #436, 2026-11-13: a static field or method named bare in a case is refused only when the enum
+does not see it by that name: it is a static of the enum or of a type around a member enum, and no
+type on the way out (the enum, then each type around it) declares a member of that name. A member
+enum's case may name its enclosing class's statics (`case CLASS -> CLASS_FLAGS;`); a constant of
+the enum of that name still refuses it ("the case of ARRAY uses ARRAY, a static of Path, which Kind
+does not see by that name. Qualify it first (Path.ARRAY), with replace_expression."). A static the
+enclosing class inherits is still refused; `NameCheck` judges a name an enum inherits.
+
+Issue #437, 2026-11-13: the selector's type is checked before the cases are read, so a switch over
+a primitive, a `String` or another type that is not an enum, interface or abstract class of the
+project is refused for that, not for its cases ("each case must be a type pattern", "an arrow
+case giving an expression"): "the switch is over int, which is not an enum, interface or abstract
+class of the project, so there is no type to declare size() on. Leave the switch as it is, or
+extract_function it to name it as a method here." (It had said "which is not an interface or
+abstract class of the project to declare size on.") An enum outside the project keeps its own
+wording.
 
 ## Merging duplicate methods (a composition)
 
