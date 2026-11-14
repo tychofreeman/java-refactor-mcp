@@ -728,6 +728,14 @@ been refused as "each case must be an arrow case giving an expression". The fiel
 as a case that is not a constant: without `as` the method form is chosen, with `as` `field` it is
 refused as any other.
 
+Issue #436, 2026-11-13: a static field or method named bare in a case is refused only when the enum
+does not see it by that name: it is a static of the enum or of a type around a member enum, and no
+type on the way out (the enum, then each type around it) declares a member of that name. A member
+enum's case may name its enclosing class's statics (`case CLASS -> CLASS_FLAGS;`); a constant of
+the enum of that name still refuses it ("the case of ARRAY uses ARRAY, a static of Path, which Kind
+does not see by that name. Qualify it first (Path.ARRAY), with replace_expression."). A static the
+enclosing class inherits is still refused; `NameCheck` judges a name an enum inherits.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`
