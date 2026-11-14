@@ -124,58 +124,17 @@ final class SubclassToStrategy {
         Precondition.that(
             () -> over.typeParameters().isEmpty(),
             () -> method + " has type parameters, which a function type cannot carry."));
-    for (CompilationUnit u : holding.units().values()) {
-      for (TypeDeclaration t : Nodes.all(u, TypeDeclaration.class)) {
-        if (t.getSuperclassType() != null
-            && t.getSuperclassType().resolveBinding() != null
-            && t.getSuperclassType().resolveBinding().getKey().equals(subKey)) {
-          throw new Refusal(t.getName() + " extends " + subName + ", which would be deleted.");
-        }
-      }
-    }
+    refuseSubclasses(holding, subKey, subName);
     usesInstance(subUnit, over, subName + "." + method);
     usesInstance(baseUnit, own, baseName + "." + method);
 
-    // Names.
-    String cap = Character.toUpperCase(method.charAt(0)) + method.substring(1);
-    String suffix =
-        subName.endsWith(baseName) && subName.length() > baseName.length()
-            ? subName.substring(0, subName.length() - baseName.length())
-            : subName;
-    String subFn = method + suffix;
-    String ownFn = "default" + cap;
-    String field = method;
-    for (Object o : base.bodyDeclarations()) {
-      List<String> names = new ArrayList<>();
-      if (o instanceof MethodDeclaration m) {
-        names.add(m.getName().getIdentifier());
-      } else if (o instanceof FieldDeclaration f) {
-        for (Object x : f.fragments()) {
-          String n = ((VariableDeclarationFragment) x).getName().getIdentifier();
-          if (n.equals(field)) {
-            field = method + "Function";
-          }
-        }
-      } else if (o instanceof TypeDeclaration t) {
-        names.add(t.getName().getIdentifier());
-      }
-      for (String n : names) {
-        if (n.equals(subFn) || n.equals(ownFn) || (type == null && n.equals(cap))) {
-          throw new Refusal(
-              baseName
-                  + " already declares "
-                  + n
-                  + ", the name the tool would write. Rename it first"
-                  + (n.equals(cap) ? ", or pass type." : "."));
-        }
-      }
-    }
+    Names naming = names(method, subName, baseName, base, type);
     boolean wide = Modifier.isPublic(sub.getModifiers());
     String vis = wide ? "public " : "";
     String params = paramsText(baseText, own);
     String thrown = thrownText(baseText, own);
     String ret = Nodes.source(baseText, own.getReturnType2());
-    String fnType = type == null ? cap : type;
+    String fnType = type == null ? naming.cap() : type;
     String sam = type == null ? method : samOf(project, baseFile, baseText, base, type, own);
     String indent = Indent.member(baseText, base, 2);
     String step = " ".repeat(Indent.step(baseText, 2));
@@ -186,11 +145,11 @@ final class SubclassToStrategy {
     List<?> members = base.bodyDeclarations();
     StringBuilder head = new StringBuilder();
     if (type == null) {
-      head.append(indent).append(vis).append("interface ").append(cap).append(" {\n");
+      head.append(indent).append(vis).append("interface ").append(naming.cap()).append(" {\n");
       head.append(in).append(ret).append(' ').append(method).append('(').append(params);
       head.append(')').append(thrown).append(";\n").append(indent).append("}\n\n");
     }
-    String fieldLine = indent + "private final " + fnType + " " + field + ";\n";
+    String fieldLine = indent + "private final " + fnType + " " + naming.field() + ";\n";
     FieldDeclaration lastField = null;
     for (FieldDeclaration f : base.getFields()) {
       if (!Modifier.isStatic(f.getModifiers())) {
@@ -211,9 +170,35 @@ final class SubclassToStrategy {
     if (constructors.isEmpty()) {
       String v = Modifier.isPublic(base.getModifiers()) ? "public " : "";
       made =
-          "\n" + indent + v + baseName + "(" + fnType + " " + field + ") {\n" + in + "this." + field
-              + " = " + field + ";\n" + indent + "}\n\n" + indent + v + baseName + "() {\n" + in
-              + "this(" + baseName + "::" + ownFn + ");\n" + indent + "}\n";
+          "\n"
+              + indent
+              + v
+              + baseName
+              + "("
+              + fnType
+              + " "
+              + naming.field()
+              + ") {\n"
+              + in
+              + "this."
+              + naming.field()
+              + " = "
+              + naming.field()
+              + ";\n"
+              + indent
+              + "}\n\n"
+              + indent
+              + v
+              + baseName
+              + "() {\n"
+              + in
+              + "this("
+              + baseName
+              + "::"
+              + naming.ownFn()
+              + ");\n"
+              + indent
+              + "}\n";
     }
     if (lastField == null) {
       edits.add(new TextEdit(top, top, head + fieldLine + made + (members.isEmpty() ? "" : "\n")));
@@ -224,68 +209,14 @@ final class SubclassToStrategy {
       int after = Lines.end(baseText, Nodes.end(lastField) - 1);
       edits.add(new TextEdit(after, after, fieldLine + made));
     }
-    // Each constructor takes the function; one with the old parameters passes the class's own.
-    for (MethodDeclaration c : constructors) {
-      List<String> names = new ArrayList<>();
-      for (Object p : c.parameters()) {
-        SingleVariableDeclaration v = (SingleVariableDeclaration) p;
-        if (v.isVarargs()) {
-          throw new Refusal(
-              "a constructor of "
-                  + baseName
-                  + " takes varargs, so it cannot take the function"
-                  + " last. Give it an array parameter first.");
-        }
-        names.add(v.getName().getIdentifier());
-      }
-      for (SimpleName n : Nodes.all(c, SimpleName.class)) {
-        if (n.getIdentifier().equals(field)
-            && n.resolveBinding() instanceof IVariableBinding v
-            && !v.isField()) {
-          throw new Refusal(
-              "a constructor of " + baseName + " already has a variable named " + field + ".");
-        }
-      }
-      int close = paramsEnd(baseText, c);
-      edits.add(new TextEdit(close, close, (names.isEmpty() ? "" : ", ") + fnType + " " + field));
-      List<?> statements = c.getBody().statements();
-      Object firstStatement = statements.isEmpty() ? null : statements.get(0);
-      if (firstStatement instanceof ConstructorInvocation call) {
-        int at = Nodes.end(call) - 2;
-        edits.add(new TextEdit(at, at, (call.arguments().isEmpty() ? "" : ", ") + field));
-      } else {
-        String assign = in + "this." + field + " = " + field + ";\n";
-        int at =
-            firstStatement instanceof SuperConstructorInvocation s
-                ? Lines.end(baseText, Nodes.end(s) - 1)
-                : Lines.end(baseText, c.getBody().getStartPosition());
-        edits.add(new TextEdit(at, at, assign));
-      }
-      String header = baseText.substring(headerStart(baseText, c), c.getBody().getStartPosition());
-      names.add(baseName + "::" + ownFn);
-      int end = Lines.end(baseText, Nodes.end(c) - 1);
-      edits.add(
-          new TextEdit(
-              end,
-              end,
-              "\n"
-                  + indent
-                  + header
-                  + "{\n"
-                  + in
-                  + "this("
-                  + String.join(", ", names)
-                  + ");\n"
-                  + indent
-                  + "}\n"));
-    }
+    constructorEdits(constructors, baseName, naming, baseText, edits, fnType, in, indent);
     // The method calls the function; its body and the override's become static methods.
     List<String> args = new ArrayList<>();
     for (Object p : own.parameters()) {
       args.add(((SingleVariableDeclaration) p).getName().getIdentifier());
     }
     boolean isVoid = ret.equals("void");
-    String call = field + "." + sam + "(" + String.join(", ", args) + ");";
+    String call = naming.field() + "." + sam + "(" + String.join(", ", args) + ");";
     String ownBody = Nodes.source(baseText, own.getBody());
     String overBody = Nodes.source(subText, over.getBody());
     edits.add(
@@ -303,7 +234,7 @@ final class SubclassToStrategy {
                 + "private static "
                 + ret
                 + " "
-                + ownFn
+                + naming.ownFn()
                 + "("
                 + params
                 + ")"
@@ -316,7 +247,7 @@ final class SubclassToStrategy {
                 + "static "
                 + Nodes.source(subText, over.getReturnType2())
                 + " "
-                + subFn
+                + naming.subFn()
                 + "("
                 + paramsText(subText, over)
                 + ")"
@@ -325,6 +256,166 @@ final class SubclassToStrategy {
                 + Indent.restep(overBody, indent, Indent.step(baseText, 2))
                 + "\n"));
 
+    Map<Path, List<TextEdit>> byFile =
+        useEdits(
+            baseFile,
+            edits,
+            holding,
+            opened,
+            subKey,
+            project,
+            subName,
+            baseName,
+            subConstructors,
+            subText,
+            naming);
+    List<String> chosen = new ArrayList<>();
+    chosen.add(baseType.getQualifiedName());
+    for (Object o : subUnit.imports()) {
+      ImportDeclaration imp = (ImportDeclaration) o;
+      if (!imp.isStatic() && !imp.isOnDemand()) {
+        chosen.add(imp.getName().getFullyQualifiedName());
+      }
+    }
+    byFile.put(opened.file(), null);
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
+            project,
+            holding.texts(),
+            byFile,
+            chosen,
+            "turning " + subName + " into a function of " + baseName,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
+    return new Outcome(
+        "turned "
+            + subName
+            + " into a function: "
+            + baseName
+            + " holds a "
+            + fnType
+            + " ("
+            + naming.field()
+            + "), "
+            + baseName
+            + "::"
+            + naming.subFn()
+            + " is "
+            + subName
+            + "'s "
+            + method
+            + " and "
+            + baseName
+            + "::"
+            + naming.ownFn()
+            + " its own; new "
+            + subName
+            + "(...) is new "
+            + baseName
+            + "(..., "
+            + baseName
+            + "::"
+            + naming.subFn()
+            + ") ("
+            + project.relative(opened.file())
+            + " deleted)"
+            + written.said(),
+        declared);
+  }
+
+  /**
+   * Adds to {@code edits} the function as each constructor's last parameter, and a constructor with
+   * the old parameters that passes the class's own.
+   */
+  private static void constructorEdits(
+      List<MethodDeclaration> constructors,
+      String baseName,
+      Names naming,
+      String baseText,
+      List<TextEdit> edits,
+      String fnType,
+      String in,
+      String indent) {
+    // Each constructor takes the function; one with the old parameters passes the class's own.
+    for (MethodDeclaration c : constructors) {
+      List<String> names = new ArrayList<>();
+      for (Object p : c.parameters()) {
+        SingleVariableDeclaration v = (SingleVariableDeclaration) p;
+        if (v.isVarargs()) {
+          throw new Refusal(
+              "a constructor of "
+                  + baseName
+                  + " takes varargs, so it cannot take the function"
+                  + " last. Give it an array parameter first.");
+        }
+        names.add(v.getName().getIdentifier());
+      }
+      for (SimpleName n : Nodes.all(c, SimpleName.class)) {
+        if (n.getIdentifier().equals(naming.field())
+            && n.resolveBinding() instanceof IVariableBinding v
+            && !v.isField()) {
+          throw new Refusal(
+              "a constructor of "
+                  + baseName
+                  + " already has a variable named "
+                  + naming.field()
+                  + ".");
+        }
+      }
+      int close = paramsEnd(baseText, c);
+      edits.add(
+          new TextEdit(
+              close, close, (names.isEmpty() ? "" : ", ") + fnType + " " + naming.field()));
+      List<?> statements = c.getBody().statements();
+      Object firstStatement = statements.isEmpty() ? null : statements.get(0);
+      if (firstStatement instanceof ConstructorInvocation call) {
+        int at = Nodes.end(call) - 2;
+        edits.add(new TextEdit(at, at, (call.arguments().isEmpty() ? "" : ", ") + naming.field()));
+      } else {
+        String assign = in + "this." + naming.field() + " = " + naming.field() + ";\n";
+        int at =
+            firstStatement instanceof SuperConstructorInvocation s
+                ? Lines.end(baseText, Nodes.end(s) - 1)
+                : Lines.end(baseText, c.getBody().getStartPosition());
+        edits.add(new TextEdit(at, at, assign));
+      }
+      String header = baseText.substring(headerStart(baseText, c), c.getBody().getStartPosition());
+      names.add(baseName + "::" + naming.ownFn());
+      int end = Lines.end(baseText, Nodes.end(c) - 1);
+      edits.add(
+          new TextEdit(
+              end,
+              end,
+              "\n"
+                  + indent
+                  + header
+                  + "{\n"
+                  + in
+                  + "this("
+                  + String.join(", ", names)
+                  + ");\n"
+                  + indent
+                  + "}\n"));
+    }
+  }
+
+  /**
+   * The edits of each file that uses the subclass, the superclass's {@code edits} among them: an
+   * import of it removed, a construction made the superclass's with the function, and any other
+   * name of it the superclass's; refused where it is told from the superclass.
+   */
+  private static Map<Path, List<TextEdit>> useEdits(
+      Path baseFile,
+      List<TextEdit> edits,
+      Holding holding,
+      Opened opened,
+      String subKey,
+      SourceProject project,
+      String subName,
+      String baseName,
+      List<MethodDeclaration> subConstructors,
+      String subText,
+      Names naming) {
     // Every use of the subclass.
     Map<Path, List<TextEdit>> byFile = new HashMap<>();
     byFile.put(baseFile, edits);
@@ -387,64 +478,72 @@ final class SubclassToStrategy {
               new TextEdit(
                   cic.getStartPosition(),
                   Nodes.end(cic),
-                  construction(text, cic, subConstructors, subText, baseName, subFn, where)));
+                  construction(
+                      text, cic, subConstructors, subText, baseName, naming.subFn(), where)));
         } else {
           es.add(new TextEdit(n.getStartPosition(), Nodes.end(n), baseName));
         }
       }
     }
-    List<String> chosen = new ArrayList<>();
-    chosen.add(baseType.getQualifiedName());
-    for (Object o : subUnit.imports()) {
-      ImportDeclaration imp = (ImportDeclaration) o;
-      if (!imp.isStatic() && !imp.isOnDemand()) {
-        chosen.add(imp.getName().getFullyQualifiedName());
+    return byFile;
+  }
+
+  /**
+   * The names the tool writes into the superclass: the interface, the two static methods and the
+   * field; refused when the superclass declares one already.
+   */
+  private static Names names(
+      String method, String subName, String baseName, TypeDeclaration base, String type) {
+    // Names.
+    String cap = Character.toUpperCase(method.charAt(0)) + method.substring(1);
+    String suffix =
+        subName.endsWith(baseName) && subName.length() > baseName.length()
+            ? subName.substring(0, subName.length() - baseName.length())
+            : subName;
+    String subFn = method + suffix;
+    String ownFn = "default" + cap;
+    String field = method;
+    for (Object o : base.bodyDeclarations()) {
+      List<String> names = new ArrayList<>();
+      if (o instanceof MethodDeclaration m) {
+        names.add(m.getName().getIdentifier());
+      } else if (o instanceof FieldDeclaration f) {
+        for (Object x : f.fragments()) {
+          String n = ((VariableDeclarationFragment) x).getName().getIdentifier();
+          if (n.equals(field)) {
+            field = method + "Function";
+          }
+        }
+      } else if (o instanceof TypeDeclaration t) {
+        names.add(t.getName().getIdentifier());
+      }
+      for (String n : names) {
+        if (n.equals(subFn) || n.equals(ownFn) || (type == null && n.equals(cap))) {
+          throw new Refusal(
+              baseName
+                  + " already declares "
+                  + n
+                  + ", the name the tool would write. Rename it first"
+                  + (n.equals(cap) ? ", or pass type." : "."));
+        }
       }
     }
-    byFile.put(opened.file(), null);
-    Edits.WrittenFiles written =
-        Edits.gatedFiles(
-            project,
-            holding.texts(),
-            byFile,
-            chosen,
-            "turning " + subName + " into a function of " + baseName,
-            "Nothing was changed.");
-    Stubs.Declared declared = written.declared();
-    return new Outcome(
-        "turned "
-            + subName
-            + " into a function: "
-            + baseName
-            + " holds a "
-            + fnType
-            + " ("
-            + field
-            + "), "
-            + baseName
-            + "::"
-            + subFn
-            + " is "
-            + subName
-            + "'s "
-            + method
-            + " and "
-            + baseName
-            + "::"
-            + ownFn
-            + " its own; new "
-            + subName
-            + "(...) is new "
-            + baseName
-            + "(..., "
-            + baseName
-            + "::"
-            + subFn
-            + ") ("
-            + project.relative(opened.file())
-            + " deleted)"
-            + written.said(),
-        declared);
+    return new Names(cap, subFn, ownFn, field);
+  }
+
+  private record Names(String cap, String subFn, String ownFn, String field) {}
+
+  /** Refuses when a class of {@code holding} extends the subclass, which would be deleted. */
+  private static void refuseSubclasses(Holding holding, String subKey, String subName) {
+    for (CompilationUnit u : holding.units().values()) {
+      for (TypeDeclaration t : Nodes.all(u, TypeDeclaration.class)) {
+        if (t.getSuperclassType() != null
+            && t.getSuperclassType().resolveBinding() != null
+            && t.getSuperclassType().resolveBinding().getKey().equals(subKey)) {
+          throw new Refusal(t.getName() + " extends " + subName + ", which would be deleted.");
+        }
+      }
+    }
   }
 
   /** Refuses a body that uses the instance: a function has none. */

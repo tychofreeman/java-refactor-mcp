@@ -1783,3 +1783,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   body), which the batch's gate does not see: only Maven's `-Werror` compile does. Rewritten as
   try/finally after the build failed.
 - No Java by hand.
+
+## 2026-11-14: strategy-run-split
+
+- `extract_variable` of the first operands of `"turned " + ... + " deleted)" + written.said()` was
+  refused ("no expression ... starts on line N"): JDT keeps a chain of `+` as one `InfixExpression`
+  with extended operands, so a prefix of it is no node. Tried: the prefix as the expression; the
+  whole argument would have taken `written` along. An `extract_variable` that takes a leading run of
+  a left-associative chain (`a + b + c` as `(a + b) + c`) would have made the message its own method.
+- Two `extract_function`s in a row by the line numbers of one read: the second took the wrong lines
+  (the first had shortened the method). `undo` put it back. Extracting bottom-up avoids it; a batch
+  that accepted the second's lines as of the read before the batch would too.
