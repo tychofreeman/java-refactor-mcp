@@ -72,19 +72,7 @@ final class Skeleton {
     if (type.isInterface() || Modifier.isAbstract(type.getModifiers())) {
       return List.of();
     }
-    List<IMethodBinding> concrete = new ArrayList<>();
-    List<IMethodBinding> abstracts = new ArrayList<>();
-    walk(type, concrete, abstracts, new HashSet<>());
-    List<IMethodBinding> out = new ArrayList<>();
-    for (IMethodBinding a : abstracts) {
-      boolean done =
-          concrete.stream().anyMatch(c -> c.isSubsignature(a))
-              || out.stream().anyMatch(o -> o.isSubsignature(a));
-      if (!done) {
-        out.add(a);
-      }
-    }
-    return out;
+    return leftAbstract(type, List.of());
   }
 
   private static void walk(
@@ -183,5 +171,26 @@ final class Skeleton {
       types.add(Extract.typeName(t));
     }
     return m.getName() + "(" + String.join(", ", types) + ")";
+  }
+
+  /**
+   * The abstract methods of {@code type} and its supertypes that neither its hierarchy nor {@code
+   * more} implements: what a class extending {@code type} and declaring {@code more} leaves
+   * abstract.
+   */
+  static List<IMethodBinding> leftAbstract(ITypeBinding type, List<IMethodBinding> more) {
+    List<IMethodBinding> concrete = new ArrayList<>(more);
+    List<IMethodBinding> abstracts = new ArrayList<>();
+    walk(type, concrete, abstracts, new HashSet<>());
+    List<IMethodBinding> out = new ArrayList<>();
+    for (IMethodBinding a : abstracts) {
+      boolean done =
+          concrete.stream().anyMatch(c -> c.isSubsignature(a))
+              || out.stream().anyMatch(o -> o.isSubsignature(a));
+      if (!done) {
+        out.add(a);
+      }
+    }
+    return out;
   }
 }

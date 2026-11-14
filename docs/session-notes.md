@@ -73,6 +73,9 @@ Each was chosen from options; the record named beside it has the options it beat
   guard or a try/catch; elsewhere a tool may change it and names each change.
   `preserve_exceptions` (one flag on every refactoring) makes it refuse instead;
   the changes are a separate part of the result.
+  Narrowed (2026-11-13, the user, roadmap #173, options in `docs/design.md`): for an integer
+  `/` or `%` and a dereference, only a guard that tests the divisor or the receiver keeps it
+  (`Guards`); leaving any other guard is reported.
 - Stubs: declared automatically by edits, no `create_from_usage` tool. A constructor stub whose
   arguments each fit one field of the class assigns them, not throws (the user, 2026-11-07:
   `Stubs.Round.setting`; the options are in `docs/design.md`). A static field read
@@ -85,6 +88,12 @@ Each was chosen from options; the record named beside it has the options it beat
   an undefined method gets a functional interface by its arity (`Supplier`,
   `Function`, `BiFunction`), a guess. Stub type variables are written by name
   when the target type declares them, erased otherwise.
+- Overloads written alike (`<T> T raise(T)`, `<T extends Throwable> T raise(T)`; #408,
+  2026-11-13, the brief's smallest option over a bound syntax and over `line` alone): `name` takes
+  their erased parameter types (`raise(Throwable)`), tried after the written ones
+  (`Declarations.find`, `erasedTypes`); `Declarations.methodLabel` is the label that names a method
+  (erased only when another of its type is written alike): use it, not `MemberMove.label`, for a
+  name a tool or a refusal hands back. `MemberMove.member` does not take erased names yet.
 - `rename` is one tool for every kind of name. When a line has two meanings it
   refuses, and `name` picks one (`Counter.count`, `local count`); not "the local
   wins".
@@ -169,6 +178,8 @@ Each was chosen from options; the record named beside it has the options it beat
 - The signature tools by line (the user, 2026-11-08, over the declaration's line only): `line` of a
   declaration or a call in place of `name`, `column` for two methods on a line; `ByLine.named`
   turns it into the declaring file and the name, so the tools themselves read `name` as before.
+  A tool that takes `line` routes it there before its own checks: `change_type` with
+  `type_parameter` did not, and refused `line` (#407, 2026-11-13; `Tools.changeType`).
 - `change_signature` (#342, 2026-11-12, the user asked for it and chose each): a new tool, over
   `add_throws`/`remove_throws` options on `change_type` (whose `return_type` stays); the
   implementations follow (overrides, lambdas, method-referenced methods, the returns of a body
@@ -219,6 +230,12 @@ Each was chosen from options; the record named beside it has the options it beat
   been outside every root, so `create_file` wrote it unchecked.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
+  An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
+  one the caller's `each` throws passes through unchanged. A type that `parseAll`'s files do not
+  hold is resolved only as far as the batch needed it, and its scope is gone after: the binding of
+  a single static import of its method threw (#411), so `parseAll` adds the files those imports
+  name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
+  declared methods" and returns none.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
@@ -231,7 +248,10 @@ Each was chosen from options; the record named beside it has the options it beat
   an executable file executable.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
-  under a source root.
+  under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
+  output that does not parse is refused as the tool's own fault, an edit's as syntax to fix.
+- An array creation (`new int[n]`, or `{1, 2}` alone) is `Effects.Kind.NEW_ARRAY`, not a change
+  (`changes()`); `Behavior.flow` refuses it in several landings only (`newArraysNow`, #178).
 - `Session` holds all per-project state (undo history, deferred flag, library
   index, last type check, `editing`, `preserveExceptions`); there is no static
   mutable state. `Server.Quiet` holds the per-server state.
@@ -261,7 +281,9 @@ Each was chosen from options; the record named beside it has the options it beat
   (each argument; code from outside the root, as an argument is, ran just before it).
   `Behavior.flow` is the gate without `NameCheck`, for a tool that runs it over
   several fragments itself. Per the policy, code that may throw
-  leaving a guard or a catching try is refused there; entering one is reported.
+  leaving a guard or a catching try is refused there; entering one is reported. Which guard
+  keeps a division or a dereference is `Guards` (#173): `operands` (null for anything else that
+  may throw, which any guard keeps), `left` (the conditions a move leaves), `tests`.
 - A refactoring reports or refuses a change to exceptional behavior through
   `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.
@@ -314,7 +336,11 @@ Each was chosen from options; the record named beside it has the options it beat
   parameters: names in the extracted nodes that bind to the class's type variables, closed over
   bounds, each `TypeParameter` copied as text. The class's clause is the names, passed to
   `AddSupertype.run` as the supertype's text. For `kind=class` (#145) the nodes are the whole
-  members and the old superclass's type; `PullUp` needed no change.
+  members and the old superclass's type; `PullUp` needed no change. Since #179 (2026-11-13) the
+  new class is abstract when the old superclass leaves an abstract method no member implements
+  (`Skeleton.leftAbstract`, which `unimplemented` now calls) or a member is abstract, and passes
+  through each old-superclass constructor the class's `super(...)` calls use
+  (`ExtractSupertype.constructors`); the defaults chosen are in the roadmap row.
 
 - A type written into code names a member type of the type around that code, or of one around
   that, by its simple name: `Extract.typeName(b, at)` (#328, 2026-11-10; `extract_function`
@@ -569,7 +595,13 @@ Each was chosen from options; the record named beside it has the options it beat
   -Dtest=RefactoringStressTest -Djrefactor.stress.root=<dir> -Djrefactor.stress.calls=300
   -Djrefactor.stress.seed=12 -Djrefactor.stress.counts=true`: about 3.5 s a call on 2 cores, 7 s
   an edit for `NarrowCheckStressTest`. Lang is Java 8 source, so it has no target for
-  `type_switch_to_method` over an enum (switch expressions and arrow cases only).
+  `type_switch_to_method` over an enum (switch expressions and arrow cases only). For that, and
+  for Java 17 shapes (records, sealed types, a named module), smallrye/jdk-classfile-backport
+  (2026-11-13, `docs/sessions/stress-enum-switch.md`): cloned the same way to a directory outside
+  the worktree, no `./mvnw` either, 258 files, about 1.5 s a call; `-Djrefactor.stress.tools=
+  type_switch_to_method_enum,add_parameter_enum_values` for the enum entries. `.refusals=true` also
+  prints each applied call's result. About 40% of the enum entry's picks there are switches over
+  `int` constants (the picker reads no bindings), refused by design.
 - The stress tests see only compile errors. A tool that moves expressions or
   members also needs probes for evaluation order and name capture: probes found
   seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`),

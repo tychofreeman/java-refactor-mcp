@@ -9,6 +9,7 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.ArrayCreation;
+import org.eclipse.jdt.core.dom.ArrayInitializer;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.BreakStatement;
 import org.eclipse.jdt.core.dom.CastExpression;
@@ -219,6 +220,14 @@ final class Effects {
           @Override
           public boolean visit(ArrayCreation n) {
             add(Kind.NEW_ARRAY, n, null);
+            return true;
+          }
+
+          @Override
+          public boolean visit(ArrayInitializer n) {
+            if (!(n.getParent() instanceof ArrayCreation)) {
+              add(Kind.NEW_ARRAY, n, null);
+            }
             return true;
           }
 
@@ -508,5 +517,19 @@ final class Effects {
    */
   boolean changesNow() {
     return !normalFlowChanges().isEmpty();
+  }
+
+  /**
+   * The arrays the code creates when it runs, outside lambdas and anonymous class bodies: {@code
+   * new int[n]}, and an initializer written alone, {@code {1, 2}}.
+   */
+  List<ASTNode> newArraysNow() {
+    List<ASTNode> out = new ArrayList<>();
+    for (Effect e : all) {
+      if (e.kind() == Kind.NEW_ARRAY && !e.deferred()) {
+        out.add(e.node());
+      }
+    }
+    return out;
   }
 }

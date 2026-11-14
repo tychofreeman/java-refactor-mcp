@@ -12,16 +12,22 @@ import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.ParameterizedType;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
+import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.ThrowStatement;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.TypeParameter;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /** Edits of whole declarations, found by name: adding members to a type, replacing one. */
@@ -390,6 +396,15 @@ final class Declarations {
         found.add(d);
       }
     }
+    if (found.isEmpty() && params != null) {
+      for (Object o : owner.decl().bodyDeclarations()) {
+        if (o instanceof MethodDeclaration m
+            && names(m).contains(memberName)
+            && params.equals(erasedTypes(m))) {
+          found.add(m);
+        }
+      }
+    }
     if (found.isEmpty()) {
       throw new Refusal(
           owner.label()
@@ -515,7 +530,7 @@ final class Declarations {
   /** "b(int, String)" for a method, the names for a field, the name for a type. */
   private static String label(BodyDeclaration d) {
     if (d instanceof MethodDeclaration m) {
-      return m.getName().getIdentifier() + "(" + String.join(", ", types(m)) + ")";
+      return methodLabel(m);
     }
     if (d instanceof Initializer) {
       return "an initializer";
@@ -732,5 +747,75 @@ final class Declarations {
   /** The offset of the last character of {@code node}. */
   private static int end(ASTNode node) {
     return node.getStartPosition() + node.getLength() - 1;
+  }
+
+  /**
+   * How a name tells {@code m} apart from the other methods of its type: its written parameter
+   * types ({@code raise(T)}), or, when another method there is written alike, its erased ones
+   * ({@code raise(Throwable)}), which {@link #find} also takes.
+   */
+  static String methodLabel(MethodDeclaration m) {
+    String written = MemberMove.label(m);
+    if (m.getParent() instanceof AbstractTypeDeclaration t) {
+      for (Object o : t.bodyDeclarations()) {
+        if (o != m
+            && o instanceof MethodDeclaration other
+            && MemberMove.label(other).equals(written)) {
+          return m.getName().getIdentifier() + "(" + String.join(", ", erasedTypes(m)) + ")";
+        }
+      }
+    }
+    return written;
+  }
+
+  /**
+   * {@code m}'s parameter types erased, read from the syntax: a type variable of the method or of a
+   * type around it becomes the erasure of its first bound, or {@code Object}, and type arguments
+   * are dropped ({@code Throwable} for {@code T} of {@code <T extends Throwable>}).
+   */
+  static List<String> erasedTypes(MethodDeclaration m) {
+    List<String> types = new ArrayList<>();
+    for (Object o : m.parameters()) {
+      SingleVariableDeclaration p = (SingleVariableDeclaration) o;
+      types.add(erasure(p.getType(), m) + (p.isVarargs() ? "..." : ""));
+    }
+    return types;
+  }
+
+  private static String erasure(Type type, ASTNode at) {
+    if (type instanceof ArrayType a) {
+      return erasure(a.getElementType(), at) + "[]".repeat(a.getDimensions());
+    }
+    if (type instanceof ParameterizedType p) {
+      return erasure(p.getType(), at);
+    }
+    if (type instanceof SimpleType s && s.getName().isSimpleName()) {
+      TypeParameter v = typeVariable(s.getName().getFullyQualifiedName(), at);
+      if (v != null) {
+        return v.typeBounds().isEmpty()
+            ? "Object"
+            : erasure((Type) v.typeBounds().get(0), v.getParent());
+      }
+    }
+    return erased(List.of(type.toString().replace(" ", ""))).get(0);
+  }
+
+  /** The type parameter {@code name} declared by the method or type nearest around {@code at}. */
+  private static TypeParameter typeVariable(String name, ASTNode at) {
+    for (ASTNode n = at; n != null; n = n.getParent()) {
+      List<?> declared =
+          switch (n) {
+            case MethodDeclaration m -> m.typeParameters();
+            case TypeDeclaration t -> t.typeParameters();
+            case RecordDeclaration r -> r.typeParameters();
+            default -> List.of();
+          };
+      for (Object o : declared) {
+        if (((TypeParameter) o).getName().getIdentifier().equals(name)) {
+          return (TypeParameter) o;
+        }
+      }
+    }
+    return null;
   }
 }

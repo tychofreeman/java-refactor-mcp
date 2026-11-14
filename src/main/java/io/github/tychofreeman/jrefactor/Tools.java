@@ -1759,7 +1759,7 @@ final class Tools {
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {
     if (args.has("type_parameter")) {
-      return TypeParameters.bound(project, args);
+      return TypeParameters.bound(project, args.has("line") ? ByLine.named(project, args) : args);
     }
     if (args.has("parameter") || args.flag("return_type")) {
       return Signatures.changeType(project, ByLine.named(project, args));
