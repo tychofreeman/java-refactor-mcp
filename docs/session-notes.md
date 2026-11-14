@@ -311,6 +311,9 @@ Each was chosen from options; the record named beside it has the options it beat
   up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
   (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,
   `Declarations` and the signature tools keep their own resolvers (roadmap #74).
+- A node named by `line` and `column` is found by `Opened.onLine`, narrowed by `Opened.atColumn`,
+  with `Opened.several` when one is meant (or `startingOn` with a `column`): one refusal wording
+  for every tool (#520). A tool that takes `column` uses them, not its own visitor or line scan.
 - What code reads, writes and calls comes from `Effects.of(node)`
   (`docs/sessions/one-effects-analysis.md`); a new effect kind goes in
   `Effects.Kind`. `Effects.mayThrow()` is the syntax-only "may throw" (a `throw`, an `assert`, an

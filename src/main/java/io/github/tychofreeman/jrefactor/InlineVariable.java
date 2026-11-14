@@ -32,7 +32,7 @@ final class InlineVariable {
     Path file = opened.file();
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    IVariableBinding variable = variableAt(unit, text, name, line, column);
+    IVariableBinding variable = variableAt(opened, name, line, column);
     if (variable.isField()) {
       throw new Refusal(
           name
@@ -147,37 +147,23 @@ final class InlineVariable {
   }
 
   /** The one variable named {@code name} on {@code line}, by column if it is needed. */
-  private static IVariableBinding variableAt(
-      CompilationUnit unit, String text, String name, int line, Integer column) {
+  private static IVariableBinding variableAt(Opened opened, String name, int line, Integer column) {
     List<SimpleName> named = new ArrayList<>();
-    for (SimpleName node : Nodes.all(unit, SimpleName.class)) {
-      if (node.getIdentifier().equals(name)
-          && Lines.number(text, node.getStartPosition()) == line) {
+    for (SimpleName node : opened.onLine(line, SimpleName.class)) {
+      if (node.getIdentifier().equals(name)) {
         named.add(node);
       }
     }
     List<IVariableBinding> found = new ArrayList<>();
-    for (SimpleName n : named) {
-      if (column != null && n.getStartPosition() - Lines.offsetOf(text, line) + 1 != column) {
-        continue;
-      }
+    List<SimpleName> first = new ArrayList<>();
+    for (SimpleName n : named.isEmpty() ? named : opened.atColumn(named, line, column, name)) {
       if (n.resolveBinding() instanceof IVariableBinding v) {
         IVariableBinding decl = v.getVariableDeclaration();
         if (found.stream().noneMatch(f -> f.isEqualTo(decl))) {
           found.add(decl);
+          first.add(n);
         }
       }
-    }
-    if (found.isEmpty() && column != null && !named.isEmpty()) {
-      throw new Refusal(
-          name
-              + (named.size() == 1 ? " starts at column " : " starts at columns ")
-              + Nodes.columns(named, Lines.offsetOf(text, line))
-              + " of line "
-              + line
-              + ", not "
-              + column
-              + ". Pass one of them.");
     }
     if (found.isEmpty()) {
       throw new Refusal(
@@ -189,13 +175,7 @@ final class InlineVariable {
               + " used.");
     }
     if (found.size() > 1) {
-      throw new Refusal(
-          name
-              + " means two different variables on line "
-              + line
-              + ", at columns "
-              + Nodes.columns(named, Lines.offsetOf(text, line))
-              + "; pass column, the one of the one you mean.");
+      throw opened.several(first, line, "variables named " + name);
     }
     return found.get(0);
   }

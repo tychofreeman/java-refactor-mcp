@@ -100,4 +100,31 @@ class OpenedTest {
             + " com/example/Shapes.java declares Shapes.",
         e.getMessage());
   }
+
+  @Test
+  void picksTheNodeOnALineByColumn(@TempDir Path root) throws Exception {
+    Opened opened = open(root);
+    IfStatement inner =
+        opened.startingOn(5, 18, IfStatement.class, x -> true, "if statement", "if statements");
+    assertEquals(17, inner.getStartPosition() - opened.unit().getPosition(5, 0));
+    Refusal wrong =
+        assertThrows(
+            Refusal.class,
+            () ->
+                opened.startingOn(
+                    5, 7, IfStatement.class, x -> true, "if statement", "if statements"));
+    assertEquals(
+        "the if statement starts at columns 5 and 18 of line 5, not 7. Pass one of them.",
+        wrong.getMessage());
+    Refusal two =
+        assertThrows(
+            Refusal.class,
+            () ->
+                opened.startingOn(
+                    5, null, IfStatement.class, x -> true, "if statement", "if statements"));
+    assertEquals(
+        "2 if statements start on line 5, at columns 5 and 18. Pass column, the one where the one"
+            + " you mean starts.",
+        two.getMessage());
+  }
 }
