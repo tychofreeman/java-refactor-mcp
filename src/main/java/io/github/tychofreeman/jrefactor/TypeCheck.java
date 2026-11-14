@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,7 +54,9 @@ final class TypeCheck {
     Map<Path, String> hashes = hashes(files);
     Session session = project.session();
     Counted last = session.lastCount;
-    if (last != null && last.project().equals(project)) {
+    if (last != null
+        && last.project().equals(project)
+        && namedModule(project, last.hashes().keySet()) == namedModule(project, files)) {
       if (last.hashes().equals(hashes)) {
         session.lastParsed = List.of();
         return new TreeMap<>(last.counts());
@@ -174,6 +177,7 @@ final class TypeCheck {
   private static Map<String, Integer> count(
       SourceProject project, List<Path> files, Map<Path, Map<String, Headers.Decl>> headers) {
     Map<String, Integer> counts = new TreeMap<>();
+    boolean namedModule = project.namedModule();
     project.session().parses++;
     Jdt.parseAll(
         project,
@@ -188,7 +192,7 @@ final class TypeCheck {
           }
           String rel = project.relative(file);
           for (IProblem problem : cu.getProblems()) {
-            if (problem.isError()) {
+            if (counts(problem, namedModule)) {
               counts.merge(rel + " | " + problem.getMessage(), 1, Integer::sum);
             }
           }
@@ -283,7 +287,7 @@ final class TypeCheck {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   /** The version of what {@link #save} writes; a file of another version is not loaded. */
-  private static final int FORMAT = 3;
+  private static final int FORMAT = 4;
 
   /** What a count depends on besides the files: the source roots and the classpath. */
   private static String build(SourceProject project) {
@@ -293,5 +297,27 @@ final class TypeCheck {
   /** The files the last {@link #errors} of {@code project} parsed; empty when it parsed none. */
   static List<Path> lastParsed(SourceProject project) {
     return project.session().lastParsed;
+  }
+
+  /**
+   * Whether {@code problem} is an error the gate counts. JDT's headless parser puts every unit in
+   * the unnamed module, so in a {@link SourceProject#namedModule named module} a sealed type that
+   * permits a class of another package of the module reads as an error javac does not report
+   * (#438); that one is not counted.
+   */
+  private static boolean counts(IProblem problem, boolean namedModule) {
+    return problem.isError()
+        && !(namedModule && problem.getID() == IProblem.SealedPermittedTypeOutsideOfPackage);
+  }
+
+  /**
+   * Whether {@code files} hold a {@code module-info.java} of one of {@code project}'s source roots:
+   * a count made with one and without one differ in files that did not change ({@link #counts}).
+   */
+  private static boolean namedModule(SourceProject project, Collection<Path> files) {
+    return files.stream()
+        .anyMatch(f ->
+            f.getFileName().toString().equals("module-info.java")
+                && project.sourceRoots().contains(f.getParent()));
   }
 }

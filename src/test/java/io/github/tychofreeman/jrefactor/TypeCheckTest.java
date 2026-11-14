@@ -158,4 +158,29 @@ class TypeCheckTest {
 
     assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project));
   }
+
+  /**
+   * A module-info.java added or removed changes what is counted in files that did not change
+   * (#438): the count after either is the count from scratch.
+   */
+  @Test
+  void aModuleInfoAddedOrRemovedRecountsEveryFile(@TempDir Path root) throws Exception {
+    Files.createDirectories(root.resolve("a"));
+    Files.createDirectories(root.resolve("b"));
+    Files.writeString(
+        root.resolve("a/Shape.java"),
+        "package a;\n\npublic sealed interface Shape permits b.Circle {}\n");
+    Files.writeString(
+        root.resolve("b/Circle.java"),
+        "package b;\n\npublic final class Circle implements a.Shape {}\n");
+    SourceProject project = SourceProject.of(root);
+    assertEquals(1, TypeCheck.errors(project).size());
+
+    Files.writeString(root.resolve("module-info.java"), "module m {}\n");
+    assertEquals(Map.of(), TypeCheck.errors(project));
+    assertEquals(TypeCheck.uncached(project), TypeCheck.errors(project));
+
+    Files.delete(root.resolve("module-info.java"));
+    assertEquals(1, TypeCheck.errors(project).size());
+  }
 }

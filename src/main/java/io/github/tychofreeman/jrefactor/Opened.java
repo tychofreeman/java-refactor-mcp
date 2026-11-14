@@ -104,15 +104,24 @@ record Opened(SourceProject project, String rel, Path file, String text, Compila
       }
     }
     if (kind != null) {
+      String others =
+          classes.isEmpty()
+              ? " Its file " + rel + " declares no class or interface to send in its place."
+              : " Send the name of one: " + rel + " declares " + String.join(", ", classes) + ".";
       throw new Refusal(
-          name
-              + " is "
-              + kind
-              + ", and this tool takes a class or interface here. Send the name of one: "
-              + rel
-              + " declares "
-              + (classes.isEmpty() ? "none" : String.join(", ", classes))
-              + ".");
+          name + " is " + kind + ", and this tool takes a class or interface here." + others);
     }
+  }
+
+  /** The top-level class, interface or record named {@code name}, which must resolve. */
+  AbstractTypeDeclaration classOrRecord(String name) {
+    for (Object o : unit.types()) {
+      if (o instanceof RecordDeclaration r
+          && r.getName().getIdentifier().equals(name)
+          && r.resolveBinding() != null) {
+        return r;
+      }
+    }
+    return topLevel(name);
   }
 }

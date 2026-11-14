@@ -93,6 +93,13 @@ class without one (2026-11-07), and fix imports; lines are 1-based.
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 
+The compile errors are JDT's, which checks every file as the unnamed module (2026-11-13, #438).
+In a project with `module-info.java` in a source root, the one error that reading adds and javac
+does not report, a sealed type permitting a class of another package ("Permitted type X in an
+unnamed module should be declared in the same package"), is not counted, so a `rename` or `move`
+that carries it to another file or name is not refused for it. Nothing else of the module is
+checked: `requires` and `exports` are not enforced.
+
 When the JDT compiler itself throws while type-checking (ECJ fails this way on some code that does
 not compile, issue #405), the call is refused, every file put back: "The Java compiler (ECJ) failed
 while type-checking, so nothing was changed: <exception> (in <where in ECJ>). It fails this way on
@@ -713,6 +720,13 @@ each is written in the file of its outermost type. A local or anonymous class is
 A member type whose body is on one line (`record Circle(double r) implements Shape {}`) is opened
 up with its closing brace at the indentation of its header (`MemberMove.appendTo`, which had put
 it at column 0).
+
+Issue #435, 2026-11-13: a case may be a bare `throw` (`default -> throw new
+IllegalArgumentException(...);`), read as the block `{ throw ...; }`: in the method form the throw
+becomes the body of the enum's own method (a `default`) or of the constant's override. It had
+been refused as "each case must be an arrow case giving an expression". The field form takes it
+as a case that is not a constant: without `as` the method form is chosen, with `as` `field` it is
+refused as any other.
 
 ## Merging duplicate methods (a composition)
 
@@ -1375,6 +1389,8 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   it in a variable first"), a body that uses `super`. A receiver that may be null is
   reported as a change to exceptional behavior (it now fails where the body uses it),
   and refused under `preserve_exceptions`.
+- A method of a record inlines as a class's does (issue #439, 2026-11-13); one of an enum is
+  still refused, naming the file's classes and interfaces, or saying it declares none.
 - A bare field of the body that a local or parameter of the calling member hides is
   qualified, `this.count` (or the type, for a static), so it keeps meaning the field
   (roadmap #93).

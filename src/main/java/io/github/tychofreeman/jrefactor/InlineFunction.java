@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
@@ -41,7 +42,6 @@ import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -71,7 +71,7 @@ final class InlineFunction {
     Path file = opened.file();
     String text = opened.text();
     CompilationUnit unit = opened.unit();
-    TypeDeclaration type = opened.topLevel(typeName);
+    AbstractTypeDeclaration type = opened.classOrRecord(typeName);
     BodyDeclaration declared = MemberMove.member(type, typeName, member, rel, "inline");
     Precondition.require(
         Precondition.that(

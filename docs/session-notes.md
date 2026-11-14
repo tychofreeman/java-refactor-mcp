@@ -236,6 +236,10 @@ Each was chosen from options; the record named beside it has the options it beat
   a single static import of its method threw (#411), so `parseAll` adds the files those imports
   name (`Jdt.staticImported`); `getDeclaredMethods()` of such a type logs "Could not retrieve
   declared methods" and returns none.
+- What the gate counts is `TypeCheck.counts` (every JDT error but those a named module would not
+  have, #438); both the full and the narrowed count go through it, and a change to what it drops
+  bumps `TypeCheck.FORMAT`, so saved counts are made again. A count depends on whether a source
+  root holds `module-info.java`: the narrowed check starts over when that changes.
 - Append to a file (the friction log, a CI job) with `replace_text` `append=true`,
   not a shell redirect.
 - A refusal about a column names the columns where the thing does start
@@ -259,7 +263,9 @@ Each was chosen from options; the record named beside it has the options it beat
   name is refused saying which it is and listing the file's classes and interfaces
   (`Opened.notAClass`, #155). The other callers of `MemberMove.typeNamed` with their own
   wording (`PullUp`, `MoveMember`, `AddResult`, `InlineClass`, `SubclassToStrategy`) were not
-  changed.
+  changed. `Opened.classOrRecord` also takes a record (#439, 2026-11-13: `inline` only, so far);
+  `MemberMove.member` takes any `AbstractTypeDeclaration`. A tool that should take records
+  switches to it once a golden case shows its algorithm holds for one.
 - A new tool starts from `Opened` (read, parse, find the target) and lists its
   up-front checks as `Precondition`s; mid-algorithm refusals stay `throw`
   (`docs/sessions/refactoring-shape.md`). `Rename`, `MoveType`, `Extract`,
@@ -416,7 +422,9 @@ Each was chosen from options; the record named beside it has the options it beat
   text into `EnumField.field`, checks them with `NameCheck`, and applies the members by
   `Declarations.plan` onto the edited enum text (one whole-file edit for the enum's file, the
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
-  name its refusal gives the case's variable ("the switch's value" for an enum).
+  name its refusal gives the case's variable ("the switch's value" for an enum). A bare `throw`
+  after the arrow is a body as a block is (`EnumSwitch.arms`, #435); `TypeSwitch.switchCases`
+  still refuses one.
   The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
   enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added
   by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
@@ -703,6 +711,11 @@ Each was chosen from options; the record named beside it has the options it beat
 - JDT's `TypePattern.getPatternVariable()` returns a node without bindings; the parse resolves
   `getPatternVariable2()` (2026-11-06, `TypeSwitch`).
 - JDT's `setEnvironment` needs one encoding per source path entry.
+- JDT's headless parser checks every file as the unnamed module: `setEnvironment` has no module
+  path, and the resolver gives each unit a null module name (#438, 2026-11-13, by `javap`; no
+  public API reaches it). A named module's errors that differ are filtered in `TypeCheck.counts`
+  (only the sealed permits one so far); `module-info.java`'s own errors are pre-existing noise
+  (every exported package reads as missing), and `create_file` of one is refused as not parsing.
 - JDT's `SimpleName.isDeclaration()` is false for a record's name (and a constructor's): test
   `t.getName() == n` on the `AbstractTypeDeclaration` too (2026-11-08, `Rename.checkMeanings`).
 - Tool descriptions say what a tool does: no refusal lists, nothing every tool shares (that is
@@ -713,6 +726,13 @@ Each was chosen from options; the record named beside it has the options it beat
   its neighbours makes Spotless re-indent the block, and `ServerTest`'s
   runs-of-spaces check then fails. Write new lines at the block's indentation
   (twice on 2026-11-04, #151 and #153).
+- A project type `Jdt.parseAll` reads from the source path (not one of its files) is resolved
+  only as far as the batch needs it, and JDT frees its scope when the batch ends: asked later,
+  `getDeclaredMethods()` logs "Could not retrieve declared methods" and answers none (#431).
+  `Jdt.completeMembers` asks, during the batch, each type a unit's names bind to and its
+  supertypes, member types and declaring class; a type reached only through another binding (a
+  method's parameter or return type) is not, so read its members inside `parseAll`'s callback or
+  parse its file with the batch. `Jdt.parse` of one file keeps them.
 - Bindings from two parses (the tool's `Opened` parse and `Holding`'s or
   `parseAll`'s) do not compare: `overrides`, `isSubTypeCompatible` and `isEqualTo`
   return false. Compare keys or qualified names, or take both from one parse (hit

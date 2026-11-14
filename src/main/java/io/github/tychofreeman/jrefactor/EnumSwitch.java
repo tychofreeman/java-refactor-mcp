@@ -23,10 +23,12 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.YieldStatement;
 
 /**
@@ -393,7 +395,8 @@ final class EnumSwitch {
 
   /**
    * The cases of a switch's {@code statements}, each an arrow case giving an expression (or, in a
-   * statement, an expression statement or a block), checked to use only what the enum sees.
+   * statement, an expression statement), a block or a throw, checked to use only what the enum
+   * sees.
    */
   private static List<Arm> arms(
       List<?> statements, boolean value, ITypeBinding e, String name, String v) {
@@ -408,7 +411,9 @@ final class EnumSwitch {
               ? y.getExpression()
               : !value && next instanceof ExpressionStatement s
                   ? s.getExpression()
-                  : next instanceof Block ? (Block) next : null;
+                  : next instanceof Block || next instanceof ThrowStatement
+                      ? (Statement) next
+                      : null;
       if (!c.isSwitchLabeledRule() || body == null) {
         throw new Refusal(
             "each case must be an arrow case giving "
