@@ -17,7 +17,6 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ExpressionMethodReference;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IBinding;
@@ -26,20 +25,13 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PackageDeclaration;
 import org.eclipse.jdt.core.dom.QualifiedName;
-import org.eclipse.jdt.core.dom.QualifiedType;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
-import org.eclipse.jdt.core.dom.SuperFieldAccess;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
-import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.core.dom.TypeMethodReference;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 /**
@@ -376,7 +368,8 @@ final class MoveType {
               return true;
             }
             boolean inside = moved.inside(n.getStartPosition());
-            String q = inside && unqualified(n) ? qualifier(b, type, moved.outerLabel()) : null;
+            String q =
+                inside && !Nodes.qualified(n) ? qualifier(b, type, moved.outerLabel()) : null;
             if (q != null) {
               edits.add(new TextEdit(n.getStartPosition(), n.getStartPosition(), q + "."));
               qualifiers.add(q.contains(".") ? q.substring(0, q.indexOf('.')) : q);
@@ -466,22 +459,6 @@ final class MoveType {
             widened.put(body.getStartPosition(), moved.label(d));
           }
         });
-  }
-
-  /** Whether {@code n} names something without a qualifier before it. */
-  private static boolean unqualified(SimpleName n) {
-    StructuralPropertyDescriptor where = n.getLocationInParent();
-    if (where == MethodInvocation.NAME_PROPERTY) {
-      return ((MethodInvocation) n.getParent()).getExpression() == null;
-    }
-    return where != QualifiedName.NAME_PROPERTY
-        && where != FieldAccess.NAME_PROPERTY
-        && where != SuperFieldAccess.NAME_PROPERTY
-        && where != SuperMethodInvocation.NAME_PROPERTY
-        && where != QualifiedType.NAME_PROPERTY
-        && where != ExpressionMethodReference.NAME_PROPERTY
-        && where != TypeMethodReference.NAME_PROPERTY
-        && where != SuperMethodReference.NAME_PROPERTY;
   }
 
   /**

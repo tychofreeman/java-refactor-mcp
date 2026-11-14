@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -171,5 +172,36 @@ class NodesTest {
     InfixExpression sum = Nodes.all(unit, InfixExpression.class).get(0);
     assertEquals("1 +   2", Nodes.source(text, sum));
     assertEquals(text.indexOf(" }"), Nodes.end(sum) + 1);
+  }
+
+  @Test
+  void aNameAfterAQualifierIsQualifiedWhereverItStands() {
+    CompilationUnit unit =
+        Jdt.parseSyntax(
+            """
+            class C extends B {
+              java.util.List<String> q;
+              void m(C a) {
+                a.q.size();
+                this.q = super.q;
+                super.m(a);
+                a.m(a);
+                Runnable r1 = a::m, r2 = C::m, r3 = super::m;
+                m(a);
+              }
+            }
+            """);
+    List<String> qualified = new ArrayList<>();
+    List<String> bare = new ArrayList<>();
+    for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
+      if (!n.isDeclaration()) {
+        (Nodes.qualified(n) ? qualified : bare).add(n.getIdentifier());
+      }
+    }
+    assertEquals(
+        List.of("util", "List", "q", "size", "q", "q", "m", "m", "m", "m", "m"), qualified);
+    assertEquals(
+        List.of("B", "java", "String", "C", "a", "a", "a", "a", "Runnable", "a", "C", "m", "a"),
+        bare);
   }
 }

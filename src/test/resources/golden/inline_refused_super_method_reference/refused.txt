@@ -1,0 +1,1 @@
+the body of Sub.up uses super, which means Sub's superclass only inside it. Keep the method.

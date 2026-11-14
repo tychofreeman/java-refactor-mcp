@@ -1814,3 +1814,9 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - One test edit by hand (a Python string replace in `NamesTest`): half applied, half missed the formatted text and was
   redone with `replace_text`, which covered it all: no tool was missing.
+
+## 2026-11-14: qualified-name-predicate
+
+- No Java by hand. `inline` of `MoveType.unqualified` (`return !Nodes.qualified(n);`) into
+  `inside && unqualified(n)` wrote `inside && (!Nodes.qualified(n))`: a prefix `!` needs no
+  parentheses after `&&`. One `replace_text` removed them.

@@ -651,16 +651,11 @@ final class MoveMember {
     return out;
   }
 
+  /** Whether {@code node} is a name after a qualifier or the name a variable declares. */
   private static boolean isNamePart(SimpleName node) {
-    ASTNode parent = node.getParent();
-    if (parent instanceof FieldAccess fa) {
-      return fa.getName() == node;
-    }
-    if (parent instanceof QualifiedName qn) {
-      return qn.getName() == node;
-    }
-    return parent instanceof org.eclipse.jdt.core.dom.VariableDeclarationFragment vdf
-        && vdf.getName() == node;
+    return Nodes.qualified(node)
+        || node.getParent() instanceof org.eclipse.jdt.core.dom.VariableDeclarationFragment vdf
+            && vdf.getName() == node;
   }
 
   /** The call rewritten to pass the instance (or nothing, for a static method). */
