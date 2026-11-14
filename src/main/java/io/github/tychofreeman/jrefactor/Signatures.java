@@ -296,7 +296,7 @@ final class Signatures {
                     + " not both."));
     MethodFamily family = MethodFamily.of(project, args);
     SignatureChange change = new SignatureChange(family);
-    checkPrimitiveUses(family, args, type, returns);
+    checkTypeDecidedUses(family, args, type, returns);
     if (returns) {
       for (Decl d : family.decls) {
         requireReturnType(d, family);
@@ -378,23 +378,23 @@ final class Signatures {
 
   /**
    * Refuses a change of or to a primitive or boxed type where a use decides the result by the type
-   * ({@link PrimitiveUses}): each call's result, for the return type; each use of the parameter in
-   * the family's bodies, for a parameter.
+   * ({@link TypeDecidedUses}): each call's result, for the return type; each use of the parameter
+   * in the family's bodies, for a parameter.
    */
-  static void checkPrimitiveUses(MethodFamily family, Args args, String type, boolean returns) {
+  static void checkTypeDecidedUses(MethodFamily family, Args args, String type, boolean returns) {
     IMethodBinding target = family.target.resolveBinding();
     if (target == null) {
       return;
     }
     if (returns) {
       ITypeBinding before = target.getReturnType();
-      if (!PrimitiveUses.applies(before, type)) {
+      if (!TypeDecidedUses.applies(before, type)) {
         return;
       }
-      boolean boxed = PrimitiveUses.anyBoxed(before, type);
+      boolean boxed = TypeDecidedUses.anyBoxed(before, type);
       for (Call c : family.calls) {
         if (c.node() instanceof Expression x) {
-          PrimitiveUses.check(
+          TypeDecidedUses.check(
               x, family.label + "'s result", before.getName(), type, boxed, c.file().rel());
         }
       }
@@ -403,10 +403,10 @@ final class Signatures {
     String parameter = args.required("parameter");
     int at = family.index(parameter, "parameter", false);
     ITypeBinding before = target.getParameterTypes()[at];
-    if (!PrimitiveUses.applies(before, type)) {
+    if (!TypeDecidedUses.applies(before, type)) {
       return;
     }
-    boolean boxed = PrimitiveUses.anyBoxed(before, type);
+    boolean boxed = TypeDecidedUses.anyBoxed(before, type);
     for (Decl d : family.decls) {
       IVariableBinding p =
           ((SingleVariableDeclaration) d.m().parameters().get(at)).resolveBinding();
@@ -416,7 +416,7 @@ final class Signatures {
       for (SimpleName n : Nodes.all(d.m().getBody(), SimpleName.class)) {
         if (n.resolveBinding() instanceof IVariableBinding v
             && v.getVariableDeclaration().getKey().equals(p.getKey())) {
-          PrimitiveUses.check(n, parameter, before.getName(), type, boxed, d.file().rel());
+          TypeDecidedUses.check(n, parameter, before.getName(), type, boxed, d.file().rel());
         }
       }
     }

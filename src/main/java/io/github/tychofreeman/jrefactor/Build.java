@@ -262,15 +262,15 @@ final class Build {
       List<String> imports)
       throws IOException {
     List<Entry> entries = entries(build, false);
-    Place place = new Place(project, opened, start, end, indent, step, imports);
+    Site site = new Site(project, opened, start, end, indent, step, imports);
     // First every into as an assignment, to see which names are variables there already, and
     // every loop over what it names, to see what that is.
     // A loop's body is decided in the draft after the loop's own head, since what it walks may
     // name the loop's variable; then each new local and loop variable is written as var, to read
     // its type.
-    Draft draft = place.draft(entries);
+    Draft draft = site.draft(entries);
     while (scope(entries, draft, new HashSet<>())) {
-      draft = place.draft(entries);
+      draft = site.draft(entries);
     }
     List<String> inferred = new ArrayList<>();
     types(entries, draft, inferred);
@@ -278,7 +278,7 @@ final class Build {
   }
 
   /** Where a build's statements go, to draft them there. */
-  private record Place(
+  private record Site(
       SourceProject project,
       Opened opened,
       int start,

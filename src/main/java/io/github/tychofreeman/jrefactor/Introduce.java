@@ -94,7 +94,8 @@ final class Introduce {
             + source
             + ";";
     String text = opened.text();
-    List<TextEdit> edits = new ArrayList<>(MemberMove.addTo(text, owner, decl, 0));
+    List<TextEdit> edits =
+        new ArrayList<>(MemberMove.addTo(text, owner, decl, Placement.Rank.FIELD));
     edits.add(new TextEdit(e.getStartPosition(), e.getStartPosition() + e.getLength(), name));
     String after = TextEdit.apply(text, edits, 0);
     Edits.Written written =

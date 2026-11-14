@@ -1621,3 +1621,25 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   CLAUDE.md allows when the change is not yet easy).
 - No Java by hand: `add_declaration` (helper, tests), `replace_declaration` of the three copies in
   one `batch`, `replace_declaration` with empty content for `TypeParameters.headerEnd`.
+
+## 2026-11-14: signature-naming
+
+- `Placement.rank` from `int` to an enum `Rank`: `change_type` of the return type was refused at
+  `Comparator.comparingInt(Placement::rank)` ("a method reference ... whose functional interface
+  fixes its parameters": it is the return type that changes, and `comparing(Placement::rank)` would
+  fit). With that call changed first, it was refused by the primitive-use rule at
+  `Placement.place(owner, Placement.rank(d))` (the overload chosen could change); the parameter it
+  is passed to was the next step, and `change_type` of that parameter refused the same way the other
+  way round. Tried: return type first, parameter first, `change_signature` (runs the same rule).
+  Done as one batch of edits. The rule could skip a change from a primitive to a type that is
+  neither primitive nor boxed (no widening or unboxing can pick another overload), or check the
+  calls' targets (`CallTargets`) in place of refusing.
+- `move` of `TypeParameters.BOXED` (`Map.of(...)`) to `JavaTypes` was refused: the initializer
+  calls a method, so it would run when the other class is initialized. `Map.of` of literals has no
+  effect to reorder. Moved by hand: `add_declaration` in `JavaTypes`, `replace_text` of the uses,
+  `replace_declaration` deleting the field (after the uses: in a batch, deletion still refuses
+  while a use is left).
+- `TestFor`'s placeholder switch to a method of `String`: `extract_variable` (`t.getName()`, then
+  the switch), `extract_function`, `inline` of the two locals, `move` to `JavaTypes`. `inline` of
+  the switch into `return` wrote `return (switch ... );`; the parentheses could not go by two
+  `replace_text`s (each step must parse), so `replace_declaration` rewrote the method.
