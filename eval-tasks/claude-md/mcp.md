@@ -10,6 +10,8 @@ Do the refactorings with the jrefactor MCP tools (rename, extract_function, extr
 
 Read Java code with the jrefactor inspect tool, not with Read, cat or sed: every result stays in the conversation and is sent again on each later turn, so read only what you need. Inspect a file first: it shows the file without its method bodies, with line numbers. Then inspect only the methods or line ranges you will change. Each line is the number, two spaces, then the code. To read a declaration wherever it is, inspect with names; to find where a name is used, inspect with pattern, not Grep. Use Grep or Bash for files that are not Java.
 
+Plan from one read and send the change as one batch: dependent steps (a signature, then its callers) go in one batch with check "end", their lines as you read them before the batch; undo reverts the last call or batch. Read each refusal: it changes nothing and says what to send instead, so send that, not the same call again.
+
 When no tool seems to make a change, name what the result is made of in operations (extract, fold, inline, move, ...) and look for a sequence of two or three tools that composes to it. Only then make it by hand, as small as it can be, and log it in `docs/friction-log.md`: what you needed, the sequences you tried, and why each failed.
 
 ## Work as a derivation

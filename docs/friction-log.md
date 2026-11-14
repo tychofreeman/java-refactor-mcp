@@ -1304,3 +1304,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - A `bin/jrefactor` batch sent as a JSON argument with its `@@` sections on stdin was refused
   ("content does not parse", `@fields` read as the content): the sections go after the JSON in
   the same input. Resent as `-` from one heredoc. Nothing by hand.
+
+## 2026-11-13: ab-darktable-md
+
+- No Java changed. The darktable variant of the instructions was cut from the project's file by a
+  Python script, and the two rules added to both copies by one; the transcripts were tallied by
+  scratch scripts, not in the repo.
+- My first `git add -A` on another branch (cli-batch-retry) committed the user's untracked
+  `examples/darktable-project-CLAUDE.md`; the user kept it in the history. Stage by path.

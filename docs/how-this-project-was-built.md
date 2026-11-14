@@ -491,3 +491,7 @@ write, was checked first with a scratch parse before any of it was built on.
 - Until 2026-11-11 CI built on JDK 21 only, and a warning only JDK 25's compiler raises broke
   the server's own rebuild on a machine whose default `java` is 25; CI now builds and tests on
   both (`docs/sessions/build-on-jdk25.md`).
+- On 2026-11-13 the instructions handed to projects were compared by an A/B run against a
+  project's own CLAUDE.md, which had grown from this repo's: the project's file batched three to
+  seven times as often for a little less cost, and its batch and refusal rules moved into
+  `examples/CLAUDE.md` (`docs/sessions/ab-darktable-md.md`).
