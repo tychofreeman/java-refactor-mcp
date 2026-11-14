@@ -520,7 +520,8 @@ Each was chosen from options; the record named beside it has the options it beat
   switch's edit inside it when the switch is in the enum's file). `TypeSwitch.usesOnly` takes the
   name its refusal gives the case's variable ("the switch's value" for an enum). A bare `throw`
   after the arrow is a body as a block is (`EnumSwitch.arms`, #435); `TypeSwitch.switchCases`
-  still refuses one. A bare static in a case is refused unless `EnumSwitch.sees` it from the enum
+  still refuses one. Both read a case's body through `TypeSwitch.armBody` (`blockOrThrow` true for
+  the enum), and both forms place the switch's call through `At.placeCall` (#517). A bare static in a case is refused unless `EnumSwitch.sees` it from the enum
   (its own, or an enclosing type's that nothing on the way out hides; #436).
   The method form (#152) is `EnumSwitch.method`: the constants' bodies are text edits on the
   enum's text (`EnumSwitch.inBody`), checked by `NameCheck`; the enum's own method is then added

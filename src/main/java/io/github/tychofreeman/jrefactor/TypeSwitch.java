@@ -36,6 +36,7 @@ import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.TypePattern;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.YieldStatement;
@@ -245,21 +246,7 @@ final class TypeSwitch {
       if (!(statements.get(i) instanceof SwitchCase c)) {
         continue;
       }
-      ASTNode next = i + 1 < statements.size() ? (ASTNode) statements.get(i + 1) : null;
-      ASTNode body =
-          next instanceof YieldStatement y && y.getExpression() != null
-              ? y.getExpression()
-              : !value && next instanceof ExpressionStatement e
-                  ? e.getExpression()
-                  : !value && next instanceof Block ? next : null;
-      if (!c.isSwitchLabeledRule() || body == null) {
-        throw new Refusal(
-            "each case must be an arrow case giving "
-                + (value ? "an expression" : "a statement or a block")
-                + "; the one at "
-                + c.toString().strip()
-                + " is not.");
-      }
+      ASTNode body = armBody(statements, i, value, false);
       if (c.isDefault()) {
         String v = selector instanceof SimpleName n ? n.getIdentifier() : null;
         usesOnly(body, v, "the supertype", "the pattern variable");
@@ -544,5 +531,33 @@ final class TypeSwitch {
       }
     }
     return false;
+  }
+
+  /**
+   * The body of the arrow case {@code statements[i]}: a yield's expression or, in a switch
+   * statement ({@code !value}), an expression statement's expression or a block; with {@code
+   * blockOrThrow}, a block in a switch expression too, and a throw. Refuses a case that gives none
+   * of these.
+   */
+  static ASTNode armBody(List<?> statements, int i, boolean value, boolean blockOrThrow) {
+    SwitchCase c = (SwitchCase) statements.get(i);
+    Object next = i + 1 < statements.size() ? statements.get(i + 1) : null;
+    ASTNode body =
+        next instanceof YieldStatement y && y.getExpression() != null
+            ? y.getExpression()
+            : !value && next instanceof ExpressionStatement e
+                ? e.getExpression()
+                : next instanceof Block b && (blockOrThrow || !value)
+                    ? b
+                    : blockOrThrow && next instanceof ThrowStatement t ? t : null;
+    if (!c.isSwitchLabeledRule() || body == null) {
+      throw new Refusal(
+          "each case must be an arrow case giving "
+              + (value ? "an expression" : "a statement or a block")
+              + "; the one at "
+              + c.toString().strip()
+              + " is not.");
+    }
+    return body;
   }
 }
