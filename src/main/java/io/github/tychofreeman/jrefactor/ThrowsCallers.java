@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -556,12 +557,15 @@ final class ThrowsCallers {
       }
       change.replaceRange(s, at, at, b.toString());
     }
-    // A try inside another the tool writes is dropped, its catches going to the outer one.
+    // A try inside another the tool writes is dropped, its catches going to the outer one, and
+    // tries around adjacent statements of one block become one: two would meet at one offset.
     List<Wrap> kept = new ArrayList<>();
+    wraps.sort(Comparator.comparingInt(Wrap::start));
     for (Wrap w : wraps) {
       Wrap outer = null;
       for (Wrap k : kept) {
-        if (k.s == w.s && k.start() <= w.end() && w.start() <= k.end()) {
+        if (k.s == w.s && k.start() <= w.end() && w.start() <= k.end()
+            || k.block == w.block && k.to + 1 == w.from) {
           outer = k;
         }
       }
