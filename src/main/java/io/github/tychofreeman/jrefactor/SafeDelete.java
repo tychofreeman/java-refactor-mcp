@@ -59,7 +59,7 @@ final class SafeDelete {
         IMethodBinding b = m.resolveBinding();
         keys.add(b.getMethodDeclaration().getKey());
         simple = m.isConstructor() ? b.getDeclaringClass().getName() : b.getName();
-        IMethodBinding inherited = overridden(b);
+        IMethodBinding inherited = Hierarchy.concreteOverridden(b, b.getDeclaringClass());
         if (inherited != null) {
           if (callsSuper(m, inherited) || sameAsInherited(project, m, inherited, simple)) {
             return;
@@ -174,29 +174,6 @@ final class SafeDelete {
       case null -> null;
       default -> b.getKey();
     };
-  }
-
-  /** The first concrete method of a supertype that {@code method} overrides, or null. */
-  private static IMethodBinding overridden(IMethodBinding method) {
-    ITypeBinding type = method.getDeclaringClass();
-    List<ITypeBinding> todo = new ArrayList<>();
-    if (type.getSuperclass() != null) {
-      todo.add(type.getSuperclass());
-    }
-    todo.addAll(List.of(type.getInterfaces()));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
-      for (IMethodBinding m : t.getDeclaredMethods()) {
-        if (!Modifier.isAbstract(m.getModifiers()) && method.overrides(m)) {
-          return m;
-        }
-      }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
-    }
-    return null;
   }
 
   /** {@code return super.m(p1, ..., pn);}, or without {@code return} for a void method. */

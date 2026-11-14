@@ -452,8 +452,8 @@ final class Build {
       e.walked = e.target;
     } else if (t.isArray()) {
       e.walked = index ? operand + ".length" : e.target;
-    } else if (LoopToStream.elementOf(t) != null || is(t, "java.lang.Iterable")) {
-      if (index && !is(t, "java.util.List")) {
+    } else if (LoopToStream.elementOf(t) != null || Hierarchy.isA(t, "java.lang.Iterable")) {
+      if (index && !Hierarchy.isA(t, "java.util.List")) {
         throw new Refusal(
             e.target + " is a " + Extract.typeName(t) + ", which has no index: use for_each.");
       }
@@ -466,7 +466,7 @@ final class Build {
                 + ", so its elements' type is not known. Pass type (the elements' type).");
       }
       e.walked = index ? operand + ".size()" : e.target;
-    } else if (is(t, "java.util.Map")) {
+    } else if (Hierarchy.isA(t, "java.util.Map")) {
       if (index) {
         throw new Refusal(
             e.target + " is a " + Extract.typeName(t) + ", which has no index: use for_each.");
@@ -526,22 +526,6 @@ final class Build {
   /** The type of the elements a for-each over {@code t} gives. */
   private static ITypeBinding element(ITypeBinding t) {
     return t == null ? null : t.isArray() ? t.getComponentType() : LoopToStream.elementOf(t);
-  }
-
-  /** Whether {@code t} is the type named {@code qualified} or a subtype of it. */
-  private static boolean is(ITypeBinding t, String qualified) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals(qualified)) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (is(i, qualified)) {
-        return true;
-      }
-    }
-    return is(t.getSuperclass(), qualified);
   }
 
   /** Whether a new variable at {@code at} can be named {@code name}. */
@@ -752,14 +736,15 @@ final class Build {
     if (t == null || t.isRecovered()) {
       return;
     }
-    for (IMethodBinding m : t.getErasure().getDeclaredMethods()) {
-      if (m.getName().equals(name) && !m.isConstructor()) {
-        out.add(m);
+    for (ITypeBinding s : Hierarchy.supertypes(t, true)) {
+      if (s.isRecovered()) {
+        continue;
       }
-    }
-    named(t.getSuperclass(), name, out);
-    for (ITypeBinding i : t.getInterfaces()) {
-      named(i, name, out);
+      for (IMethodBinding m : s.getErasure().getDeclaredMethods()) {
+        if (m.getName().equals(name) && !m.isConstructor()) {
+          out.add(m);
+        }
+      }
     }
   }
 

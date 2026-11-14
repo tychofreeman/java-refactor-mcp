@@ -722,7 +722,7 @@ final class TypeParameters {
         }
       } else if (d instanceof MethodDeclaration m) {
         IMethodBinding mb = m.resolveBinding();
-        List<IMethodBinding> overridden = mb == null ? List.of() : CallTargets.overridden(mb);
+        List<IMethodBinding> overridden = mb == null ? List.of() : Hierarchy.overridden(mb);
         if (!overridden.isEmpty()) {
           IMethodBinding over = overridden.get(0);
           throw new Refusal(

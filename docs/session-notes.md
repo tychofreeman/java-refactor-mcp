@@ -252,6 +252,10 @@ Each was chosen from options; the record named beside it has the options it beat
   outermost type of a binding is `Names.outermost` (erased). A search by simple name
   (`MoveMember.targetFile` for `to=Tax`) matches the file name, never a path suffix: a suffix match
   took `x/a/b/C.java` for `a.b.C`.
+- A walk above a type is `Hierarchy` (#495, 2026-11-14): `supertypes(t, self)` (breadth-first, nearest
+  first, each once by erasure key), `overridden`, `concreteOverridden`, `isSubtype` (by erasure key,
+  safe across parses) and `isA` (by qualified name, for a library type). Loop over it rather than
+  writing a worklist over `getSuperclass()` and `getInterfaces()`.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
@@ -585,7 +589,7 @@ Each was chosen from options; the record named beside it has the options it beat
 - A tool that adds an instance method to a type asks `Overrides.of` (#466, 2026-11-13) whether it
   would override a supertype's method or be overridden by a project subtype's, by name and erased
   parameter types, and words its own refusal: `function_to_method`, `encapsulate_field`'s
-  accessors, `inline` with `field`'s folded methods. `push_down` asks `CallTargets.overridden` of
+  accessors, `inline` with `field`'s folded methods. `push_down` asks `Hierarchy.overridden` of
   the method's binding (#465), not a name: a `name` may carry its parameter list.
 
 - `CallTargets` (roadmap #146, 2026-11-13) is the check that a change keeps what every call runs:
@@ -601,7 +605,7 @@ Each was chosen from options; the record named beside it has the options it beat
   it), and a refusal aborts the step, which puts its files back. `change_type` calls it; a tool
   that changes a signature or makes a type generic should. A virtual call (a `MethodInvocation`
   of an instance method) whose new target is a method its old target overrides passes
-  (`Target.overrides`, by `CallTargets.overridden`, #157): `value.equals(x)` names
+  (`Target.overrides`, by `Hierarchy.overridden`, #157): `value.equals(x)` names
   `Object.equals` once `value` is a `T`, and still runs `String.equals`.
   It also keeps overrides (#159): `of` records each method of the checked files that overrides
   another, by "its place > the overridden's place" (`overrides`), and `require` refuses one lost

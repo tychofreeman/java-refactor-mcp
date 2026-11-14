@@ -237,7 +237,13 @@ public final class Server {
           .addTextContent(Refusal.PREFIX + refusal.getMessage())
           .isError(true)
           .build();
-    } catch (Exception e) {
+    } catch (Exception | Error e) {
+      // A deep recursion or a heap filled by one call ends that call; other VM errors end the
+      // server.
+      if (e instanceof VirtualMachineError fatal
+          && !(fatal instanceof StackOverflowError || fatal instanceof OutOfMemoryError)) {
+        throw fatal;
+      }
       e.printStackTrace(System.err);
       String where =
           java.util.Arrays.stream(e.getStackTrace())

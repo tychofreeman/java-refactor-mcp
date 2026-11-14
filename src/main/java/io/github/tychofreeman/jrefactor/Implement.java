@@ -2,7 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -98,17 +97,7 @@ final class Implement {
     for (IMethodBinding m : t.getDeclaredMethods()) {
       seen.add(m.getName() + "(" + types(m) + ")");
     }
-    ArrayDeque<ITypeBinding> queue = new ArrayDeque<>();
-    Set<String> visited = new HashSet<>();
-    if (t.getSuperclass() != null) {
-      queue.add(t.getSuperclass());
-    }
-    queue.addAll(List.of(t.getInterfaces()));
-    while (!queue.isEmpty()) {
-      ITypeBinding s = queue.poll();
-      if (!visited.add(s.getErasure().getKey())) {
-        continue;
-      }
+    for (ITypeBinding s : Hierarchy.supertypes(t, false)) {
       for (IMethodBinding m : s.getDeclaredMethods()) {
         int mods = m.getModifiers();
         if (m.isConstructor()
@@ -120,10 +109,6 @@ final class Implement {
         }
         out.add(m);
       }
-      if (s.getSuperclass() != null) {
-        queue.add(s.getSuperclass());
-      }
-      queue.addAll(List.of(s.getInterfaces()));
     }
     return out;
   }

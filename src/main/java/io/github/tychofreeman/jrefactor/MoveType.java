@@ -540,7 +540,7 @@ final class MoveType {
       return null;
     }
     String ownerKey = owner.getTypeDeclaration().getKey();
-    if (inherits(moved, ownerKey)) {
+    if (Hierarchy.isSubtype(moved, ownerKey)) {
       return null;
     }
     ITypeBinding outer = moved.getDeclaringClass();
@@ -548,30 +548,11 @@ final class MoveType {
       return outerLabel;
     }
     for (ITypeBinding t = outer; t != null; t = t.getDeclaringClass()) {
-      if (inherits(t, ownerKey)) {
+      if (Hierarchy.isSubtype(t, ownerKey)) {
         return Names.typeLabel(owner);
       }
     }
     return null;
-  }
-
-  /** Whether {@code type} is the type with key {@code key}, or a subtype of it. */
-  private static boolean inherits(ITypeBinding type, String key) {
-    if (type == null) {
-      return false;
-    }
-    if (declaredBy(type, key)) {
-      return true;
-    }
-    if (inherits(type.getSuperclass(), key)) {
-      return true;
-    }
-    for (ITypeBinding i : type.getInterfaces()) {
-      if (inherits(i, key)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private static boolean declaredBy(ITypeBinding type, String key) {

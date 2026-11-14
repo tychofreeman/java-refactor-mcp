@@ -679,7 +679,7 @@ final class ParameterValue {
           return false;
         }
       }
-      return subtype(theirs.getDeclaringClass(), mine.getDeclaringClass());
+      return Hierarchy.isSubtype(theirs.getDeclaringClass(), mine.getDeclaringClass());
     }
 
     /** Whether the call is on the caller's own object: unqualified, or on this. */
@@ -794,29 +794,7 @@ final class ParameterValue {
       return !onThis;
     }
     IMethodBinding in = m.resolveBinding();
-    return in != null && subtype(in.getDeclaringClass(), b.getDeclaringClass());
-  }
-
-  /** Whether {@code t} is {@code of} or a subtype of it, by key: the two may be of two parses. */
-  static boolean subtype(ITypeBinding t, ITypeBinding of) {
-    String target = of.getErasure().getKey();
-    java.util.Deque<ITypeBinding> todo = new java.util.ArrayDeque<>();
-    java.util.Set<String> seen = new java.util.HashSet<>();
-    todo.add(t);
-    while (!todo.isEmpty()) {
-      ITypeBinding x = todo.pop();
-      if (!seen.add(x.getErasure().getKey())) {
-        continue;
-      }
-      if (x.getErasure().getKey().equals(target)) {
-        return true;
-      }
-      if (x.getSuperclass() != null) {
-        todo.add(x.getSuperclass());
-      }
-      todo.addAll(List.of(x.getInterfaces()));
-    }
-    return false;
+    return in != null && Hierarchy.isSubtype(in.getDeclaringClass(), b.getDeclaringClass());
   }
 
   /** The types around {@code n}, the nearest first: whose {@code this} code there reads first. */
@@ -841,7 +819,7 @@ final class ParameterValue {
    * subtype, or a type nested in one.
    */
   private static boolean reaches(ASTNode n, ITypeBinding type) {
-    return typesAround(n).stream().anyMatch(t -> subtype(t, type));
+    return typesAround(n).stream().anyMatch(t -> Hierarchy.isSubtype(t, type));
   }
 
   /**
@@ -887,7 +865,7 @@ final class ParameterValue {
           if (o != null
               && !key(o).equals(key(b))
               && Instance.overrides(o, b)
-              && subtype(o.getDeclaringClass(), site)) {
+              && Hierarchy.isSubtype(o.getDeclaringClass(), site)) {
             return true;
           }
         }
@@ -954,7 +932,7 @@ final class ParameterValue {
             when mi.getExpression() == null
                 || mi.getExpression() instanceof ThisExpression t && t.getQualifier() == null -> {
           List<ITypeBinding> around = typesAround(mi);
-          if (around.isEmpty() || !subtype(around.get(0), owner)) {
+          if (around.isEmpty() || !Hierarchy.isSubtype(around.get(0), owner)) {
             throw new Refusal(
                 "the call at "
                     + c.where(mi)
