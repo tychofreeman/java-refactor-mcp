@@ -66,7 +66,8 @@ final class Skeleton {
 
   /**
    * The abstract methods of {@code type}'s supertypes that nothing in its hierarchy implements, in
-   * the order the supertypes declare them; none for an interface or an abstract class.
+   * the order the supertypes declare them, the nearest supertype first; none for an interface or an
+   * abstract class.
    */
   static List<IMethodBinding> unimplemented(ITypeBinding type) {
     if (type.isInterface() || Modifier.isAbstract(type.getModifiers())) {

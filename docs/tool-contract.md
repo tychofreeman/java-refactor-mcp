@@ -954,8 +954,8 @@ in the same turn only if it is sent after it.
   assignment, a plain call, a return and a guard pass. Bodies with logic are not refused. With `declaration` (a
   `.java` file under a source root only), the file is the package line and that type
   header with an empty body, plus a "not implemented" stub for each abstract method its
-  supertypes leave unimplemented, named in the result (`; stubs for what its supertypes
-  leave abstract: Priced.price()`); a declaration with a body, or naming another type
+  supertypes leave unimplemented (the nearest supertype's first), named in the result
+  (`; stubs for what its supertypes leave abstract: Priced.price()`); a declaration with a body, or naming another type
   than the file, is refused. An existing file is refused unless `overwrite`; with `declaration`,
   when the file's type lacks supertypes the declaration names (a stub class a test declared,
   say), the refusal names the `add_supertype` calls that add them and keep its members

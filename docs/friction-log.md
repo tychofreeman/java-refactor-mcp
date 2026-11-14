@@ -1409,3 +1409,24 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - Everything else went through the tools: `extract_variable`, `extract_function`, `inline` (local
   and static method), `move_parameter`, `move` (to `Names`), `rename`, `replace_statements`,
   `insert_statements`. Goldens are resources.
+
+## 2026-11-14: hierarchy-helper
+
+- No tool turns a hand-written supertype worklist into a loop over a helper's result. Tried in
+  thought before editing: `fold` of `Hierarchy.supertypes` matches its whole body, but each site
+  interleaves its own per-type work between the queue's start and its `add`s, so no site holds
+  that body; `extract_function` of the queue part fails since its statements are not contiguous
+  (the list before the loop, the `add`s at the end of its body). Done as `replace_text` of each
+  loop (about fifteen sites), each in a `batch` with check `"end"`. Where a whole helper was the
+  walk (`CallTargets.overridden`, `Signatures.overridden`, `ParameterValue.subtype`,
+  `InlineFunction.subtype`, `Build.is`, `ConvertLoop.isA`, `SafeDelete.overridden`,
+  `MoveType.inherits`), `replace_declaration` made it a delegate and `inline` removed it: a tool
+  for "replace this method's body with a call of that one, then inline" would be one step.
+- `move` of `PullUp.overridden` into `Hierarchy`, whose only member then was the one-line
+  `private Hierarchy() {}`, indented the moved body four spaces a step; Spotless put it back.
+  With no nested step in the target file to measure, the step fell back to four (the Indent
+  issue, #499).
+- `rename` with `name=Hierarchy.ancestors` and no `line` was refused ("rename needs line").
+  The batch's `retry` with `line` fixed it.
+- Rebasing onto `main` met `Stubs.removedInSupertypes` changed by #556 (`project.fileOf`); the
+  conflict was resolved by hand, keeping both.
