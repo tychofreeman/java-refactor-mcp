@@ -52,5 +52,5 @@ easy. Nothing in `PullUp` changed.
 ## Follow-ups
 
 - A superclass whose constructor takes arguments is still not passed on (the first version's
-  limit, generic or not).
+  limit, generic or not). Done 2026-11-13, roadmap #179 (`docs/sessions/fix-supertype-constructors.md`).
 - `Opened.topLevel` refuses a record as "not a top-level type": roadmap #155.

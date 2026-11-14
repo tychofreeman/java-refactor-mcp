@@ -117,7 +117,9 @@ final class ByLine {
       IMethodBinding b = d.resolveBinding();
       if (b != null && b.getKey().equals(method.getKey())) {
         return args.with("file", home)
-            .with("name", Names.typeLabel(method.getDeclaringClass()) + "." + MemberMove.label(d));
+            .with(
+                "name",
+                Names.typeLabel(method.getDeclaringClass()) + "." + Declarations.methodLabel(d));
       }
     }
     throw new Refusal(

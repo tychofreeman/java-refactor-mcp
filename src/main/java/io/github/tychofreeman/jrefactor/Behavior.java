@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TryStatement;
@@ -103,6 +104,15 @@ final class Behavior {
               + " places, so it would run "
               + m.landings().size()
               + " times.");
+    }
+    if (m.landings().size() > 1 && !code.newArraysNow().isEmpty()) {
+      throw new Refusal(
+          m.label()
+              + " creates an array, and "
+              + m.verb()
+              + " puts it in "
+              + m.landings().size()
+              + " places, so each would hold a different array where there was one.");
     }
     for (ASTNode landing : m.landings()) {
       checkPlace(project, m, code, throwing, landing);
@@ -304,7 +314,12 @@ final class Behavior {
                   + " when it did.");
         }
         if (!throwing.isEmpty()) {
-          if (earlier) {
+          if (!earlier) {
+            report(project, m, throwing, "after the early exit at " + line(s));
+            continue;
+          }
+          List<Guards.Operand> operands = Guards.operands(throwing);
+          if (operands == null || Guards.tests(List.of(s), operands)) {
             throw new Refusal(
                 m.label()
                     + " may throw ("
@@ -315,7 +330,19 @@ final class Behavior {
                     + m.verb()
                     + " would move it above that guard. Keep it there.");
           }
-          report(project, m, throwing, "after the early exit at " + line(s));
+          Exceptional.change(
+              project,
+              m.label()
+                  + " may throw ("
+                  + throwing.get(0)
+                  + "), and "
+                  + m.verb()
+                  + " moves it above "
+                  + exit
+                  + ", which may leave the block early but "
+                  + Guards.UNTESTED
+                  + ": it would now throw where that exit came first",
+              "leave it where it is");
         }
       } else if (m.code() instanceof Statement own && Effects.leaves(own)) {
         if (Effects.of(s).changes()) {
@@ -327,16 +354,33 @@ final class Behavior {
                   + exit
                   + ", which changes state: that would run when it did not, or not when it did.");
         }
-        if (!Effects.of(s).mayThrow().isEmpty() && !earlier) {
-          throw new Refusal(
+        List<ASTNode> its = Effects.of(s).mayThrow();
+        if (!its.isEmpty() && !earlier) {
+          List<Guards.Operand> operands = Guards.operands(its);
+          if (operands == null || Guards.tests(List.of(m.code()), operands)) {
+            throw new Refusal(
+                exit
+                    + " may throw ("
+                    + its.get(0)
+                    + "), and "
+                    + m.label()
+                    + ", which may leave the block early, guards it; "
+                    + m.verb()
+                    + " would move the guard below it.");
+          }
+          Exceptional.change(
+              project,
               exit
                   + " may throw ("
-                  + Effects.of(s).mayThrow().get(0)
+                  + its.get(0)
                   + "), and "
-                  + m.label()
-                  + ", which may leave the block early, guards it; "
                   + m.verb()
-                  + " would move the guard below it.");
+                  + " moves "
+                  + m.label()
+                  + ", which may leave the block early but "
+                  + Guards.UNTESTED
+                  + ", below it: it would now throw where that exit came first",
+              "leave it where it is");
         }
       }
     }
@@ -374,7 +418,24 @@ final class Behavior {
                 + " would read them once. Name it inside the loop.");
       }
       if (!throwing.isEmpty()) {
-        if (was != null) {
+        List<Guards.Operand> operands = Guards.operands(throwing);
+        List<Expression> left = was == null ? null : Guards.left(m.code(), m.root(), landing);
+        if (operands != null && left != null && !Guards.tests(left, operands)) {
+          Exceptional.change(
+              project,
+              m.label()
+                  + " may throw ("
+                  + throwing.get(0)
+                  + ") and runs only sometimes where it is ("
+                  + was
+                  + "), under a condition that "
+                  + Guards.UNTESTED
+                  + "; "
+                  + m.verb()
+                  + " moves it out from under that condition: it would now throw where the"
+                  + " condition skipped it",
+              "leave it where it is");
+        } else if (was != null) {
           throw new Refusal(
               m.label()
                   + " may throw ("

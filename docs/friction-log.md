@@ -1210,6 +1210,25 @@ not in placement, since in a batch the reader may name it only in a later step.
   it copied from the first send missed ("old is not in"); copied again from the file. Not a
   defect.
 
+## 2026-11-13: fix-parameter-generic-types
+
+- The `add_parameter` lookup failure logged under parameter-value-cast was issue #406, in
+  `Introduce`'s naming of the method (erasures), not in `add_parameter`: fixed there. Nothing by
+  hand.
+## 2026-11-13: stress-enum-switch
+
+- The enum switch stress run on smallrye/jdk-classfile-backport (`docs/sessions/stress-enum-switch.md`)
+  filed seven issues, each with its reproduction: `type_switch_to_method` refuses a bare `throw`
+  arm (#435), says a member enum cannot see its enclosing class's statics (#436), and asks for type
+  patterns on an `int` switch (#437); a named module is checked as the unnamed one, so sealed
+  permits across packages block a rename or move (#438); `inline` of a record's method (#439);
+  `move` of a member record whose fields the outer class reads (#440) and of a member of a sealed
+  hierarchy with implicit permits (#441), both with the fix text "Rename one of the clashing
+  types". `rename` hit #411 again. Not fixed in that PR.
+- `batch` refused a first send with each step's arguments at the step's top level ("replace_text
+  needs file"); they go under `args`. The refusal could say so when a step has `file` beside
+  `tool`.
+
 ## 2026-11-13: the generator task set (`generator-tasks`)
 
 By hand: the fixture's Maven files (`mvnw`, `.mvn`, `.gitignore`, `pom.xml` with its artifactId

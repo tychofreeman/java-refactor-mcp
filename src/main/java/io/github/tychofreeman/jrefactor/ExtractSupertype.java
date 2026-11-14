@@ -3,16 +3,20 @@ package io.github.tychofreeman.jrefactor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ConstructorInvocation;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeParameter;
@@ -102,7 +106,7 @@ final class ExtractSupertype {
         body.append("  ").append(s).append(";\n");
       }
       body.append("}\n");
-      create(project, target, body.toString(), supertype);
+      create(project, target, body.toString(), supertype, List.of());
       AddSupertype.run(project, rel, name, "implements", supertype + generics.named());
       return Outcome.of(
           "extracted interface "
@@ -135,11 +139,24 @@ final class ExtractSupertype {
       uses.add(superclass);
     }
     Generics generics = generics(type, text, uses, supertype);
+    boolean isAbstract = leavesAbstract(type, uses);
+    List<String> chosen = new ArrayList<>();
+    String constructors = constructors(type, supertype, chosen);
     create(
         project,
         target,
-        pkg + "public class " + supertype + generics.declared() + extending + " {\n}\n",
-        supertype);
+        pkg
+            + "public "
+            + (isAbstract ? "abstract " : "")
+            + "class "
+            + supertype
+            + generics.declared()
+            + extending
+            + " {\n"
+            + constructors
+            + "}\n",
+        supertype,
+        chosen);
     if (superclass == null) {
       AddSupertype.run(project, rel, name, "extends", supertype + generics.named());
     } else {
@@ -158,7 +175,8 @@ final class ExtractSupertype {
       PullUp.run(project, rel, name + "." + member, supertype);
     }
     return Outcome.of(
-        "extracted class "
+        "extracted "
+            + (isAbstract ? "abstract class " : "class ")
             + supertype
             + generics.named()
             + " ("
@@ -173,9 +191,10 @@ final class ExtractSupertype {
   }
 
   /** Writes the new type's file, its imports fixed, through the gate. */
-  private static void create(SourceProject project, Path target, String text, String supertype)
+  private static void create(
+      SourceProject project, Path target, String text, String supertype, List<String> chosen)
       throws Exception {
-    String fixed = Imports.fix(project, target, "", text, List.of()).text();
+    String fixed = Imports.fix(project, target, "", text, chosen).text();
     Gate.applyOrRefuse(
         project,
         Map.of(target, fixed),
@@ -268,5 +287,115 @@ final class ExtractSupertype {
         ? new Generics("", "")
         : new Generics(
             "<" + String.join(", ", declared) + ">", "<" + String.join(", ", named) + ">");
+  }
+
+  /**
+   * Whether the class extracted from {@code type} with {@code members} must be abstract: a member
+   * is abstract, or the old superclass leaves an abstract method that no member implements.
+   */
+  private static boolean leavesAbstract(TypeDeclaration type, List<ASTNode> members) {
+    List<IMethodBinding> concrete = new ArrayList<>();
+    for (ASTNode member : members) {
+      if (member instanceof MethodDeclaration m && m.resolveBinding() != null) {
+        if (Modifier.isAbstract(m.getModifiers())) {
+          return true;
+        }
+        concrete.add(m.resolveBinding());
+      }
+    }
+    ITypeBinding binding = type.resolveBinding();
+    return binding != null
+        && binding.getSuperclass() != null
+        && !Skeleton.leftAbstract(binding.getSuperclass(), concrete).isEmpty();
+  }
+
+  /**
+   * The constructors of the class extracted from {@code type}, each line indented, as its body
+   * starts: one passing to each constructor of the old superclass that {@code type}'s constructors
+   * call by {@code super(...)}, with its parameters, access and {@code throws}, and one with no
+   * parameters when another constructor calls {@code super()} implicitly; empty when they call only
+   * that one, which the class's default constructor does. Adds the qualified names of the types
+   * they write to {@code chosen}.
+   */
+  private static String constructors(TypeDeclaration type, String supertype, List<String> chosen) {
+    Map<String, IMethodBinding> called = new LinkedHashMap<>();
+    // A class without constructors has the default one, which calls super() implicitly.
+    boolean implicit = true;
+    for (MethodDeclaration c : type.getMethods()) {
+      if (c.isConstructor() && c.getBody() != null) {
+        implicit = false;
+      }
+    }
+    for (MethodDeclaration c : type.getMethods()) {
+      if (!c.isConstructor() || c.getBody() == null) {
+        continue;
+      }
+      List<?> statements = c.getBody().statements();
+      Object first = statements.isEmpty() ? null : statements.get(0);
+      if (first instanceof SuperConstructorInvocation s && s.resolveConstructorBinding() != null) {
+        IMethodBinding b = s.resolveConstructorBinding();
+        called.putIfAbsent(b.getMethodDeclaration().getKey(), b);
+      } else if (!(first instanceof ConstructorInvocation)) {
+        implicit = true;
+      }
+    }
+    List<String> written = new ArrayList<>();
+    boolean none = false;
+    for (IMethodBinding b : called.values()) {
+      ITypeBinding[] types = b.getParameterTypes();
+      String[] names = b.getMethodDeclaration().getParameterNames();
+      List<String> parameters = new ArrayList<>();
+      List<String> arguments = new ArrayList<>();
+      for (int i = 0; i < types.length; i++) {
+        String n = i < names.length ? names[i] : "arg" + i;
+        boolean varargs = b.isVarargs() && i == types.length - 1;
+        ITypeBinding t = varargs ? types[i].getComponentType() : types[i];
+        qualified(t, chosen);
+        parameters.add(Extract.typeName(t) + (varargs ? "... " : " ") + n);
+        arguments.add(n);
+      }
+      List<String> thrown = new ArrayList<>();
+      for (ITypeBinding e : b.getExceptionTypes()) {
+        qualified(e, chosen);
+        thrown.add(Extract.typeName(e));
+      }
+      int mods = b.getModifiers();
+      none |= types.length == 0;
+      written.add(
+          "  "
+              + (Modifier.isPublic(mods)
+                  ? "public "
+                  : Modifier.isProtected(mods) ? "protected " : "")
+              + supertype
+              + "("
+              + String.join(", ", parameters)
+              + ")"
+              + (thrown.isEmpty() ? "" : " throws " + String.join(", ", thrown))
+              + " {\n    super("
+              + String.join(", ", arguments)
+              + ");\n  }\n");
+    }
+    if (!written.isEmpty() && implicit && !none) {
+      written.add("  " + supertype + "() {}\n");
+    }
+    return String.join("\n", written);
+  }
+
+  /** Adds the qualified names of the classes {@code t} names to {@code out}. */
+  private static void qualified(ITypeBinding t, List<String> out) {
+    if (t == null || t.isPrimitive() || t.isTypeVariable() || t.isWildcardType()) {
+      return;
+    }
+    if (t.isArray()) {
+      qualified(t.getElementType(), out);
+      return;
+    }
+    String name = t.getErasure().getQualifiedName();
+    if (!name.isEmpty() && !name.startsWith("java.lang.") && !out.contains(name)) {
+      out.add(name);
+    }
+    for (ITypeBinding a : t.getTypeArguments()) {
+      qualified(a, out);
+    }
   }
 }

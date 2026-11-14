@@ -1,0 +1,3 @@
+[
+  {"tool": "replace_text", "args": {"file": "p/Task.java", "old": "E extends Throwable", "new": "E extends Object & Comparable<E>"}}
+]
