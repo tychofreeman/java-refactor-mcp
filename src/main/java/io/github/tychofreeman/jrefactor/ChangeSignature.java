@@ -44,10 +44,10 @@ final class ChangeSignature {
 
   static Outcome run(SourceProject project, Args args) throws Exception {
     String returnType = args.string("return_type");
-    List<String> added = names(args.string("add_throws"));
-    List<String> removed = names(args.string("remove_throws"));
+    List<String> added = Args.commaSeparated(args.string("add_throws"));
+    List<String> removed = Args.commaSeparated(args.string("remove_throws"));
     String callers = args.string("callers") == null ? "propagate" : args.string("callers");
-    List<String> stops = names(args.string("stop_at"));
+    List<String> stops = Args.commaSeparated(args.string("stop_at"));
     Precondition.require(
         Precondition.that(
             () -> returnType != null || !added.isEmpty() || !removed.isEmpty(),
@@ -229,19 +229,6 @@ final class ChangeSignature {
     } else {
       change.replaceRange(d.file(), first, last, String.join(", ", kept));
     }
-  }
-
-  /** The names in a comma-separated list, none for null. */
-  private static List<String> names(String list) {
-    List<String> out = new ArrayList<>();
-    if (list != null) {
-      for (String s : list.split(",")) {
-        if (!s.isBlank()) {
-          out.add(s.strip());
-        }
-      }
-    }
-    return out;
   }
 
   /**

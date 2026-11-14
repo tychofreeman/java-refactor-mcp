@@ -207,13 +207,9 @@ final class ParameterValue {
     return v.at(c);
   }
 
-  /**
-   * Where {@code e} names a parameter of {@code m}: the offset within {@code e}, the length, the
-   * parameter's index, and 1 where the name is a receiver (of a call, a field or an element), the
-   * last first.
-   */
-  private static List<int[]> occurrences(Expression e, MethodDeclaration m) {
-    List<int[]> uses = new ArrayList<>();
+  /** Where {@code e} names a parameter of {@code m}, the last first. */
+  private static List<Occurrence> occurrences(Expression e, MethodDeclaration m) {
+    List<Occurrence> uses = new ArrayList<>();
     for (SimpleName n : Nodes.all(e, SimpleName.class)) {
       if (n.resolveBinding() instanceof IVariableBinding v && parameterIndex(m, v) >= 0) {
         boolean receiver =
@@ -225,15 +221,14 @@ final class ParameterValue {
               default -> false;
             };
         uses.add(
-            new int[] {
-              n.getStartPosition() - e.getStartPosition(),
-              n.getLength(),
-              parameterIndex(m, v),
-              receiver ? 1 : 0
-            });
+            new Occurrence(
+                n.getStartPosition() - e.getStartPosition(),
+                n.getLength(),
+                parameterIndex(m, v),
+                receiver));
       }
     }
-    uses.sort((a, b) -> b[0] - a[0]);
+    uses.sort((a, b) -> b.offset() - a.offset());
     return uses;
   }
 
@@ -244,14 +239,14 @@ final class ParameterValue {
    * parameter's type, as the call converted it.
    */
   private static String substituted(
-      List<int[]> uses,
+      List<Occurrence> uses,
       String source,
       Signatures.Call c,
       List<TextEdit> more,
       MethodDeclaration casts) {
     List<TextEdit> swaps = new ArrayList<>(more);
-    for (int[] u : uses) {
-      Expression arg = (Expression) c.arguments().get(u[2]);
+    for (Occurrence u : uses) {
+      Expression arg = (Expression) c.arguments().get(u.parameter());
       String text = Nodes.source(c.file().text(), arg);
       boolean plain =
           arg instanceof Name || arg instanceof NumberLiteral || arg instanceof StringLiteral;
@@ -260,17 +255,17 @@ final class ParameterValue {
           casts == null
               ? ""
               : cast(
-                  ((SingleVariableDeclaration) casts.parameters().get(u[2]))
+                  ((SingleVariableDeclaration) casts.parameters().get(u.parameter()))
                       .getType()
                       .resolveBinding(),
                   arg.resolveTypeBinding());
       if (cast != null && !cast.isEmpty()) {
         passed = "(" + cast + ") " + passed;
-        if (u[3] == 1) {
+        if (u.receiver()) {
           passed = "(" + passed + ")";
         }
       }
-      swaps.add(new TextEdit(u[0], u[0] + u[1], passed));
+      swaps.add(new TextEdit(u.offset(), u.offset() + u.length(), passed));
     }
     return TextEdit.apply(source, swaps, 0);
   }
@@ -1137,4 +1132,10 @@ final class ParameterValue {
       return passed(v, c, project, probed);
     }
   }
+
+  /**
+   * A name of a method's parameter in an expression: its offset within the expression, its length,
+   * the parameter's index, and whether it is a receiver (of a call, a field or an element).
+   */
+  private record Occurrence(int offset, int length, int parameter, boolean receiver) {}
 }
