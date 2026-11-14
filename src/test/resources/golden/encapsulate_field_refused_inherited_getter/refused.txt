@@ -1,0 +1,1 @@
+the getter getName() would override Base.getName()

@@ -1,0 +1,1 @@
+Sub.reset() would then override Counter.reset(), folded into Holder

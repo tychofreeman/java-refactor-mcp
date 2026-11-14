@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,10 +10,12 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.ThisExpression;
@@ -142,6 +145,7 @@ final class InlineClass {
       }
     }
 
+    refuseOverride(project, opened.file(), h, c);
     String fieldKey = frag.resolveBinding().getKey();
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
@@ -230,5 +234,52 @@ final class InlineClass {
       }
     }
     return false;
+  }
+
+  /**
+   * Refuses a method of {@code c} that, folded into {@code holder}, would override a method of the
+   * holder's supertypes or be overridden by one of its subtypes': a call would run another body.
+   */
+  private static void refuseOverride(
+      SourceProject project, Path file, TypeDeclaration holder, TypeDeclaration c)
+      throws IOException {
+    for (MethodDeclaration m : c.getMethods()) {
+      IMethodBinding b = m.resolveBinding();
+      if (m.isConstructor() || b == null || Modifier.isStatic(b.getModifiers())) {
+        continue;
+      }
+      List<String> params = new ArrayList<>();
+      for (ITypeBinding p : b.getParameterTypes()) {
+        params.add(p.getErasure().getQualifiedName());
+      }
+      Overrides.Clash clash =
+          Overrides.of(project, file, holder.resolveBinding(), b.getName(), params);
+      if (clash == null) {
+        continue;
+      }
+      String folded = Signatures.label(b);
+      String holderName = holder.getName().getIdentifier();
+      if (clash.subtype() == null) {
+        throw new Refusal(
+            "folded into "
+                + holderName
+                + ", "
+                + folded
+                + " would override "
+                + clash.method()
+                + ", so a call of it on a "
+                + holderName
+                + " would run another body. Rename one of them first.");
+      }
+      throw new Refusal(
+          clash.method()
+              + " would then override "
+              + folded
+              + ", folded into "
+              + holderName
+              + ", so a call of it on a "
+              + clash.subtype().getName()
+              + " would run that body instead. Rename one of them first.");
+    }
   }
 }

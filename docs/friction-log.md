@@ -1379,3 +1379,11 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - No Java by hand: one `batch` from a file (`replace_text`, `replace_declaration`, `add_declaration`
   across `LoopToStream` and `ConvertLoop`), then `remove_parameter` for the parameter it left unused.
   The probes and goldens were written by heredocs.
+
+## 2026-11-13: fix-new-override
+
+- `move` of `FunctionToMethod.clash` and `.below` to the new `Overrides` widened each from private to
+  package access, though the only callers then were in `Overrides` itself (after `Overrides.of` was
+  added). Narrowed back by `sed`: no tool narrows a member's visibility, and `replace_declaration`
+  of each would resend the whole method for one word. Sequences tried: none composes (`change_type`
+  changes types, not modifiers).

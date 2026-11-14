@@ -1,12 +1,10 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -19,7 +17,6 @@ import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
  * function_to_method: a static method whose first parameter is of its own class becomes an instance
@@ -168,93 +165,31 @@ final class FunctionToMethod {
    */
   private static void refuseOverriding(
       SourceProject project, String rel, IMethodBinding b, String label) throws Exception {
-    ITypeBinding owner = b.getDeclaringClass().getErasure();
     List<String> rest = new ArrayList<>();
     ITypeBinding[] types = b.getParameterTypes();
     for (int i = 1; i < types.length; i++) {
       rest.add(types[i].getErasure().getQualifiedName());
     }
-    List<ITypeBinding> supertypes = new ArrayList<>();
-    for (ITypeBinding t = owner.getSuperclass(); t != null; t = t.getSuperclass()) {
-      supertypes.add(t);
-      supertypes.addAll(Arrays.asList(t.getInterfaces()));
+    Overrides.Clash clash =
+        Overrides.of(project, project.javaFile(rel), b.getDeclaringClass(), b.getName(), rest);
+    if (clash == null) {
+      return;
     }
-    supertypes.addAll(Arrays.asList(owner.getInterfaces()));
-    for (ITypeBinding t : supertypes) {
-      String clash = clash(t, b.getName(), rest);
-      if (clash != null) {
-        throw new Refusal(
-            "as an instance method, "
-                + label
-                + " would override "
-                + clash
-                + ", so a call on its class would run another body. Rename one of them first.");
-      }
+    if (clash.subtype() == null) {
+      throw new Refusal(
+          "as an instance method, "
+              + label
+              + " would override "
+              + clash.method()
+              + ", so a call on its class would run another body. Rename one of them first.");
     }
-    Holding holding = Holding.of(project, owner.getName(), project.javaFile(rel));
-    String key = owner.getKey();
-    for (CompilationUnit u : holding.units().values()) {
-      u.accept(
-          new ASTVisitor() {
-            @Override
-            public boolean visit(TypeDeclaration t) {
-              ITypeBinding tb = t.resolveBinding();
-              if (tb != null
-                  && !tb.getErasure().getKey().equals(key)
-                  && below(tb, owner.getQualifiedName())) {
-                String clash = clash(tb, b.getName(), rest);
-                if (clash != null) {
-                  throw new Refusal(
-                      clash
-                          + " would then override it, so a call of "
-                          + label
-                          + " on a "
-                          + tb.getName()
-                          + " would run that body instead. Rename one of them first.");
-                }
-              }
-              return true;
-            }
-          });
-    }
-  }
-
-  /**
-   * "Square.area(int)": an instance method of {@code t} named {@code name} taking {@code params}.
-   */
-  private static String clash(ITypeBinding t, String name, List<String> params) {
-    for (IMethodBinding m : t.getDeclaredMethods()) {
-      if (!m.getName().equals(name) || Modifier.isStatic(m.getModifiers())) {
-        continue;
-      }
-      List<String> theirs = new ArrayList<>();
-      for (ITypeBinding p : m.getParameterTypes()) {
-        theirs.add(p.getErasure().getQualifiedName());
-      }
-      if (theirs.equals(params)) {
-        return Signatures.label(m);
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Whether {@code t} extends or implements the type named {@code qualified}, by name: bindings of
-   * two parses do not compare.
-   */
-  private static boolean below(ITypeBinding t, String qualified) {
-    List<ITypeBinding> todo = new ArrayList<>(List.of(t));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding s = todo.get(i);
-      if (i > 0 && s.getErasure().getQualifiedName().equals(qualified)) {
-        return true;
-      }
-      if (s.getSuperclass() != null) {
-        todo.add(s.getSuperclass());
-      }
-      todo.addAll(Arrays.asList(s.getInterfaces()));
-    }
-    return false;
+    throw new Refusal(
+        clash.method()
+            + " would then override it, so a call of "
+            + label
+            + " on a "
+            + clash.subtype().getName()
+            + " would run that body instead. Rename one of them first.");
   }
 
   private static boolean sameType(ITypeBinding a, ITypeBinding b) {
