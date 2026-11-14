@@ -1391,3 +1391,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 ## 2026-11-13: fix-batch-client-name
 
 - No Java by hand: one `replace_text`. The golden case is resources.
+
+## 2026-11-13: fix-batch-retry-numbers
+
+- No Java by hand: one `batch` of two `add_declaration`s (the tests), one of three `replace_text`s
+  (the fix), one `replace_text` (the doc comment).
