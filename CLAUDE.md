@@ -19,8 +19,8 @@ about 95% of coding through the tools, this project's own code included.
 The MCP server is `Server` (STDIO); the tools are defined in `Tools.ALL`. Every
 change goes through the type-check gate (`Gate`, `TypeCheck`), which first
 declares stubs for what an edit uses and nothing declares (`Stubs`), and is
-recorded in `Journal`. Check the roadmap in `docs/design.md` before starting
-work.
+recorded in `Journal`. Check the roadmap (`bin/roadmap --open`; one file per item in
+`docs/roadmap/`, described under "Roadmap" in `docs/design.md`) before starting work.
 
 ## How we work
 
@@ -45,8 +45,10 @@ do them in order, each in its own PR. Before pushing, run what CI runs,
 `./mvnw verify` (see "Build and test").
 
 Each PR also updates the docs it affects (see "Documentation to keep in sync"):
-mark a roadmap item *Done* when it is, and fix text that still calls finished
-work open. Do not write a PR number into docs before the PR exists.
+mark a roadmap item *Done* when it is (`status: Done` in its file in `docs/roadmap/`), and
+fix text that still calls finished work open. A new item is a new file there, with the
+numbers `bin/roadmap next` gives on a fresh `main`. Do not write a PR number into docs before
+the PR exists.
 
 Once the server runs, use it for every refactoring and edit it can do. When no
 tool covers a change, make it by hand and log it in `docs/friction-log.md`. That
@@ -184,7 +186,8 @@ and every pull request; the release jar is built on 21 (`maven.compiler.release`
 ## Documentation to keep in sync
 
 - `docs/tool-contract.md`: update when a tool name, argument or result shape changes.
-- `docs/design.md`: the roadmap, and each decision that changes the architecture.
+- `docs/design.md`: each decision that changes the architecture; `docs/roadmap/`: the roadmap,
+  one file per item.
 - `docs/session-notes.md`: current facts a later session needs; fix stale ones.
 - `docs/how-this-project-was-built.md`: the arc of the project and each decision that
   changed how work is done (as gorefactor's of the same name); extend it in that PR.

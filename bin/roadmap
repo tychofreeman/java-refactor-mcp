@@ -1,0 +1,43 @@
+#!/bin/sh
+# Prints the roadmap (docs/roadmap/, one file per item) as a Markdown table sorted by order;
+# items without an order (the first ones done) come first. --open prints only the items whose
+# status is not Done or Closed. "next" prints the next free order and item numbers.
+set -eu
+here=$(cd "$(dirname "$0")/.." && pwd)
+mode=all
+case "${1:-}" in
+  '') ;;
+  --open) mode=open ;;
+  next) mode=next ;;
+  *) echo "usage: bin/roadmap [--open | next]" >&2; exit 2 ;;
+esac
+
+rows() {
+  awk -v mode="$mode" '
+    function flush() {
+      if (file == "" || mode == "next") return
+      if (mode == "open" && (status == "Done" || status == "Closed")) return
+      for (p in text) gsub(/\|/, "\\|", text[p])
+      printf "%d\t%d\t| %s | %s | %s | %s | %s |\n", (order == "none" ? -1 : order), item,
+        (order == "none" ? "" : order), item, text["Item"], text["Status"], text["Evidence"]
+    }
+    FNR == 1 { flush(); file = FILENAME; order = ""; item = ""; status = ""; part = ""; split("", text) }
+    part == "" && /^order: / { order = $2; if (order != "none" && order + 0 > maxOrder) maxOrder = order + 0 }
+    part == "" && /^item: / { item = $2; if (item + 0 > maxItem) maxItem = item + 0 }
+    part == "" && /^status: / { status = substr($0, 9) }
+    /^## / { part = substr($0, 4); next }
+    part != "" && $0 != "" { if (part in text) text[part] = text[part] " " $0; else text[part] = $0 }
+    END {
+      flush()
+      if (mode == "next") printf "order %d, item %d\n", maxOrder + 1, maxItem + 1
+    }
+  ' "$here"/docs/roadmap/*.md
+}
+
+if [ "$mode" = next ]; then
+  rows
+else
+  echo "| Order | # | Item | Status | Evidence |"
+  echo "|---|---|------|--------|----------|"
+  rows | sort -t "$(printf '\t')" -k1,1n -k2,2n | cut -f3-
+fi
