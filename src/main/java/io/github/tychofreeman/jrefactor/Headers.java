@@ -1,10 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -60,7 +57,7 @@ final class Headers {
       for (Object o : unit.imports()) {
         ImportDeclaration i = (ImportDeclaration) o;
         String qualified = i.getName().getFullyQualifiedName();
-        String last = qualified.substring(qualified.lastIndexOf('.') + 1);
+        String last = Names.simpleName(qualified);
         if (i.isOnDemand() || used.contains(last)) {
           context.append(i.isStatic() ? "static " : "").append(qualified);
           context.append(i.isOnDemand() ? ".*\n" : "\n");
@@ -176,12 +173,6 @@ final class Headers {
   }
 
   private static String hash(String text) {
-    try {
-      byte[] digest =
-          MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(digest, 0, 16);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
-    }
+    return Hashes.sha256Hex(text.getBytes(StandardCharsets.UTF_8)).substring(0, 32);
   }
 }

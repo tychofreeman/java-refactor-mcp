@@ -34,7 +34,7 @@ final class SignatureChange {
 
   /** Replaces {@code node}'s text in {@code file} with {@code text}. */
   void replace(Signatures.Source file, ASTNode node, String text) {
-    add(file, node.getStartPosition(), node.getStartPosition() + node.getLength(), text);
+    add(file, node.getStartPosition(), Nodes.end(node), text);
   }
 
   /** Replaces {@code start}-{@code end} of {@code file} with {@code text}. */
@@ -83,11 +83,7 @@ final class SignatureChange {
       if (order.get(k) != k) {
         ASTNode at = (ASTNode) list.get(k);
         ASTNode from = (ASTNode) list.get(order.get(k));
-        add(
-            file,
-            at.getStartPosition(),
-            Nodes.end(at),
-            file.text().substring(from.getStartPosition(), Nodes.end(from)));
+        add(file, at.getStartPosition(), Nodes.end(at), Nodes.source(file.text(), from));
       }
     }
   }

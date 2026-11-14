@@ -11,7 +11,6 @@ import java.util.Objects;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -67,7 +66,7 @@ final class MoveMember {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     TypeDeclaration source = opened.topLevel(typeName);
-    String toName = to.substring(to.lastIndexOf('.') + 1);
+    String toName = Names.simpleName(to);
     Path targetFile =
         !to.contains(".") && MemberMove.typeNamed(unit, to) != null
             ? file
@@ -97,7 +96,7 @@ final class MoveMember {
                     + " is generic. The receiver parameter is typed by the class's name, so a"
                     + " method of a generic class is not moved yet."),
         Precondition.that(
-            () -> !overrides(m),
+            () -> Nodes.overrideAnnotation(m) == null,
             () ->
                 name
                     + " overrides a method of a supertype. Moving it would change which method"
@@ -196,7 +195,7 @@ final class MoveMember {
           fragments.add(site.getExpression());
         }
         if (!isStatic && site.getExpression() != null && NonNull.mayBeNull(site.getExpression())) {
-          nullable.add(source(fileText, site.getExpression()) + " in " + project.relative(p));
+          nullable.add(Nodes.source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
         list.add(
             rewrite(
@@ -436,7 +435,7 @@ final class MoveMember {
    * com.example.Tax} when several do), or a refusal naming what to pass.
    */
   private static Path targetFile(SourceProject project, String to, String rel) throws IOException {
-    String simple = to.substring(to.lastIndexOf('.') + 1);
+    String simple = Names.simpleName(to);
     List<Path> found = new ArrayList<>();
     if (to.contains(".")) {
       Path declaring = project.fileDeclaring(to);
@@ -476,16 +475,6 @@ final class MoveMember {
               + ".");
     }
     return found.get(0);
-  }
-
-  /** Whether {@code m} is marked {@code @Override}. */
-  private static boolean overrides(MethodDeclaration m) {
-    for (Object o : m.modifiers()) {
-      if (o instanceof Annotation a && a.getTypeName().getFullyQualifiedName().equals("Override")) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /** The refusals about the body: what its names would mean in the target. */
@@ -693,8 +682,8 @@ final class MoveMember {
         // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
         parts.add(
             keep && NonNull.mayBeNull(expr)
-                ? "java.util.Objects.requireNonNull(" + source(fileText, expr) + ")"
-                : source(fileText, expr));
+                ? "java.util.Objects.requireNonNull(" + Nodes.source(fileText, expr) + ")"
+                : Nodes.source(fileText, expr));
       } else {
         ASTNode owner = owningType(site);
         if (owner instanceof AnonymousClassDeclaration) {
@@ -736,7 +725,7 @@ final class MoveMember {
                 + " is called inside another argument of a call. Move the inner call into a"
                 + " variable first.");
       }
-      parts.add(source(fileText, arg));
+      parts.add(Nodes.source(fileText, arg));
     }
     int s = site.getStartPosition();
     return new TextEdit(
@@ -760,10 +749,6 @@ final class MoveMember {
       }
     }
     return null;
-  }
-
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
   }
 
   /**

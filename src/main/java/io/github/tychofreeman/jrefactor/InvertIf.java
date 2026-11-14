@@ -2,7 +2,6 @@ package io.github.tychofreeman.jrefactor;
 
 import java.nio.file.Path;
 import java.util.List;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
@@ -59,7 +58,7 @@ final class InvertIf {
             + ") "
             + thenText(text, elseBranch, ifs)
             + " else "
-            + source(text, ifs.getThenStatement());
+            + Nodes.source(text, ifs.getThenStatement());
     int start = ifs.getStartPosition();
     int end = start + ifs.getLength();
     String updated = text.substring(0, start) + replacement + text.substring(end);
@@ -86,7 +85,7 @@ final class InvertIf {
 
   static String negate(String text, Expression cond, int line) {
     if (cond instanceof PrefixExpression p && p.getOperator() == PrefixExpression.Operator.NOT) {
-      return source(text, p.getOperand());
+      return Nodes.source(text, p.getOperand());
     }
     if (cond instanceof InfixExpression in && in.extendedOperands().isEmpty()) {
       String op = opposite(in.getOperator());
@@ -100,14 +99,14 @@ final class InvertIf {
                   + " the opposite operator when a value is NaN, so the if is not inverted. Write"
                   + " the condition by hand, or use == and != instead.");
         }
-        return source(text, in.getLeftOperand())
+        return Nodes.source(text, in.getLeftOperand())
             + " "
             + op
             + " "
-            + source(text, in.getRightOperand());
+            + Nodes.source(text, in.getRightOperand());
       }
     }
-    String src = source(text, cond);
+    String src = Nodes.source(text, cond);
     return primary(cond) ? "!" + src : "!(" + src + ")";
   }
 
@@ -157,16 +156,12 @@ final class InvertIf {
         || e instanceof ParenthesizedExpression;
   }
 
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
-  }
-
   /**
    * The old else branch as the new then branch: in braces when it is unbraced and ends in an if
    * without an else, which the swapped else would otherwise attach to.
    */
   private static String thenText(String text, Statement branch, IfStatement ifs) {
-    String src = source(text, branch);
+    String src = Nodes.source(text, branch);
     if (!endsInOpenIf(branch)) {
       return src;
     }

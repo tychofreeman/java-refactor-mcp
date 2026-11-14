@@ -88,8 +88,7 @@ final class Extract {
     }
 
     boolean contains(ASTNode node) {
-      return node.getStartPosition() >= startOffset
-          && node.getStartPosition() + node.getLength() <= endOffset;
+      return node.getStartPosition() >= startOffset && Nodes.end(node) <= endOffset;
     }
 
     String lines() {
@@ -324,15 +323,6 @@ final class Extract {
       arguments.add(typeName(argument, at));
     }
     return arguments.isEmpty() ? name : name + "<" + String.join(", ", arguments) + ">";
-  }
-
-  static String and(List<String> names) {
-    if (names.size() == 1) {
-      return names.get(0);
-    }
-    return String.join(", ", names.subList(0, names.size() - 1))
-        + " and "
-        + names.get(names.size() - 1);
   }
 
   private static List<Statement> asStatements(List<?> list) {

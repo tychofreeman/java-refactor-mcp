@@ -134,7 +134,7 @@ final class Extraction {
                 ? ""
                 : p.results().size() == 1
                     ? ", returning " + p.results().get(0).getName()
-                    : ", returning " + Extract.and(names(p.results())) + " as " + recordName())
+                    : ", returning " + Names.listed(names(p.results())) + " as " + recordName())
             + ", at lines "
             + first
             + "-"
@@ -704,7 +704,7 @@ final class Extraction {
     List<String> out = new ArrayList<>();
     for (Object o : m.typeParameters()) {
       TypeParameter p = (TypeParameter) o;
-      out.add(text.substring(p.getStartPosition(), Nodes.end(p)));
+      out.add(Nodes.source(text, p));
     }
     return "<" + String.join(", ", out) + "> ";
   }

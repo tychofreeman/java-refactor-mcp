@@ -174,7 +174,7 @@ final class SubclassToStrategy {
     String vis = wide ? "public " : "";
     String params = paramsText(baseText, own);
     String thrown = thrownText(baseText, own);
-    String ret = src(baseText, own.getReturnType2());
+    String ret = Nodes.source(baseText, own.getReturnType2());
     String fnType = type == null ? cap : type;
     String sam = type == null ? method : samOf(project, baseFile, baseText, base, type, own);
     String indent = Indent.member(baseText, base, 2);
@@ -286,8 +286,8 @@ final class SubclassToStrategy {
     }
     boolean isVoid = ret.equals("void");
     String call = field + "." + sam + "(" + String.join(", ", args) + ");";
-    String ownBody = src(baseText, own.getBody());
-    String overBody = src(subText, over.getBody());
+    String ownBody = Nodes.source(baseText, own.getBody());
+    String overBody = Nodes.source(subText, over.getBody());
     edits.add(
         new TextEdit(
             own.getBody().getStartPosition(),
@@ -314,7 +314,7 @@ final class SubclassToStrategy {
                 + indent
                 + vis
                 + "static "
-                + src(subText, over.getReturnType2())
+                + Nodes.source(subText, over.getReturnType2())
                 + " "
                 + subFn
                 + "("
@@ -570,10 +570,10 @@ final class SubclassToStrategy {
                 new TextEdit(
                     n.getStartPosition(),
                     Nodes.end(n),
-                    n == arg ? src(text, given) : LoopToStream.primary(text, given)));
+                    n == arg ? Nodes.source(text, given) : LoopToStream.primary(text, given)));
           }
         }
-        out.add(TextEdit.apply(src(subText, arg), swaps, arg.getStartPosition()));
+        out.add(TextEdit.apply(Nodes.source(subText, arg), swaps, arg.getStartPosition()));
       }
       if (!order.equals(params)) {
         for (Object a : cic.arguments()) {
@@ -586,7 +586,7 @@ final class SubclassToStrategy {
                 "the construction at "
                     + where
                     + " passes "
-                    + src(text, (ASTNode) a)
+                    + Nodes.source(text, (ASTNode) a)
                     + ", and the subclass's constructor does not pass each parameter on once, in"
                     + " order; the argument would run another number of times or in another order."
                     + " Put it in a local first (extract_variable).");
@@ -635,9 +635,5 @@ final class SubclassToStrategy {
       at++;
     }
     return at;
-  }
-
-  private static String src(String text, ASTNode n) {
-    return text.substring(n.getStartPosition(), Nodes.end(n));
   }
 }

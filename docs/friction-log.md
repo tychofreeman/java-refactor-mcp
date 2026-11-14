@@ -1701,3 +1701,65 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   of edits: `add_declaration` of `Occurrence`, `replace_declaration` of `occurrences`, five
   `replace_text`s in `substituted`. An "array to record" refactoring (name each index, rewrite each
   `a[i]` read and each `new T[] {...}`) would have been one call.
+
+## 2026-11-14: node-text
+
+- All through the tools: `move` of `Generated.source` to `Nodes`, `fold` of `Nodes.end` and of
+  `Nodes.source` over the project, then `inline` of each of the eleven private copies, which
+  `fold` had turned into delegates. One call per copy, in a shell loop: a batch would have done
+  it in one, but each copy's file had to be named.
+- `rename` of `Nodes.source` to `text` was refused: its parameter is named `text`. Kept `source`.
+- `fold` left ten sites where the node expression is a getter called twice (`d.getJavadoc()`):
+  "a call would evaluate it once". A getter of an AST node has no effect; a way to tell `fold`
+  that a getter is pure would have taken them.
+- `inline` of `RemoveElse.source` took over two minutes (the others seconds); not looked into.
+
+## 2026-11-14: override-annotation
+
+- No Java by hand. Five detectors onto `Nodes.overrideAnnotation`: two loops by
+  `replace_statements`, three private helpers made delegates by `replace_declaration` and
+  `inline`d. `inline` wrote `overrides(m)` as `(Nodes.overrideAnnotation(m) != null)` and `!overrides(m)`
+  as `!(Nodes.overrideAnnotation(m) != null)`; two `replace_text`s simplified them. An inline that
+  dropped needless parentheses and negated a comparison would have saved them.
+- `replace_text` refused `content_file` (its text argument is `new`): `new_file` works.
+
+## 2026-11-14: extract-type-sibling
+
+- `fold` of `Edits.newFile` matched nothing while the copies passed `Imports.fix(...).text()`
+  inline where the method names it as a local; `extract_variable` at each copy, then `fold`, in one
+  batch, folded all three. A `fold` that matched an inlined local of the body would save the step.
+- `fold` of `Opened.packageHeader(String pkg)` (with a null test) did not reach `Stubs` and
+  `MoveType`, which test only `isEmpty()`: `replace_expression` at each.
+- Otherwise through the tools: `move`, `rename`, `add_parameter` (three), `replace_statements`,
+  `replace_declaration`, `add_declaration`, `extract_variable`. The roadmap row went in by hand.
+
+## 2026-11-14: moved-type-context
+
+- `move` of the static `MoveType.label` (whose first parameter was by then the new record
+  `MovedType`) to `MovedType` was refused: "MovedType is not a class ... that resolves"; `move`
+  takes a top-level class, not a record (`Opened.topLevel`). `function_to_method` in place needs
+  the first parameter to be of the method's own class. Tried: `move` then `function_to_method`
+  (refused at the move). Done by hand: `add_declaration` of the instance methods on the record,
+  `replace_text` of the calls, `replace_declaration` deleting the statics. `move` to a record would
+  make it two calls.
+- The `new MovedType(...)` `extract_type` wrote into a call inside a loop, hoisted to before the
+  loop: `extract_variable` declares it just before the call's statement, inside the loop, and
+  `move_statement` stops at the block. Done with `insert_statements` and `replace_expression`.
+
+## 2026-11-14: problem-record
+
+- Changing the key of the type check's map (`Map<String, Integer>` to `Map<Problem, Integer>`)
+  across five classes and five tests took one `batch` of `replace_text` steps: `change_type` with
+  `return_type` changes the declarations but not the locals and parameters that receive the
+  result, which a "follow the type" option would have carried.
+
+## 2026-11-14: small-helpers
+
+- All through the tools: `move` of three helpers into `Names`, `fold` of each (and of
+  `Journal.read` once widened, and of a new `Nodes.at`), `replace_declaration` to a delegate then
+  `inline` for the copies `fold` could not match (the list joins written with an `if`), and
+  `replace_text` in a batch for the seven mappers.
+- `fold` of `Names.listed` was refused: its body declares a local before the return. The copies
+  were made delegates and inlined instead.
+- `create_file` of `Json` with `com.fasterxml.jackson` was refused: the project uses Jackson 3
+  (`tools.jackson`). The refusal named the import; the second call passed.

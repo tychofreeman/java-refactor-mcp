@@ -59,7 +59,7 @@ final class ConvertToRecord {
       BodyDeclaration d = (BodyDeclaration) o;
       boolean isStatic = Modifier.isStatic(d.getModifiers());
       if (d instanceof FieldDeclaration f && !isStatic) {
-        String fieldType = annotations(text, f) + source(text, f.getType());
+        String fieldType = annotations(text, f) + Nodes.source(text, f.getType());
         for (Object v : f.fragments()) {
           VariableDeclarationFragment frag = (VariableDeclarationFragment) v;
           String field = frag.getName().getIdentifier();
@@ -136,7 +136,7 @@ final class ConvertToRecord {
       throw new Refusal(
           name
               + " does not define "
-              + Extract.and(missing)
+              + Names.listed(missing)
               + overload(type)
               + ", which a record generates from its components: equality would compare values,"
               + " not identity, and toString would list them. Pass value_semantics=true if that is"
@@ -169,7 +169,7 @@ final class ConvertToRecord {
     List<String> modifiers = new ArrayList<>();
     for (Object o : type.modifiers()) {
       if (o instanceof Annotation a) {
-        modifiers.add(source(text, a));
+        modifiers.add(Nodes.source(text, a));
       } else if (o instanceof Modifier m && !m.isFinal() && !m.isStatic()) {
         modifiers.add(m.getKeyword().toString());
       }
@@ -180,7 +180,7 @@ final class ConvertToRecord {
     }
     List<String> interfaces = new ArrayList<>();
     for (Object o : type.superInterfaceTypes()) {
-      interfaces.add(source(text, (ASTNode) o));
+      interfaces.add(Nodes.source(text, (ASTNode) o));
     }
     String typeParameters =
         type.typeParameters().isEmpty()
@@ -219,8 +219,8 @@ final class ConvertToRecord {
             + String.join(", ", names)
             + ") in "
             + rel
-            + (missing.isEmpty() ? "" : "; it now has the record's " + Extract.and(missing))
-            + (widened.isEmpty() ? "" : "; made " + Extract.and(widened) + " public")
+            + (missing.isEmpty() ? "" : "; it now has the record's " + Names.listed(missing))
+            + (widened.isEmpty() ? "" : "; made " + Names.listed(widened) + " public")
             + written.fixed().said(),
         written.declared());
   }
@@ -303,10 +303,6 @@ final class ConvertToRecord {
     return at;
   }
 
-  private static String source(String text, ASTNode n) {
-    return text.substring(n.getStartPosition(), Nodes.end(n));
-  }
-
   /** Whether {@code type} declares equals(Object), the method a record would generate. */
   private static boolean definesEquals(TypeDeclaration type) {
     for (MethodDeclaration m : type.getMethods()) {
@@ -339,7 +335,7 @@ final class ConvertToRecord {
     StringBuilder out = new StringBuilder();
     for (Object o : f.modifiers()) {
       if (o instanceof Annotation a) {
-        out.append(source(text, a)).append(' ');
+        out.append(Nodes.source(text, a)).append(' ');
       }
     }
     return out.toString();

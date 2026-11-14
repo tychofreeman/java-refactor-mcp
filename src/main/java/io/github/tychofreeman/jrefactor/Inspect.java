@@ -201,7 +201,7 @@ public final class Inspect {
       int dot = name.lastIndexOf('.');
       String type = dot > 0 ? name.substring(0, dot) : name;
       String member = dot > 0 ? name.substring(dot + 1) : null;
-      String simple = type.substring(type.lastIndexOf('.') + 1);
+      String simple = Names.simpleName(type);
       boolean typeFound = false;
       int before = out.length();
       for (Path file : project.javaFiles()) {
@@ -349,7 +349,7 @@ public final class Inspect {
   }
 
   private static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength() - 1;
+    return Nodes.end(node) - 1;
   }
 
   /**

@@ -115,7 +115,7 @@ class NarrowCheckStressTest {
       String what = kind.name() + " in " + project.relative(file) + " at " + d.getStartPosition();
       try {
         Files.writeString(file, edited);
-        Map<String, Integer> narrowed = TypeCheck.errors(project);
+        Map<TypeCheck.Problem, Integer> narrowed = TypeCheck.errors(project);
         rechecked += TypeCheck.lastParsed(project).size();
         compare(what, narrowed, TypeCheck.uncached(project), misses);
       } finally {
@@ -134,15 +134,18 @@ class NarrowCheckStressTest {
   }
 
   private static void compare(
-      String what, Map<String, Integer> narrowed, Map<String, Integer> full, List<String> misses) {
+      String what,
+      Map<TypeCheck.Problem, Integer> narrowed,
+      Map<TypeCheck.Problem, Integer> full,
+      List<String> misses) {
     if (narrowed.equals(full)) {
       return;
     }
-    TreeSet<String> keys = new TreeSet<>(narrowed.keySet());
+    TreeSet<TypeCheck.Problem> keys = new TreeSet<>(narrowed.keySet());
     keys.addAll(full.keySet());
     keys.removeIf(k -> narrowed.getOrDefault(k, 0).equals(full.getOrDefault(k, 0)));
     List<String> diff = new ArrayList<>();
-    for (String k : keys) {
+    for (TypeCheck.Problem k : keys) {
       diff.add(
           k
               + " (narrowed "
@@ -244,6 +247,6 @@ class NarrowCheckStressTest {
   }
 
   private static int end(ASTNode node) {
-    return node.getStartPosition() + node.getLength();
+    return Nodes.end(node);
   }
 }

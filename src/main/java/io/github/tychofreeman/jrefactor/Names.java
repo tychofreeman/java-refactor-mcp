@@ -6,6 +6,7 @@ import java.util.Set;
 import javax.lang.model.SourceVersion;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -164,5 +165,23 @@ final class Names {
   /** "Base.describe(int, String)": the declaring class, and the method as {@link #signature}. */
   static String sourceLabel(IMethodBinding m) {
     return m.getDeclaringClass().getErasure().getName() + "." + signature(m);
+  }
+
+  /** The part of a qualified name after its last dot: {@code Map} for {@code java.util.Map}. */
+  static String simpleName(String qualified) {
+    return qualified.substring(qualified.lastIndexOf('.') + 1);
+  }
+
+  /** The package {@code u} declares, or the empty string for the default package. */
+  static String packageOf(CompilationUnit u) {
+    return u.getPackage() == null ? "" : u.getPackage().getName().getFullyQualifiedName();
+  }
+
+  /** "a", "a and b", "a, b and c". */
+  static String listed(List<String> items) {
+    int last = items.size() - 1;
+    return last == 0
+        ? items.get(0)
+        : String.join(", ", items.subList(0, last)) + " and " + items.get(last);
   }
 }
