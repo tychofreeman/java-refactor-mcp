@@ -1059,6 +1059,8 @@ lost calls. Fixed in the same PR: `removed` tells fields from methods. Record:
   was refused "step 1 of 5 (replace_text) refused: replace_text needs file." The step had a
   file, beside `tool` rather than in `args`. Wanted: a step with no `args` takes its other keys
   as the arguments, or the refusal says to put them in `"args"`.
+- Follow-up: done: the refusal names the keys and shows the step with them under `args`, before
+  any step runs (roadmap #196, 2026-11-13).
 
 ## 2026-11-10: move of a static method refused for a parameter named receiver
 
@@ -1115,6 +1117,8 @@ not in placement, since in a batch the reader may name it only in a later step.
   refused: replace_text needs file." The file was there; what was missing was the `args` object
   around it. Resent with `args`. Wanted: when a step has keys beside `tool` and no `args`, the
   refusal says a step's arguments go in `args`, or the step is read that way.
+- Follow-up: done: the refusal names the keys and shows the step with them under `args`, before
+  any step runs (roadmap #196, 2026-11-13).
 
 ## 2026-11-13: move of a generic method; stubs declared in a nested record (remove-parameter-value-expression)
 
@@ -1228,6 +1232,8 @@ not in placement, since in a batch the reader may name it only in a later step.
 - `batch` refused a first send with each step's arguments at the step's top level ("replace_text
   needs file"); they go under `args`. The refusal could say so when a step has `file` beside
   `tool`.
+- Follow-up: done: the refusal names the keys and shows the step with them under `args`, before
+  any step runs (roadmap #196, 2026-11-13).
 
 ## 2026-11-13: the generator task set (`generator-tasks`)
 
@@ -1263,6 +1269,8 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - `batch` refused a first send with each step's arguments beside `tool` again ("replace_text
   needs file"), the second time today (see stress-enum-switch above): evidence for a refusal that
   says they go under `args`.
+- Follow-up: done: the refusal names the keys and shows the step with them under `args`, before
+  any step runs (roadmap #196, 2026-11-13).
 - `extract_variable` `as=constant` of a string a test wrote twice replaced the first only; the
   second went through `replace_expression` (`new` the constant). `all_occurrences` was not tried.
   Nothing by hand.
@@ -1285,7 +1293,14 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - A `batch` with `retry: true` in a second `bin/jrefactor` run was refused ("there is no refused
   batch since the last one passed"), though the run before was refused: the CLI does not keep the
   refused batch between runs, while the refusal offered `retry`. Resent whole.
+
 ## 2026-11-13: cli-batch-retry
 
 - No hand edit of Java; the fix for the CLI `retry` entries above (roadmap #194). The docs went
   through a Python script, not `replace_text`.
+
+## 2026-11-13: batch-args-beside-tool
+
+- A `bin/jrefactor` batch sent as a JSON argument with its `@@` sections on stdin was refused
+  ("content does not parse", `@fields` read as the content): the sections go after the JSON in
+  the same input. Resent as `-` from one heredoc. Nothing by hand.

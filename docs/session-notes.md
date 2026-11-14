@@ -312,6 +312,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Session.refusedBatch` keeps the last refused batch for `batch` `retry` (2026-11-06); a batch
   that passes clears it. The command line keeps it between runs in its cache directory, beside
   the undo stack and the type count (`Batch.save`, `Batch.load`, #194).
+- A `batch` step's own keys are `Batch.STEP_KEYS` (`tool`, `args`, `id`): `argumentsUnderArgs`
+  refuses any other key the step's tool takes as an argument, before a step runs (#196); a new
+  step key goes there.
 - The server runs one tool call at a time (`Server.ONE_AT_A_TIME`): two edits
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
