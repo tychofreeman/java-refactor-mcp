@@ -34,4 +34,20 @@ final class Exceptional {
       project.session().exceptional.add(change);
     }
   }
+
+  /**
+   * Runs {@code body} as a trial: returns the refusal it threw, or null when it passed. The changes
+   * a refused trial reported are dropped, so a tool can try a move and fall back without them.
+   */
+  static Refusal trial(SourceProject project, Runnable body) {
+    java.util.List<String> reports = project.session().exceptional;
+    int mark = reports.size();
+    try {
+      body.run();
+      return null;
+    } catch (Refusal r) {
+      reports.subList(mark, reports.size()).clear();
+      return r;
+    }
+  }
 }
