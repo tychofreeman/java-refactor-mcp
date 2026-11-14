@@ -1924,7 +1924,8 @@ field, an instance getter or setter that would override a method of the class's 
   the refused one, and every refused batch ends by saying how to retry. From the command line,
   the refused batch is kept between runs, beside the undo stack (#194, 2026-11-13). Refused: a retry with no
   refused batch, a change with not exactly one of `step`, `after` and `remove`, a number outside
-  it. The refusal's hint says a step's tool can change and how to move a step.
+  it, one that is not a JSON number (`"2"`), and a step that `step` or `remove` names twice (#488;
+  `after` may repeat, each step added in order). The refusal's hint says a step's tool can change and how to move a step.
 - `steps`: a list of `{tool, args, id?}`, each a tool and the arguments it takes
   alone; `check`: `"each"` (default) or `"end"`. A tool is named as the server
   names it (`rename`) or as a client does (`mcp__<server>__rename`, any server
