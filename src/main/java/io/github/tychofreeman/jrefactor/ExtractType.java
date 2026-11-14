@@ -60,15 +60,17 @@ final class ExtractType {
    */
   static Outcome run(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
-    for (Object t : Opened.of(project, args.required("file")).unit().types()) {
+    Opened opened = Opened.of(project, args.required("file"));
+    for (Object t : opened.unit().types()) {
       if (((AbstractTypeDeclaration) t).getName().getIdentifier().equals(name)) {
-        return fields(project, args.renamed(Map.of("members", "fields", "as", "field")));
+        return fields(project, args.renamed(Map.of("members", "fields", "as", "field")), opened);
       }
     }
-    return parameters(project, args.renamed(Map.of("members", "parameters", "as", "parameter")));
+    return parameters(
+        project, args.renamed(Map.of("members", "parameters", "as", "parameter")), opened);
   }
 
-  static Outcome parameters(SourceProject project, Args args) throws Exception {
+  static Outcome parameters(SourceProject project, Args args, Opened opened) throws Exception {
     String struct = args.required("new_type");
     String parameter = args.required("parameter");
     List<String> chosen = args.list("parameters");
@@ -189,17 +191,9 @@ final class ExtractType {
           c.file(), s, e, "new " + struct + "(" + c.file().text().substring(s, e) + ")");
     }
 
-    Opened home = Opened.of(project, rel);
-    String pkg =
-        home.unit().getPackage() == null
-            ? ""
-            : "package " + home.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    String pkg = opened.packageHeader();
     String text = pkg + "public record " + struct + "(" + String.join(", ", components) + ") {}\n";
-    Gate.applyOrRefuse(
-        project,
-        Map.of(record, Imports.fix(project, record, "", text, List.of()).text()),
-        "creating " + struct,
-        "Nothing was changed.");
+    Edits.newFile(project, record, text, struct, List.of(), "Nothing was changed.");
     return change.apply(
         project,
         "grouped "
@@ -255,7 +249,7 @@ final class ExtractType {
    * package-private class in a file of its own, held by one {@code private final} field of the
    * class in the first one's place; every use goes through it ({@code home.street}).
    */
-  private static Outcome fields(SourceProject project, Args args) throws Exception {
+  private static Outcome fields(SourceProject project, Args args, Opened opened) throws Exception {
     String rel = args.required("file");
     String struct = args.required("new_type");
     String holder = args.required("field");
@@ -264,16 +258,12 @@ final class ExtractType {
         Precondition.identifier(struct, "the class"),
         Precondition.identifier(holder, "the field that holds it"),
         Precondition.that(() -> !chosen.isEmpty(), () -> "fields names the fields to move."));
-    Opened opened = Opened.of(project, rel);
-    for (Object t : opened.unit().types()) {
-      if (t instanceof RecordDeclaration r
-          && r.getName().getIdentifier().equals(args.required("name"))
-          && r.resolveBinding() != null) {
-        return components(project, args, opened, r);
-      }
+    AbstractTypeDeclaration named = opened.classOrRecord(args.required("name"));
+    if (named instanceof RecordDeclaration r) {
+      return components(project, args, opened, r);
     }
     String text = opened.text();
-    TypeDeclaration owner = opened.topLevel(args.required("name"));
+    TypeDeclaration owner = (TypeDeclaration) named;
     String ownerName = owner.getName().getIdentifier();
     Path target = opened.file().resolveSibling(struct + ".java");
     Precondition.require(
@@ -430,10 +420,7 @@ final class ExtractType {
         edits.add(MemberMove.removal(text, fd));
       }
     }
-    String pkg =
-        opened.unit().getPackage() == null
-            ? ""
-            : "package " + opened.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    String pkg = opened.packageHeader();
     if (!params.isEmpty()) {
       body.append("\n  ")
           .append(struct)
@@ -444,11 +431,7 @@ final class ExtractType {
           .append("  }\n");
     }
     String created = pkg + "class " + struct + " {\n" + body + "}\n";
-    Gate.applyOrRefuse(
-        project,
-        Map.of(target, Imports.fix(project, target, "", created, List.of()).text()),
-        "creating " + struct,
-        "Nothing was changed.");
+    Edits.newFile(project, target, created, struct, List.of(), "Nothing was changed.");
     Edits.Written written =
         Edits.gated(
             project,
@@ -663,18 +646,11 @@ final class ExtractType {
               + " yet. Write it as a lambda or with the accessors first.");
     }
 
-    String pkg =
-        opened.unit().getPackage() == null
-            ? ""
-            : "package " + opened.unit().getPackage().getName().getFullyQualifiedName() + ";\n\n";
+    String pkg = opened.packageHeader();
     String visibility = Modifier.isPublic(owner.getModifiers()) ? "public " : "";
     String created =
         pkg + visibility + "record " + struct + "(" + String.join(", ", components) + ") {}\n";
-    Gate.applyOrRefuse(
-        project,
-        Map.of(target, Imports.fix(project, target, "", created, List.of()).text()),
-        "creating " + struct,
-        "Nothing was changed.");
+    Edits.newFile(project, target, created, struct, List.of(), "Nothing was changed.");
     Edits.WrittenFiles written =
         Edits.gatedFiles(
             project,

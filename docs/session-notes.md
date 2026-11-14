@@ -276,6 +276,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Holding.where(project, (file, text) -> ...)` for any other test (#502, 2026-11-14): do not
   write the read-filter-`parseAll` loop again. Its units are parsed from disk, so it takes no
   caller's text. `inspect` `names` parses syntax only (`Jdt.parseSyntax`): it uses no binding.
+- A tool that creates a new type's file writes it with `Edits.newFile` (imports fixed, through the
+  gate, the caller's last sentence for a refusal) and starts it with `Opened.packageHeader()` (#518).
 - Java's primitive types as tools write them are `JavaTypes` (#530): `BOXED`, `isPrimitive`, `isBox`,
   `zero` (a variable's start value) and `placeholder` (a typed test argument). A member's kind for
   layout is `Placement.Rank`, not an int. `TypeDecidedUses` (was `PrimitiveUses`) is the
