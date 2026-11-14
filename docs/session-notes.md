@@ -230,6 +230,13 @@ Each was chosen from options; the record named beside it has the options it beat
   (`MavenBuild.sourceRoots`, #293): a root that does not exist yet is skipped when walking and
   parsing, so a test created before `src/test/java` is type-checked and gets its stubs. It had
   been outside every root, so `create_file` wrote it unchecked.
+- The file that declares a type is `SourceProject.fileOf(ITypeBinding)` (the file its outermost
+  type's name implies; null for a local or anonymous class) or `fileDeclaring(qualified)` (a
+  top-level name), one `stat` per source root (#482). A second top-level class of a file is not
+  there: find it by binding in a parse (`Signatures.projects`, `Rename.renameTypeParameter`). The
+  outermost type of a binding is `Names.outermost` (erased). A search by simple name
+  (`MoveMember.targetFile` for `to=Tax`) matches the file name, never a path suffix: a suffix match
+  took `x/a/b/C.java` for `a.b.C`.
 - `Jdt` owns every parser; `grep ASTParser` finds `Jdt` only. A unit parsed from a
   file carries its path (`Jdt.fileOf(unit)`), which a check across parses can key by.
   An exception ECJ throws while resolving becomes a refusal there (`Jdt.compilerFailed`, #405);
@@ -446,8 +453,8 @@ Each was chosen from options; the record named beside it has the options it beat
   by `MemberMove.appendTo` on that edited text, reparsed, since `appendTo`'s `;` after the last
   constant would overlap a body written after it. `TypeSwitch.body` takes the indentation, and
   `TypeSwitch.Case` is shared.
-  A member type is found by `TypeSwitch.fileAround` (the file of its outermost type; `fileOf`
-  stays top-level only, as `InlineClass`, `SubclassToStrategy` and `ByLine` rely on its null for a
+  A member type is found by `SourceProject.fileOf` (the file of its outermost type; `TypeSwitch.fileOf`
+  stays top-level only, as `InlineClass` and `SubclassToStrategy` rely on its null for a
   member type) and `TypeSwitch.declaration` (by `Names.typeLabel`, without bindings) (#154).
 
 - `extract_variable` with `as` (#86, 2026-11-04) is `Introduce`: a constant, a field,

@@ -280,11 +280,7 @@ final class ChangeSignature {
       if (target == null || target.isConstructor() || !target.getDeclaringClass().isFromSource()) {
         continue;
       }
-      ITypeBinding top = target.getDeclaringClass();
-      while (top.getDeclaringClass() != null) {
-        top = top.getDeclaringClass();
-      }
-      Path file = TypeSwitch.fileOf(project, top);
+      Path file = project.fileOf(target.getDeclaringClass());
       if (file == null) {
         continue;
       }

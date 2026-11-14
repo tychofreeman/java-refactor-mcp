@@ -357,13 +357,7 @@ final class Imports {
 
   /** Whether the top-level class {@code qualified} is in the project's sources. */
   private static boolean own(SourceProject project, String qualified) {
-    String path = qualified.replace('.', '/') + ".java";
-    for (Path root : project.sourceRoots()) {
-      if (Files.exists(root.resolve(path))) {
-        return true;
-      }
-    }
-    return false;
+    return project.fileDeclaring(qualified) != null;
   }
 
   /** How many of the other Java files in {@code file}'s directory import each class. */
