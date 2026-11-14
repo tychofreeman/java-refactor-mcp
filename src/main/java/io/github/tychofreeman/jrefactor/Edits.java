@@ -387,7 +387,6 @@ final class Edits {
       Gate.write(project, path, text);
       return new Written(new Imports.Fixed(text, 0, List.of()), Stubs.Declared.NONE);
     }
-    parses(text, "the result");
     return gated(project, path, before, text, chosen, what, fix);
   }
 

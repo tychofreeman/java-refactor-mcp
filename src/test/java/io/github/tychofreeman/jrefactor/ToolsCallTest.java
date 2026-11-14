@@ -80,4 +80,13 @@ class ToolsCallTest {
     Outcome outcome = Tools.call(writer(Tools.Kind.EDIT), project, Map.of());
     assertEquals("com/example/Cart.java", outcome.declared().byFile().keySet().iterator().next());
   }
+
+  /** A call's flags hold while it runs only: after a top-level edit, nothing is editing. */
+  @Test
+  void anEditLeavesNoFlagSetAfterIt(@TempDir Path root) throws Exception {
+    SourceProject project = cartProject(root);
+    Tools.call(writer(Tools.Kind.EDIT), project, Map.of());
+    assertFalse(project.session().editing);
+    assertFalse(project.session().preserveExceptions);
+  }
 }

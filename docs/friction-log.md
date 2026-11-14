@@ -1774,6 +1774,27 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 - `fold` of a method that builds a list in statements and returns it is refused (one return or a
   void method only): the four `segments` sites went through `replace_statements`.
 
+## 2026-11-14: session-scope
+
+- A `replace_text` that wrapped `Fold`'s loop body in a lambda (`Exceptional.trial`) named a new
+  local `left`, already a local there: the end check caught it. No tool turns a try/catch into a
+  call with a lambda; `replace_text` of the whole block was the way.
+- `Gate.deferred` as a try-with-resources failed `-Xlint:try` (the resource is never named in the
+  body), which the batch's gate does not see: only Maven's `-Werror` compile does. Rewritten as
+  try/finally after the build failed.
+- No Java by hand.
+
+## 2026-11-14: strategy-run-split
+
+- `extract_variable` of the first operands of `"turned " + ... + " deleted)" + written.said()` was
+  refused ("no expression ... starts on line N"): JDT keeps a chain of `+` as one `InfixExpression`
+  with extended operands, so a prefix of it is no node. Tried: the prefix as the expression; the
+  whole argument would have taken `written` along. An `extract_variable` that takes a leading run of
+  a left-associative chain (`a + b + c` as `(a + b) + c`) would have made the message its own method.
+- Two `extract_function`s in a row by the line numbers of one read: the second took the wrong lines
+  (the first had shortened the method). `undo` put it back. Extracting bottom-up avoids it; a batch
+  that accepted the second's lines as of the read before the batch would too.
+
 ## 2026-11-14: lines-helpers
 
 - No Java by hand: one batch of 13 steps (`add_declaration` of `Lines.offsetOf` with a column,

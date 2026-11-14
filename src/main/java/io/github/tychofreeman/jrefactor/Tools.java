@@ -1840,27 +1840,21 @@ final class Tools {
             .without(RETIRED_ARGS.getOrDefault(def.name(), Set.of()));
     args.check(def.args());
     Journal.begin(project, def.name());
-    Session session = project.session();
-    boolean outer = session.editing;
-    boolean outerPreserve = session.preserveExceptions;
-    List<String> outerExceptional = session.exceptional;
-    session.editing = def.kind() == Kind.EDIT;
-    session.preserveExceptions = def.kind() == Kind.REFACTORING && args.flag(Exceptional.FLAG);
-    session.exceptional = new ArrayList<>();
-    try {
-      Outcome outcome = def.handler().run(project, args).withExceptional(session.exceptional);
-      Journal.commit(project);
-      // A step's changes to exceptional behavior are its batch's too.
-      outerExceptional.addAll(session.exceptional);
-      return outcome;
-    } catch (Exception | Error e) {
-      abort(project, e);
-      throw e;
-    } finally {
-      // A batch remembers that one of its steps was an edit, for its check at the end.
-      session.editing = outer || def.kind() == Kind.EDIT;
-      session.preserveExceptions = outerPreserve;
-      session.exceptional = outerExceptional;
+    try (Session.Scope scope =
+        project
+            .session()
+            .scope(
+                def.kind() == Kind.EDIT,
+                def.kind() == Kind.REFACTORING && args.flag(Exceptional.FLAG))) {
+      try {
+        Outcome outcome = def.handler().run(project, args).withExceptional(scope.reports());
+        Journal.commit(project);
+        scope.keep();
+        return outcome;
+      } catch (Exception | Error e) {
+        abort(project, e);
+        throw e;
+      }
     }
   }
 

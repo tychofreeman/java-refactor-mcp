@@ -198,7 +198,6 @@ final class Fold {
     List<ASTNode> moved = new ArrayList<>();
     Map<Path, List<Integer>> folded = new LinkedHashMap<>();
     List<String> left = new ArrayList<>();
-    List<String> reports = project.session().exceptional;
     String call = typeName + "." + methodName;
     for (Candidate c : found) {
       int at = c.unit().getLineNumber(c.start());
@@ -206,15 +205,17 @@ final class Fold {
         continue;
       }
       String text = holding.texts().get(c.file());
-      int mark = reports.size();
-      String why;
-      try {
-        why = leave(project, c, m, params, order, uses, stable, text, call);
-      } catch (Refusal r) {
-        why = r.getMessage();
-      }
-      if (why != null) {
-        reports.subList(mark, reports.size()).clear();
+      Refusal refused =
+          Exceptional.trial(
+              project,
+              () -> {
+                String why = leave(project, c, m, params, order, uses, stable, text, call);
+                if (why != null) {
+                  throw new Refusal(why);
+                }
+              });
+      if (refused != null) {
+        String why = refused.getMessage();
         left.add(project.relative(c.file()) + " line " + at + " (" + why + ")");
         continue;
       }

@@ -333,6 +333,9 @@ Each was chosen from options; the record named beside it has the options it beat
   fixed, all through the gate; a null edit list deletes the file, an empty one leaves it alone. It
   returns `WrittenFiles` (the fixed texts, the import notes as "rel: imported a.B", the stubs);
   a tool's result appends `said()`, so every multi-file tool names the imports it changed.
+- `Imports.fix` is `render(after, plan(...))` (#522): `plan` finds and chooses (a `Plan` of the
+  imports to add and remove), `render` lays them out; a caller that needs only what would change
+  calls `plan`. It parses `before` once, with bindings; read names and imports from that unit.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
@@ -342,6 +345,10 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Session` holds all per-project state (undo history, deferred flag, library
   index, last type check, `editing`, `preserveExceptions`); there is no static
   mutable state. `Server.Quiet` holds the per-server state.
+  A call's flags (`editing`, `preserveExceptions`, its exceptional reports) are set and put back
+  by `Session.scope` (a `Scope`, closed by `Tools.call`), `deferred` by `Session.deferring`
+  (#525): a new per-call flag goes in `Scope`, not in another save and restore. A tool that tries
+  a check and falls back calls `Exceptional.trial`, which drops what a refused try reported.
 - `Opened.topLevel` takes a class or interface only; a record, enum or annotation type of that
   name is refused saying which it is and listing the file's classes and interfaces
   (`Opened.notAClass`, #155). The other callers of `MemberMove.typeNamed` with their own
