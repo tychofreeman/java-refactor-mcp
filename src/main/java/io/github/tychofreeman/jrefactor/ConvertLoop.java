@@ -183,7 +183,7 @@ final class ConvertLoop {
         && size.getName().getIdentifier().equals("size")
         && size.arguments().isEmpty()
         && size.getExpression() != null
-        && isA(size.getExpression().resolveTypeBinding(), "java.util.List")) {
+        && Hierarchy.isA(size.getExpression().resolveTypeBinding(), "java.util.List")) {
       return new Indexed(f, index, size.getExpression(), false);
     }
     if (bound instanceof QualifiedName q
@@ -225,22 +225,6 @@ final class ConvertLoop {
 
   private static boolean same(IBinding a, IBinding b) {
     return a != null && b != null && a.getKey().equals(b.getKey());
-  }
-
-  /** Whether {@code t} is, extends or implements the type named {@code name}. */
-  private static boolean isA(ITypeBinding t, String name) {
-    if (t == null) {
-      return false;
-    }
-    if (t.getErasure().getQualifiedName().equals(name)) {
-      return true;
-    }
-    for (ITypeBinding i : t.getInterfaces()) {
-      if (isA(i, name)) {
-        return true;
-      }
-    }
-    return isA(t.getSuperclass(), name);
   }
 
   /** An index for to an enhanced for: each {@code x.get(i)} or {@code x[i]} becomes the element. */
@@ -432,7 +416,7 @@ final class ConvertLoop {
     if (loop.initializers().size() != 1
         || !(loop.initializers().get(0) instanceof VariableDeclarationExpression init)
         || init.fragments().size() != 1
-        || !isA(init.getType().resolveBinding(), "java.util.Iterator")
+        || !Hierarchy.isA(init.getType().resolveBinding(), "java.util.Iterator")
         || !loop.updaters().isEmpty()) {
       throw new Refusal("the loop at line " + line + shape);
     }
@@ -527,7 +511,7 @@ final class ConvertLoop {
     Expression of = loop.getExpression();
     ITypeBinding t = of.resolveTypeBinding();
     boolean array = t != null && t.isArray();
-    if (!array && !isA(t, "java.util.List")) {
+    if (!array && !Hierarchy.isA(t, "java.util.List")) {
       throw new Refusal(
           "the loop at line "
               + line
@@ -558,7 +542,7 @@ final class ConvertLoop {
     first(text, loop, body, source(text, loop.getParameter()) + " = " + read + ";", edits);
     edits.add(new Edit(loop.getStartPosition(), body.getStartPosition(), header + " "));
     String note =
-        !array && !isA(t, "java.util.RandomAccess")
+        !array && !Hierarchy.isA(t, "java.util.RandomAccess")
             ? " " + from + " is not a RandomAccess list, so get(i) may walk it (a LinkedList)."
             : "";
     return "a " + header + "." + note;

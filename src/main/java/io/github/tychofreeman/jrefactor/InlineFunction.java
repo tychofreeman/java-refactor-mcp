@@ -1008,7 +1008,7 @@ final class InlineFunction {
           && !argType.isNullType()
           && paramType != null
           && !argType.isEqualTo(paramType)
-          && !(subtypeSafe[i] && subtype(argType, paramType))) {
+          && !(subtypeSafe[i] && Hierarchy.isSubtype(argType, paramType))) {
         throw new Refusal(
             "argument "
                 + param
@@ -1034,32 +1034,6 @@ final class InlineFunction {
       }
     }
     return n;
-  }
-
-  /**
-   * Whether reference type {@code sub} extends or implements {@code sup}, by qualified name: the
-   * two come from different parses.
-   */
-  private static boolean subtype(ITypeBinding sub, ITypeBinding sup) {
-    if (sub.isPrimitive() || sup.isPrimitive()) {
-      return false;
-    }
-    String target = sup.getErasure().getQualifiedName();
-    if (target.equals("java.lang.Object")) {
-      return true;
-    }
-    List<ITypeBinding> todo = new ArrayList<>(List.of(sub));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
-      if (t.getErasure().getQualifiedName().equals(target)) {
-        return true;
-      }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
-    }
-    return false;
   }
 
   /**
@@ -1225,23 +1199,13 @@ final class InlineFunction {
     }
     IMethodBinding decl = b.getMethodDeclaration();
     int same = 0;
-    List<ITypeBinding> todo = new ArrayList<>(List.of(decl.getDeclaringClass()));
-    Set<String> seen = new HashSet<>();
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
-      if (!seen.add(t.getKey())) {
-        continue;
-      }
+    for (ITypeBinding t : Hierarchy.supertypes(decl.getDeclaringClass(), true)) {
       for (IMethodBinding m : t.getDeclaredMethods()) {
         if (m.getName().equals(decl.getName())
             && m.getParameterTypes().length == decl.getParameterTypes().length) {
           same++;
         }
       }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(Arrays.asList(t.getInterfaces()));
     }
     return same == 1;
   }

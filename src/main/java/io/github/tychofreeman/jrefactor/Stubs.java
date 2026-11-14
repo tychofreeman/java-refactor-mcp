@@ -245,17 +245,9 @@ final class Stubs {
      * in its own file, since a call inside a subclass has no file of the supertype's.
      */
     private boolean removedInSupertypes(ITypeBinding type, String name) {
-      List<ITypeBinding> supertypes = new ArrayList<>();
-      if (type.getSuperclass() != null) {
-        supertypes.add(type.getSuperclass());
-      }
-      supertypes.addAll(List.of(type.getInterfaces()));
-      for (ITypeBinding s : supertypes) {
+      for (ITypeBinding s : Hierarchy.supertypes(type, false)) {
         Path file = project.fileOf(s);
         if (file != null && removed(file, Names.typeLabel(s.getErasure()), name, false)) {
-          return true;
-        }
-        if (removedInSupertypes(s, name)) {
           return true;
         }
       }

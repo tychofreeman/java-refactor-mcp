@@ -123,7 +123,7 @@ final class PushDown {
     if (mine == null) {
       return;
     }
-    List<IMethodBinding> overridden = CallTargets.overridden(mine);
+    List<IMethodBinding> overridden = Hierarchy.overridden(mine);
     if (!overridden.isEmpty()) {
       throw new Refusal(
           overridden.get(0).getDeclaringClass().getErasure().getName()

@@ -71,7 +71,7 @@ final class PullUp {
               + ". Rename one of them, or pull_up is not the change you want.");
     }
     if (moved instanceof MethodDeclaration md && md.resolveBinding() != null) {
-      IMethodBinding inherited = overridden(md.resolveBinding(), superType);
+      IMethodBinding inherited = Hierarchy.concreteOverridden(md.resolveBinding(), superType);
       if (inherited != null) {
         String declaring = inherited.getDeclaringClass().getErasure().getName();
         throw new Refusal(
@@ -168,32 +168,6 @@ final class PullUp {
             + ". Its direct supertypes are "
             + directNames(sub)
             + ".");
-  }
-
-  /**
-   * The first concrete method of {@code type}'s supertypes (superclasses and interfaces, not {@code
-   * type} itself) that {@code method} overrides, or null. In {@code type}, the moved method would
-   * take its place for every class below that does not declare its own.
-   */
-  private static IMethodBinding overridden(IMethodBinding method, ITypeBinding type) {
-    List<ITypeBinding> todo = new ArrayList<>();
-    if (type.getSuperclass() != null) {
-      todo.add(type.getSuperclass());
-    }
-    todo.addAll(List.of(type.getInterfaces()));
-    for (int i = 0; i < todo.size(); i++) {
-      ITypeBinding t = todo.get(i);
-      for (IMethodBinding m : t.getDeclaredMethods()) {
-        if (!Modifier.isAbstract(m.getModifiers()) && method.overrides(m)) {
-          return m;
-        }
-      }
-      if (t.getSuperclass() != null) {
-        todo.add(t.getSuperclass());
-      }
-      todo.addAll(List.of(t.getInterfaces()));
-    }
-    return null;
   }
 
   private static String directNames(ITypeBinding sub) {

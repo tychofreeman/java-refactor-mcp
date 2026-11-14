@@ -218,9 +218,7 @@ final class ExtractVariable {
       if (type == null) {
         continue;
       }
-      List<ITypeBinding> todo = new ArrayList<>(List.of(type));
-      for (int i = 0; i < todo.size(); i++) {
-        ITypeBinding c = todo.get(i);
+      for (ITypeBinding c : Hierarchy.supertypes(type, true)) {
         for (IVariableBinding f : c.getDeclaredFields()) {
           if (f.getName().equals(name)) {
             throw new Refusal(
@@ -233,10 +231,6 @@ final class ExtractVariable {
                     + " another name.");
           }
         }
-        if (c.getSuperclass() != null) {
-          todo.add(c.getSuperclass());
-        }
-        todo.addAll(List.of(c.getInterfaces()));
       }
     }
   }
