@@ -500,7 +500,6 @@ final class TypeSwitch {
         edits.add(new TextEdit(s, s + "yield".length(), "return"));
       }
     }
-    edits.sort((a, b) -> b.start() - a.start());
     return TextEdit.apply(text.substring(base, Nodes.end(e)), edits, 0);
   }
 

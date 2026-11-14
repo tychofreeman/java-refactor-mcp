@@ -1477,3 +1477,18 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   sets could match such a copy.
 - Otherwise through the tools: `extract_function` (twice, one returning a record), `move`,
   `rename` (twice), statement edits. Goldens are resources.
+
+## 2026-11-14: one-text-edit-apply
+
+- No Java by hand. `ConvertLoop.Edit` onto `TextEdit`: no tool replaces a type with another of
+  the same shape. Tried `rename` to `TextEdit` (applied, shadowing the top-level record), then
+  `replace_declaration` with empty content (refused: the uses bind to the nested record); the
+  record was deleted by `replace_text` in a batch, which the gate accepts as the uses then resolve
+  to `TextEdit`. A `rename` onto an existing type of the same shape, or a safe delete that
+  re-resolves the uses, would be one step.
+- `inline` of `ConvertLoop.within` was refused for the argument `List.of()` ("calls, assigns or
+  changes a variable"): a call of a JDK factory with no arguments is treated as an effect.
+  Worked around with `replace_expression` of that call by what it computed.
+- `ParameterValue.Swap(offset, length, text)` to `TextEdit(start, end, text)`: each construction
+  by `replace_expression`, the type by `replace_text` with `all_occurrences`; no tool changes a
+  record's components and its constructions together (`change_signature` takes methods only).

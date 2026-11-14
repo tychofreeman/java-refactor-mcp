@@ -596,14 +596,8 @@ final class InlineFunction {
       }
       all.add(new TextEdit(u.start(), u.end(), argText));
     }
-    all.sort((a, b) -> Integer.compare(b.start(), a.start()));
-    StringBuilder out = new StringBuilder(declaringText.substring(start, end));
-    for (TextEdit e : all) {
-      if (e.start() >= start && e.end() <= end) {
-        out.replace(e.start() - start, e.end() - start, e.text());
-      }
-    }
-    return out.toString();
+    all.removeIf(e -> e.start() < start || e.end() > end);
+    return TextEdit.apply(declaringText.substring(start, end), all, start);
   }
 
   /**

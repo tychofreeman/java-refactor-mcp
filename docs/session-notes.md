@@ -279,6 +279,10 @@ Each was chosen from options; the record named beside it has the options it beat
   journal also keeps a file's mode (`Journal.mode`, `copyMode`), so undo puts back
   an executable file executable. Both take the project: a deletion removes the directories it
   empties up to a source root or the project's root, never those (#479, `Journal.removable`).
+- `TextEdit.apply` is the one applier of text edits (#498): it sorts them itself, applies them from
+  the end (an insert at a replacement's start goes before it), and throws `IllegalStateException`
+  on overlapping edits, a tool's bug. For a window of a file, pass the window's start as `offset`
+  rather than shifting the edits; filter edits outside the window first. No sort before it.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's

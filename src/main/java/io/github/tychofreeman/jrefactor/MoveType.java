@@ -123,7 +123,7 @@ final class MoveType {
       }
       if (!f.equals(file)) {
         if (!edits.isEmpty() || inherits) {
-          String after = apply(text, 0, edits);
+          String after = TextEdit.apply(text, edits, 0);
           if (inherits) {
             after = Imports.adding(after, Jdt.parseSyntax(after), qualified(pkg, simple));
           }
@@ -182,7 +182,8 @@ final class MoveType {
         (edit.start() >= start && edit.start() < end ? inside : outside).add(edit);
       }
       int lineStart = Lines.start(text, start);
-      String moved = dedent(apply(text.substring(lineStart, end), lineStart, inside), text, start);
+      String moved =
+          dedent(TextEdit.apply(text.substring(lineStart, end), inside, lineStart), text, start);
       Set<String> usedInside = new HashSet<>();
       Set<String> usedOutside = new HashSet<>();
       identifiers(u, start, end, usedInside, usedOutside);
@@ -216,7 +217,7 @@ final class MoveType {
         cutStart = before;
       }
       outside.add(new TextEdit(cutStart, Lines.end(text, end), ""));
-      changed.put(f, apply(text, 0, outside));
+      changed.put(f, TextEdit.apply(text, outside, 0));
       String created =
           (pkg.isEmpty() ? "" : "package " + pkg + ";\n\n")
               + (kept.isEmpty() ? "" : kept + "\n")
@@ -626,11 +627,6 @@ final class MoveType {
       at++;
     }
     return at;
-  }
-
-  /** {@code text}, which starts at {@code offset} of the file, with {@code edits} applied. */
-  private static String apply(String text, int offset, List<TextEdit> edits) {
-    return TextEdit.apply(text, edits, offset);
   }
 
   /**
