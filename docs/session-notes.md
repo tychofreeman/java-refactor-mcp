@@ -60,6 +60,8 @@ fact here becomes wrong, fix or remove it in the same PR.
   #119-#130 (2026-11-06, the user asked for it to be merged with this repo's next items); the
   merged order is "Next, in order" in `docs/design.md`. When an item there is done, mark it
   in parity.md too (gorefactor's repo, its own PR).
+- Every open issue has a roadmap row (2026-11-13, #200-#206 for #364's rest and #367-#372), and
+  a new issue gets one in the PR that files or first touches it.
 - The roadmap's open items are ordered by evidence (gorefactor's, then this
   repo's friction log), not only by what unblocks what; the reasons are under
   "Why this order" in `docs/design.md`.

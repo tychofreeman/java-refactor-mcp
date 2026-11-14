@@ -1323,3 +1323,7 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
 
 - No Java by hand. The golden cases were written by a script (resources). A batch deleting a
   method before changing its one call was refused; `retry` with `remove` and `after` reordered it.
+
+## 2026-11-13: roadmap-open-issues
+
+- Docs only; the rows inserted by a script.
