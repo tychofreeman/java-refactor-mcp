@@ -40,7 +40,7 @@ final class PushDown {
     Holding holding = Holding.of(project, subType.getErasure().getName(), file);
     Map<Path, String> texts = holding.texts();
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
-    String movedText = MemberMove.textOf(text, moved);
+    String movedText = Nodes.source(text, moved);
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(MemberMove.removal(text, moved));
 
     int subclasses = 0;

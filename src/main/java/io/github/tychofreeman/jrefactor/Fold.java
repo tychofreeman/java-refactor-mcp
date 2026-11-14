@@ -779,9 +779,7 @@ final class Fold {
 
   /** The text of {@code x}: its source, or for a literal fold made from a format, its literal. */
   private static String source(Expression x, String text) {
-    return made(x)
-        ? ((StringLiteral) x).getEscapedValue()
-        : text.substring(x.getStartPosition(), Nodes.end(x));
+    return made(x) ? ((StringLiteral) x).getEscapedValue() : Nodes.source(text, x);
   }
 
   /** Whether {@code x} is a literal fold made from a format's text, which is not in the source. */

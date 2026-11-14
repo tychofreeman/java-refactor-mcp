@@ -93,7 +93,7 @@ final class Effects {
     }
 
     int end() {
-      return node.getStartPosition() + node.getLength();
+      return Nodes.end(node);
     }
   }
 

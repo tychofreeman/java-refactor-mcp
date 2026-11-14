@@ -127,7 +127,7 @@ final class AddResult {
 
     List<TextEdit> own = edits.computeIfAbsent(file, k -> new ArrayList<>());
     ASTNode returnType = m.getReturnType2();
-    String oldType = text.substring(returnType.getStartPosition(), Nodes.end(returnType));
+    String oldType = Nodes.source(text, returnType);
     own.add(
         new TextEdit(
             returnType.getStartPosition(), Nodes.end(returnType), isVoid ? type : recordName));
@@ -143,13 +143,7 @@ final class AddResult {
             new TextEdit(
                 x.getStartPosition(),
                 Nodes.end(x),
-                "new "
-                    + recordName
-                    + "("
-                    + text.substring(x.getStartPosition(), Nodes.end(x))
-                    + ", "
-                    + zero
-                    + ")"));
+                "new " + recordName + "(" + Nodes.source(text, x) + ", " + zero + ")"));
       }
     }
     String indent = Lines.indentOf(text, m.getStartPosition());

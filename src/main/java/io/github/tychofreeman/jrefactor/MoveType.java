@@ -367,7 +367,7 @@ final class MoveType {
               edits.add(
                   new TextEdit(
                       q.getStartPosition(),
-                      q.getStartPosition() + q.getLength(),
+                      Nodes.end(q),
                       short_ ? simple : qualified(pkg, simple)));
               return false;
             }
@@ -453,7 +453,7 @@ final class MoveType {
                       + field
                       + "() if that is what it should mean, then move it again.");
             }
-            int at = n.getStartPosition() + n.getLength();
+            int at = Nodes.end(n);
             edits.add(new TextEdit(at, at, "()"));
             accessed.add(field);
             return true;
@@ -610,7 +610,7 @@ final class MoveType {
 
   /** Removes modifier {@code m} and the spaces after it. */
   private static TextEdit dropModifier(String text, Modifier m) {
-    int end = m.getStartPosition() + m.getLength();
+    int end = Nodes.end(m);
     while (end < text.length() && text.charAt(end) == ' ') {
       end++;
     }

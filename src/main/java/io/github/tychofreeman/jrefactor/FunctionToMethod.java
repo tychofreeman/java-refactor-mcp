@@ -118,9 +118,9 @@ final class FunctionToMethod {
       List<String> rest = new ArrayList<>();
       for (int i = 1; i < c.arguments().size(); i++) {
         ASTNode a = (ASTNode) c.arguments().get(i);
-        rest.add(text.substring(a.getStartPosition(), Nodes.end(a)));
+        rest.add(Nodes.source(text, a));
       }
-      String on = text.substring(receiver.getStartPosition(), Nodes.end(receiver));
+      String on = Nodes.source(text, receiver);
       if (InlineVariable.needsParentheses(receiver)) {
         on = "(" + on + ")";
       }

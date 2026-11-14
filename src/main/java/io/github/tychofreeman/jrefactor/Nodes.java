@@ -183,4 +183,9 @@ final class Nodes {
     }
     return null;
   }
+
+  /** The source of {@code n} in {@code text}. */
+  static String source(String text, ASTNode n) {
+    return text.substring(n.getStartPosition(), Nodes.end(n));
+  }
 }

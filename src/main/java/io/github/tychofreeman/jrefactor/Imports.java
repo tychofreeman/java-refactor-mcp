@@ -159,9 +159,7 @@ final class Imports {
     for (ImportDeclaration i : remove) {
       TextEdit cut =
           new TextEdit(
-              Lines.start(after, i.getStartPosition()),
-              Lines.end(after, i.getStartPosition() + i.getLength()),
-              "");
+              Lines.start(after, i.getStartPosition()), Lines.end(after, Nodes.end(i)), "");
       if (!edits.contains(cut)) {
         edits.add(cut);
       }
@@ -525,7 +523,7 @@ final class Imports {
       last = i;
     }
     if (last != null) {
-      return Lines.end(text, last.getStartPosition() + last.getLength());
+      return Lines.end(text, Nodes.end(last));
     }
     if (!kept.isEmpty()) {
       return Lines.start(text, kept.get(0).getStartPosition());
@@ -536,7 +534,7 @@ final class Imports {
   /** The offset just past the package line, or 0 with no package. */
   private static int packageEnd(String text, CompilationUnit unit) {
     PackageDeclaration p = unit.getPackage();
-    return p == null ? 0 : Lines.end(text, p.getStartPosition() + p.getLength());
+    return p == null ? 0 : Lines.end(text, Nodes.end(p));
   }
 
   /** Simple type names the compiler could not resolve in {@code unit}. */

@@ -85,7 +85,7 @@ final class EncapsulateField {
     String getter = getterArg != null && !getterArg.isBlank() ? getterArg : "get" + cap;
     String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
     String fieldKey = Bindings.declarationKey(fieldBinding);
-    String typeText = source(text, fd.getType());
+    String typeText = Nodes.source(text, fd.getType());
     if (!isStatic) {
       refuseOverride(project, file, owner, getter, List.of(), "getter", field);
       if (!isFinal) {
@@ -272,7 +272,7 @@ final class EncapsulateField {
       }
       String prefix = fileText.substring(target.getStartPosition(), n.getStartPosition());
       int s = st.getStartPosition();
-      String rhs = source(fileText, a.getRightHandSide());
+      String rhs = Nodes.source(fileText, a.getRightHandSide());
       return new TextEdit(s, s + st.getLength(), prefix + setter + "(" + rhs + ");");
     }
     if (isIncDec(up, target)) {
@@ -325,10 +325,6 @@ final class EncapsulateField {
     return found[0];
   }
 
-  private static String source(String text, ASTNode node) {
-    return text.substring(node.getStartPosition(), node.getStartPosition() + node.getLength());
-  }
-
   /**
    * The setter call that replaces {@code statement}, a write of the field through {@code target}
    * ({@code n} its name): the getter's value combined with {@code operand} by {@code op}, as {@code
@@ -349,7 +345,7 @@ final class EncapsulateField {
       Path p) {
     if (target instanceof FieldAccess fa
         && !(fa.getExpression() instanceof ThisExpression || fa.getExpression() instanceof Name)) {
-      String receiver = source(fileText, fa.getExpression());
+      String receiver = Nodes.source(fileText, fa.getExpression());
       throw new Refusal(
           field
               + " is changed through "
@@ -372,7 +368,7 @@ final class EncapsulateField {
 
   /** {@code e}'s source, in parentheses unless it is a name, a literal, a call or already so. */
   private static String operand(String fileText, Expression e) {
-    String text = source(fileText, e);
+    String text = Nodes.source(fileText, e);
     boolean bare =
         e instanceof Name
             || e instanceof NumberLiteral

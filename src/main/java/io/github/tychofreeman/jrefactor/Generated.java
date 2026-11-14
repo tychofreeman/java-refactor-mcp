@@ -108,8 +108,7 @@ final class Generated {
     if (!(inner instanceof Block b)) {
       return;
     }
-    String body =
-        text.substring(b.getStartPosition() + 1, b.getStartPosition() + b.getLength() - 1);
+    String body = text.substring(b.getStartPosition() + 1, Nodes.end(b) - 1);
     if (!squeezed(body).equals(squeezed(replaced))) {
       return;
     }
@@ -205,7 +204,7 @@ final class Generated {
     for (MethodDeclaration m : Nodes.all(Edits.parses(after, rel), MethodDeclaration.class)) {
       MethodDeclaration was = old.get(key(m));
       if (was != null
-          && (MemberMove.textOf(before, was).equals(MemberMove.textOf(after, m)) || refused(was))) {
+          && (Nodes.source(before, was).equals(Nodes.source(after, m)) || refused(was))) {
         continue;
       }
       checkMembers(
@@ -247,7 +246,7 @@ final class Generated {
     for (int i = 0; i < statements.size(); i++) {
       Statement s = (Statement) statements.get(i);
       Built b = built(text, s);
-      build.add(b == null ? source(text, s) : b.entry());
+      build.add(b == null ? Nodes.source(text, s) : b.entry());
       if (b != null && what == null) {
         what = b.what();
         first = i + 1;
@@ -283,7 +282,7 @@ final class Generated {
       if (init instanceof MethodInvocation call && call.typeArguments().isEmpty()) {
         entry.put(
             "call",
-            (call.getExpression() == null ? "" : source(text, call.getExpression()) + ".")
+            (call.getExpression() == null ? "" : Nodes.source(text, call.getExpression()) + ".")
                 + call.getName().getIdentifier());
         arguments = call.arguments();
         what = "a local declared from a call, its type typed,";
@@ -295,7 +294,7 @@ final class Generated {
             c.getType() instanceof ParameterizedType p && p.typeArguments().isEmpty()
                 ? p.getType()
                 : c.getType();
-        entry.put("new", source(text, made));
+        entry.put("new", Nodes.source(text, made));
         arguments = c.arguments();
         what = "a local declared from a construction, its type typed,";
       } else {
@@ -303,20 +302,20 @@ final class Generated {
       }
       List<String> args = new ArrayList<>();
       for (Object a : arguments) {
-        args.add(source(text, (ASTNode) a));
+        args.add(Nodes.source(text, (ASTNode) a));
       }
       if (!args.isEmpty()) {
         entry.put("args", args);
       }
       entry.put("into", f.getName().getIdentifier());
-      if (entry.containsKey("new") && !source(text, v.getType()).equals(entry.get("new"))) {
-        entry.put("type", source(text, v.getType()));
+      if (entry.containsKey("new") && !Nodes.source(text, v.getType()).equals(entry.get("new"))) {
+        entry.put("type", Nodes.source(text, v.getType()));
       }
     } else if (s instanceof EnhancedForStatement f
         && !f.getParameter().getType().isVar()
         && f.getParameter().modifiers().isEmpty()
         && f.getBody() instanceof Block b) {
-      entry.put("loop", source(text, f.getExpression()));
+      entry.put("loop", Nodes.source(text, f.getExpression()));
       entry.put("name", f.getParameter().getName().getIdentifier());
       body(text, b, entry);
       what = "a loop, its element's type typed,";
@@ -337,11 +336,6 @@ final class Generated {
       return null;
     }
     return new Built(entry, what);
-  }
-
-  /** The source of {@code n} in {@code text}. */
-  private static String source(String text, ASTNode n) {
-    return text.substring(n.getStartPosition(), Nodes.end(n));
   }
 
   /** A loop's body as build's body: each statement as typed, when there are any. */
@@ -394,18 +388,18 @@ final class Generated {
     }
     Expression bound = less.getRightOperand();
     if (bound instanceof QualifiedName q && q.getName().getIdentifier().equals("length")) {
-      return source(text, q.getQualifier());
+      return Nodes.source(text, q.getQualifier());
     }
     if (bound instanceof FieldAccess a && a.getName().getIdentifier().equals("length")) {
-      return source(text, a.getExpression());
+      return Nodes.source(text, a.getExpression());
     }
     if (bound instanceof MethodInvocation m
         && m.getName().getIdentifier().equals("size")
         && m.arguments().isEmpty()
         && m.getExpression() != null) {
-      return source(text, m.getExpression());
+      return Nodes.source(text, m.getExpression());
     }
-    return bound instanceof SimpleName ? source(text, bound) : null;
+    return bound instanceof SimpleName ? Nodes.source(text, bound) : null;
   }
 
   /** The one statement of {@code text}, content in a method; null for none or several. */

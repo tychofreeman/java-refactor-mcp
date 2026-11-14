@@ -163,4 +163,13 @@ class NodesTest {
                 p.getOperator() == PrefixExpression.Operator.MINUS
                     && !Nodes.written(p.getOperand())));
   }
+
+  @Test
+  void aNodesSourceIsItsTextAsWritten() {
+    String text = "class S { int f() { return  1 +   2; } }";
+    CompilationUnit unit = Jdt.parseSyntax(text);
+    InfixExpression sum = Nodes.all(unit, InfixExpression.class).get(0);
+    assertEquals("1 +   2", Nodes.source(text, sum));
+    assertEquals(text.indexOf(" }"), Nodes.end(sum) + 1);
+  }
 }
