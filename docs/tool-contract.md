@@ -1081,6 +1081,11 @@ in the same turn only if it is sent after it.
     empty `finally` when they throw none. Another head is refused, naming the forms.
     What they throw is `Exceptions.uncaught` (roadmap #342, issue #481, 2026-11-14): code inside
     a lambda or a class they declare does not count, and a resource's `close()` does.
+    Refused, with either form of `surround` (issue #611, 2026-11-14): statements that declare a
+    local a later statement of the block reads, since the declaration would move inside the new
+    block and a stub for the name would then compile ("lines 8-9 declare n, and line 10, after
+    them, reads n: ... End the range at line 10 or later, or declare n before line 8 and assign
+    it inside the range.").
   - `build` in place of `content`, on `insert_statements` and `replace_statements` (roadmap
     #149, 2026-11-13; the generators, `docs/design.md`): a list whose entries are statements as
     typed (strings) or objects that name what to write, in order. `{"call": "pricing.priceOf",
