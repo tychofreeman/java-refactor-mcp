@@ -56,18 +56,7 @@ final class EncapsulateField {
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     TypeDeclaration owner = opened.topLevel(typeName);
-    FieldDeclaration fd = null;
-    for (FieldDeclaration f : owner.getFields()) {
-      for (Object o : f.fragments()) {
-        if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(field)) {
-          fd = f;
-        }
-      }
-    }
-    if (fd == null) {
-      throw new Refusal(
-          name + " is not a field of " + typeName + " in " + rel + ". Pass Type.field.");
-    }
+    FieldDeclaration fd = declaration(owner, field, name, typeName, rel);
     if (fd.fragments().size() != 1) {
       throw new Refusal(
           "the declaration of "
@@ -79,18 +68,12 @@ final class EncapsulateField {
     if (fieldBinding == null) {
       throw new Refusal(name + " does not resolve.");
     }
-    boolean isStatic = Modifier.isStatic(fd.getModifiers());
-    boolean isFinal = Modifier.isFinal(fd.getModifiers());
-    String cap = Character.toUpperCase(field.charAt(0)) + field.substring(1);
-    String getter = getterArg != null && !getterArg.isBlank() ? getterArg : "get" + cap;
-    String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
-    String fieldKey = Bindings.declarationKey(fieldBinding);
-    String typeText = Nodes.source(text, fd.getType());
-    if (!isStatic) {
-      refuseOverride(project, file, owner, getter, List.of(), "getter", field);
-      if (!isFinal) {
+    Accessors accessors = accessors(fd, field, getterArg, setterArg, fieldBinding, text);
+    if (!accessors.isStatic()) {
+      refuseOverride(project, file, owner, accessors.getter(), List.of(), "getter", field);
+      if (!accessors.isFinal()) {
         String param = fieldBinding.getType().getErasure().getQualifiedName();
-        refuseOverride(project, file, owner, setter, List.of(param), "setter", field);
+        refuseOverride(project, file, owner, accessors.setter(), List.of(param), "setter", field);
       }
     }
 
@@ -111,7 +94,7 @@ final class EncapsulateField {
             public boolean visit(SimpleName node) {
               if (node.resolveBinding() instanceof IVariableBinding v
                   && v.isField()
-                  && fieldKey.equals(Bindings.declarationKey(v))
+                  && accessors.fieldKey().equals(Bindings.declarationKey(v))
                   && !(node.getParent() instanceof VariableDeclarationFragment)) {
                 refs.add(node);
               }
@@ -120,7 +103,7 @@ final class EncapsulateField {
           });
       List<TextEdit> list = new ArrayList<>();
       for (SimpleName n : refs) {
-        list.add(useEdit(fileText, n, fieldKey, field, getter, setter, isFinal, p));
+        list.add(useEdit(fileText, n, field, p, accessors));
         usedIn.add(p);
         uses++;
       }
@@ -130,49 +113,8 @@ final class EncapsulateField {
     }
 
     List<TextEdit> own = edits.computeIfAbsent(file, k -> new ArrayList<>());
-    boolean wasPrivate = false;
-    for (Object o : fd.modifiers()) {
-      if (o instanceof org.eclipse.jdt.core.dom.Modifier mod) {
-        if (mod.isPrivate()) {
-          wasPrivate = true;
-        } else if (mod.isPublic() || mod.isProtected()) {
-          own.add(
-              new TextEdit(
-                  mod.getStartPosition(), mod.getStartPosition() + mod.getLength() + 1, ""));
-        }
-      }
-    }
-    if (!wasPrivate) {
-      int at = fd.getType().getStartPosition();
-      own.add(new TextEdit(at, at, "private "));
-    }
-    String moved =
-        (isStatic ? "static " : "")
-            + "public "
-            + typeText
-            + " "
-            + getter
-            + "() {\n    return "
-            + (isStatic ? typeName + "." : "")
-            + field
-            + ";\n  }";
-    if (!isFinal) {
-      moved +=
-          "\n\n  "
-              + (isStatic ? "static " : "")
-              + "public void "
-              + setter
-              + "("
-              + typeText
-              + " "
-              + field
-              + ") {\n    "
-              + (isStatic ? typeName + "." : "this.")
-              + field
-              + " = "
-              + field
-              + ";\n  }";
-    }
+    makePrivate(fd, own);
+    String moved = accessorText(accessors, typeName, field);
     own.addAll(MemberMove.appendTo(text, owner, moved));
 
     Edits.WrittenFiles written =
@@ -192,8 +134,8 @@ final class EncapsulateField {
             + " in "
             + rel
             + " with "
-            + getter
-            + (isFinal ? " (final: no setter)" : " and " + setter)
+            + accessors.getter()
+            + (accessors.isFinal() ? " (final: no setter)" : " and " + accessors.setter())
             + "; "
             + uses
             + " use"
@@ -206,16 +148,117 @@ final class EncapsulateField {
         declared);
   }
 
-  /** The edit for one reference to the field: a read, or a plain assignment statement. */
-  private static TextEdit useEdit(
-      String fileText,
-      SimpleName n,
-      String fieldKey,
+  /** The declaration of field in owner, or a refusal. */
+  private static FieldDeclaration declaration(
+      TypeDeclaration owner, String field, String name, String typeName, String rel) {
+    FieldDeclaration fd = null;
+    for (FieldDeclaration f : owner.getFields()) {
+      for (Object o : f.fragments()) {
+        if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(field)) {
+          fd = f;
+        }
+      }
+    }
+    if (fd == null) {
+      throw new Refusal(
+          name + " is not a field of " + typeName + " in " + rel + ". Pass Type.field.");
+    }
+    return fd;
+  }
+
+  /**
+   * Edits that make the field's declaration private: its public or protected modifier removed,
+   * private added unless it has it.
+   */
+  private static void makePrivate(FieldDeclaration fd, List<TextEdit> own) {
+    boolean wasPrivate = false;
+    for (Object o : fd.modifiers()) {
+      if (o instanceof org.eclipse.jdt.core.dom.Modifier mod) {
+        if (mod.isPrivate()) {
+          wasPrivate = true;
+        } else if (mod.isPublic() || mod.isProtected()) {
+          own.add(
+              new TextEdit(
+                  mod.getStartPosition(), mod.getStartPosition() + mod.getLength() + 1, ""));
+        }
+      }
+    }
+    if (!wasPrivate) {
+      int at = fd.getType().getStartPosition();
+      own.add(new TextEdit(at, at, "private "));
+    }
+  }
+
+  /** The getter, and the setter unless the field is final, as written into the class. */
+  private static String accessorText(Accessors accessors, String typeName, String field) {
+    String moved =
+        (accessors.isStatic() ? "static " : "")
+            + "public "
+            + accessors.typeText()
+            + " "
+            + accessors.getter()
+            + "() {\n    return "
+            + (accessors.isStatic() ? typeName + "." : "")
+            + field
+            + ";\n  }";
+    if (!accessors.isFinal()) {
+      moved +=
+          "\n\n  "
+              + (accessors.isStatic() ? "static " : "")
+              + "public void "
+              + accessors.setter()
+              + "("
+              + accessors.typeText()
+              + " "
+              + field
+              + ") {\n    "
+              + (accessors.isStatic() ? typeName + "." : "this.")
+              + field
+              + " = "
+              + field
+              + ";\n  }";
+    }
+    return moved;
+  }
+
+  /**
+   * What encapsulating the field writes and matches: whether it is static and final, the getter's
+   * and setter's names (the ones given, else getX and setX), the field's binding key and its type
+   * as written.
+   */
+  private static Accessors accessors(
+      FieldDeclaration fd,
       String field,
+      String getterArg,
+      String setterArg,
+      IVariableBinding fieldBinding,
+      String text) {
+    boolean isStatic = Modifier.isStatic(fd.getModifiers());
+    boolean isFinal = Modifier.isFinal(fd.getModifiers());
+    String cap = Character.toUpperCase(field.charAt(0)) + field.substring(1);
+    String getter = getterArg != null && !getterArg.isBlank() ? getterArg : "get" + cap;
+    String setter = setterArg != null && !setterArg.isBlank() ? setterArg : "set" + cap;
+    String fieldKey = Bindings.declarationKey(fieldBinding);
+    String typeText = Nodes.source(text, fd.getType());
+    return new Accessors(isStatic, isFinal, getter, setter, fieldKey, typeText);
+  }
+
+  /** The field's facts the rewrite needs: {@link #accessors}. */
+  private record Accessors(
+      boolean isStatic,
+      boolean isFinal,
       String getter,
       String setter,
-      boolean isFinal,
-      Path p) {
+      String fieldKey,
+      String typeText) {}
+
+  /** The edit for one reference to the field: a read, or a plain assignment statement. */
+  private static TextEdit useEdit(
+      String fileText, SimpleName n, String field, Path p, Accessors accessors) {
+    boolean isFinal = accessors.isFinal();
+    String setter = accessors.setter();
+    String getter = accessors.getter();
+    String fieldKey = accessors.fieldKey();
     ASTNode target = n;
     if (n.getParent() instanceof FieldAccess fa && fa.getName() == n) {
       target = fa;
