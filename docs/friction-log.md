@@ -1930,7 +1930,7 @@ again.
 - `extract_function` of the throws block before the record took 11 parameters (the five argument
   values among them). Extracting the argument reading first (several results make a record),
   then inlining its locals, gave the later extractions one `Request` in their place.
-## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField)
+## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField and MoveMember)
 
 - No Java by hand. Replacing four parameters of `useEdit` with the record that holds them is a
   composition: `add_parameter` of the record, then `remove_parameter` with `value`
