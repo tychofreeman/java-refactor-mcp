@@ -2232,7 +2232,9 @@ in K files`, with `; private widened to package access` when so.
 
 Refusals: an override, a method another class overrides, a constructor, no body, a generic class, a
 method reference to it, a call of itself (an instance method's; a static method's call of
-itself moves with it, unqualified, #356), super, an anonymous or local class in the body, a use of
+itself moves with it, unqualified, #356), super, an anonymous or local class in an instance
+method's body (a static method's moves with it, issue #660, 2026-11-15: its `this` is its own
+either way, and `NameCheck` judges the names it reads), a use of
 a private method or field of its class that stays behind, when the target is outside that class
 (#317: "Main.renameAll uses Main.carryOut, private to Main, which Renamer cannot reach: move
 Main.carryOut to Renamer first (a batch can hold both moves, that one before this)"; since
