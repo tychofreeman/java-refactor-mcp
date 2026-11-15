@@ -36,15 +36,7 @@ final class InlineClass {
       throws Exception {
     Opened opened = Opened.of(project, rel);
     TypeDeclaration holder = opened.topLevel(holderName);
-    FieldDeclaration fd = null;
-    for (FieldDeclaration f : holder.getFields()) {
-      for (Object o : f.fragments()) {
-        if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(field)) {
-          fd = f;
-        }
-      }
-    }
-    FieldDeclaration decl = fd;
+    FieldDeclaration decl = fieldNamed(holder, field);
     Precondition.require(
         Precondition.that(
             () -> decl != null, () -> field + " is not a field of " + holderName + "."),
@@ -78,13 +70,7 @@ final class InlineClass {
     String text = holding.texts().get(opened.file());
     CompilationUnit unit = holding.units().get(opened.file());
     TypeDeclaration h = MemberMove.typeNamed(unit, holderName);
-    FieldDeclaration hd = null;
-    for (FieldDeclaration f : h.getFields()) {
-      if (f.getStartPosition() == decl.getStartPosition()) {
-        hd = f;
-      }
-    }
-    FieldDeclaration homeDecl = hd;
+    FieldDeclaration homeDecl = homeDeclaration(h, decl);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       if (e.getKey().equals(classFile)) {
         continue;
@@ -109,6 +95,72 @@ final class InlineClass {
         Precondition.that(
             () -> c != null && c.getSuperclassType() == null && c.superInterfaceTypes().isEmpty(),
             () -> cls + " has a superclass or interfaces, which " + holderName + " would not."));
+    refuseClashes(h, c, cls, holderName);
+
+    refuseOverride(project, opened.file(), h, c);
+    List<TextEdit> edits = useEdits(frag, unit, field, cls);
+    String body = body(c, holding, classFile);
+    edits.add(
+        new TextEdit(
+            Lines.start(text, homeDecl.getStartPosition()),
+            Lines.end(text, Nodes.end(homeDecl) - 1),
+            body));
+    Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
+    byFile.put(opened.file(), edits);
+    byFile.put(classFile, null);
+    Edits.WrittenFiles written =
+        Edits.gatedFiles(
+            project,
+            Map.of(opened.file(), text),
+            byFile,
+            List.of(),
+            "folding " + cls + " into " + holderName,
+            "Nothing was changed.");
+    Stubs.Declared declared = written.declared();
+    return new Outcome(
+        "folded "
+            + cls
+            + " into "
+            + holderName
+            + " in place of "
+            + field
+            + " ("
+            + project.relative(classFile)
+            + " deleted)"
+            + written.said(),
+        declared);
+  }
+
+  /** The declaration of field in holder, or null. */
+  private static FieldDeclaration fieldNamed(TypeDeclaration holder, String field) {
+    FieldDeclaration fd = null;
+    for (FieldDeclaration f : holder.getFields()) {
+      for (Object o : f.fragments()) {
+        if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(field)) {
+          fd = f;
+        }
+      }
+    }
+    return fd;
+  }
+
+  /** The field's declaration in the holder as parsed with the class's other uses. */
+  private static FieldDeclaration homeDeclaration(TypeDeclaration h, FieldDeclaration decl) {
+    FieldDeclaration hd = null;
+    for (FieldDeclaration f : h.getFields()) {
+      if (f.getStartPosition() == decl.getStartPosition()) {
+        hd = f;
+      }
+    }
+    return hd;
+  }
+
+  /**
+   * Refuses a class whose members the holder could not take: a constructor with work, a nested type
+   * or initializer, or a name the holder already has.
+   */
+  private static void refuseClashes(
+      TypeDeclaration h, TypeDeclaration c, String cls, String holderName) {
     java.util.Set<String> names = new java.util.HashSet<>();
     for (Object o : h.bodyDeclarations()) {
       if (o instanceof FieldDeclaration f) {
@@ -145,8 +197,14 @@ final class InlineClass {
         }
       }
     }
+  }
 
-    refuseOverride(project, opened.file(), h, c);
+  /**
+   * The edits that make each use of the field reach the folded member directly (holder.x.m()
+   * becomes x.m() or this.m()), or a refusal for a use that is not a member reach.
+   */
+  private static List<TextEdit> useEdits(
+      VariableDeclarationFragment frag, CompilationUnit unit, String field, String cls) {
     String fieldKey = Bindings.declarationKey(frag.resolveBinding());
     List<TextEdit> edits = new ArrayList<>();
     for (SimpleName n : Nodes.all(unit, SimpleName.class)) {
@@ -180,6 +238,14 @@ final class InlineClass {
                 + " folded in.");
       }
     }
+    return edits;
+  }
+
+  /**
+   * The class's members as written, from the line of the first to that of the last, ending in a
+   * newline; empty for none.
+   */
+  private static String body(TypeDeclaration c, Holding holding, Path classFile) {
     List<?> members = c.bodyDeclarations();
     String classText = holding.texts().get(classFile);
     String body = "";
@@ -191,35 +257,7 @@ final class InlineClass {
         body = body + "\n";
       }
     }
-    edits.add(
-        new TextEdit(
-            Lines.start(text, homeDecl.getStartPosition()),
-            Lines.end(text, Nodes.end(homeDecl) - 1),
-            body));
-    Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
-    byFile.put(opened.file(), edits);
-    byFile.put(classFile, null);
-    Edits.WrittenFiles written =
-        Edits.gatedFiles(
-            project,
-            Map.of(opened.file(), text),
-            byFile,
-            List.of(),
-            "folding " + cls + " into " + holderName,
-            "Nothing was changed.");
-    Stubs.Declared declared = written.declared();
-    return new Outcome(
-        "folded "
-            + cls
-            + " into "
-            + holderName
-            + " in place of "
-            + field
-            + " ("
-            + project.relative(classFile)
-            + " deleted)"
-            + written.said(),
-        declared);
+    return body;
   }
 
   /** Whether a local or parameter named {@code name} is declared in the method around {@code n}. */

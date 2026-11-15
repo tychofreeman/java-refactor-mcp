@@ -582,6 +582,12 @@ final class Imports {
     }
     for (Object o : unit.imports()) {
       ImportDeclaration i = (ImportDeclaration) o;
+      if (i.isStatic() && !i.isOnDemand()) {
+        String member = Names.simpleName(i.getName().getFullyQualifiedName());
+        if (usedBefore.contains(member) && !usedAfter.contains(member)) {
+          remove.add(i);
+        }
+      }
       if (i.isStatic() || i.isOnDemand()) {
         continue;
       }

@@ -363,6 +363,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Imports.fix` is `render(after, plan(...))` (#522): `plan` finds and chooses (a `Plan` of the
   imports to add and remove), `render` lays them out; a caller that needs only what would change
   calls `plan`. It parses `before` once, with bindings; read names and imports from that unit.
+  An import whose simple name the file used before the edit and not after is removed: a type
+  import, and since #644 (2026-11-15, a default to reopen) a single static import too, so
+  `inline` through `import static p.Keys.erased;` drops it; an on-demand import stays.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
@@ -469,6 +472,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The server runs one tool call at a time (`Server.ONE_AT_A_TIME`): two edits
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
+
+- `inline` with `field` is `InlineClass`; its checks and edits are `fieldNamed`, `homeDeclaration`,
+  `refuseClashes`, `useEdits` and `body` (#528).
 
 - `move_type` with `package` (#80, 2026-11-04) is `MoveToPackage`: a file's only
   top-level type to another package of its source root; package-private

@@ -1945,6 +1945,14 @@ again.
   the target): undone. The call-site visitor in `run` reads eight locals; no extraction helps
   until those travel together.
 
+## 2026-11-15: move-tools-split-2 (#528, item 6, InlineClass and MoveToPackage)
+
+- No Java by hand. `extract_function` of a lookup that a later line copies into a final local
+  for lambdas (`FieldDeclaration fd = ...; FieldDeclaration decl = fd;`) leaves both; an `inline`
+  of the temporary each.
+- `MoveToPackage.run`'s visitor and per-file loop were left: each reads ten or more of `run`'s
+  locals. `extract_function` would take them all as parameters; a record of the move's names would
+  have to come first, and no tool gathers locals that are computed in different places into one.
 ## 2026-11-15: strategy-context (#528, item 7)
 
 - No Java by hand. `rename` of a record component cannot be done: by `name`
