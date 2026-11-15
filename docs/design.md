@@ -599,6 +599,19 @@ built: gorefactor's merges functions that differ only in constants (`functions`,
 `parameters`), not `extract_variable` with `as=parameter` as the issue's table had it, so an alias
 would refuse every recipe that uses it; the owner chooses.
 
+**Decided (2026-11-15, the owner, issue #372, roadmap #508): `parameterize` is a published tool,
+gorefactor's name and arguments** (`file`, `functions`, `name`, `parameters`; option (B)), over (A)
+an option on `fold` (no new tool, but `fold`'s definition is already over the 1,700-character
+limit, `name` would mean the method to fold or the method to make, and fold folds every match in
+the project) and over (C) only an unpublished alias composing `extract_function`,
+`extract_variable` `as=parameter` and `fold` (free in the tool list, but no model of this server
+would see it). Defaults to reopen, taken where Java differs from Go: the methods are of one type,
+all static or all instance (Go's functions of a package); the new method is `private` (`static`
+when they are), not the first one's modifiers or annotations (an `@Override` copied would not
+compile), placed as `add_declaration` places a method (gorefactor puts it after the first);
+literals are numbers, strings, characters and text blocks (Go's `BasicLit`; `true`, `false`,
+`null` and class literals are not constants here, as Go's `true` is a name); each literal is its
+own parameter, also when two of them have the same values in every method, as gorefactor's.
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

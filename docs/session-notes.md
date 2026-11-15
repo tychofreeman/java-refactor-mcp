@@ -197,6 +197,9 @@ Each was chosen from options; the record named beside it has the options it beat
   file path renames the file. One `inline` likewise replaces inline_function and
   inline_variable (#122, 2026-11-06: `Tools.inline`, `line` for a local, `Type.method` for a
   static method), and takes inline class when it is built (#128).
+  gorefactor's `parameterize` is a published tool here too, by its name and arguments (#508,
+  2026-11-15, the owner: option (B), over an option on `fold` and over an unpublished alias
+  only); it is `Parameterize`, its options in `docs/design.md`.
 - Layout is the tool's, not the model's (the user, 2026-11-07, options in `docs/design.md`):
   `add_declaration` places members by kind (`Placement.place`); `after` and `before` are retired,
   accepted and ignored (`Tools.RETIRED_ARGS`, dropped by `Args.without` before the argument check).

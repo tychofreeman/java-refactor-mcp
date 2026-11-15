@@ -1450,6 +1450,33 @@ final class Tools {
           Kind.REFACTORING,
           Tools::fold);
 
+  static final Def PARAMETERIZE =
+      new Def(
+          "parameterize",
+          """
+          Make methods that are the same but for constants calls of one new method that takes \
+          those constants as parameters: logEmail(String to) { return String.format("email to \
+          %s", to); } and logSms(String addr) { return String.format("sms to %s", addr); } become \
+          return logTo(to, "email to %s"); and return logTo(addr, "sms to %s"); of a new private \
+          logTo(String to, String format). Each keeps its signature and callers; inline retires \
+          them.\
+          """,
+          List.of(
+              Arg.FILE.described("Java file that declares the methods."),
+              Arg.strings(
+                      "functions",
+                      "The methods, Type.method or method, of one type with one signature; the"
+                          + " new method is the first one's.")
+                  .required(),
+              Arg.string("name", "Name of the new method.").required(),
+              Arg.strings(
+                      "parameters",
+                      "A name for each constant that differs, in the order they appear in the"
+                          + " first method.")
+                  .required()),
+          Kind.REFACTORING,
+          Tools::parameterize);
+
   static final Def CHANGE_TRY =
       new Def(
           "change_try",
@@ -1516,6 +1543,7 @@ final class Tools {
           ADD_RESULT,
           TYPE_SWITCH_TO_METHOD,
           FOLD,
+          PARAMETERIZE,
           CHANGE_TYPE,
           ADD_SUPERTYPE,
           EXTRACT_SUPERTYPE,
@@ -2203,5 +2231,14 @@ final class Tools {
       throw noTool(name);
     }
     return TYPED.getOrDefault(def.name(), def);
+  }
+
+  private static Outcome parameterize(SourceProject project, Args args) throws Exception {
+    return Parameterize.run(
+        project,
+        args.required("file"),
+        args.list("functions"),
+        args.required("name"),
+        args.list("parameters"));
   }
 }

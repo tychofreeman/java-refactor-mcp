@@ -1,0 +1,1 @@
+made Notes.logEmail and Notes.logSms calls of a new Notes.logTo(String to, String format) in com/example/Notes.java

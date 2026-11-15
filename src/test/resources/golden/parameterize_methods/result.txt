@@ -1,0 +1,1 @@
+made Sms.shortForm and Sms.tinyForm calls of a new Sms.fit(int limit, int keep, String mark) in com/example/Sms.java
