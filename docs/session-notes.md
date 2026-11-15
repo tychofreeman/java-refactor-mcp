@@ -757,6 +757,11 @@ Each was chosen from options; the record named beside it has the options it beat
   as a batch's steps do), so one undo reverts all three; a later step's refusal rolls back the
   earlier ones.
 
+- `replace_text` `files` is `Edits.replaceTexts`, `replaceText` once per file in the one call;
+  `function` narrows the search to the declaration's range (`lo`, `hi`) in `replaceText`.
+  `replace_declaration` `line` goes through `ByLine.declaration`, which hands `Declarations.replace`
+  the declaring file and `Type.member` (#204, 2026-11-15).
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the

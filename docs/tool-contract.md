@@ -1289,7 +1289,12 @@ in the same turn only if it is sent after it.
   one (gorefactor's `append`, 2026-11-05): `appended <n> line(s) to <file>, line(s) ...`;
   refused with `old` or `all_occurrences`, and neither `old` nor `append` is refused. An empty
   `old` is refused (it matched at every offset, and the call never ended; #462).
-  gorefactor's `files` and `function` are not built.
+  `function` (roadmap #204, issue #371, 2026-11-15, gorefactor's): `Type.method` (or `member`,
+  as `replace_declaration` names it) of a Java file, its Javadoc included, where `old` is looked
+  for; the refusals name it (`old is not in <file> (within Calc.b)`); refused with `append` or
+  `files`, or for a file that is not Java. `files` (the same), in place of `file`: the same
+  replacement in each file in order, each file's result on its own line, one undo for all, and a
+  refusal in any file changes none; refused with `file` or `function`.
 - `add_declaration` with `test_for` (`Cart.total`) in place of `content`: the member is a
   red test of that method, as `create_file`'s, named after it (`total2` when taken), with
   the framework's imports added.
@@ -1326,7 +1331,11 @@ in the same turn only if it is sent after it.
   is an enum; ... For a field with a value per constant, use add_parameter with name Color and
   values (...); for a constructor alone, add it as content (Color() {}).", roadmap #143, #150).
 - `replace_declaration`: `file`, `name` (`Type`, `Type.member`, `member`; with
-  `(parameter types)` for an overload), `content` (empty deletes, with the
+  `(parameter types)` for an overload), optional `line` and `column` (roadmap #204, issue #371,
+  2026-11-15, gorefactor's): `name` is then what that name is on that line of `file`, its
+  declaration or a use, and the declaration replaced is in whichever file declares it (`ByLine.
+  declaration`); a parameter or local there is refused ("change it with replace_statements or
+  replace_text"), two different things of that name on the line need `column`. `content` (empty deletes, with the
   Javadoc; deleting a file's only top-level type deletes the file, "deleted Old
   and its file com/example/Old.java (was lines 5-8)", and a type still used is
   refused rather than declared again as a stub). A deletion is a safe delete

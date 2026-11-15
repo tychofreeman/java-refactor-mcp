@@ -1120,17 +1120,22 @@ final class Tools {
           old must be as in the file and occur once, or set all_occurrences; spacing within lines \
           may differ (each run of spaces stands for any other), and then new moves to the file's \
           indentation (the result says so). append, in place of \
-          old, adds new at the end of the file (a friction-log entry, a CI job).\
+          old, adds new at the end of the file (a friction-log entry, a CI job). function \
+          (Type.method) looks for old only in that method, its Javadoc included; files in place \
+          of file makes the same replacement in each.\
           """,
           List.of(
-              Arg.FILE.described("Path of the file."),
+              Arg.string("file", "Path of the file."),
+              Arg.strings("files", "Instead of file: several files, the same replacement in each."),
               Arg.string("old", "Text as it is in the file."),
               Arg.string("new", "The text to put in its place.").required(),
               Arg.bool("all_occurrences", "Replace every occurrence, not only one."),
+              Arg.string(
+                  "function", "Optional: look for old only in this method of the Java file."),
               Arg.bool("append", "Instead of old: add new at the end of the file."),
               Arg.IMPORTS),
           Kind.EDIT,
-          (project, args) -> Edits.replaceText(project, args));
+          (project, args) -> Edits.replaceTexts(project, args));
 
   static final Def ADD_DECLARATION =
       new Def(
@@ -1174,7 +1179,8 @@ final class Tools {
           and body that change together, a field, or a type. Empty content deletes it, with its \
           Javadoc; a file's only top-level type takes the file with it (undo restores it).
           name is Type, Type.member, or member (of the file's only top-level type); for one of \
-          several overloads, add its parameter types: Cart.add(int, String).
+          several overloads, add its parameter types: Cart.add(int, String). With line, name is \
+          what it names on that line of file (its declaration or a use), wherever it is declared.
           The old Javadoc stays unless content has its own.\
           """,
           List.of(
@@ -1184,9 +1190,14 @@ final class Tools {
                       "Type, Type.member or member; with (parameter types) for an overload.")
                   .required(),
               Arg.string("content", "The new declaration; empty to delete it.").required(),
+              Arg.integer("line", "Optional: a line of file with its declaration or a use."),
+              Arg.integer("column", "Optional 1-based column of name, when the line has two."),
               Arg.IMPORTS),
           Kind.EDIT,
-          (project, args) -> Declarations.replace(project, args));
+          (project, args) ->
+              Declarations.replace(
+                  project,
+                  args.integer("line") == null ? args : ByLine.declaration(project, args)));
 
   static final Def ADD_PARAMETER =
       new Def(
