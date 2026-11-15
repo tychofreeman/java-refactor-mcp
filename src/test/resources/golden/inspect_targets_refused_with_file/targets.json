@@ -1,0 +1,3 @@
+[{"file": "com/example/Cart.java", "function": "Cart.count"},
+ {"file": "com/example/Cart.java", "start_line": 3, "end_line": 4},
+ {"file": "com/example/Cart.java", "function": "size"}]

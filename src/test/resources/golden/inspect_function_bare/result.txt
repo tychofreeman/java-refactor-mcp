@@ -1,0 +1,4 @@
+com/example/Cart.java  lines 15-17 (Cart.count):
+15    int count() {
+16      return 1;
+17    }

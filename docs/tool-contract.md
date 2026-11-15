@@ -320,7 +320,17 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   alone"). The roles Java adds or renames against Go's (a default to reopen, `docs/design.md`):
   `made by new` for Go's `made by a literal`, `a method reference`, and `asserted` taking
   `instanceof` and casts, Go's type assertion.
-- Not yet: `function`, `targets`, and each body's complexity, nesting and side effects.
+- `function` (roadmap #505, issue #369, 2026-11-15, gorefactor's argument), with `file`: the
+  method `Type.method`, or the method of that name in whichever of the file's types declares it,
+  each overload in full, shown as `names` shows a member (`<file>  lines a-b (Cart.count):`).
+  Refused: no such method in the file ("no method size in <file>. inspect the file to see what it
+  declares."), `function` with a line range, `pattern`, `names` or `uses`.
+- `targets` (roadmap #505), in place of `file`: a list of views, each `{file, function}` or
+  `{file, start_line, end_line}` (or `{file}`, its outline), shown in order with a blank line
+  between; one refused reads `target N: <refusal>` in its place, as gorefactor's. Refused:
+  `targets` with `file`, `function` or a line range; a target with another key (`targets` of its
+  own included) is refused in its place.
+- Not yet: each body's complexity, nesting and side effects.
 
 ## `rename` (built)
 

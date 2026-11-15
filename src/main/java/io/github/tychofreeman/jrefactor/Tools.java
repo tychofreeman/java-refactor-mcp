@@ -87,24 +87,28 @@ final class Tools {
       new Def(
           "inspect",
           """
-          Read Java code with line numbers, before a refactoring, for exact lines.
-          - no arguments: the source roots, packages and files with line counts.
-          - file: the file with each body of two lines or more elided to the lines it takes.
-          - file + start_line/end_line: those lines.
-          - pattern (a Java regular expression), with file or without: the matching lines, file \
-          by file (at most 100). Use it rather than grep.
-          - names: declarations by name, anywhere: ["Fold"] the class, bodies elided; \
-          ["Cart.total"] each overload, or a field, in full.
+          Read Java code with line numbers, for exact lines.
+          - no arguments: the source roots, packages and files.
+          - file: its bodies of two lines or more elided; with function (Type.method, or the \
+          method) that method; with start_line/end_line those lines.
+          - targets: several of those at once, each {file, function} or {file, start_line, \
+          end_line}.
+          - pattern (a Java regular expression), with file or without: the matching lines (at \
+          most 100). Use it rather than grep.
+          - names: declarations by name, anywhere: Type (bodies elided) or Type.member.
           - uses: every use of a type, field or method, by binding, under what it does with it \
-          (switch on it, compared, asserted, written, passed as an interface, called, read; for a \
-          type also casts, new, type cases): ["Plant.species"] gives "compared (1): \
-          garden/Bed.java:85 p.species == null".\
+          (compared, written, called, read, ...).\
           """,
           List.of(
-              Arg.string(
-                  "file", "Java file path; optional with pattern, to search" + " every Java file."),
+              Arg.string("file", "Java file path; optional with pattern."),
+              Arg.string("function", "With file: Type.method, or the method's name."),
               Arg.integer("start_line", "First line to show (1-based)."),
               Arg.integer("end_line", "Last line to show (inclusive)."),
+              Arg.json(
+                  "targets",
+                  """
+                  {"type": "array", "description": "Views of files.", "items": {"type": "object"}}
+                  """),
               Arg.string(
                   "pattern", "Optional: show the lines that match this Java regular expression."),
               Arg.strings(
@@ -1684,6 +1688,41 @@ final class Tools {
     Integer end = args.integer("end_line");
     List<String> names = args.list("names");
     List<String> uses = args.list("uses");
+    List<Map<String, Object>> targets = args.objects("targets");
+    if (!targets.isEmpty()) {
+      if (args.string("file") != null
+          || args.string("function") != null
+          || start != null
+          || end != null) {
+        throw new Refusal(
+            "give either targets or file (with function or start_line/end_line), not both.");
+      }
+      List<String> parts = new ArrayList<>();
+      for (int i = 0; i < targets.size(); i++) {
+        Map<String, Object> t = targets.get(i);
+        String part;
+        try {
+          if (!Set.of("file", "function", "start_line", "end_line").containsAll(t.keySet())) {
+            throw new Refusal(
+                "a target takes file, with function or start_line/end_line; got "
+                    + t.keySet()
+                    + ".");
+          }
+          part = inspect(project, new Args("inspect", t, INSPECT.arguments())).text();
+        } catch (Refusal r) {
+          part = "target " + (i + 1) + ": " + r.getMessage() + "\n";
+        }
+        parts.add(part);
+      }
+      return Outcome.of(String.join("\n", parts));
+    }
+    String function = args.string("function");
+    if (function != null) {
+      if (start != null || end != null || pattern != null || !names.isEmpty() || !uses.isEmpty()) {
+        throw new Refusal("function shows one method of file; leave out the other arguments.");
+      }
+      return Outcome.of(Inspect.function(project, args.required("file"), function));
+    }
     if (!uses.isEmpty()) {
       if (!names.isEmpty()
           || pattern != null
@@ -1702,7 +1741,7 @@ final class Tools {
             "names finds each declaration anywhere in the project; leave out file, pattern,"
                 + " start_line and end_line, or names.");
       }
-      return Outcome.of(Inspect.names(project, names));
+      return Outcome.of(Inspect.names(project, names, null));
     }
     if (pattern != null) {
       if (start != null || end != null) {
