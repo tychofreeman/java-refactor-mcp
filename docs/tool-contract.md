@@ -382,7 +382,9 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
 - Without `line` (issue #613, 2026-11-15): `name` as `Type.member` (`Type.method(int)` for one
   overload, `Outer.Inner` for a member type) is found in `file` as `Declarations.find` finds it
   for the other tools, and renamed from its declaration, so a `batch` need not know the line
-  an earlier step moved it to. `line` stays optional in the schema; a name with no type and no
+  an earlier step moved it to. A field declared with others (`int a, b;`) is renamed alone,
+  as with `line` (issue #642, 2026-11-15): `Declarations.find` no longer refuses such a
+  statement; `replace_declaration` does. `line` stays optional in the schema; a name with no type and no
   `line` is refused: "rename needs line for total: the 1-based line of its declaration or any
   use. Pass line, or name a member as Type.member (Type.method(int) for one of its
   overloads)."; a name of several overloads is refused with each ("A has 2 members named show:
@@ -1389,7 +1391,9 @@ in the same turn only if it is sent after it.
   with new content) still count. A delete outside a batch is unchanged. The old Javadoc stays
   unless content has its own. Refused: several
   members of that name (with their signatures), no such member (with the
-  members there), a field declared with others in one statement. gorefactor's
+  members there), a field declared with others in one statement ("A declares a, b in one
+  statement. Change one of them with replace_text, ..."; refused in `Declarations.replace`
+  since #642, so the tools that only find the member take one field of the statement). gorefactor's
   `line`/`column` addressing and `imports` are not built.
 
 Refusals come back as an error result whose text starts `refused: `. Other

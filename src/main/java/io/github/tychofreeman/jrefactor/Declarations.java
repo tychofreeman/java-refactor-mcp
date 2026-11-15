@@ -234,6 +234,14 @@ final class Declarations {
     CompilationUnit unit = Edits.parses(text, rel);
     Named target = find(unit, name, rel);
     BodyDeclaration decl = target.decl();
+    if (decl instanceof FieldDeclaration f && f.fragments().size() > 1) {
+      throw new Refusal(
+          Qualified.parse(target.label()).type()
+              + " declares "
+              + label(decl)
+              + " in one statement. Change one of them with replace_text, or replace them all"
+              + " by naming the first and giving content for all.");
+    }
     int firstLine = Lines.number(text, decl.getStartPosition());
     int lastLine = Lines.number(text, end(decl));
     if (content.isBlank()) {
@@ -385,14 +393,6 @@ final class Declarations {
               + ".");
     }
     BodyDeclaration d = found.get(0);
-    if (d instanceof FieldDeclaration f && f.fragments().size() > 1) {
-      throw new Refusal(
-          owner.label()
-              + " declares "
-              + label(d)
-              + " in one statement. Change one of them with replace_text, or replace them all"
-              + " by naming the first and giving content for all.");
-    }
     return new Named(d, owner.label() + "." + label(d));
   }
 

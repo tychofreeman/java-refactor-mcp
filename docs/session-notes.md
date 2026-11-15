@@ -504,7 +504,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `replace_declaration` with empty content is a safe delete (#83, 2026-11-04):
   `SafeDelete.check` names the uses by binding before the gate, and refuses an
   override of a concrete method unless it only calls super or has the same body
-  (`SafeDelete.SameMeaning`, #322). The stub goldens that deleted a used member
+  (`SafeDelete.SameMeaning`, #322). A field declared with others (`int a, b;`) is refused by
+  `Declarations.replace`, not by `Declarations.find` (#642): `find` returns the statement, and a
+  tool that only locates the member (`rename`) picks the fragment itself. The stub goldens that deleted a used member
   (`stub_after_delete_*`) are now refused there, before the stubs run.
   Inside a `batch` (#623, 2026-11-14, the owner's choice, options in `docs/design.md`): `Batch.steps`
   sets `Session.deletedLater` to the later steps' deletes (`Batch.deletes`) around each step, and
