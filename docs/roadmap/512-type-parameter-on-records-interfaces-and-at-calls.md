@@ -1,7 +1,7 @@
 ---
 order: 502
 item: 512
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,9 @@ status: Open
 
 ## Status
 
-Part 1 done 2026-11-15: a record or an interface as the class, a record component in `members`, a method of a record (`TypeParameters`; `CallTargets` places a record's implicit accessor and canonical constructor by the record). Part 2, the explicit type argument at a call, is open
+Done 2026-11-15, in two PRs. Part 1: a record or an interface as the class, a record component in `members`, a method of a record (`TypeParameters`; `CallTargets` places a record's implicit accessor and canonical constructor by the record). Part 2: a call that would infer another type is given `value` as its type argument (`TypeParameters.typeArgument`), with the qualifier Java requires: the class for a static method, `this` for a method of the class around the call.
+
+Defaults chosen (not settled by the sketch; the smallest, to reopen): a method reference, a call that already has type arguments, and an unqualified call of an outer class's method stay refused with the inference wording, rather than writing `Lists::<String>first`, inserting among existing type arguments, or `Outer.this.<String>m(...)`. The calls are written in a second gated round after the declarations, as `fullDiamonds` writes diamonds out
 
 ## Evidence
 

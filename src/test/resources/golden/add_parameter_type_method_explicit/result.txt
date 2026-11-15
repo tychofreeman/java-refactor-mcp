@@ -1,0 +1,1 @@
+added the type parameter T to Lists.first(List<String>); String became T in its parameter and return types; 2 calls infer String, 2 of them given <String> at the call
