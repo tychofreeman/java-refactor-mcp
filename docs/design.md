@@ -558,6 +558,16 @@ what a later step needs; `append` with `files` adds to each, as gorefactor's doe
 with `line` finds members and types only: a local at the line is refused, over replacing its
 declaration statement, which `replace_statements` does.
 
+**Decided (2026-11-15, the owner's brief, issue #372, roadmap #203; defaults to reopen):** of the
+five aliases the user chose, four are built. `prepare_switch_for_types` runs `type_switch_to_method`
+(it moves every case at once, so the preparation needs no step of its own), over accepting it as a
+step that does nothing, which would leave a recipe's next step without the method it expects; its
+`interface` is accepted and not used. `convert_params_to_object` without `type_name` names the
+record `<Method>Args`, gorefactor's default, capitalized as a Java type. `parameterize` is not
+built: gorefactor's merges functions that differ only in constants (`functions`, `name`,
+`parameters`), not `extract_variable` with `as=parameter` as the issue's table had it, so an alias
+would refuse every recipe that uses it; the owner chooses.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

@@ -1,7 +1,7 @@
 ---
 order: 196
 item: 203
-status: Open
+status: Partly done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ gorefactor's tool names accepted here: `introduce_parameter`, `parameterize`, `c
 
 ## Status
 
-Open; aliases here, merges in gorefactor, or both, is the user's choice; two are compositions here and need more than an alias
+Partly done 2026-11-15 (the user chose aliases here and options in gorefactor, go-refactor-mcp #634): `introduce_parameter`, `convert_params_to_object`, `remove_dead_code`, `prepare_switch_for_types` (`GoNames`, goldens `alias_*`). Left: `parameterize` (gorefactor's is another operation; the owner's choice), `merge_duplicate_function` and `add_field` on a class (compositions, put off by the user)
 
 ## Evidence
 

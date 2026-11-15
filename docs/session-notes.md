@@ -762,6 +762,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `replace_declaration` `line` goes through `ByLine.declaration`, which hands `Declarations.replace`
   the declaring file and `Type.member` (#204, 2026-11-15).
 
+- gorefactor's names `introduce_parameter`, `convert_params_to_object`, `remove_dead_code` and
+  `prepare_switch_for_types` (roadmap #203, 2026-11-15) are `GoNames`: each maps gorefactor's
+  arguments and runs the tool here through `Tools.call`; aliases in `Tools.ALIASES`, not published.
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the
