@@ -220,6 +220,23 @@ was `extract_method`. Aliases (`Tools.ALIASES`), accepted by `batch` and the CLI
 published: `extract_method` for `extract_function`, and gorefactor's `method_to_function` for
 `move_member` with `to` the method's own class (taken from `name`, `Type.method`). gorefactor's `replace_parameter` (roadmap #160, 2026-11-13) is `remove_parameter` with `value`, which it requires ("replace_parameter needs value: What every call passes for it, as the method can compute it. Pass value."); the query form only, as the generators sketch decided. gorefactor's `create_loop`, `create_call` and `create_guard` (roadmap #166, 2026-11-13) are `insert_statements` with one `build` entry, unpublished: `file`, `line` and `where` place it, and the rest are the entry's keys (`over` is the loop's `loop`; `create_call` takes `call` or `new`, `args`, `into`, `type`; `create_guard` takes `guard` or `guard_null`, `exit`, `value`, `message`). Results and refusals are `insert_statements`'s; there is no `op` (the loop is a shell, as decided).
 
+gorefactor's names for four more operations (roadmap #203, issue #372, 2026-11-15, the user's
+choice of aliases here and options in gorefactor), unpublished, each with gorefactor's arguments,
+mapped (`GoNames`): `introduce_parameter` (`file`, `line` or `function`, `expression`,
+`parameter`, `column`) is `extract_variable` with `as=parameter`, `function` giving the line of
+the expression's first use in that method's body; `convert_params_to_object` (`file`, `name`,
+`type_name`) is `extract_type` with every parameter of the method as `members`, `new_type`
+`type_name` (default the method's name capitalized and `Args`, `ShipArgs` for `ship`) and `as`
+the same decapitalized; `remove_dead_code` (`file`, `name`, `line`, `column`, `also`) is
+`replace_declaration` with empty content, and with `also` a `batch` of those, checked at the end,
+so uses among them do not count; its `value` is refused as not built; `prepare_switch_for_types`
+(`file`, `line` or `function`, `interface`, `method`) is `type_switch_to_method` with `name` the
+method, which moves every case at once here, so there is no step before it; `interface` is
+accepted and not used (the switch's cases name the types). Results and refusals are the target
+tool's. Not aliased: `parameterize` (gorefactor's merges functions that differ only in
+constants, which no tool here does; it waits for the owner), `merge_duplicate_function` and
+`add_field` on a class (compositions, put off by the user).
+
 One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
 file or directory (`to`, `copy`, `delete`). `name` with `package`: the file's top-level type to

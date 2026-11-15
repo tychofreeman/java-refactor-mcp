@@ -1661,13 +1661,82 @@ final class Tools {
           Kind.EDIT,
           (project, args) -> insertOne(project, args, Map.of()));
 
+  /** extract_variable with as=parameter, by gorefactor's name: an alias, not published. */
+  static final Def INTRODUCE_PARAMETER =
+      new Def(
+          "introduce_parameter",
+          """
+          Replace an expression in a method's body with a new parameter, each call passing it: \
+          extract_variable with as=parameter.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.string("function", "Instead of line: the method whose body uses it first."),
+              Arg.integer("line", "1-based line on which the expression starts."),
+              Arg.string("expression", "Source text of the expression.").required(),
+              Arg.string("parameter", "Name of the new parameter.").required(),
+              Arg.integer("column", "Optional 1-based column where the expression starts.")),
+          Kind.REFACTORING,
+          GoNames::introduceParameter);
+
+  /** extract_type of every parameter of a method, by gorefactor's name: an alias. */
+  static final Def CONVERT_PARAMS_TO_OBJECT =
+      new Def(
+          "convert_params_to_object",
+          """
+          Bundle a method's parameters into one record every call builds: extract_type with all \
+          of its parameters as members.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.string("name", "The method: Type.method.").required(),
+              Arg.string("type_name", "Optional: the record's name (default <Method>Args).")),
+          Kind.REFACTORING,
+          GoNames::paramsToObject);
+
+  /** replace_declaration with empty content, by gorefactor's name: an alias. */
+  static final Def REMOVE_DEAD_CODE =
+      new Def(
+          "remove_dead_code",
+          """
+          Delete a declaration nothing uses: replace_declaration with empty content; also, more \
+          to delete with it in one batch.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "Optional: a line of its declaration or a use."),
+              Arg.string("name", "Type, Type.member or member.").required(),
+              Arg.integer("column", "Optional 1-based column of name."),
+              Arg.strings("also", "Optional: more members of file to delete with it."),
+              Arg.string("value", "Not built here.")),
+          Kind.EDIT,
+          GoNames::removeDeadCode);
+
+  /** type_switch_to_method, by gorefactor's name for its first step: an alias. */
+  static final Def PREPARE_SWITCH_FOR_TYPES =
+      new Def(
+          "prepare_switch_for_types",
+          """
+          Move the cases of a switch over types into a method of each type: \
+          type_switch_to_method, with method its name.\
+          """,
+          List.of(
+              Arg.FILE,
+              Arg.integer("line", "1-based line on which the switch starts."),
+              Arg.string("function", "Instead of line: the method whose only switch it is."),
+              Arg.string("interface", "The switch's type, which declares the method."),
+              Arg.string("method", "The new method's name.").required()),
+          Kind.REFACTORING,
+          GoNames::prepareSwitch);
+
   /**
    * Names {@code batch} and the CLI still accept for a tool published under its shared name
    * (gorefactor's {@code docs/parity.md}): extract_method for extract_function, Go's
    * method_to_function for move_member in place, extract_struct for extract_type, Go's and
    * TypeScript's old extract_interface for extract_supertype, replace_parameter for
    * remove_parameter with value, create_loop, create_call and create_guard for insert_statements
-   * with one build entry.
+   * with one build entry; and gorefactor's introduce_parameter, convert_params_to_object,
+   * remove_dead_code and prepare_switch_for_types ({@link GoNames}, issue #372).
    */
   static final Map<String, Def> ALIASES =
       Map.ofEntries(
@@ -1683,7 +1752,11 @@ final class Tools {
           Map.entry("replace_parameter", REPLACE_PARAMETER),
           Map.entry("create_loop", CREATE_LOOP),
           Map.entry("create_call", CREATE_CALL),
-          Map.entry("create_guard", CREATE_GUARD));
+          Map.entry("create_guard", CREATE_GUARD),
+          Map.entry("introduce_parameter", INTRODUCE_PARAMETER),
+          Map.entry("convert_params_to_object", CONVERT_PARAMS_TO_OBJECT),
+          Map.entry("remove_dead_code", REMOVE_DEAD_CODE),
+          Map.entry("prepare_switch_for_types", PREPARE_SWITCH_FOR_TYPES));
 
   /**
    * Argument names a tool still accepts under its published ones, by tool: extract_type's
