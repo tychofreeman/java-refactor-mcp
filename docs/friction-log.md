@@ -1909,3 +1909,13 @@ again.
   before the loops and `replace_statements` of the call.
 - `inline` of `int[] firstEnd = facts.firstEnd();` reported an exceptional change ("may throw"):
   a record accessor on a local just assigned from a method the tool cannot prove non-null.
+
+## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField)
+
+- No Java by hand. Replacing four parameters of `useEdit` with the record that holds them is a
+  composition: `add_parameter` of the record, then `remove_parameter` with `value`
+  `accessors.getter()` per parameter. It needs each call to pass exactly that expression, so the
+  caller's locals (`String getter = accessors.getter();`) had to be inlined first; before that
+  the removal was refused ("passes fieldKey, not accessors.fieldKey()"). `remove_parameter` could
+  accept an argument that is a local whose only value is the expression. The removed values stay
+  as locals at the top of the body, which suits a body that reads them often.
