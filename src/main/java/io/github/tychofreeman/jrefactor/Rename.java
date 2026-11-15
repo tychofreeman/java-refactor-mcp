@@ -461,7 +461,7 @@ public final class Rename {
     String oldName = method.getName();
     Holding holding = Holding.of(project, oldName);
     Set<String> keys =
-        Signatures.family(project, holding.units().values(), method, "so it cannot be renamed.");
+        MethodFamily.family(project, holding.units().values(), method, "so it cannot be renamed.");
 
     TreeSet<String> others = new TreeSet<>();
     Map<Path, Map<Integer, String>> existing = meanings(project, newName);

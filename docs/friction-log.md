@@ -1980,3 +1980,17 @@ again.
   takes six parameters. A refusal built by a method and thrown at the call
   (`throw unconvertible(...)`) would be the shape; `extract_function` could offer it for a block
   that ends in `throw`.
+
+## 2026-11-15: signatures-family (#528, item 2)
+
+- `move` of the static `Signatures.family` to `MethodFamily` was refused: "contains an anonymous
+  class or a local class, whose this is not the receiver". A static method has no receiver, so
+  the reason does not apply. Rewriting the anonymous `ASTVisitor` as a `Nodes.all` loop
+  (`replace_statements`) let it move; for a visitor that overrides several methods that would not
+  be a small edit.
+- No tool moves a member type into another class: `move` of `Signatures.Decl` with `to` is
+  refused as "declares no method or field Decl", and `move` without `to` only gives it a file of
+  its own. The five records (`Source`, `Decl`, `Call`, `Lambda`, `Reference`) are named in about
+  100 lines of seven files, so moving them by hand was not done. Sequences considered: `move` to
+  its own file, then nothing nests a top-level type into a class. A `move` of a member type `to` a
+  class would do it.
