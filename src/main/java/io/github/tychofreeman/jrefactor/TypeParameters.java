@@ -748,7 +748,7 @@ final class TypeParameters {
       SourceProject project, Args args, String written, String parameter, String value)
       throws Exception {
     MethodFamily family =
-        MethodFamily.of(project, args, true, "so its type parameters cannot change.");
+        MethodFamily.of(project, args, true, "so its type parameters cannot change.", false);
     MethodDeclaration target = family.target;
     String label = family.label;
     Precondition.require(
@@ -1094,7 +1094,7 @@ final class TypeParameters {
     int declarations = 1;
     if (namesMethod(file, args.required("name"), rel)) {
       MethodFamily family =
-          MethodFamily.of(project, args, true, "so its type parameters cannot change.");
+          MethodFamily.of(project, args, true, "so its type parameters cannot change.", false);
       label = family.label;
       int index = typeParameter(family.target.typeParameters(), name, label);
       for (Signatures.Source s : family.sources.values()) {

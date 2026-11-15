@@ -69,7 +69,8 @@ final class ChangeSignature {
     for (String name : added) {
       Signatures.parsesAs("add_throws", name, "class X { void x() throws " + name + " {} }");
     }
-    MethodFamily family = MethodFamily.of(project, args, true, "so its signature cannot change.");
+    MethodFamily family =
+        MethodFamily.of(project, args, true, "so its signature cannot change.", false);
     SignatureChange change = new SignatureChange(family);
     List<Signatures.Decl> decls = new ArrayList<>(family.decls);
     decls.addAll(referenced(project, family));
