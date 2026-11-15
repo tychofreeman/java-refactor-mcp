@@ -202,7 +202,7 @@ final class Gate {
    * An added problem as a refusal lists it: "<file> | <message>", and " (xN)" when it was added N
    * times.
    */
-  private static String text(TypeCheck.Added added) {
+  static String text(TypeCheck.Added added) {
     return added.problem().rel()
         + " | "
         + added.problem().message()

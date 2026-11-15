@@ -14,4 +14,14 @@ public class Refusal extends RuntimeException {
   public Refusal(String message) {
     super(message);
   }
+
+  /**
+   * A refusal of a call that keeps what it did before the refused part: a batch refused after a
+   * check step passed keeps the steps through it.
+   */
+  static final class Kept extends Refusal {
+    Kept(String message) {
+      super(message);
+    }
+  }
 }

@@ -1429,6 +1429,20 @@ final class Tools {
               Arg.IMPORTS),
           Kind.EDIT,
           ChangeTry::run);
+  static final Def CHECK =
+      new Def(
+          "check",
+          """
+          Report where the project stands: its compile errors, and with run_tests the tests the \
+          changes reach, run through Maven: the test classes changed, and those that name a type \
+          a changed file declares. Alone, the changes are this session's; failures are named by \
+          test and line. As a step of a batch, {"tool": "check"} is a checkpoint: the code must \
+          type-check there (and with run_tests, the batch's tests pass), and when a later step is \
+          refused, the steps through it are kept.\
+          """,
+          List.of(Arg.bool("run_tests", "Also run the tests the changes reach.")),
+          Kind.READ,
+          (project, args) -> Check.run(project, args));
   static final List<Def> ALL =
       List.of(
           INSPECT,
@@ -1470,6 +1484,7 @@ final class Tools {
           CHANGE_SIGNATURE,
           REMOVE_ELSE,
           ENCAPSULATE_FIELD,
+          CHECK,
           BATCH,
           UNDO);
 
@@ -1843,6 +1858,9 @@ final class Tools {
         Journal.commit(project);
         scope.keep();
         return outcome;
+      } catch (Refusal.Kept kept) {
+        Journal.commit(project); // what the call kept, which it has put back as it was
+        throw kept;
       } catch (Exception | Error e) {
         abort(project, e);
         throw e;

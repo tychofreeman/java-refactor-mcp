@@ -2101,9 +2101,33 @@ field, an instance getter or setter that would override a method of the class's 
 - Result: `batch of n steps:` then each step's result, numbered; with `"end"`, a
   last line `checked at the end: no new compile errors`.
 - `batch` and `undo` cannot be steps, under a client's name too (`mcp__jrefactor__undo`; #473).
+- A step `{"tool": "check"}` (`run_tests` its one argument) is a checkpoint (#201, 2026-11-14,
+  gorefactor's rule): under `"end"` it declares the stubs the earlier steps need and requires no
+  compile errors beyond the batch's start, under `"each"` every step was checked already; with
+  `run_tests` the tests the batch's changes reach must pass. Refused: `step k of n (check)
+  refused: the code does not type-check at this checkpoint: ...`, or the failed tests. When a
+  later step is refused (or the end check fails), the steps through the last checkpoint that
+  passed are kept, as one change for `undo`, the files written after it put back; the refusal
+  ends `The steps through the check at step k were kept, and those after it rolled back; ...`,
+  and the batch is not kept for `retry`, since its first steps applied.
+## `check` (built)
+
+- Reports where the project stands (#201, issue #367, 2026-11-14): `type-checks: no compile
+  errors`, or `N compile errors:` and the first ten, `rel | message (xN)`, then `and M more`.
+  Read-only: it writes no source (Maven writes `target/`).
+- `run_tests` runs, through Maven (`./mvnw`, else `mvn`; `test -Dtest=<classes>`), the test
+  classes the changes reach, for as long as the run takes (the user's comment on #367): each
+  changed Java file under `src/test/java`, and each file there whose text names, as a word, the
+  file name of a changed file under `src/main/java`. Alone, the changes are the files of this
+  session's changes (the undo history, from the command line too); as a batch step, the files the
+  batch wrote so far. A failure is named from surefire's report as `Class.method (File.java:N):
+  message`, its line the first frame in the test's class; Maven failing with no report (a
+  compile error) gives its last lines. `N tests of A, B passed (those ... reach)`, or `no test
+  class reaches ..., so no test ran`.
+- Refused: `run_tests` in a project with no `pom.xml`.
+- As a batch step it is a checkpoint (see `batch`).
 
 ## `undo` (built)
-
 - Reverts the last change made through the tools in this server session: one
   call, or a whole batch. Call again to step back further.
 - Kept in memory per server process (`docs/design.md`, question 3: not on disk).

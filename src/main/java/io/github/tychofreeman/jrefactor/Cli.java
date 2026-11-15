@@ -133,7 +133,6 @@ final class Cli {
       Batch.load(project, refused);
       try {
         Outcome outcome = Tools.call(def, project, values);
-        Journal.save(project, stack);
         out.println(outcome.render());
         if (!outcome.exceptional().isEmpty()) {
           out.println();
@@ -141,6 +140,7 @@ final class Cli {
         }
         return 0;
       } finally {
+        Journal.save(project, stack); // a refused batch keeps the steps through a checkpoint
         TypeCheck.save(project, count);
         Batch.save(project, refused);
       }

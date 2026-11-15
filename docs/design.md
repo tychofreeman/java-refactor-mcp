@@ -501,6 +501,16 @@ applies under both checks, and under `"each"` the type check still refuses a ste
 callers go later, with the batch's hint toward `"end"`, over relaxing the per-step type check for
 deletes.
 
+**Decided: which tests `check` runs** (2026-11-14, roadmap #201). The user chose the intent on issue #367: only the tests focused on the changes the batch has made
+so far, however long the run takes. The rule that finds them is this session's default, to
+reopen: (a) the test classes changed, and the test files whose text names a type of a changed main
+file, by the file's name as a word; over (b) the same through bindings, closed over the main types
+that use a changed one (a parse of the project per check, and a change to a widely used type would
+reach most tests), and (c) a list of tests or a pattern given with `run_tests` (a second argument
+for what the rule should find). Alone, the changes are the session's undo history; over the files
+`git` says differ (a change by hand would count, but the tools do not read `git` today). No time
+limit: a hung test hangs the call, as the user's "however long" allows.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

@@ -448,6 +448,13 @@ Each was chosen from options; the record named beside it has the options it beat
   `Arg.string(...).required()`, ...), not JSON (#97). To check that a rewrite of
   `Tools` keeps every schema, diff two runs of `ToolSchemasTest`
   (`-Djrefactor.schemas.out=<file>`).
+- `check` and the batch checkpoint are `Check` (#201, 2026-11-14): `Check.run` the tool,
+  `Check.checkpoint` the step, which `Batch.steps` calls in place of `Tools.call` (under `"end"`
+  with the batch's starting errors, to declare stubs as the end check does). A passing step is a
+  `Batch.Mark`; a later refusal puts the files back to it and throws `Refusal.Kept`, which
+  `Tools.call` commits rather than aborts, and the CLI saves the undo stack after a refusal too.
+  The tests that run are `Check.focused` (a choice of this session, options in `docs/design.md`,
+  Decisions), run by `Session.tests` (`Check.maven`; a test passes a stand-in).
 - `Session.refusedBatch` keeps the last refused batch for `batch` `retry` (2026-11-06); a batch
   that passes clears it. The command line keeps it between runs in its cache directory, beside
   the undo stack and the type count (`Batch.save`, `Batch.load`, #194).

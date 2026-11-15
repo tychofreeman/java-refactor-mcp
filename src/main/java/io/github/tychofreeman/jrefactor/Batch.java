@@ -41,13 +41,15 @@ final class Batch {
     }
     Lifted lifted = underArgs(steps, session);
     List<Map<String, Object>> run = lifted.steps();
+    Mark mark = new Mark();
     try {
       Outcome outcome;
       if (mode.equals("end")) {
+        Map<TypeCheck.Problem, Integer> baseline = TypeCheck.errors(project);
         Gate.Checked<String> checked =
             Gate.checkedAtEnd(
                 project,
-                () -> steps(project, run, true),
+                () -> steps(project, run, baseline, mark),
                 "the batch",
                 "Add the steps that fix them, or change the steps that cause them.");
         outcome =
@@ -55,11 +57,21 @@ final class Batch {
                 checked.result() + "\nchecked at the end: no new compile errors" + lifted.note(),
                 checked.declared());
       } else {
-        outcome = Outcome.of(steps(project, run, false) + lifted.note());
+        outcome = Outcome.of(steps(project, run, null, mark) + lifted.note());
       }
       session.refusedBatch = null;
       return outcome;
     } catch (Refusal refusal) {
+      if (mark.step > 0) {
+        mark.restore(project);
+        session.refusedBatch = null; // its first steps applied, so a retry would repeat them
+        throw new Refusal.Kept(
+            refusal.getMessage().replace(", so nothing was changed:", ":")
+                + "\nThe steps through the check at step "
+                + mark.step
+                + " were kept, and those after it rolled back; one undo reverts the kept steps."
+                + " Send the steps after the check again, fixed, as a new batch.");
+      }
       session.refusedBatch = run;
       session.refusedCheck = mode;
       throw new Refusal(
@@ -178,7 +190,11 @@ final class Batch {
   /** The keys a step takes itself; its tool's arguments go under {@code args}. */
   private static final Set<String> STEP_KEYS = Set.of("tool", "args", "id");
 
-  private static String steps(SourceProject project, List<Map<String, Object>> steps, boolean atEnd)
+  private static String steps(
+      SourceProject project,
+      List<Map<String, Object>> steps,
+      Map<TypeCheck.Problem, Integer> baseline,
+      Mark mark)
       throws Exception {
     List<Done> done = new ArrayList<>();
     StringBuilder said = new StringBuilder("batch of " + steps.size() + " steps:");
@@ -210,10 +226,13 @@ final class Batch {
       String text;
       project.session().deletedLater = deletes(steps.subList(i + 1, steps.size()), project);
       try {
-        text = Tools.call(def, project, stepArgs).render();
+        text =
+            def.name().equals("check")
+                ? Check.checkpoint(project, stepArgs, baseline)
+                : Tools.call(def, project, stepArgs).render();
       } catch (Refusal refusal) {
         String hint =
-            !atEnd && refusal.getMessage().contains("would add compile errors")
+            baseline == null && refusal.getMessage().contains("would add compile errors")
                 ? "\nIf a later step fixes these errors, send the batch with check \"end\"."
                 : "";
         throw new Refusal(
@@ -225,10 +244,13 @@ final class Batch {
                 + name
                 + ") refused: "
                 + refusal.getMessage()
-                + "\nNothing was changed."
+                + (mark.step == 0 ? "\nNothing was changed." : "")
                 + hint);
       } finally {
         project.session().deletedLater = List.of();
+      }
+      if (def.name().equals("check")) {
+        mark.pass(project, number);
       }
       String after = path != null && Files.isRegularFile(path) ? Files.readString(path) : null;
       Object id = step.get("id");
@@ -568,5 +590,35 @@ final class Batch {
       }
     }
     return out;
+  }
+
+  /**
+   * The last check step of a batch that passed: its number (0 for none), and the text then of each
+   * file the batch had written.
+   */
+  private static final class Mark {
+    int step;
+    Map<Path, String> texts = new LinkedHashMap<>();
+
+    /** Marks step {@code number} as passed, with the files as they are now. */
+    void pass(SourceProject project, int number) throws IOException {
+      step = number;
+      texts = new LinkedHashMap<>();
+      for (Path file : Journal.written(project).keySet()) {
+        texts.put(file, Journal.read(file));
+      }
+    }
+
+    /**
+     * Puts each file the batch wrote back as it was at the mark, or as it was before the batch when
+     * the mark had not written it, and records that as the batch's change.
+     */
+    void restore(SourceProject project) throws IOException {
+      for (Map.Entry<Path, String> file : Journal.written(project).entrySet()) {
+        String text = texts.containsKey(file.getKey()) ? texts.get(file.getKey()) : file.getValue();
+        Journal.put(project, file.getKey(), text);
+        Journal.wrote(project, file.getKey(), file.getValue(), text);
+      }
+    }
   }
 }
