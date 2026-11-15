@@ -125,28 +125,10 @@ final class Fold {
         pattern.add((ASTNode) o);
       }
     }
-    int[] uses = new int[params.size()];
-    int[] firstEnd = new int[params.size()];
-    int[] lastStart = new int[params.size()];
-    List<Integer> order = new ArrayList<>();
-    Set<String> bodyLocals = new HashSet<>();
-    for (ASTNode p : pattern) {
-      for (VariableDeclaration d : Nodes.all(p, VariableDeclaration.class)) {
-        bodyLocals.add(Bindings.declarationKey(d.resolveBinding()));
-      }
-      for (SimpleName n : Nodes.all(p, SimpleName.class)) {
-        int i = params.indexOf(Bindings.declarationKey(n.resolveBinding()));
-        if (i >= 0) {
-          if (uses[i]++ == 0) {
-            firstEnd[i] = Nodes.end(n);
-          }
-          lastStart[i] = n.getStartPosition();
-          if (!order.contains(i)) {
-            order.add(i);
-          }
-        }
-      }
-    }
+    ParamUses facts = paramUses(params, pattern);
+    int[] uses = facts.uses();
+    List<Integer> order = facts.order();
+    Set<String> bodyLocals = facts.bodyLocals();
     for (int i = 0; i < params.size(); i++) {
       String param = ((SingleVariableDeclaration) m.parameters().get(i)).getName().getIdentifier();
       if (uses[i] == 0) {
@@ -174,20 +156,7 @@ final class Fold {
 
     // A parameter whose uses nothing in the body between them could change: an argument without
     // effects read there twice reads the same value, as the call's one read does.
-    boolean[] stable = new boolean[params.size()];
-    for (int i = 0; i < params.size(); i++) {
-      stable[i] = true;
-      for (ASTNode p : pattern) {
-        for (Effects.Effect e : Effects.of(p).all()) {
-          if (e.changes()
-              && !e.deferred()
-              && e.node().getStartPosition() >= firstEnd[i]
-              && e.end() <= lastStart[i]) {
-            stable[i] = false;
-          }
-        }
-      }
-    }
+    boolean[] stable = stable(params, pattern, facts.firstEnd(), facts.lastStart());
     List<Candidate> found = new ArrayList<>();
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       collect(e.getKey(), e.getValue(), m, pattern, params, bodyLocals, returns, found);
@@ -284,6 +253,60 @@ final class Fold {
             + (left.isEmpty() ? "" : "; left " + left.size() + ": " + String.join(", ", left))
             + written.said(),
         declared);
+  }
+
+  /**
+   * How many times the pattern reads each parameter, where its first read ends and its last starts,
+   * the order of their first reads, and the locals the pattern declares.
+   */
+  private static ParamUses paramUses(List<String> params, List<ASTNode> pattern) {
+    int[] uses = new int[params.size()];
+    int[] firstEnd = new int[params.size()];
+    int[] lastStart = new int[params.size()];
+    List<Integer> order = new ArrayList<>();
+    Set<String> bodyLocals = new HashSet<>();
+    for (ASTNode p : pattern) {
+      for (VariableDeclaration d : Nodes.all(p, VariableDeclaration.class)) {
+        bodyLocals.add(Bindings.declarationKey(d.resolveBinding()));
+      }
+      for (SimpleName n : Nodes.all(p, SimpleName.class)) {
+        int i = params.indexOf(Bindings.declarationKey(n.resolveBinding()));
+        if (i >= 0) {
+          if (uses[i]++ == 0) {
+            firstEnd[i] = Nodes.end(n);
+          }
+          lastStart[i] = n.getStartPosition();
+          if (!order.contains(i)) {
+            order.add(i);
+          }
+        }
+      }
+    }
+    return new ParamUses(uses, firstEnd, lastStart, order, bodyLocals);
+  }
+
+  /** What {@link #paramUses} reads of the pattern, by parameter index. */
+  private record ParamUses(
+      int[] uses, int[] firstEnd, int[] lastStart, List<Integer> order, Set<String> bodyLocals) {}
+
+  /** Whether nothing in the pattern between each parameter's first and last use could change it. */
+  private static boolean[] stable(
+      List<String> params, List<ASTNode> pattern, int[] firstEnd, int[] lastStart) {
+    boolean[] stable = new boolean[params.size()];
+    for (int i = 0; i < params.size(); i++) {
+      stable[i] = true;
+      for (ASTNode p : pattern) {
+        for (Effects.Effect e : Effects.of(p).all()) {
+          if (e.changes()
+              && !e.deferred()
+              && e.node().getStartPosition() >= firstEnd[i]
+              && e.end() <= lastStart[i]) {
+            stable[i] = false;
+          }
+        }
+      }
+    }
+    return stable;
   }
 
   /**
