@@ -1953,3 +1953,12 @@ again.
 - `MoveToPackage.run`'s visitor and per-file loop were left: each reads ten or more of `run`'s
   locals. `extract_function` would take them all as parameters; a record of the move's names would
   have to come first, and no tool gathers locals that are computed in different places into one.
+
+## 2026-11-15: long-methods (#528, item 8, TypeSwitch and ConvertLambda)
+
+- No Java by hand. `ConvertLoop.run`'s last branch builds a refusal's text and throws; the
+  branches before it assign `said`. Extracting that branch into a method leaves the compiler
+  unsure `said` is assigned after the if chain, so it was not tried; extracting the whole chain
+  takes six parameters. A refusal built by a method and thrown at the call
+  (`throw unconvertible(...)`) would be the shape; `extract_function` could offer it for a block
+  that ends in `throw`.
