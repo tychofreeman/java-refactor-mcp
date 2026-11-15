@@ -144,7 +144,7 @@ final class MavenBuild {
     return Files.isDirectory(path) ? path.resolve("pom.xml") : path;
   }
 
-  private static List<String> maven(Path root) throws IOException {
+  static List<String> maven(Path root) throws IOException {
     Path wrapper = root.resolve("mvnw");
     if (Files.isExecutable(wrapper)) {
       return List.of(wrapper.toString());
@@ -157,7 +157,7 @@ final class MavenBuild {
     throw new IOException("no ./mvnw in the project and no mvn on the PATH");
   }
 
-  private static String tail(Path log) throws IOException {
+  static String tail(Path log) throws IOException {
     List<String> lines = Files.readAllLines(log);
     return String.join("\n", lines.subList(Math.max(0, lines.size() - 20), lines.size()));
   }

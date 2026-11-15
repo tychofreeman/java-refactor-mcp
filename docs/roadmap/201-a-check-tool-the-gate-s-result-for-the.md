@@ -1,7 +1,7 @@
 ---
 order: 194
 item: 201
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ A `check` tool: the gate's result for the project, and with `run_tests` the Mave
 
 ## Status
 
-Open; which tests `run_tests` runs by default (all, or those the changed files reach) is a choice for the user
+Done (2026-11-14): `Check`. Which tests `run_tests` runs is the user's (#367: those the changes reach); the rule that decides them is a default of this session, with the options it beat in `docs/design.md`, Decisions, to reopen
 
 ## Evidence
 

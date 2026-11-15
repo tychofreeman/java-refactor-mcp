@@ -1861,3 +1861,12 @@ By hand: the wrapper `eval-tasks/jrefactor-ab-server-aliases` from the no-build 
   an `@@` section (its last newline dropped) joined two lines, three times in one batch; two more
   `replace_text` calls split them. Nothing flagged it: the result could say when `old` ends in a
   newline and `new` does not.
+
+## 2026-11-14: an import of a JDK internal class for a type the batch creates later (check-tool)
+
+A batch whose `add_declaration` steps named `Check` before the step that `create_file`d
+`Check.java` was refused: the import fix, run on each step's text, took
+`com.sun.tools.javac.comp.Check` for the name, and the end check then found it not accessible.
+Moving the `create_file` first (a `retry`) worked. No tool was skipped. The import fix could
+prefer a type a later step of the same batch creates, or never choose a class of a package the
+module system does not export; neither is on the roadmap yet.

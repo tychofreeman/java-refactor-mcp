@@ -68,7 +68,8 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   `replace_statements` and `replace_expression` also take `build`: calls,
   constructions, loops and guards written from names, their types read from
   the code.
-- **Plumbing:** `batch` and `undo`.
+- **Plumbing:** `batch`, `check` (the compile errors, and with `run_tests` the tests the
+  changes reach; in a batch, a checkpoint) and `undo`.
 
 The arguments and results of each are in
 [docs/tool-contract.md](docs/tool-contract.md).

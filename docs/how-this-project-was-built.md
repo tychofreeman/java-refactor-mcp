@@ -527,3 +527,8 @@ a cell after the last one; their text is kept.
   closing: the probes kept the form honest where the user's description of the choice (the close
   first in an existing finally) would have run catches before the close, and found the one change
   the form cannot avoid, suppression, which the result now names.
+
+- The `check` tool and the batch checkpoint (2026-11-14, roadmap #201) brought gorefactor's
+  red-and-green loop into a batch: a failing step after a passing check no longer throws the
+  whole batch away. The tests that run are those the changes reach, at the user's request, not
+  the module's whole suite as in gorefactor.

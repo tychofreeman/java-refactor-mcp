@@ -94,6 +94,9 @@ final class Session {
    */
   List<SafeDelete.Deletion> deletedLater = List.of();
 
+  /** Runs the tests a check asks for: Maven, or a test's stand-in for it. */
+  Check.Runner tests = Check::maven;
+
   /** What {@link #deferring} and the like return: closing it puts back what it changed. */
   interface Restore extends AutoCloseable {
     @Override
