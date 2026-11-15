@@ -473,6 +473,9 @@ Each was chosen from options; the record named beside it has the options it beat
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
 
+- `inline` with `field` is `InlineClass`; its checks and edits are `fieldNamed`, `homeDeclaration`,
+  `refuseClashes`, `useEdits` and `body` (#528).
+
 - `move_type` with `package` (#80, 2026-11-04) is `MoveToPackage`: a file's only
   top-level type to another package of its source root; package-private
   declarations a use crosses the new boundary with become public, found by

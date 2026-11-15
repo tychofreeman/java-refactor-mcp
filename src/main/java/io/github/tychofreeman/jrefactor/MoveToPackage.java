@@ -165,17 +165,7 @@ final class MoveToPackage {
       CompilationUnit u = units.get(f);
       List<TextEdit> list = new ArrayList<>(e.getValue());
       if (f.equals(opened.file())) {
-        if (u.getPackage() != null) {
-          ASTNode p = u.getPackage().getName();
-          list.add(new TextEdit(p.getStartPosition(), Nodes.end(p), pkg));
-        } else {
-          // The default package: the package line goes before the imports and the type.
-          int at =
-              !u.imports().isEmpty()
-                  ? ((ASTNode) u.imports().get(0)).getStartPosition()
-                  : type.getStartPosition();
-          list.add(new TextEdit(at, at, "package " + pkg + ";\n\n"));
-        }
+        packageLine(u, list, pkg, type);
         String after = TextEdit.apply(text, list, 0);
         changed.put(f, null);
         changed.put(
@@ -204,16 +194,7 @@ final class MoveToPackage {
                 : "Widen or move what the errors name first, then move " + name + " again.");
     String result = "moved " + name + " to package " + pkg + " (" + project.relative(target) + ")";
     if (references > 0) {
-      List<String> each = new ArrayList<>();
-      lines.forEach((r, ls) -> each.add(r + " " + Lines.list(ls)));
-      result +=
-          ", with "
-              + references
-              + (references == 1 ? " reference" : " references")
-              + " in "
-              + lines.size()
-              + (lines.size() == 1 ? " file: " : " files: ")
-              + String.join("; ", each);
+      result = withReferences(lines, result, references);
     }
     if (!widened.isEmpty()) {
       List<String> all = new ArrayList<>(widened);
@@ -221,6 +202,41 @@ final class MoveToPackage {
       result += "; widened " + joined + " to public";
     }
     return new Outcome(result, declared);
+  }
+
+  /**
+   * Adds to list the moved file's package line: the new name in place of the old, or a new line for
+   * a file of the default package.
+   */
+  private static void packageLine(
+      CompilationUnit u, List<TextEdit> list, String pkg, AbstractTypeDeclaration type) {
+    if (u.getPackage() != null) {
+      ASTNode p = u.getPackage().getName();
+      list.add(new TextEdit(p.getStartPosition(), Nodes.end(p), pkg));
+    } else {
+      // The default package: the package line goes before the imports and the type.
+      int at =
+          !u.imports().isEmpty()
+              ? ((ASTNode) u.imports().get(0)).getStartPosition()
+              : type.getStartPosition();
+      list.add(new TextEdit(at, at, "package " + pkg + ";\n\n"));
+    }
+  }
+
+  /** result with the references rewritten, by file and line. */
+  private static String withReferences(
+      Map<String, List<Integer>> lines, String result, int references) {
+    List<String> each = new ArrayList<>();
+    lines.forEach((r, ls) -> each.add(r + " " + Lines.list(ls)));
+    result +=
+        ", with "
+            + references
+            + (references == 1 ? " reference" : " references")
+            + " in "
+            + lines.size()
+            + (lines.size() == 1 ? " file: " : " files: ")
+            + String.join("; ", each);
+    return result;
   }
 
   /**
