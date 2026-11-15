@@ -67,7 +67,7 @@ final class ChangeSignature {
     MethodFamily family =
         MethodFamily.of(project, args, true, "so its signature cannot change.", false);
     SignatureChange change = new SignatureChange(family);
-    List<Signatures.Decl> decls = new ArrayList<>(family.decls);
+    List<MethodFamily.Decl> decls = new ArrayList<>(family.decls);
     decls.addAll(referenced(project, family));
     List<String> said = new ArrayList<>();
     List<String> chosen = new ArrayList<>(args.list("imports"));
@@ -125,14 +125,14 @@ final class ChangeSignature {
       Request request,
       MethodFamily family,
       Args args,
-      List<Signatures.Decl> decls,
+      List<MethodFamily.Decl> decls,
       SignatureChange change,
       List<String> said) {
     boolean toVoid = request.returnType().equals("void");
     if (!toVoid) {
       Signatures.checkTypeDecidedUses(family, args, request.returnType(), true);
     }
-    for (Signatures.Decl d : decls) {
+    for (MethodFamily.Decl d : decls) {
       Signatures.requireReturnType(d, family);
       Type old = d.m().getReturnType2();
       if (Nodes.source(d.file().text(), old).equals(request.returnType())) {
@@ -144,7 +144,7 @@ final class ChangeSignature {
       }
     }
     if (toVoid) {
-      for (Signatures.Lambda l : family.lambdas) {
+      for (MethodFamily.Lambda l : family.lambdas) {
         ASTNode body = l.node().getBody();
         if (body instanceof Block block) {
           voidReturns(change, l.file(), l.node(), block);
@@ -165,12 +165,12 @@ final class ChangeSignature {
    */
   private static void throwsEdits(
       Request request,
-      List<Signatures.Decl> decls,
+      List<MethodFamily.Decl> decls,
       SignatureChange change,
       MethodFamily family,
       List<String> said) {
     List<String> missing = new ArrayList<>(request.removed());
-    for (Signatures.Decl d : decls) {
+    for (MethodFamily.Decl d : decls) {
       throwsClause(change, d, request.added(), request.removed(), missing);
     }
     if (!missing.isEmpty()) {
@@ -197,7 +197,7 @@ final class ChangeSignature {
       SourceProject project,
       MethodFamily family,
       SignatureChange change,
-      List<Signatures.Decl> decls,
+      List<MethodFamily.Decl> decls,
       Request request,
       List<String> chosen,
       int declarations,
@@ -214,7 +214,7 @@ final class ChangeSignature {
             request.stops(),
             chosen);
     List<String> gained = new ArrayList<>();
-    for (Signatures.Decl d : handled.decls) {
+    for (MethodFamily.Decl d : handled.decls) {
       throwsClause(change, d, handled.names.get(d.m()), List.of(), new ArrayList<>());
       gained.add(Names.methodLabel(d.binding()));
     }
@@ -263,7 +263,7 @@ final class ChangeSignature {
    */
   private static void throwsClause(
       SignatureChange change,
-      Signatures.Decl d,
+      MethodFamily.Decl d,
       List<String> added,
       List<String> removed,
       List<String> missing) {
@@ -336,10 +336,10 @@ final class ChangeSignature {
    * The project's methods that a method reference implements the family with: {@code
    * Renamer::moveFile} where a {@code Move} is wanted makes {@code moveFile} one more declaration.
    */
-  private static List<Signatures.Decl> referenced(SourceProject project, MethodFamily family)
+  private static List<MethodFamily.Decl> referenced(SourceProject project, MethodFamily family)
       throws Exception {
-    List<Signatures.Decl> out = new ArrayList<>();
-    for (Signatures.Reference r : family.references) {
+    List<MethodFamily.Decl> out = new ArrayList<>();
+    for (MethodFamily.Reference r : family.references) {
       IMethodBinding target = r.target();
       if (target == null || target.isConstructor() || !target.getDeclaringClass().isFromSource()) {
         continue;
@@ -348,11 +348,11 @@ final class ChangeSignature {
       if (file == null) {
         continue;
       }
-      Signatures.Source s = family.sources.get(file);
+      MethodFamily.Source s = family.sources.get(file);
       if (s == null) {
         String text = Files.readString(file);
         s =
-            new Signatures.Source(
+            new MethodFamily.Source(
                 file, project.relative(file), text, Jdt.parse(project, file, text));
         family.sources.put(file, s);
       }
@@ -360,14 +360,14 @@ final class ChangeSignature {
       for (MethodDeclaration m : Nodes.all(s.unit(), MethodDeclaration.class)) {
         IMethodBinding b = m.resolveBinding();
         boolean known = false;
-        for (Signatures.Decl d : family.decls) {
+        for (MethodFamily.Decl d : family.decls) {
           known |= d.m() == m;
         }
-        for (Signatures.Decl d : out) {
+        for (MethodFamily.Decl d : out) {
           known |= d.m() == m;
         }
         if (b != null && MethodFamily.key(b).equals(key) && !known) {
-          out.add(new Signatures.Decl(s, m, b, Signatures.open(s.text(), m.getName())));
+          out.add(new MethodFamily.Decl(s, m, b, Signatures.open(s.text(), m.getName())));
         }
       }
     }
@@ -380,7 +380,7 @@ final class ChangeSignature {
    * return;} for a call, an assignment or an increment; refused for another.
    */
   private static void voidReturns(
-      SignatureChange change, Signatures.Source s, ASTNode fn, Block body) {
+      SignatureChange change, MethodFamily.Source s, ASTNode fn, Block body) {
     String text = s.text();
     for (ReturnStatement r : Nodes.all(body, ReturnStatement.class)) {
       Expression e = r.getExpression();
@@ -418,7 +418,7 @@ final class ChangeSignature {
     }
   }
 
-  private static String unkept(Signatures.Source s, ASTNode e) {
+  private static String unkept(MethodFamily.Source s, ASTNode e) {
     return s.rel()
         + ", line "
         + s.line(e)

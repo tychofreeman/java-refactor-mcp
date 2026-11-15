@@ -21,10 +21,8 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
-import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
@@ -86,7 +84,7 @@ final class Signatures {
   static Outcome addParameter(
       SourceProject project,
       Args args,
-      Function<Call, String> value,
+      Function<MethodFamily.Call, String> value,
       BiConsumer<MethodFamily, SignatureChange> more)
       throws Exception {
     String parameter = args.required("parameter");
@@ -97,13 +95,13 @@ final class Signatures {
     family.refuseHiding(parameter);
     SignatureChange change = new SignatureChange(family);
     more.accept(family, change);
-    for (Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       change.insert(d.file(), d.m().parameters(), d.open(), -1, at, type + " " + parameter);
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       change.insert(c.file(), c.arguments(), c.open(), c.bare(), at, value.apply(c));
     }
-    for (Lambda l : family.lambdas) {
+    for (MethodFamily.Lambda l : family.lambdas) {
       List<String> params = l.params();
       params.add(at, l.typed() ? type + " " + parameter : parameter);
       change.lambda(l, params);
@@ -133,7 +131,7 @@ final class Signatures {
       return removeWithValue(project, family, at, args.required("parameter"), value.strip());
     }
     family.refuseReading(at);
-    for (Lambda l : family.lambdas) {
+    for (MethodFamily.Lambda l : family.lambdas) {
       VariableDeclaration p = (VariableDeclaration) l.node().parameters().get(at);
       IVariableBinding b = p.resolveBinding();
       boolean[] reads = {false};
@@ -158,7 +156,7 @@ final class Signatures {
                 + ", so it cannot be removed. Change the lambda not to read it first.");
       }
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
       if (acts(argument)) {
         throw new Refusal(
@@ -181,14 +179,14 @@ final class Signatures {
       }
     }
     SignatureChange change = new SignatureChange(family);
-    for (Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       change.remove(d.file(), d.m().parameters(), at);
       change.removeParamTag(d, at);
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       change.remove(c.file(), c.arguments(), at);
     }
-    for (Lambda l : family.lambdas) {
+    for (MethodFamily.Lambda l : family.lambdas) {
       List<String> params = l.params();
       params.remove(at);
       change.lambda(l, params);
@@ -219,7 +217,7 @@ final class Signatures {
     order.add(to > from ? to - 1 : to, from);
     int low = Math.min(from, to);
     int high = Math.max(from, to - 1);
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       List<Expression> impure = new ArrayList<>();
       for (int i = low; i <= high; i++) {
         Expression argument = (Expression) c.arguments().get(i);
@@ -259,13 +257,13 @@ final class Signatures {
       }
     }
     SignatureChange change = new SignatureChange(family);
-    for (Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       change.reorder(d.file(), d.m().parameters(), order);
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       change.reorder(c.file(), c.arguments(), order);
     }
-    for (Lambda l : family.lambdas) {
+    for (MethodFamily.Lambda l : family.lambdas) {
       List<String> params = l.params();
       List<String> moved = new ArrayList<>();
       for (int i : order) {
@@ -322,7 +320,7 @@ final class Signatures {
     SignatureChange change = new SignatureChange(family);
     checkTypeDecidedUses(family, args, varargs ? element + "[]" : type, returns);
     if (returns) {
-      for (Decl d : family.decls) {
+      for (MethodFamily.Decl d : family.decls) {
         requireReturnType(d, family);
         change.replace(d.file(), d.m().getReturnType2(), type);
       }
@@ -356,7 +354,7 @@ final class Signatures {
                     + ". Pass "
                     + element
                     + "[], or move it last first with move_parameter."));
-    for (Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       SingleVariableDeclaration p = (SingleVariableDeclaration) d.m().parameters().get(at);
       Precondition.require(
           Precondition.that(
@@ -377,7 +375,7 @@ final class Signatures {
             written + (varargs ? "... " : " "));
       }
     }
-    for (Lambda l : family.lambdas) {
+    for (MethodFamily.Lambda l : family.lambdas) {
       if (l.typed()) {
         List<String> params = l.params();
         String name =
@@ -404,7 +402,7 @@ final class Signatures {
    * Refuses a change of the return type of {@code d}, a declaration of {@code family}: a
    * constructor, or a return type with [] after the parameters.
    */
-  static void requireReturnType(Decl d, MethodFamily family) {
+  static void requireReturnType(MethodFamily.Decl d, MethodFamily family) {
     Precondition.require(
         Precondition.that(
             () -> !d.m().isConstructor(),
@@ -433,7 +431,7 @@ final class Signatures {
         return;
       }
       boolean boxed = TypeDecidedUses.anyBoxed(before, type);
-      for (Call c : family.calls) {
+      for (MethodFamily.Call c : family.calls) {
         if (c.node() instanceof Expression x) {
           TypeDecidedUses.check(
               x, family.label + "'s result", before.getName(), type, boxed, c.file().rel());
@@ -448,7 +446,7 @@ final class Signatures {
       return;
     }
     boolean boxed = TypeDecidedUses.anyBoxed(before, type);
-    for (Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       IVariableBinding p =
           ((SingleVariableDeclaration) d.m().parameters().get(at)).resolveBinding();
       if (d.m().getBody() == null || p == null) {
@@ -584,45 +582,6 @@ final class Signatures {
         declared);
   }
 
-  /** A file of the project, read and parsed with bindings. */
-  record Source(Path file, String rel, String text, CompilationUnit unit) {
-    int line(ASTNode node) {
-      return unit.getLineNumber(node.getStartPosition());
-    }
-  }
-
-  /** A declaration in the family; {@code open} is the offset just after its "(". */
-  record Decl(Source file, MethodDeclaration m, IMethodBinding binding, int open) {}
-
-  /**
-   * A call of the family: its arguments, the offset just after its "(", or -1 for an enum constant
-   * without one, then {@code bare} is where "(...)" goes.
-   */
-  record Call(Source file, ASTNode node, List<?> arguments, int open, int bare) {
-    String where(ASTNode n) {
-      return file.rel() + ", line " + file.line(n);
-    }
-  }
-
-  /** A lambda that implements a family member: one more declaration whose parameters change. */
-  record Lambda(Source file, LambdaExpression node) {
-    /** Each parameter's text, as written: {@code a}, or {@code int a} when they are typed. */
-    List<String> params() {
-      List<String> out = new ArrayList<>();
-      for (Object o : node.parameters()) {
-        ASTNode p = (ASTNode) o;
-        out.add(Nodes.source(file.text(), p));
-      }
-      return out;
-    }
-
-    /** Whether its parameters are written with their types. */
-    boolean typed() {
-      return !node.parameters().isEmpty()
-          && node.parameters().get(0) instanceof SingleVariableDeclaration;
-    }
-  }
-
   /**
    * Whether {@code type} is declared in one of the project's source files: one parsed from source
    * (the parse reads only the project's source roots), as a second top-level class of a file is, or
@@ -659,7 +618,7 @@ final class Signatures {
               + " could need another value. Remove the parameter from the others first, or"
               + " without value.");
     }
-    Decl d = family.decls.get(0);
+    MethodFamily.Decl d = family.decls.get(0);
     MethodDeclaration m = d.m();
     IVariableBinding param = ((SingleVariableDeclaration) m.parameters().get(at)).resolveBinding();
     boolean literal =
@@ -678,7 +637,7 @@ final class Signatures {
               + m.getName()
               + " has none of. Pass a static field or a literal.");
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
       if (!(literal ? argument.toString().equals(value) : sameField(argument, c.node(), field))) {
         throw new Refusal(
@@ -716,7 +675,7 @@ final class Signatures {
     }
     change.remove(d.file(), m.parameters(), at);
     change.removeParamTag(d, at);
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       change.remove(c.file(), c.arguments(), at);
     }
     return change.apply(
@@ -732,7 +691,8 @@ final class Signatures {
    * The field {@code value} names: {@code f} or {@code this.f}, of the method's class or one above
    * it, or {@code T.F}, a static field one of the calls passes.
    */
-  private static IVariableBinding fieldNamed(MethodFamily family, Decl d, int at, String value) {
+  private static IVariableBinding fieldNamed(
+      MethodFamily family, MethodFamily.Decl d, int at, String value) {
     String name = value.startsWith("this.") ? value.substring(5) : value;
     if (!name.contains(".")) {
       for (ITypeBinding t = d.binding().getDeclaringClass(); t != null; t = t.getSuperclass()) {
@@ -745,7 +705,7 @@ final class Signatures {
     } else {
       String simple = Names.simpleName(name);
       String type = name.substring(0, name.lastIndexOf('.'));
-      for (Call c : family.calls) {
+      for (MethodFamily.Call c : family.calls) {
         if (c.arguments().get(at) instanceof Name n
             && n.resolveBinding() instanceof IVariableBinding f
             && f.isField()
@@ -814,9 +774,6 @@ final class Signatures {
         : "this." + field.getName();
   }
 
-  /** A method reference that implements a family member, and the method it refers to. */
-  record Reference(Source file, MethodReference node, IMethodBinding target) {}
-
   /**
    * Applies {@code change}, a change of a type in {@code family}'s declarations, and refuses it
    * when a call in the family's files then runs another declaration ({@link CallTargets}).
@@ -831,7 +788,7 @@ final class Signatures {
       List<String> imports)
       throws Exception {
     CallTargets targets =
-        CallTargets.of(family.sources.values().stream().map(Source::unit).toList());
+        CallTargets.of(family.sources.values().stream().map(MethodFamily.Source::unit).toList());
     Outcome outcome = change.apply(project, done, imports, fix, -1, doing);
     targets.require(project, doing);
     return outcome;
@@ -845,7 +802,7 @@ final class Signatures {
   private static Outcome removeWithExpression(
       SourceProject project, MethodFamily family, int at, String parameter, String value)
       throws Exception {
-    Decl d = family.decls.get(0);
+    MethodFamily.Decl d = family.decls.get(0);
     MethodDeclaration m = d.m();
     SingleVariableDeclaration p = (SingleVariableDeclaration) m.parameters().get(at);
     ParameterValue.refuseNoLocal(m, family, value, p, parameter);
@@ -869,7 +826,7 @@ final class Signatures {
     declareFirst(change, d.file(), m, local);
     change.remove(d.file(), m.parameters(), at);
     change.removeParamTag(d, at);
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       change.remove(c.file(), c.arguments(), at);
     }
     Outcome done =
@@ -896,7 +853,7 @@ final class Signatures {
    * super(...)}: on its own line, a body written on one line opened up for it.
    */
   private static void declareFirst(
-      SignatureChange change, Source file, MethodDeclaration m, String statement) {
+      SignatureChange change, MethodFamily.Source file, MethodDeclaration m, String statement) {
     String text = file.text();
     int from = ParameterValue.afterConstructorCall(m);
     int close = Nodes.end(m.getBody()) - 1;
@@ -957,7 +914,7 @@ final class Signatures {
     if (field != null) {
       return field.getType().getKey().equals(key);
     }
-    for (Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       ITypeBinding t = ((Expression) c.arguments().get(at)).resolveTypeBinding();
       if (t == null || !t.getKey().equals(key)) {
         return false;

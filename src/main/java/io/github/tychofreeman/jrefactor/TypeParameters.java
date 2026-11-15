@@ -830,7 +830,7 @@ final class TypeParameters {
                     + "), and a lambda cannot implement a generic method. Turn the lambda into an"
                     + " anonymous class first (convert_lambda with to anonymous)."));
     refuseHiddenInFamily(family, parameter);
-    Signatures.Source home = family.sources.get(project.javaFile(args.required("file")));
+    MethodFamily.Source home = family.sources.get(project.javaFile(args.required("file")));
     AbstractTypeDeclaration owner = (AbstractTypeDeclaration) target.getParent();
     List<String> chosen = args.list("imports");
     Value v = value(project, home.file(), home.text(), owner, value, chosen);
@@ -874,7 +874,7 @@ final class TypeParameters {
     int index = target.typeParameters().size();
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
-    for (Signatures.Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       List<TextEdit> list = edits.computeIfAbsent(d.file().file(), k -> new ArrayList<>());
       MethodDeclaration m = d.m();
       List<?> declared = m.typeParameters();
@@ -1011,7 +1011,7 @@ final class TypeParameters {
    * that names a type one uses, which the parameter would hide.
    */
   private static void refuseHiddenInFamily(MethodFamily family, String parameter) {
-    for (Signatures.Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       for (SimpleName n : Nodes.all(d.m(), SimpleName.class)) {
         if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
           throw new Refusal(
@@ -1042,7 +1042,7 @@ final class TypeParameters {
   /** The family's files' texts. */
   private static Map<Path, String> texts(MethodFamily family) {
     Map<Path, String> texts = new LinkedHashMap<>();
-    for (Map.Entry<Path, Signatures.Source> e : family.sources.entrySet()) {
+    for (Map.Entry<Path, MethodFamily.Source> e : family.sources.entrySet()) {
       texts.put(e.getKey(), e.getValue().text());
     }
     return texts;
@@ -1051,7 +1051,7 @@ final class TypeParameters {
   /** The family's files, parsed. */
   private static List<CompilationUnit> units(MethodFamily family) {
     List<CompilationUnit> units = new ArrayList<>();
-    for (Signatures.Source s : family.sources.values()) {
+    for (MethodFamily.Source s : family.sources.values()) {
       units.add(s.unit());
     }
     return units;
@@ -1085,15 +1085,15 @@ final class TypeParameters {
    */
   private static Map<Path, Map<String, List<String>>> callTypes(MethodFamily family) {
     Map<Path, Map<String, List<String>>> before = new LinkedHashMap<>();
-    Map<ASTNode, Signatures.Source> uses = new LinkedHashMap<>();
-    for (Signatures.Call c : family.calls) {
+    Map<ASTNode, MethodFamily.Source> uses = new LinkedHashMap<>();
+    for (MethodFamily.Call c : family.calls) {
       uses.put(c.node(), c.file());
     }
     Set<String> keys = new HashSet<>();
-    for (Signatures.Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       keys.add(MethodFamily.key(d.binding()));
     }
-    for (Signatures.Source s : family.sources.values()) {
+    for (MethodFamily.Source s : family.sources.values()) {
       for (MethodReference r : Nodes.all(s.unit(), MethodReference.class)) {
         IMethodBinding b = r.resolveMethodBinding();
         if (b != null && keys.contains(MethodFamily.key(b.getMethodDeclaration()))) {
@@ -1102,7 +1102,7 @@ final class TypeParameters {
       }
     }
     Map<ASTNode, Map<ASTNode, String>> ordinals = new LinkedHashMap<>();
-    for (Map.Entry<ASTNode, Signatures.Source> u : uses.entrySet()) {
+    for (Map.Entry<ASTNode, MethodFamily.Source> u : uses.entrySet()) {
       IMethodBinding b = Calls.binding(u.getKey());
       if (b != null) {
         before
@@ -1193,11 +1193,11 @@ final class TypeParameters {
           MethodFamily.of(project, args, true, "so its type parameters cannot change.", false);
       label = family.label;
       int index = typeParameter(family.target.typeParameters(), name, label);
-      for (Signatures.Source s : family.sources.values()) {
+      for (MethodFamily.Source s : family.sources.values()) {
         sources.put(s.file(), s.text());
         units.put(s.file(), s.unit());
       }
-      for (Signatures.Decl d : family.decls) {
+      for (MethodFamily.Decl d : family.decls) {
         declared
             .computeIfAbsent(d.file().file(), k -> new ArrayList<>())
             .add((TypeParameter) d.m().typeParameters().get(index));
