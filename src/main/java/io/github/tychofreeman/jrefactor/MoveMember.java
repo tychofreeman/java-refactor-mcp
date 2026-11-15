@@ -124,6 +124,7 @@ final class MoveMember {
       checkPrivateUses(m, method, typeName, to, name);
     }
     boolean crosses = !Objects.equals(project.packageOf(file), project.packageOf(targetFile));
+    MovedMethod move = new MovedMethod(sourceKey, typeName, toName, base, isStatic, name, key);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     List<String> nullable = new ArrayList<>();
@@ -171,18 +172,7 @@ final class MoveMember {
               return true;
             }
           });
-      for (MethodDeclaration d : decls) {
-        IMethodBinding b = d.resolveBinding();
-        if (b != null && !key.equals(Bindings.declarationKey(b)) && b.overrides(method)) {
-          throw new Refusal(
-              name
-                  + " is overridden by "
-                  + d.getName().getIdentifier()
-                  + " in "
-                  + p.getFileName()
-                  + ". Moving it would change what that class runs; leave it in place.");
-        }
-      }
+      refuseOverriders(decls, key, method, name, p);
       if (sites.isEmpty()) {
         continue;
       }
@@ -197,37 +187,12 @@ final class MoveMember {
         if (!isStatic && site.getExpression() != null && NonNull.mayBeNull(site.getExpression())) {
           nullable.add(Nodes.source(fileText, site.getExpression()) + " in " + project.relative(p));
         }
-        list.add(
-            rewrite(
-                site,
-                fileText,
-                sourceKey,
-                typeName,
-                toName,
-                base,
-                isStatic,
-                name,
-                key,
-                Exceptional.preserved(project)));
+        list.add(rewrite(site, fileText, move, Exceptional.preserved(project)));
       }
       calls += sites.size();
       callFiles++;
     }
-    if (!nullable.isEmpty()) {
-      Exceptional.report(
-          project,
-          "a null receiver of "
-              + typeName
-              + "."
-              + member
-              + " now fails inside "
-              + to
-              + "."
-              + member
-              + ", when it uses the receiver and after the other arguments run (or not at all),"
-              + " not at the call: "
-              + String.join(", ", nullable));
-    }
+    reportNullable(nullable, project, typeName, member, to);
 
     int ms = m.getStartPosition();
     int me = ms + m.getLength();
@@ -241,12 +206,7 @@ final class MoveMember {
         .addAll(MemberMove.appendTo(texts.get(targetFile), target, moved));
     edits.entrySet().removeIf(e -> e.getValue().isEmpty());
 
-    boolean widened = false;
-    for (Object o : m.modifiers()) {
-      if (o instanceof org.eclipse.jdt.core.dom.Modifier mod && mod.isPrivate()) {
-        widened = true;
-      }
-    }
+    boolean widened = isPrivate(m);
     NameCheck.require(
         project, texts, edits, NameCheck.meanings(fragments), "moving " + name + " to " + to);
     Edits.WrittenFiles written =
@@ -278,6 +238,60 @@ final class MoveMember {
             + (widened ? "; private widened to package access" : "")
             + written.said(),
         declared2);
+  }
+
+  /**
+   * Refuses when a method of decls overrides the moved method: moving it would change what that
+   * class runs.
+   */
+  private static void refuseOverriders(
+      List<MethodDeclaration> decls, String key, IMethodBinding method, String name, Path p) {
+    for (MethodDeclaration d : decls) {
+      IMethodBinding b = d.resolveBinding();
+      if (b != null && !key.equals(Bindings.declarationKey(b)) && b.overrides(method)) {
+        throw new Refusal(
+            name
+                + " is overridden by "
+                + d.getName().getIdentifier()
+                + " in "
+                + p.getFileName()
+                + ". Moving it would change what that class runs; leave it in place.");
+      }
+    }
+  }
+
+  /**
+   * Reports the calls whose receiver may be null: it now fails inside the moved method, not at the
+   * call.
+   */
+  private static void reportNullable(
+      List<String> nullable, SourceProject project, String typeName, String member, String to) {
+    if (!nullable.isEmpty()) {
+      Exceptional.report(
+          project,
+          "a null receiver of "
+              + typeName
+              + "."
+              + member
+              + " now fails inside "
+              + to
+              + "."
+              + member
+              + ", when it uses the receiver and after the other arguments run (or not at all),"
+              + " not at the call: "
+              + String.join(", ", nullable));
+    }
+  }
+
+  /** Whether m is declared private. */
+  private static boolean isPrivate(MethodDeclaration m) {
+    boolean widened = false;
+    for (Object o : m.modifiers()) {
+      if (o instanceof org.eclipse.jdt.core.dom.Modifier mod && mod.isPrivate()) {
+        widened = true;
+      }
+    }
+    return widened;
   }
 
   /**
@@ -660,19 +674,10 @@ final class MoveMember {
 
   /** The call rewritten to pass the instance (or nothing, for a static method). */
   private static TextEdit rewrite(
-      MethodInvocation site,
-      String fileText,
-      String sourceKey,
-      String typeName,
-      String to,
-      String member,
-      boolean isStatic,
-      String name,
-      String key,
-      boolean keep) {
+      MethodInvocation site, String fileText, MovedMethod move, boolean keep) {
     Expression expr = site.getExpression();
     List<String> parts = new ArrayList<>();
-    if (!isStatic) {
+    if (!move.isStatic()) {
       if (expr != null) {
         // A null receiver failed at the call, before the arguments ran; requireNonNull keeps that.
         parts.add(
@@ -683,40 +688,40 @@ final class MoveMember {
         ASTNode owner = owningType(site);
         if (owner instanceof AnonymousClassDeclaration) {
           throw new Refusal(
-              name
+              move.name()
                   + " is called from an anonymous class, where this is not the instance. Call it"
                   + " from a method of "
-                  + typeName
+                  + move.typeName()
                   + " first.");
         }
         boolean inSource =
             owner instanceof TypeDeclaration td
                 && td.resolveBinding() != null
-                && td.resolveBinding().getKey().equals(sourceKey);
+                && td.resolveBinding().getKey().equals(move.sourceKey());
         if (!inSource) {
           throw new Refusal(
-              name
+              move.name()
                   + " is called without a receiver from another class; qualify the call with an"
                   + " instance of "
-                  + typeName
+                  + move.typeName()
                   + ".");
         }
         parts.add("this");
       }
     } else if (expr != null && !(expr instanceof Name)) {
       throw new Refusal(
-          name
+          move.name()
               + " is static and called through an expression. Call it as "
-              + typeName
+              + move.typeName()
               + "."
-              + member
+              + move.member()
               + " first.");
     }
     for (Object o : site.arguments()) {
       Expression arg = (Expression) o;
-      if (callsMember(arg, key)) {
+      if (callsMember(arg, move.key())) {
         throw new Refusal(
-            name
+            move.name()
                 + " is called inside another argument of a call. Move the inner call into a"
                 + " variable first.");
       }
@@ -724,7 +729,9 @@ final class MoveMember {
     }
     int s = site.getStartPosition();
     return new TextEdit(
-        s, s + site.getLength(), to + "." + member + "(" + String.join(", ", parts) + ")");
+        s,
+        s + site.getLength(),
+        move.to() + "." + move.member() + "(" + String.join(", ", parts) + ")");
   }
 
   private static boolean callsMember(Expression arg, String key) {
