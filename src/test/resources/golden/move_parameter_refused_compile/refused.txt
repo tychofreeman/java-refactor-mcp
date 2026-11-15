@@ -1,0 +1,1 @@
+moving size before text in Label.print

@@ -207,7 +207,17 @@ final class ExtractType {
             + " ("
             + project.relative(record)
             + ")",
-        args.list("imports"));
+        args.list("imports"),
+        SignatureChange.FIX,
+        -1,
+        "grouping "
+            + Names.listed(chosen)
+            + " of "
+            + family.label
+            + " into "
+            + struct
+            + " "
+            + parameter);
   }
 
   /**

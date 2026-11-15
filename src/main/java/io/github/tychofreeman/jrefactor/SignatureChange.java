@@ -111,24 +111,11 @@ final class SignatureChange {
     }
   }
 
-  /** Applies the edits, fixes each file's imports, and writes them all under the gate. */
-  Outcome apply(SourceProject project, String what, List<String> chosen) throws Exception {
-    return apply(project, what, chosen, FIX, -1);
-  }
-
   /**
-   * As {@link #apply(SourceProject, String, List)}, with the refusal's {@code fix}; with {@code
-   * declarations} zero or more, the result counts those and no calls.
-   */
-  Outcome apply(
-      SourceProject project, String what, List<String> chosen, String fix, int declarations)
-      throws Exception {
-    return apply(project, what, chosen, fix, declarations, what);
-  }
-
-  /**
-   * As {@link #apply(SourceProject, String, List, String, int)}, with {@code doing} ("changing the
-   * type of ...") in place of {@code what} in a refusal, which changes nothing.
+   * Applies the edits, fixes each file's imports, and writes them all under the gate: the result
+   * says {@code what} was done, a refusal (with its {@code fix}) what it was {@code doing}
+   * ("changing the type of ..."), since a refusal changes nothing. With {@code declarations} zero
+   * or more, the result counts those and no calls.
    */
   Outcome apply(
       SourceProject project,
