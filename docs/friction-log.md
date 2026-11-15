@@ -1971,3 +1971,12 @@ again.
 - `move` of the instance method `checkOverride` wrote it as `static checkOverride(Extraction
   receiver, ...)` assigning `receiver.overridden`; making it return the method instead (a field
   write become a result) has no tool: `extract_function` returns locals, not fields.
+
+## 2026-11-15: long-methods (#528, item 8, TypeSwitch and ConvertLambda)
+
+- No Java by hand. `ConvertLoop.run`'s last branch builds a refusal's text and throws; the
+  branches before it assign `said`. Extracting that branch into a method leaves the compiler
+  unsure `said` is assigned after the if chain, so it was not tried; extracting the whole chain
+  takes six parameters. A refusal built by a method and thrown at the call
+  (`throw unconvertible(...)`) would be the shape; `extract_function` could offer it for a block
+  that ends in `throw`.

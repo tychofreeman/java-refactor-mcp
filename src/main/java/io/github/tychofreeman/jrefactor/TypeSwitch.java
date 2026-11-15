@@ -122,15 +122,7 @@ final class TypeSwitch {
             () -> "the switch's type does not resolve."));
     String r = result == null ? "void" : Extract.typeName(result);
 
-    Map<Path, String> texts = new LinkedHashMap<>();
-    texts.put(opened.file(), text);
-    texts.putIfAbsent(sFile, Files.readString(sFile));
-    for (Case c : cases) {
-      if (c.type() != null) {
-        Path f = project.fileOf(c.type());
-        texts.putIfAbsent(f, Files.readString(f));
-      }
-    }
+    Map<Path, String> texts = texts(opened, text, sFile, cases, project);
     Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     Case fallback = cases.stream().filter(c -> c.type() == null).findFirst().orElse(null);
@@ -171,13 +163,7 @@ final class TypeSwitch {
           .addAll(MemberMove.appendTo(texts.get(f), declaration(parsed.get(f), c.type()), method));
       types.add(c.type().getName());
     }
-    String sel = Nodes.source(text, selector);
-    String call =
-        (selector instanceof Name ? sel : "(" + sel + ")")
-            + "."
-            + name
-            + "()"
-            + (node instanceof SwitchExpression ? "" : ";");
+    String call = call(text, selector, name, node);
     edits
         .computeIfAbsent(opened.file(), k -> new ArrayList<>())
         .add(new TextEdit(node.getStartPosition(), Nodes.end(node), call));
@@ -212,6 +198,39 @@ final class TypeSwitch {
             + call
             + written.said(),
         declared);
+  }
+
+  /**
+   * The texts of the files the change writes: the switch's, the supertype's and each case type's.
+   */
+  private static Map<Path, String> texts(
+      Opened opened, String text, Path sFile, List<Case> cases, SourceProject project)
+      throws IOException {
+    Map<Path, String> texts = new LinkedHashMap<>();
+    texts.put(opened.file(), text);
+    texts.putIfAbsent(sFile, Files.readString(sFile));
+    for (Case c : cases) {
+      if (c.type() != null) {
+        Path f = project.fileOf(c.type());
+        texts.putIfAbsent(f, Files.readString(f));
+      }
+    }
+    return texts;
+  }
+
+  /**
+   * The call that replaces the switch: the selector's method name(), parenthesized unless a name,
+   * and a statement for a switch or if statement.
+   */
+  private static String call(String text, Expression selector, String name, ASTNode node) {
+    String sel = Nodes.source(text, selector);
+    String call =
+        (selector instanceof Name ? sel : "(" + sel + ")")
+            + "."
+            + name
+            + "()"
+            + (node instanceof SwitchExpression ? "" : ";");
+    return call;
   }
 
   /**

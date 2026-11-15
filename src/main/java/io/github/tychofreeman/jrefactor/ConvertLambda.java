@@ -75,30 +75,7 @@ final class ConvertLambda {
         node instanceof LambdaExpression
             ? "lambda"
             : node instanceof MethodReference ? "method reference" : "anonymous class";
-    String replacement =
-        switch (to) {
-          case "method_reference" -> {
-            if (!(node instanceof LambdaExpression l)) {
-              throw new Refusal("the " + what + " is not a lambda; convert it to a lambda first.");
-            }
-            yield reference(l, text);
-          }
-          case "lambda" -> {
-            if (node instanceof MethodReference r) {
-              yield lambdaOf(r, text);
-            }
-            if (node instanceof ClassInstanceCreation c) {
-              yield lambdaOf(c, text);
-            }
-            throw new Refusal("it is a lambda already.");
-          }
-          default -> {
-            if (!(node instanceof LambdaExpression l)) {
-              throw new Refusal("the " + what + " is not a lambda; convert it to a lambda first.");
-            }
-            yield anonymousOf(l, text);
-          }
-        };
+    String replacement = replacement(to, node, what, text);
     NameCheck.require(
         project,
         Map.of(opened.file(), text),
@@ -132,6 +109,38 @@ final class ConvertLambda {
                 : to.equals("lambda") ? "a lambda" : "an anonymous class")
             + written.fixed().said(),
         written.declared());
+  }
+
+  /**
+   * The text node becomes in the form to names, or a refusal when it is that form already or must
+   * be a lambda first.
+   */
+  private static String replacement(String to, ASTNode node, String what, String text) {
+    String replacement =
+        switch (to) {
+          case "method_reference" -> {
+            if (!(node instanceof LambdaExpression l)) {
+              throw new Refusal("the " + what + " is not a lambda; convert it to a lambda first.");
+            }
+            yield reference(l, text);
+          }
+          case "lambda" -> {
+            if (node instanceof MethodReference r) {
+              yield lambdaOf(r, text);
+            }
+            if (node instanceof ClassInstanceCreation c) {
+              yield lambdaOf(c, text);
+            }
+            throw new Refusal("it is a lambda already.");
+          }
+          default -> {
+            if (!(node instanceof LambdaExpression l)) {
+              throw new Refusal("the " + what + " is not a lambda; convert it to a lambda first.");
+            }
+            yield anonymousOf(l, text);
+          }
+        };
+    return replacement;
   }
 
   /** The method reference that means what {@code l} does, or a refusal. */
