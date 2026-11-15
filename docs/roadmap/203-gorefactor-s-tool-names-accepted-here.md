@@ -10,7 +10,7 @@ gorefactor's tool names accepted here: `introduce_parameter`, `parameterize`, `c
 
 ## Status
 
-Partly done 2026-11-15 (the user chose aliases here and options in gorefactor, go-refactor-mcp #634): `introduce_parameter`, `convert_params_to_object`, `remove_dead_code`, `prepare_switch_for_types` (`GoNames`, goldens `alias_*`). Left: `parameterize` (gorefactor's is another operation; the owner's choice), `merge_duplicate_function` and `add_field` on a class (compositions, put off by the user)
+Partly done 2026-11-15 (the user chose aliases here and options in gorefactor, go-refactor-mcp #634): `introduce_parameter`, `convert_params_to_object`, `remove_dead_code`, `prepare_switch_for_types` (`GoNames`, goldens `alias_*`). `parameterize` became a tool of its own (#508, the owner's choice of 2026-11-15). Left: `merge_duplicate_function` and `add_field` on a class (compositions, put off by the user)
 
 ## Evidence
 

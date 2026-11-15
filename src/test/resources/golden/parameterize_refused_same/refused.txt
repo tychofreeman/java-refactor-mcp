@@ -1,0 +1,1 @@
+Twice.a and Twice.b do not differ; fold the one to keep, then inline the other

@@ -53,7 +53,8 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   `pull_up`, `push_down`, `add_supertype`, `extract_supertype`;
   `function_to_method`, `encapsulate_field`, `convert_lambda` (lambda,
   method reference, anonymous class), `convert_to_record`; `fold` (replace
-  code that does what a method does with a call of it); `move_statement`,
+  code that does what a method does with a call of it), `parameterize` (methods that are the
+  same but for constants become calls of one that takes them); `move_statement`,
   `invert_if`, `remove_else`, `type_switch_to_method`; `loop_to_stream`
   (an enhanced for as a stream), `convert_loop` (an index or iterator for
   and an enhanced for, a for and a while, a while and a do-while, either way),

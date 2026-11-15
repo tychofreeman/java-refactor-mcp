@@ -233,9 +233,9 @@ so uses among them do not count; its `value` is refused as not built; `prepare_s
 (`file`, `line` or `function`, `interface`, `method`) is `type_switch_to_method` with `name` the
 method, which moves every case at once here, so there is no step before it; `interface` is
 accepted and not used (the switch's cases name the types). Results and refusals are the target
-tool's. Not aliased: `parameterize` (gorefactor's merges functions that differ only in
-constants, which no tool here does; it waits for the owner), `merge_duplicate_function` and
-`add_field` on a class (compositions, put off by the user).
+tool's. `parameterize` is a tool here, by gorefactor's name and arguments (roadmap #508, below).
+Not aliased: `merge_duplicate_function` and `add_field` on a class (compositions, put off by the
+user).
 
 One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `move_type`,
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
@@ -1706,6 +1706,33 @@ of `in`, or of `file`). The method stays.
   return or a void method's statements (or returns early), a parameter the body does not
   use, a body that assigns a parameter or returns one, and no match a call can replace
   (with the reasons of those left).
+
+## `parameterize` (built)
+
+Methods that are the same but for constants become calls of one new method that takes those
+constants as parameters (roadmap #508, issue #372, 2026-11-15, gorefactor's `parameterize`, its
+name and arguments). Arguments: `file` (declares the methods), `functions` (two or more,
+`Type.method` or `method`, an overload by its parameter types), `name` (the new method),
+`parameters` (a name for each constant that differs, in the order they appear in the first
+method). The new method is the first one's body with each differing literal (a number, string,
+character or text block) made a parameter, after the first method's own; it is `private`, `static`
+when the methods are, and placed as `add_declaration` places a method. Each method's body becomes
+`return name(its parameters, its constants);` (no `return` for a void method), so each keeps its
+signature and callers; `inline` retires them. Each literal is its own parameter, also when two
+have the same values (gorefactor's rule). Bodies match as gorefactor's: the methods' parameters by
+position, locals by name, every other name by what it means.
+
+Result: `made Notes.logEmail and Notes.logSms calls of a new Notes.logTo(String to, String format)
+in com/example/Notes.java`.
+
+Refused: fewer than two methods; a constructor or a method without a body; a generic method;
+methods of different types, of different signatures, or one static and one not; bodies that differ
+other than in literals of one type ("A.a and A.b differ at x and y, which are not constants");
+bodies that do not differ ("fold the one to keep, then inline the other"); a count of `parameters`
+other than the constants that differ ("the methods differ in 1 constant ("email to %s" in
+Notes.logEmail), so give 1 name in parameters, not 2"); a `name` the type or a supertype has
+for a method; a parameter name that is no identifier, is given twice, or names a variable of the
+first method; a literal that must stay a constant (a case label), by the type check.
 
 ## `inline_function` (built)
 

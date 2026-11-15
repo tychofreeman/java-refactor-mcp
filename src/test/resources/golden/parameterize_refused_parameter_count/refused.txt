@@ -1,0 +1,1 @@
+the methods differ in 1 constant ("email to %s" in Notes.logEmail), so give 1 name in parameters, not 2
