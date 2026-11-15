@@ -928,33 +928,24 @@ final class Tools {
       new Def(
           "move",
           """
-          Move a type, a member or a file; every reference follows. What moves follows from the \
-          arguments:
-          - name Outer.Inner: the static nested type to its own file (Line.java), or with to into \
-          that class of its package (Shop.Line becomes Order.Line).
-          - name Type with package: the file's only top-level type to that package of its source \
-          root; imports follow, package-private declarations used across become public.
-          - name Type.member with to: a method or a static field to the class to, in this file \
-          or another (Tax or com.example.Tax); an instance method becomes static there, its \
-          instance the first parameter, receiver, which every call passes. To its own class, a \
-          method is made static in place.
-          - no name, to a path: the file or directory, not Java under a source root (copy keeps \
-          it; delete=true without to removes it).\
+          Move a type, a member or a file; every reference follows. The arguments choose:
+          - name Outer.Inner: the nested type to its own file (Line.java); with to, into that \
+          class of its package (Shop.Line becomes Order.Line).
+          - name Type with package: the file's top-level type to that package (Cart to \
+          com.shop.model); package-private declarations used across become public.
+          - name Type.member with to: a method or static field to that class (Tax or \
+          com.example.Tax); an instance method becomes static, its instance the first \
+          parameter, receiver. To its own class, made static in place.
+          - no name, to a path: the file or directory (docs/a.md to docs/b.md); copy keeps it, \
+          delete=true removes it.\
           """,
           List.of(
-              Arg.FILE.described(
-                  "The file declaring what moves; without name, the file or directory to move."),
-              Arg.string(
-                  "name",
-                  "What moves: Outer.Inner, Type (with package), or Type.member (with to); omit it"
-                      + " to move the file itself."),
-              Arg.string(
-                  "to",
-                  "The class it moves into (Type.member, Outer.Inner); without name, the file's"
-                      + " new path."),
-              Arg.string("package", "With name Type: the package it moves to."),
-              Arg.bool("copy", "Without name: copy the file, keeping the original."),
-              Arg.bool("delete", "Without name: delete the file instead (no to)."),
+              Arg.FILE.described("Declares what moves; without name, the file or directory."),
+              Arg.string("name", "Outer.Inner, Type or Type.member; omit to move the file."),
+              Arg.string("to", "The class it moves into; without name, the new path."),
+              Arg.string("package", "The package a type moves to."),
+              Arg.bool("copy", "Copy the file, keeping the original."),
+              Arg.bool("delete", "Delete the file."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::move);
