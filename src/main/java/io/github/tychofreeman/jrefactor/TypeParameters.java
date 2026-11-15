@@ -158,42 +158,10 @@ final class TypeParameters {
                     + " is a Throwable, and a generic class cannot extend Throwable. Add the type"
                     + " parameter to a class it holds, or to a method."));
     AbstractTypeDeclaration target = type;
-    for (SimpleName n : Nodes.all(target, SimpleName.class)) {
-      if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
-        int line = holding.units().get(file).getLineNumber(n.getStartPosition());
-        throw new Refusal(
-            t.isTypeVariable()
-                ? label + " already has a type parameter " + parameter + ". Choose another name."
-                : parameter
-                    + " is a type that "
-                    + label
-                    + " already names (line "
-                    + line
-                    + "); as its type parameter, "
-                    + parameter
-                    + " would hide it. Choose another name.");
-      }
-    }
+    refuseHidden(target, parameter, holding, file, label);
     List<?> declared = typeParameters(target);
     int at = declared.size();
-    String before = args.string("before");
-    if (before != null) {
-      List<String> names = new ArrayList<>();
-      for (Object o : declared) {
-        names.add(((TypeParameter) o).getName().getIdentifier());
-      }
-      at = names.indexOf(before);
-      if (at < 0) {
-        throw new Refusal(
-            label
-                + " has no type parameter "
-                + before
-                + " to put "
-                + parameter
-                + " before"
-                + (names.isEmpty() ? "." : ": it has " + String.join(", ", names) + "."));
-      }
-    }
+    at = position(args, declared, at, label, parameter);
     String text = holding.texts().get(file);
     List<String> chosen = args.list("imports");
     Value v = value(project, file, text, target, value, chosen);
@@ -278,21 +246,7 @@ final class TypeParameters {
     }
 
     CallTargets targets = CallTargets.of(holding.units().values());
-    String fix =
-        "Change the uses that do not compile with "
-            + target.getName().getIdentifier()
-            + "<"
-            + v.text()
-            + "> first, or choose another value."
-            + (members.isEmpty()
-                ? ""
-                : " Where a member's body needs a "
-                    + v.text()
-                    + ", give "
-                    + parameter
-                    + " a bound that has what it uses (type_parameter \""
-                    + parameter
-                    + " extends ...\"), or leave that member out of members.");
+    String fix = fix(target, v, members, parameter);
     Edits.WrittenFiles gated = Edits.gatedFiles(project, holding.texts(), edits, chosen, what, fix);
     Map<Path, String> texts = gated.texts();
     Stubs.Declared stubs = gated.declared();
@@ -339,6 +293,80 @@ final class TypeParameters {
             + (hasParamTags(target) ? "; its Javadoc has no @param <" + parameter + "> yet" : "")
             + gated.said(),
         stubs);
+  }
+
+  /**
+   * Refuses a parameter name that target already has as a type parameter, or that names a type it
+   * uses, which the parameter would hide.
+   */
+  private static void refuseHidden(
+      AbstractTypeDeclaration target, String parameter, Holding holding, Path file, String label) {
+    for (SimpleName n : Nodes.all(target, SimpleName.class)) {
+      if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
+        int line = holding.units().get(file).getLineNumber(n.getStartPosition());
+        throw new Refusal(
+            t.isTypeVariable()
+                ? label + " already has a type parameter " + parameter + ". Choose another name."
+                : parameter
+                    + " is a type that "
+                    + label
+                    + " already names (line "
+                    + line
+                    + "); as its type parameter, "
+                    + parameter
+                    + " would hide it. Choose another name.");
+      }
+    }
+  }
+
+  /**
+   * Where the new type parameter goes among the declared ones: before the one before names, else
+   * last.
+   */
+  private static int position(Args args, List<?> declared, int at, String label, String parameter) {
+    String before = args.string("before");
+    if (before != null) {
+      List<String> names = new ArrayList<>();
+      for (Object o : declared) {
+        names.add(((TypeParameter) o).getName().getIdentifier());
+      }
+      at = names.indexOf(before);
+      if (at < 0) {
+        throw new Refusal(
+            label
+                + " has no type parameter "
+                + before
+                + " to put "
+                + parameter
+                + " before"
+                + (names.isEmpty() ? "." : ": it has " + String.join(", ", names) + "."));
+      }
+    }
+    return at;
+  }
+
+  /**
+   * The refusal's fix when the uses do not compile with the value: change them, choose another
+   * value, or bound the parameter or leave a member out.
+   */
+  private static String fix(
+      AbstractTypeDeclaration target, Value v, List<String> members, String parameter) {
+    String fix =
+        "Change the uses that do not compile with "
+            + target.getName().getIdentifier()
+            + "<"
+            + v.text()
+            + "> first, or choose another value."
+            + (members.isEmpty()
+                ? ""
+                : " Where a member's body needs a "
+                    + v.text()
+                    + ", give "
+                    + parameter
+                    + " a bound that has what it uses (type_parameter \""
+                    + parameter
+                    + " extends ...\"), or leave that member out of members.");
+    return fix;
   }
 
   /** Whether {@code t} names a type by a name, as a use of a class does; {@code var} does not. */
@@ -801,32 +829,7 @@ final class TypeParameters {
                             + family.lambdas.get(0).file().line(family.lambdas.get(0).node()))
                     + "), and a lambda cannot implement a generic method. Turn the lambda into an"
                     + " anonymous class first (convert_lambda with to anonymous)."));
-    for (Signatures.Decl d : family.decls) {
-      for (SimpleName n : Nodes.all(d.m(), SimpleName.class)) {
-        if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
-          throw new Refusal(
-              t.isTypeVariable()
-                  ? Names.methodLabel(d.binding())
-                      + " already names a type parameter "
-                      + parameter
-                      + " (line "
-                      + d.file().line(n)
-                      + " of "
-                      + d.file().rel()
-                      + "). Choose another name."
-                  : parameter
-                      + " is a type that "
-                      + Names.methodLabel(d.binding())
-                      + " already names (line "
-                      + d.file().line(n)
-                      + " of "
-                      + d.file().rel()
-                      + "); as its type parameter, "
-                      + parameter
-                      + " would hide it. Choose another name.");
-        }
-      }
-    }
+    refuseHiddenInFamily(family, parameter);
     Signatures.Source home = family.sources.get(project.javaFile(args.required("file")));
     AbstractTypeDeclaration owner = (AbstractTypeDeclaration) target.getParent();
     List<String> chosen = args.list("imports");
@@ -910,14 +913,8 @@ final class TypeParameters {
       }
       retype(roots, list, v, parameter);
     }
-    Map<Path, String> texts = new LinkedHashMap<>();
-    for (Map.Entry<Path, Signatures.Source> e : family.sources.entrySet()) {
-      texts.put(e.getKey(), e.getValue().text());
-    }
-    List<CompilationUnit> units = new ArrayList<>();
-    for (Signatures.Source s : family.sources.values()) {
-      units.add(s.unit());
-    }
+    Map<Path, String> texts = texts(family);
+    List<CompilationUnit> units = units(family);
     CallTargets targets = CallTargets.of(units);
     String fix =
         "Where a body needs a "
@@ -932,19 +929,7 @@ final class TypeParameters {
     Map<Path, CompilationUnit> after =
         Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
     // A call that now infers another type gets value as its type argument, where Java can take one.
-    Map<Path, List<TextEdit>> explicit = new LinkedHashMap<>();
-    for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
-      Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
-      for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
-        ASTNode n = nodes.get(c.getKey());
-        IMethodBinding b = n == null ? null : Calls.binding(n);
-        TextEdit edit =
-            b == null || c.getValue().get(0).equals(types(b)) ? null : typeArgument(n, b, v.text());
-        if (edit != null) {
-          explicit.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(edit);
-        }
-      }
-    }
+    Map<Path, List<TextEdit>> explicit = explicitTypeArguments(before, after, v);
     int typed = explicit.values().stream().mapToInt(List::size).sum();
     String more = "";
     if (!explicit.isEmpty()) {
@@ -1019,6 +1004,79 @@ final class TypeParameters {
             + gated.said()
             + more,
         stubs);
+  }
+
+  /**
+   * Refuses a parameter name that a declaration of the family already has as a type parameter, or
+   * that names a type one uses, which the parameter would hide.
+   */
+  private static void refuseHiddenInFamily(MethodFamily family, String parameter) {
+    for (Signatures.Decl d : family.decls) {
+      for (SimpleName n : Nodes.all(d.m(), SimpleName.class)) {
+        if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
+          throw new Refusal(
+              t.isTypeVariable()
+                  ? Names.methodLabel(d.binding())
+                      + " already names a type parameter "
+                      + parameter
+                      + " (line "
+                      + d.file().line(n)
+                      + " of "
+                      + d.file().rel()
+                      + "). Choose another name."
+                  : parameter
+                      + " is a type that "
+                      + Names.methodLabel(d.binding())
+                      + " already names (line "
+                      + d.file().line(n)
+                      + " of "
+                      + d.file().rel()
+                      + "); as its type parameter, "
+                      + parameter
+                      + " would hide it. Choose another name.");
+        }
+      }
+    }
+  }
+
+  /** The family's files' texts. */
+  private static Map<Path, String> texts(MethodFamily family) {
+    Map<Path, String> texts = new LinkedHashMap<>();
+    for (Map.Entry<Path, Signatures.Source> e : family.sources.entrySet()) {
+      texts.put(e.getKey(), e.getValue().text());
+    }
+    return texts;
+  }
+
+  /** The family's files, parsed. */
+  private static List<CompilationUnit> units(MethodFamily family) {
+    List<CompilationUnit> units = new ArrayList<>();
+    for (Signatures.Source s : family.sources.values()) {
+      units.add(s.unit());
+    }
+    return units;
+  }
+
+  /**
+   * For each call that now infers another type, the edit that gives it value as its type argument,
+   * where Java can take one.
+   */
+  private static Map<Path, List<TextEdit>> explicitTypeArguments(
+      Map<Path, Map<String, List<String>>> before, Map<Path, CompilationUnit> after, Value v) {
+    Map<Path, List<TextEdit>> explicit = new LinkedHashMap<>();
+    for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
+      Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
+      for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
+        ASTNode n = nodes.get(c.getKey());
+        IMethodBinding b = n == null ? null : Calls.binding(n);
+        TextEdit edit =
+            b == null || c.getValue().get(0).equals(types(b)) ? null : typeArgument(n, b, v.text());
+        if (edit != null) {
+          explicit.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(edit);
+        }
+      }
+    }
+    return explicit;
   }
 
   /**
@@ -1185,20 +1243,7 @@ final class TypeParameters {
         }
       }
     }
-    List<String> casts = new ArrayList<>();
-    for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
-      for (CastExpression c : Nodes.all(e.getValue(), CastExpression.class)) {
-        ITypeBinding b = c.getType().resolveBinding();
-        ITypeBinding element = b == null ? null : b.isArray() ? b.getElementType() : b;
-        if (element != null && keys.contains(element.getKey())) {
-          casts.add(
-              "line "
-                  + e.getValue().getLineNumber(c.getStartPosition())
-                  + " of "
-                  + project.relative(e.getKey()));
-        }
-      }
-    }
+    List<String> casts = casts(units, keys, project);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     String old = "";
@@ -1224,30 +1269,7 @@ final class TypeParameters {
     Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after = Jdt.parseAll(project, new ArrayList<>(units.keySet()));
     int kept = 0;
-    if (calls != null) {
-      for (Map.Entry<Path, Map<String, List<String>>> e : calls.entrySet()) {
-        Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
-        for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
-          ASTNode n = nodes.get(c.getKey());
-          IMethodBinding b = n == null ? null : Calls.binding(n);
-          String now = b == null ? "nothing" : types(b);
-          if (!c.getValue().get(0).equals(now)) {
-            throw new Refusal(
-                what
-                    + " would change the types of the call at line "
-                    + c.getValue().get(1)
-                    + " of "
-                    + project.relative(e.getKey())
-                    + " (from "
-                    + c.getValue().get(0)
-                    + " to "
-                    + now
-                    + "). Change that call first, or choose a bound it meets.");
-          }
-          kept++;
-        }
-      }
-    }
+    kept = keptCalls(calls, after, what, project, kept);
     targets.require(
         project,
         after.values(),
@@ -1293,6 +1315,63 @@ final class TypeParameters {
                 : "; " + kept + (kept == 1 ? " call keeps its types" : " calls keep their types"))
             + gated.said(),
         stubs);
+  }
+
+  /** Where a cast to the type parameter (or an array of it) stands, by line and file. */
+  private static List<String> casts(
+      Map<Path, CompilationUnit> units, Set<String> keys, SourceProject project) {
+    List<String> casts = new ArrayList<>();
+    for (Map.Entry<Path, CompilationUnit> e : units.entrySet()) {
+      for (CastExpression c : Nodes.all(e.getValue(), CastExpression.class)) {
+        ITypeBinding b = c.getType().resolveBinding();
+        ITypeBinding element = b == null ? null : b.isArray() ? b.getElementType() : b;
+        if (element != null && keys.contains(element.getKey())) {
+          casts.add(
+              "line "
+                  + e.getValue().getLineNumber(c.getStartPosition())
+                  + " of "
+                  + project.relative(e.getKey()));
+        }
+      }
+    }
+    return casts;
+  }
+
+  /**
+   * Refuses when a call of the method now has other types; returns how many calls kept theirs (0
+   * for a class).
+   */
+  private static int keptCalls(
+      Map<Path, Map<String, List<String>>> calls,
+      Map<Path, CompilationUnit> after,
+      String what,
+      SourceProject project,
+      int kept) {
+    if (calls != null) {
+      for (Map.Entry<Path, Map<String, List<String>>> e : calls.entrySet()) {
+        Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
+        for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
+          ASTNode n = nodes.get(c.getKey());
+          IMethodBinding b = n == null ? null : Calls.binding(n);
+          String now = b == null ? "nothing" : types(b);
+          if (!c.getValue().get(0).equals(now)) {
+            throw new Refusal(
+                what
+                    + " would change the types of the call at line "
+                    + c.getValue().get(1)
+                    + " of "
+                    + project.relative(e.getKey())
+                    + " (from "
+                    + c.getValue().get(0)
+                    + " to "
+                    + now
+                    + "). Change that call first, or choose a bound it meets.");
+          }
+          kept++;
+        }
+      }
+    }
+    return kept;
   }
 
   /** The index in {@code list} of the type parameter {@code name}; refused when it has none. */
