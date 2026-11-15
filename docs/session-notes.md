@@ -860,7 +860,10 @@ Each was chosen from options; the record named beside it has the options it beat
   A record or an interface as the class, and a method of a record (#375, 2026-11-15) go the same
   way: the declaration through `TypeParameters.typeParameters(AbstractTypeDeclaration)`, a record
   component in `members` through `componentTypes` (component, accessor, canonical constructor,
-  which Java keeps alike), an interface's fields counted static by `staticMember`.
+  which Java keeps alike), an interface's fields counted static by `staticMember`. A call of a
+  method that would infer another type is given `value` (`TypeParameters.typeArgument`: the
+  class or `this` as qualifier where it has none) in a second gated round; a method reference, a
+  call with type arguments and an outer class's method stay refused (defaults, roadmap 512).
   `change_type` with `type_parameter` (#159) is `TypeParameters.bound`, which `Tools.changeType`
   routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
   declaration (one for a class, the family's for a method); casts to the parameter are found by
