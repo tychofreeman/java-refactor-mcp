@@ -93,7 +93,7 @@ final class Build {
     // A typed statement, or null for a generator.
     String typed;
     // call, new or loop, and the method, class or walked expression it names.
-    String kind;
+    Kind kind;
     String target;
     List<String> args = List.of();
     // The name the result goes into (or return), and the type to declare it with, when given.
@@ -123,18 +123,18 @@ final class Build {
     String message;
 
     boolean loop() {
-      return typed == null && kind.equals("loop");
+      return typed == null && kind == Kind.LOOP;
     }
 
     boolean guard() {
-      return typed == null && (kind.equals("guard") || kind.equals("guard_null"));
+      return typed == null && kind.guard();
     }
 
     /**
      * What a guard leaves on: its condition as typed, or what guard_null names compared to null.
      */
     String condition() {
-      return kind.equals("guard") ? target : operand(target) + " == null";
+      return kind == Kind.GUARD ? target : operand(target) + " == null";
     }
 
     /** A guard's statement, its exit one {@code step} in: if (cond) { continue; }. */
@@ -167,7 +167,7 @@ final class Build {
 
     String expression() {
       String list = String.join(", ", args);
-      return kind.equals("new")
+      return kind == Kind.NEW
           ? "new " + target + (diamond ? "<>" : "") + "(" + list + ")"
           : target + "(" + list + ")";
     }
@@ -229,16 +229,14 @@ final class Build {
                 ? a.getRightHandSide()
                 : es.getExpression();
       }
-      if (e.kind.equals("new")
-          ? x instanceof ClassInstanceCreation
-          : x instanceof MethodInvocation) {
+      if (e.kind == Kind.NEW ? x instanceof ClassInstanceCreation : x instanceof MethodInvocation) {
         return x;
       }
       throw new Refusal(
           "build's entry for "
               + e.target
               + " is not a "
-              + (e.kind.equals("new") ? "construction" : "call")
+              + (e.kind == Kind.NEW ? "construction" : "call")
               + " as written: "
               + e.statement());
     }
@@ -778,9 +776,9 @@ final class Build {
   }
 
   private static void generator(Map<?, ?> map, Entry e) {
-    List<String> kinds = new ArrayList<>();
-    for (String kind : List.of("call", "new", "loop", "guard", "guard_null")) {
-      if (map.containsKey(kind)) {
+    List<Kind> kinds = new ArrayList<>();
+    for (Kind kind : Kind.values()) {
+      if (map.containsKey(kind.toString())) {
         kinds.add(kind);
       }
     }
@@ -793,11 +791,11 @@ final class Build {
     }
     e.kind = kinds.get(0);
     List<String> takes =
-        e.kind.equals("loop")
-            ? List.of("loop", "name", "form", "type", "body")
-            : e.kind.startsWith("guard")
-                ? List.of(e.kind, "exit", "value", "message")
-                : List.of(e.kind, "args", "into", "type");
+        switch (e.kind) {
+          case LOOP -> List.of("loop", "name", "form", "type", "body");
+          case GUARD, GUARD_NULL -> List.of(e.kind.toString(), "exit", "value", "message");
+          case CALL, NEW -> List.of(e.kind.toString(), "args", "into", "type");
+        };
     for (String key : keys(map)) {
       if (!takes.contains(key)) {
         throw new Refusal(
@@ -812,19 +810,19 @@ final class Build {
                 + " is none of these.");
       }
     }
-    e.target = string(map, e.kind, e).strip();
-    if (e.kind.equals("call") && !CALLED.matcher(e.target).matches()) {
+    e.target = string(map, e.kind.toString(), e).strip();
+    if (e.kind == Kind.CALL && !CALLED.matcher(e.target).matches()) {
       throw new Refusal(
           "call is the method's name, with what it is called on (priceOf, pricing.priceOf,"
               + " Money.zero), without its arguments: those go in args. Got "
               + e.target
               + ".");
     }
-    if (e.kind.equals("loop")) {
+    if (e.kind == Kind.LOOP) {
       loop(map, e);
       return;
     }
-    if (e.kind.startsWith("guard")) {
+    if (e.kind.guard()) {
       exits(map, e);
       return;
     }
@@ -939,7 +937,7 @@ final class Build {
   /** Reads a guard's exit, value and message, refusing what the exit does not take. */
   private static void exits(Map<?, ?> map, Entry e) {
     List<String> exits = new ArrayList<>(List.of(RETURN, "continue", "break", THROW));
-    if (e.kind.equals("guard_null")) {
+    if (e.kind == Kind.GUARD_NULL) {
       exits.add(REQUIRE);
     }
     String choices =
@@ -982,7 +980,7 @@ final class Build {
     Expression tested = null;
     if (s instanceof IfStatement i) {
       tested = i.getExpression();
-      if (e.kind.equals("guard_null") && tested instanceof InfixExpression n) {
+      if (e.kind == Kind.GUARD_NULL && tested instanceof InfixExpression n) {
         tested = n.getLeftOperand();
       }
     } else if (s instanceof ExpressionStatement x
@@ -996,12 +994,12 @@ final class Build {
     }
     ITypeBinding t = tested.resolveTypeBinding();
     if (t != null && !t.isRecovered()) {
-      if (e.kind.equals("guard")
+      if (e.kind == Kind.GUARD
           && !t.getName().equals("boolean")
           && !t.getQualifiedName().equals("java.lang.Boolean")) {
         throw new Refusal(e.target + " is " + article(Extract.typeName(t)) + ", not a condition.");
       }
-      if (e.kind.equals("guard_null") && t.isPrimitive()) {
+      if (e.kind == Kind.GUARD_NULL && t.isPrimitive()) {
         throw new Refusal(e.target + " is " + article(t.getName()) + ", which is never null.");
       }
     }
@@ -1014,7 +1012,7 @@ final class Build {
         m == null
             ? "the code there"
             : owner instanceof LambdaExpression ? "the lambda" : Names.methodLabel(m);
-    String when = e.kind.equals("guard") ? e.target : e.target + " is null";
+    String when = e.kind == Kind.GUARD ? e.target : e.target + " is null";
     if (e.exit.equals(RETURN) && m != null) {
       ITypeBinding r = m.getReturnType();
       boolean none = m.isConstructor() || r.getName().equals("void");
@@ -1107,7 +1105,7 @@ final class Build {
     }
     Entry e = new Entry();
     generator(map, e);
-    if (!e.kind.equals("call") && !e.kind.equals("new")) {
+    if (e.kind != Kind.CALL && e.kind != Kind.NEW) {
       throw new Refusal(
           shape
               + " A "
@@ -1152,5 +1150,31 @@ final class Build {
     }
     throw new Refusal(
         "build's entry for " + e.target + " is not one expression as written there: " + written);
+  }
+
+  /** What a generator entry writes, by the key that names it in the build. */
+  private enum Kind {
+    CALL("call"),
+    NEW("new"),
+    LOOP("loop"),
+    GUARD("guard"),
+    GUARD_NULL("guard_null");
+
+    private final String key;
+
+    Kind(String key) {
+      this.key = key;
+    }
+
+    /** Whether it is a guard: of a condition, or of a null. */
+    boolean guard() {
+      return this == GUARD || this == GUARD_NULL;
+    }
+
+    /** Its key, as the build names it and refusals say it. */
+    @Override
+    public String toString() {
+      return key;
+    }
   }
 }
