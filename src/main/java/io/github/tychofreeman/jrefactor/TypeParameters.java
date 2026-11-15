@@ -150,20 +150,12 @@ final class TypeParameters {
             () -> !(type instanceof AnnotationTypeDeclaration),
             () -> label + " is an annotation, which cannot have type parameters."),
         Precondition.that(
-            () -> !(type instanceof RecordDeclaration) && !((TypeDeclaration) type).isInterface(),
-            () ->
-                label
-                    + " is "
-                    + (type instanceof RecordDeclaration ? "a record" : "an interface")
-                    + "; add_parameter adds a type parameter to a class only, so far. Declare it"
-                    + " with replace_declaration and change the uses in the same batch."),
-        Precondition.that(
             () -> !throwable(binding),
             () ->
                 label
                     + " is a Throwable, and a generic class cannot extend Throwable. Add the type"
                     + " parameter to a class it holds, or to a method."));
-    TypeDeclaration target = (TypeDeclaration) type;
+    AbstractTypeDeclaration target = type;
     for (SimpleName n : Nodes.all(target, SimpleName.class)) {
       if (n.getIdentifier().equals(parameter) && n.resolveBinding() instanceof ITypeBinding t) {
         int line = holding.units().get(file).getLineNumber(n.getStartPosition());
@@ -180,7 +172,7 @@ final class TypeParameters {
                     + " would hide it. Choose another name.");
       }
     }
-    List<?> declared = target.typeParameters();
+    List<?> declared = typeParameters(target);
     int at = declared.size();
     String before = args.string("before");
     if (before != null) {
@@ -376,7 +368,7 @@ final class TypeParameters {
     return false;
   }
 
-  private static boolean hasParamTags(TypeDeclaration target) {
+  private static boolean hasParamTags(AbstractTypeDeclaration target) {
     if (target.getJavadoc() == null) {
       return false;
     }
@@ -389,12 +381,12 @@ final class TypeParameters {
   }
 
   /** The edit that declares {@code written} at {@code at} of {@code target}'s type parameters. */
-  private static TextEdit declaration(TypeDeclaration target, int at, String written) {
-    if (target.typeParameters().isEmpty()) {
+  private static TextEdit declaration(AbstractTypeDeclaration target, int at, String written) {
+    if (typeParameters(target).isEmpty()) {
       int end = Nodes.end(target.getName());
       return new TextEdit(end, end, "<" + written + ">");
     }
-    return SignatureChange.insertAt(target.typeParameters(), at, written);
+    return SignatureChange.insertAt(typeParameters(target), at, written);
   }
 
   /**
@@ -406,7 +398,7 @@ final class TypeParameters {
       SourceProject project,
       Path file,
       String text,
-      TypeDeclaration target,
+      AbstractTypeDeclaration target,
       String value,
       List<String> chosen)
       throws IOException {
@@ -443,7 +435,7 @@ final class TypeParameters {
             || c.isInterface()) {
           return false;
         }
-      } else if (n instanceof BodyDeclaration d && Modifier.isStatic(d.getModifiers())) {
+      } else if (n instanceof BodyDeclaration d && staticMember(d)) {
         return false;
       }
     }
@@ -603,7 +595,7 @@ final class TypeParameters {
    */
   private static List<TextEdit> typed(
       CompilationUnit unit,
-      TypeDeclaration target,
+      AbstractTypeDeclaration target,
       String label,
       List<String> members,
       Value v,
@@ -619,9 +611,14 @@ final class TypeParameters {
               + " name, or import it first.");
     }
     for (String member : members) {
+      List<Type> component = componentTypes(target, member);
+      if (!component.isEmpty()) {
+        retypeNamed(edits, component, v, parameter, label + "." + member);
+        continue;
+      }
       BodyDeclaration d = member(unit, target, label, member, rel);
       String named = label + "." + member;
-      if (Modifier.isStatic(d.getModifiers())) {
+      if (staticMember(d)) {
         throw new Refusal(
             named
                 + " is static, and a static member cannot use "
@@ -681,19 +678,28 @@ final class TypeParameters {
         throw new Refusal(
             named + " is not a field, a method or a constructor. Name those in members.");
       }
-      int before = edits.size();
-      retype(declared, edits, v, parameter);
-      if (edits.size() == before) {
-        throw new Refusal(
-            named
-                + " has no "
-                + v.text()
-                + " in its declared types, so nothing in it would become "
-                + parameter
-                + ". Leave it out of members.");
-      }
+      retypeNamed(edits, declared, v, parameter, named);
     }
     return edits;
+  }
+
+  /**
+   * {@link #retype}, refused when nothing in {@code declared}, the types of the member {@code
+   * named}, is {@code v}.
+   */
+  private static void retypeNamed(
+      List<TextEdit> edits, List<Type> declared, Value v, String parameter, String named) {
+    int before = edits.size();
+    retype(declared, edits, v, parameter);
+    if (edits.size() == before) {
+      throw new Refusal(
+          named
+              + " has no "
+              + v.text()
+              + " in its declared types, so nothing in it would become "
+              + parameter
+              + ". Leave it out of members.");
+    }
   }
 
   /**
@@ -721,18 +727,23 @@ final class TypeParameters {
    * field declared with others in one statement is refused.
    */
   private static BodyDeclaration member(
-      CompilationUnit unit, TypeDeclaration target, String label, String member, String rel) {
+      CompilationUnit unit,
+      AbstractTypeDeclaration target,
+      String label,
+      String member,
+      String rel) {
     String base = member.contains("(") ? member.substring(0, member.indexOf('(')).strip() : member;
-    for (FieldDeclaration f : target.getFields()) {
-      for (Object o : f.fragments()) {
-        if (f.fragments().size() > 1
-            && ((VariableDeclarationFragment) o).getName().getIdentifier().equals(base)) {
-          throw new Refusal(
-              label
-                  + "."
-                  + base
-                  + " is declared with other fields in one statement. Split it into one"
-                  + " declaration per field first.");
+    for (Object d : target.bodyDeclarations()) {
+      if (d instanceof FieldDeclaration f && f.fragments().size() > 1) {
+        for (Object o : f.fragments()) {
+          if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(base)) {
+            throw new Refusal(
+                label
+                    + "."
+                    + base
+                    + " is declared with other fields in one statement. Split it into one"
+                    + " declaration per field first.");
+          }
         }
       }
     }
@@ -769,11 +780,13 @@ final class TypeParameters {
                     + target.getName().getIdentifier()
                     + ")."),
         Precondition.that(
-            () -> target.getParent() instanceof TypeDeclaration,
+            () ->
+                target.getParent() instanceof TypeDeclaration
+                    || target.getParent() instanceof RecordDeclaration,
             () ->
                 label
-                    + " is declared in a record, an enum or an anonymous class; add_parameter adds a"
-                    + " type parameter to a method of a class or an interface only, so far."),
+                    + " is declared in an enum or an anonymous class; add_parameter adds a type"
+                    + " parameter to a method of a class, an interface or a record only, so far."),
         Precondition.that(
             () -> family.lambdas.isEmpty(),
             () ->
@@ -813,7 +826,7 @@ final class TypeParameters {
       }
     }
     Signatures.Source home = family.sources.get(project.javaFile(args.required("file")));
-    TypeDeclaration owner = (TypeDeclaration) target.getParent();
+    AbstractTypeDeclaration owner = (AbstractTypeDeclaration) target.getParent();
     List<String> chosen = args.list("imports");
     Value v = value(project, home.file(), home.text(), owner, value, chosen);
     if (v.qualified() == null) {
@@ -1297,5 +1310,73 @@ final class TypeParameters {
     return Files.isRegularFile(file)
         && Declarations.find(Jdt.parseSyntax(Files.readString(file)), name, rel).decl()
             instanceof MethodDeclaration;
+  }
+
+  /** The type parameters {@code t} declares: a class's, an interface's or a record's. */
+  private static List<?> typeParameters(AbstractTypeDeclaration t) {
+    return t instanceof RecordDeclaration r
+        ? r.typeParameters()
+        : ((TypeDeclaration) t).typeParameters();
+  }
+
+  /** Whether {@code d} is static: declared so, or a field of an interface. */
+  private static boolean staticMember(BodyDeclaration d) {
+    return Modifier.isStatic(d.getModifiers())
+        || (d instanceof FieldDeclaration
+            && d.getParent() instanceof TypeDeclaration t
+            && t.isInterface());
+  }
+
+  /**
+   * The declared types of the record component {@code member} of {@code target}, which Java keeps
+   * the same: the component's, its accessor's return type and the canonical constructor's
+   * parameter, when they are written; empty when {@code target} is not a record with that
+   * component.
+   */
+  private static List<Type> componentTypes(AbstractTypeDeclaration target, String member) {
+    List<Type> out = new ArrayList<>();
+    if (!(target instanceof RecordDeclaration r)) {
+      return out;
+    }
+    List<?> components = r.recordComponents();
+    int at = -1;
+    for (int i = 0; i < components.size(); i++) {
+      if (((SingleVariableDeclaration) components.get(i))
+          .getName()
+          .getIdentifier()
+          .equals(member)) {
+        at = i;
+      }
+    }
+    if (at < 0) {
+      return out;
+    }
+    out.add(((SingleVariableDeclaration) components.get(at)).getType());
+    for (MethodDeclaration m : r.getMethods()) {
+      if (!m.isConstructor()
+          && m.parameters().isEmpty()
+          && m.getName().getIdentifier().equals(member)) {
+        out.add(m.getReturnType2());
+      } else if (m.isConstructor() && !m.isCompactConstructor() && canonical(m, components)) {
+        out.add(((SingleVariableDeclaration) m.parameters().get(at)).getType());
+      }
+    }
+    return out;
+  }
+
+  /** Whether {@code m} takes the types of {@code components}, in order: a canonical constructor. */
+  private static boolean canonical(MethodDeclaration m, List<?> components) {
+    if (m.parameters().size() != components.size()) {
+      return false;
+    }
+    for (int i = 0; i < components.size(); i++) {
+      ITypeBinding p =
+          ((SingleVariableDeclaration) m.parameters().get(i)).getType().resolveBinding();
+      ITypeBinding c = ((SingleVariableDeclaration) components.get(i)).getType().resolveBinding();
+      if (p == null || c == null || !p.isEqualTo(c)) {
+        return false;
+      }
+    }
+    return true;
   }
 }

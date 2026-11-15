@@ -776,8 +776,7 @@ typed `T` yet.
   its own instance code pass T; a cast to it is now unchecked at line 21 of ...`; and `its
   Javadoc has no @param <T> yet` when the class's Javadoc has `@param` tags.
 - Refused: `parameter` or `type` with it; a primitive `value` ("int is a primitive, which
-  cannot be a type argument. Pass value Integer; ..."); an enum, an annotation, a Throwable;
-  a record or an interface (not built yet); a name the class already uses for a type
+  cannot be a type argument. Pass value Integer; ..."); an enum, an annotation, a Throwable; a name the class already uses for a type
   ("String is a type that Box already names (line 4); as its type parameter, String would
   hide it. Choose another name."), or already has as a type parameter; a `before` the class
   does not declare; a `value` that is a type parameter of the class; a use of the class's name
@@ -803,7 +802,7 @@ typed `T` yet.
   `value`, and run what it ran (`CallTargets`). Result: `added the type parameter T to
   Lists.first(List<String>); String became T in its parameter and return types; 2 calls and 1
   method reference infer String, none changed`. Refused: `members` with it; a constructor; a
-  method of a record, an enum or an anonymous class (not built yet); a family a lambda implements
+  method of an enum or an anonymous class (not built yet); a family a lambda implements
   ("... and a lambda cannot implement a generic method. Turn the lambda into an anonymous class
   first (convert_lambda with to anonymous)."); `value` in the return type only ("T would be in
   the return type only, so no call could infer it from its arguments. Name a method whose
@@ -812,8 +811,17 @@ typed `T` yet.
   at line 7 of com/example/Use.java: it would infer T as Object, not String. Give it an argument
   or a target typed with String first, or leave the method as it is."); a method that overrides
   a library's.
-- Not built yet: records and interfaces as the class, and writing `Lists.<String>first(...)` at a
-  call that would infer another type (issue #375).
+- A record or an interface as the class, and a method of a record (issue #375, 2026-11-15; the
+  sketch's increment 8): the same walk over uses (`implements Source` becomes
+  `implements Source<String>`). In `members`, a record's component (`value` of
+  `record Holder(String value, int count)`) retypes the component, its accessor and the
+  canonical constructor's parameter where they are written, as Java requires them to agree; a
+  compact constructor has none. An interface's fields are static, so a use of the interface in
+  one passes `value` (`Source<String> EMPTY = ...`), and one named in `members` is refused as
+  static. `CallTargets` knows a record's implicit accessor and canonical constructor by the
+  record's place, as it knows a default constructor.
+- Not built yet: writing `Lists.<String>first(...)` at a call that would infer another type
+  (issue #375).
 
 ## `type_switch_to_method` (built)
 
