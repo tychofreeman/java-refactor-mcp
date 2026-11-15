@@ -1962,6 +1962,15 @@ again.
   parameters kept the parameters' names (`sub.subKey()`, `sub.subName()`). Tried: by name, by
   line. A rename of a component should take its accessor and every call of it along, as a
   record's field and accessor are one name.
+## 2026-11-15: override-check (#528, item 8, OverrideCheck and ConvertToRecord)
+
+- No Java by hand. `move` of a static method to another class widens it to package access even
+  when every caller moves with it (`keys`, `takenOver` and `callsSuper` were called only from
+  `checkOverride`, moved in the same batch): three `replace_text`s made them private again. A move
+  in a batch could leave private what only moved code calls.
+- `move` of the instance method `checkOverride` wrote it as `static checkOverride(Extraction
+  receiver, ...)` assigning `receiver.overridden`; making it return the method instead (a field
+  write become a result) has no tool: `extract_function` returns locals, not fields.
 
 ## 2026-11-15: long-methods (#528, item 8, TypeSwitch and ConvertLambda)
 

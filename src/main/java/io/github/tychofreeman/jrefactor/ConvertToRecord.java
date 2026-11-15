@@ -122,6 +122,46 @@ final class ConvertToRecord {
     remove(edits, MemberMove.removal(text, ctor));
     refuseSubclasses(project, opened.file(), binding, name);
 
+    List<String> missing = missing(type, valueSemantics, name);
+    List<String> widened = publicAccessors(type, components, edits, text);
+
+    int headerStart =
+        type.getJavadoc() != null
+            ? skipSpace(text, Nodes.end(type.getJavadoc()))
+            : type.getStartPosition();
+    int open = bodyOpen(type, text);
+    String header = header(type, text, components, name);
+    String edited = TextEdit.apply(text, edits, 0);
+    String after = edited.substring(0, headerStart) + header + edited.substring(open + 1);
+
+    Edits.Written written =
+        Edits.gated(
+            project,
+            opened.file(),
+            text,
+            after,
+            List.of(),
+            "converting " + name + " to a record",
+            "Nothing was changed. Change what the errors name first.");
+    List<String> names = components.stream().map(Component::name).toList();
+    return new Outcome(
+        "converted "
+            + name
+            + " to a record ("
+            + String.join(", ", names)
+            + ") in "
+            + rel
+            + (missing.isEmpty() ? "" : "; it now has the record's " + Names.listed(missing))
+            + (widened.isEmpty() ? "" : "; made " + Names.listed(widened) + " public")
+            + written.fixed().said(),
+        written.declared());
+  }
+
+  /**
+   * The value methods the class does not define, which the record will generate; refused unless
+   * valueSemantics.
+   */
+  private static List<String> missing(TypeDeclaration type, boolean valueSemantics, String name) {
     List<String> missing = new ArrayList<>();
     if (!definesEquals(type)) {
       missing.add("equals");
@@ -142,6 +182,12 @@ final class ConvertToRecord {
               + " not identity, and toString would list them. Pass value_semantics=true if that is"
               + " wanted, or define them first.");
     }
+    return missing;
+  }
+
+  /** Makes each accessor of a component public, as a record's are; returns their names. */
+  private static List<String> publicAccessors(
+      TypeDeclaration type, List<Component> components, List<TextEdit> edits, String text) {
     List<String> widened = new ArrayList<>();
     for (MethodDeclaration m : type.getMethods()) {
       boolean accessor =
@@ -153,11 +199,11 @@ final class ConvertToRecord {
         widened.add(m.getName().getIdentifier() + "()");
       }
     }
+    return widened;
+  }
 
-    int headerStart =
-        type.getJavadoc() != null
-            ? skipSpace(text, Nodes.end(type.getJavadoc()))
-            : type.getStartPosition();
+  /** Where the class's body opens: its brace after the name, type parameters and interfaces. */
+  private static int bodyOpen(TypeDeclaration type, String text) {
     int afterHeader = Nodes.end(type.getName());
     for (Object o : type.typeParameters()) {
       afterHeader = Math.max(afterHeader, Nodes.end(((ASTNode) o)));
@@ -166,6 +212,15 @@ final class ConvertToRecord {
       afterHeader = Math.max(afterHeader, Nodes.end(((ASTNode) o)));
     }
     int open = text.indexOf('{', afterHeader);
+    return open;
+  }
+
+  /**
+   * The record's header up to its brace: the class's annotations and modifiers but final and
+   * static, its name and type parameters, the components and the interfaces.
+   */
+  private static String header(
+      TypeDeclaration type, String text, List<Component> components, String name) {
     List<String> modifiers = new ArrayList<>();
     for (Object o : type.modifiers()) {
       if (o instanceof Annotation a) {
@@ -199,30 +254,7 @@ final class ConvertToRecord {
             + ")"
             + (interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces))
             + " {";
-    String edited = TextEdit.apply(text, edits, 0);
-    String after = edited.substring(0, headerStart) + header + edited.substring(open + 1);
-
-    Edits.Written written =
-        Edits.gated(
-            project,
-            opened.file(),
-            text,
-            after,
-            List.of(),
-            "converting " + name + " to a record",
-            "Nothing was changed. Change what the errors name first.");
-    List<String> names = components.stream().map(Component::name).toList();
-    return new Outcome(
-        "converted "
-            + name
-            + " to a record ("
-            + String.join(", ", names)
-            + ") in "
-            + rel
-            + (missing.isEmpty() ? "" : "; it now has the record's " + Names.listed(missing))
-            + (widened.isEmpty() ? "" : "; made " + Names.listed(widened) + " public")
-            + written.fixed().said(),
-        written.declared());
+    return header;
   }
 
   /** Whether {@code ctor} only assigns each component from its parameter, in order. */
