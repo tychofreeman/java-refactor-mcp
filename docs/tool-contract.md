@@ -253,7 +253,8 @@ One `move` (roadmap #121, 2026-11-06, as gorefactor's): published in place of `m
 `move_member` and `move_file`, which become aliases; it routes by its arguments. No `name`: the
 file or directory (`to`, `copy`, `delete`). `name` with `package`: the file's top-level type to
 that package. `name` (`Type.member`) with `to`: the method or static field to that class.
-`name` alone (`Outer.Inner`): the nested type to its own file. `imports` (roadmap #131) goes to
+`name` alone (`Outer.Inner`): the nested type to its own file; with `to`, into that class (roadmap
+#513, `move_type` with `to` below). `imports` (roadmap #131) goes to
 the member route's import fix, as for `move_member`, and is refused on the others. Refused:
 `package` without `name`, `copy` or `delete` with `name`, `to` and `package` together. Each route's own arguments,
 results and refusals are those of its section below. Where Java still differs, the name says
@@ -495,6 +496,44 @@ Range.length() if that is what it should mean, then move it again."); a move
 that adds compile errors, with them ("Fix what the errors name, then move it
 again; when the moved type's name clashes with another type's, rename one of
 them first."; until 2026-11-13 it said only to rename a clashing type).
+
+With `to` (roadmap #513, 2026-11-15), the member type moves into `to`, a top-level class,
+record or enum of another file of the same package (`Order`, or `com.example.Order`), as its
+member type, placed by kind as `add_declaration` places a nested type (after an enum's constants,
+writing the `;`), indented as the target's members:
+
+- every reference follows in the qualified form: `Shop.Line` (or `Line` reached through `Shop`, a
+  subclass of it or `import a.Shop.*`) becomes `Order.Line`, `a.Shop.Line` becomes `a.Order.Line`,
+  `{@link Shop.Line}` follows, and inside `Order` (and the moved type) it is `Line`; an import of
+  it, single-type or static (`import a.Shop.Line;`, `import static a.Shop.Line.EMPTY;`), becomes
+  `a.Order.Line` and the simple uses stay; a file of another package that now writes `Order`
+  imports `a.Order`;
+- inside the moved type, what it reached through `Shop` is qualified (`Shop.label(x)`), private
+  members used across either boundary become package-private, record field reads across it become
+  accessor calls, and a sealed type gets `permits`, as for a move to its own file; a `private`
+  moved type used outside the target becomes package-private;
+- the target gains the outer file's imports that the moved type uses.
+
+Result: `moved Shop.Line into com/example/Order.java as Order.Line, with 13 references in 7
+files: <file> <lines>; ...; widened Shop.label(String) and Line.price to package-private`, then
+the accessor and permits parts as above, and the imports the fix added
+(`; com/example/report/Totals.java: imported com.example.Order`). References are those of the
+files before the move, the moved type's own left out.
+
+Refusals: an inner class (as above); a target not found ("No top-level class Ledger in package p:
+to names a top-level class of Shop.Line's package, as Target or p.Target."), in another package
+("move takes a member type into a class of its own package so far; to move it to another package,
+move it to its own file (move without to), then pass package."), in the outer type's file, or an
+interface ("Order is an interface, whose member types are public. move takes a member type into a
+class, record or enum so far."); a target named as the type ("Shop.Line would be a member type of
+Line, its own name, which Java does not allow."); a member type of that name in the target or
+inherited ("Order already has a member type Line[, inherited from Base]. Rename one of them
+first, then move Shop.Line."), or a type parameter; a use of another type of that name, written
+unqualified in the target, a type in it or a subtype ("moving Shop.Line into Order would hide
+p.Line, which Line means at line 4 of p/Order.java. Rename one of them, or qualify that use,
+first."); a name in the moved type that a declaration of the target would capture (`NameCheck`:
+"moving Shop.Line into Order would make Item at line 7 of p/Order.java mean the type Order.Item,
+..."); and a move that adds compile errors, with them.
 
 With `package` (roadmap #80, 2026-11-04), `name` is the file's only top-level
 type, and it moves to that package in the same source root: the file moves

@@ -79,7 +79,8 @@ final class MoveType {
     String outerKey = type.getDeclaringClass().getTypeDeclaration().getKey();
     int start = decl.getStartPosition();
     int end = start + decl.getLength();
-    MovedType nested = new MovedType(start, end, pkg, name, simple, key, outerKey, outerLabel);
+    MovedType nested =
+        new MovedType(start, end, pkg, name, simple, key, outerKey, outerLabel, null);
 
     Map<Path, String> changed = new LinkedHashMap<>();
     Map<String, List<Integer>> lines = new TreeMap<>();
@@ -243,7 +244,7 @@ final class MoveType {
    * The nested type {@code name} ("Outer.Inner") in {@code unit}, or a refusal: a top-level type,
    * or no such type.
    */
-  private static AbstractTypeDeclaration find(CompilationUnit unit, String name, String rel) {
+  static AbstractTypeDeclaration find(CompilationUnit unit, String name, String rel) {
     String[] parts = name.split("\\.");
     AbstractTypeDeclaration at = Declarations.typePath(unit, new String[] {parts[0]});
     if (at != null && parts.length == 1) {
@@ -349,7 +350,7 @@ final class MoveType {
    * names put in {@code qualifiers}; and the removal of {@code private} from each member used
    * across the moved type's boundary, which {@code widened} names by position.
    */
-  private static void qualifyAndWiden(
+  static void qualifyAndWiden(
       CompilationUnit u,
       String text,
       AbstractTypeDeclaration decl,
@@ -406,8 +407,8 @@ final class MoveType {
                       + " reads the field "
                       + field
                       + ", which is private once "
-                      + moved.simple()
-                      + " is top-level, and "
+                      + moved.once()
+                      + ", and "
                       + field
                       + "() does more than return it. Replace each read with a call of "
                       + field
@@ -528,7 +529,7 @@ final class MoveType {
   }
 
   /** Removes modifier {@code m} and the spaces after it. */
-  private static TextEdit dropModifier(String text, Modifier m) {
+  static TextEdit dropModifier(String text, Modifier m) {
     int end = Nodes.end(m);
     while (end < text.length() && text.charAt(end) == ' ') {
       end++;
@@ -602,7 +603,7 @@ final class MoveType {
    * the move; a private subtype the clause names from the other file becomes package-private, in
    * {@code widened}. Names in {@code sealed} each type that gets a clause.
    */
-  private static void permits(
+  static void permits(
       CompilationUnit u,
       String text,
       MovedType moved,

@@ -6,11 +6,11 @@ status: Open
 
 ## Item
 
-`move` of a member type (a nested record, enum, interface or class) into another class: `move name=Signatures.Decl to=MethodFamily`, every reference rewritten to the new place. Options and what it must handle: `docs/sessions/member-type-move-sketch.md`; the owner chooses before it is built.
+`move` of a member type (a nested record, enum, interface or class) into another class: `move name=Signatures.Decl to=MethodFamily`, every reference rewritten to the new place. Options and what it must handle: `docs/sessions/member-type-move-sketch.md`; the owner chose (A) on 2026-11-15.
 
 ## Status
 
-Open (2026-11-15): options written for the owner's choice.
+Open (2026-11-15): the owner chose option (A), built in slices (`docs/design.md`, Decisions). Slice 1 is built: a static member type into a top-level class, record or enum of another file of the same package (`NestType`). Left: a target in another package, an interface target, a target in the outer file or nested, inner classes.
 
 ## Evidence
 
