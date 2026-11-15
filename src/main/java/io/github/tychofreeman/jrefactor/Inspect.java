@@ -44,7 +44,7 @@ public final class Inspect {
     String source = Files.readString(path);
     List<String> lines = source.lines().toList();
     CompilationUnit unit = Jdt.parse(project, path, source);
-    List<Body> elided = bodies(unit);
+    List<Body> elided = bodies(unit, SideEffects.of(project, unit));
 
     int width = String.valueOf(lines.size()).length();
     StringBuilder out = new StringBuilder();
@@ -319,7 +319,7 @@ public final class Inspect {
     int first = unit.getLineNumber(t.getStartPosition());
     int last = unit.getLineNumber(Nodes.end(t) - 1);
     header(out, rel, first, last, label + ", bodies elided");
-    outline(lines, bodies(unit), out, String.valueOf(last).length(), first, last);
+    outline(lines, bodies(unit, Map.of()), out, String.valueOf(last).length(), first, last);
   }
 
   private static void header(StringBuilder out, String rel, int first, int last, String label) {
@@ -340,9 +340,10 @@ public final class Inspect {
 
   /**
    * Each method, constructor and initializer body, in order, with the 1-based lines strictly inside
-   * its braces when they are two or more. Bodies inside another are not visited.
+   * its braces when they are two or more, and its facts, a method's side effects among them when
+   * {@code effects} has them. Bodies inside another are not visited.
    */
-  private static List<Body> bodies(CompilationUnit unit) {
+  private static List<Body> bodies(CompilationUnit unit, Map<MethodDeclaration, String> effects) {
     List<Body> out = new ArrayList<>();
     unit.accept(
         new ASTVisitor() {
@@ -362,7 +363,7 @@ public final class Inspect {
             }
             int open = unit.getLineNumber(body.getStartPosition());
             int close = unit.getLineNumber((Nodes.end(body) - 1));
-            String facts = facts(unit, declaration, body);
+            String facts = facts(unit, declaration, body, effects.get(declaration));
             if (close - open - 1 >= 2) {
               out.add(new Body(open + 1, close - 1, close, facts));
             } else {
@@ -488,10 +489,12 @@ public final class Inspect {
   private record Body(int first, int last, int end, String facts) {}
 
   /**
-   * "[7 lines, complexity 2, nesting 1]": the lines {@code declaration} takes (its Javadoc left
-   * out) and {@link #metrics} of its body, as gorefactor's outline gives a function's.
+   * "[7 lines, complexity 2, nesting 1, no side effects]": the lines {@code declaration} takes (its
+   * Javadoc left out), {@link #metrics} of its body and, when not null, its side {@code effects},
+   * as gorefactor's outline gives a function's.
    */
-  private static String facts(CompilationUnit unit, BodyDeclaration declaration, Block body) {
+  private static String facts(
+      CompilationUnit unit, BodyDeclaration declaration, Block body, String effects) {
     int start = declaration.getStartPosition();
     if (declaration.getJavadoc() != null) {
       start = Nodes.end(declaration.getJavadoc());
@@ -511,6 +514,7 @@ public final class Inspect {
         + m[0]
         + ", nesting "
         + m[1]
+        + (effects == null ? "" : ", " + effects)
         + "]";
   }
 

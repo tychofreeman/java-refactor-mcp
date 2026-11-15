@@ -304,8 +304,21 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   one for each `if`, `for`, enhanced `for`, `while`, `do`, `catch`, `?:`, `case` other than
   `default`, and `&&` or `||`; nesting is the deepest stack of `if`s (an `else if` no deeper than
   its `if`), loops and switches; lambdas and classes in the body count toward both (defaults to
-  reopen, in `docs/design.md`). gorefactor also says whether calling the function has side
-  effects; not yet here (the owner's choice, issue #369).
+  reopen, in `docs/design.md`). Since roadmap #507 (issue #369, 2026-11-15) a method's or a
+  constructor's brackets end with `no side effects` or `side effects: <the first one>`, as
+  gorefactor's: `assigns to count`, `calls System.out.println`, `calls log, which calls
+  System.out.println`. An assignment counts unless to a local or a parameter, an element or field
+  of a local that only ever holds a new object or array, a field of a local or anonymous class, or
+  in a constructor a field of the object it makes. A call of a project method takes its body's
+  first side effect, its file parsed with only the bodies it needs; a call back into a method being
+  summarized, of an abstract or interface method, or of a lambda's function counts (`calls f`); a
+  library call counts unless the library list in `SideEffects` holds it (`String`, `Math`, the
+  boxed types, `Objects`, `Optional`, reads of collections and maps, streams, a new collection,
+  builder or exception, a call on a local of a new object). Lambdas and anonymous classes in the
+  body count as part of it; a call runs the method it names (overrides are not followed).
+  Initializers, and the outline of `names`, which parses syntax only, give no side effects. The
+  session keeps what it read from each called file while the file's text stays the same, so a
+  later outline reads only the files changed since.
 - `file` + `start_line`/`end_line`: those lines; `end_line` defaults to, and is
   clamped to, the end of the file.
 - Refused: a path that is not a `.java` file under the root; a file that does
@@ -354,7 +367,6 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   between; one refused reads `target N: <refusal>` in its place, as gorefactor's. Refused:
   `targets` with `file`, `function` or a line range; a target with another key (`targets` of its
   own included) is refused in its place.
-- Not yet: each body's side effects.
 
 ## `rename` (built)
 

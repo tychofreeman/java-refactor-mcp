@@ -212,6 +212,7 @@ final class Journal {
    * project's root: a refused or undone call leaves no empty directories behind.
    */
   static void put(SourceProject project, Path file, String text) throws IOException {
+    project.session().sideEffects.remove(file.toAbsolutePath().normalize());
     if (text == null) {
       Files.deleteIfExists(file);
       for (Path d = file.getParent(); d != null && removable(project, d); d = d.getParent()) {

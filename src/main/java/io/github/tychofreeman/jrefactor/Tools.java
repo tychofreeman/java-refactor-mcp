@@ -89,9 +89,9 @@ final class Tools {
           """
           Read Java code with line numbers, for exact lines.
           - no arguments: the source roots, packages and files.
-          - file: its bodies of two lines or more elided, each method's lines, complexity and \
-          nesting given; with function (Type.method, or the method) that method; with \
-          start_line/end_line those lines.
+          - file: its bodies of two lines or more elided, each method's lines, complexity, \
+          nesting and side effects given; with function (Type.method, or the method) that \
+          method; with start_line/end_line those lines.
           - targets: several of those at once, each {file, function} or {file, start_line, \
           end_line}.
           - pattern (a Java regular expression), with file or without: the matching lines (at \

@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +52,12 @@ final class Session {
 
   /** The library classes by simple name, built on first use; null until then. */
   Map<String, List<String>> libraries;
+
+  /**
+   * What the outline's side effects read from each file, kept while the file's text is the same:
+   * {@link Journal#put} drops a file's when it writes it.
+   */
+  final Map<Path, SideEffects.Read> sideEffects = new HashMap<>();
 
   /** The last type check, with the text of every file it counted. */
   TypeCheck.Counted lastCount;

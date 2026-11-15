@@ -1882,3 +1882,12 @@ stub's parameter to `Collection<Path>` (would clash with the real one). Done by 
 removing the stub's three lines. Safe delete could count a use as kept when another overload
 takes it after the delete; or `add_declaration` could replace a stub its new method's
 parameters accept.
+
+## 2026-11-15: a batch retry from the command line loses the first run's sections (inspect-side-effects)
+
+A `batch` sent as `bin/jrefactor - <<'JR'` with `@@name` sections was refused at step 3 (a name
+that meant a field and a method). The refusal offered `retry` with only the changed step; the
+retry's step pointed at `@read`, a section of the first run, and was refused as content that does
+not parse (the text `@read`). Resent the whole batch from a file (`@file`). A retry could keep the
+first run's sections with the refused batch, or the refusal could say that sections must be sent
+again.
