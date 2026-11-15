@@ -881,6 +881,8 @@ Each was chosen from options; the record named beside it has the options it beat
   routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
   declaration (one for a class, the family's for a method); casts to the parameter are found by
   the type variable's key before the write and reported when its erasure differs after.
+  Their parts (#528): `refuseHidden`, `position` and `fix` for a class; `refuseHiddenInFamily`,
+  `texts`, `units` and `explicitTypeArguments` for a method; `casts` and `keptCalls` for a bound.
 
 ## Testing
 

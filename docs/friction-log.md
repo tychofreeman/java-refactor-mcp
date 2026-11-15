@@ -2010,6 +2010,17 @@ again.
   there, now always false, since `equals` takes an Object. A "replace type code with enum"
   operation (the constants from the literals compared to, each `equals` test rewritten) would
   have been one step and safe; it composes from no tools here.
+## 2026-11-15: type-parameters-split (#528, item 5, TypeParameters)
+
+- No Java by hand. `extract_function` of a loop that adds to a counter declared before it
+  (`int kept = 0;` then the loop) took the counter's start as a parameter and returned the count
+  (`kept = keptCalls(..., kept)`), where the counter could have moved into the new method: the
+  extraction could take a local's declaration along when nothing between it and the extracted
+  lines uses it. Leaving the declaration outside the range was the only way to keep the loop whole.
+- The long loops of `toClass`, `toMethod` and `bound` were left: each reads 7 to 10 locals and
+  updates several counters, so `extract_function` would return a record of counts and take most
+  of the method's state. Gathering the context into a record first has no tool when the values are
+  computed in different places (as moved-type-context and move-tools-split-2 found).
 
 ## 2026-11-15: item8-rest (#528, item 8, the rest)
 
