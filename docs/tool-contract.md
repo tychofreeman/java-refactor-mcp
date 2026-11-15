@@ -1826,7 +1826,9 @@ and `type` (the new type as written).
   `imports`. Every declaration in the method's family (overrides, implementations)
   changes, and a lambda that writes the parameter's type; calls are not edited, so a
   call the new type breaks is refused by the gate with the error. Result: `changed the
-  type of qty of Pricing.price(int) to long ...` or `changed the return type of ...`.
+  type of qty of Pricing.price(int) to long ...` or `changed the return type of ...`; the
+  gate's refusal says `changing the type of ...` (`changing the return type of ...`) `would add
+  compile errors, so nothing was changed` (issue #643, 2026-11-15: it had said `changed`).
   Refuses: both options or neither with a method; a `[]` written after the name; a
   constructor's return type.
 - Varargs (issue #614, 2026-11-15): `type` `T...` makes the last parameter varargs of `T`

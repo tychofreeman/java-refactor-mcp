@@ -1,1 +1,1 @@
-would add compile errors
+changing the return type of Pricing.price

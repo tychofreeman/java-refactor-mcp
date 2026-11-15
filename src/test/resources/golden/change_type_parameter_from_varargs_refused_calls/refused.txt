@@ -1,1 +1,1 @@
-would add compile errors
+changing the type of values of Sums.sum

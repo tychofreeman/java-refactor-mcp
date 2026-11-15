@@ -129,6 +129,27 @@ final class Primitives {
    */
   static Outcome replaceStatements(SourceProject project, Args args) throws Exception {
     String rel = args.required("file");
+    // content, build and surround: one of them, but surround with empty content.
+    Precondition.require(
+        Precondition.that(
+            () -> !(args.has("build") && args.string("content") != null),
+            () -> args.tool() + " takes content or build, not both."),
+        Precondition.that(
+            () -> !(args.has("build") && args.raw("surround") != null),
+            () -> "replace_statements takes build or surround, not both."),
+        Precondition.that(
+            () ->
+                args.raw("surround") == null
+                    || args.string("content") == null
+                    || !(args.raw("surround") instanceof Map<?, ?>)
+                        && args.string("content").isEmpty(),
+            () -> "replace_statements takes content or surround, not both."),
+        Precondition.that(
+            () ->
+                args.has("build") || args.raw("surround") != null || args.string("content") != null,
+            () ->
+                "replace_statements needs content (empty deletes the statements), build or"
+                    + " surround."));
     int startLine = args.integer("start_line");
     int endLine = args.integer("end_line");
     Opened opened = Opened.of(project, rel);
@@ -177,13 +198,7 @@ final class Primitives {
     String surround = around instanceof Map<?, ?> ? null : args.string("surround");
     String indent = Lines.indentOf(text, first.getStartPosition());
     Build.Built built = built(project, opened, args, start, end, block, indent);
-    if (built != null && around != null) {
-      throw new Refusal("replace_statements takes build or surround, not both.");
-    }
     if (around instanceof Map<?, ?> loop) {
-      if (args.string("content") != null) {
-        throw new Refusal("replace_statements takes content or surround, not both.");
-      }
       built =
           Build.around(
               project,
@@ -197,14 +212,7 @@ final class Primitives {
     }
     String content =
         built != null ? built.text() : args.string("content") == null ? "" : args.string("content");
-    if (built == null && args.string("content") == null && surround == null) {
-      throw new Refusal(
-          "replace_statements needs content (empty deletes the statements), build or surround.");
-    }
     if (surround != null) {
-      if (!content.isEmpty()) {
-        throw new Refusal("replace_statements takes content or surround, not both.");
-      }
       String outer = Lines.indentOf(text, block.getStartPosition());
       String inner = Lines.indentOf(text, first.getStartPosition());
       String step = inner.length() > outer.length() ? inner.substring(outer.length()) : "  ";

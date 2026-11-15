@@ -883,7 +883,7 @@ final class Signatures {
       throws Exception {
     CallTargets targets =
         CallTargets.of(family.sources.values().stream().map(Source::unit).toList());
-    Outcome outcome = change.apply(project, done, imports, fix, -1);
+    Outcome outcome = change.apply(project, done, imports, fix, -1, doing);
     targets.require(project, doing);
     return outcome;
   }
