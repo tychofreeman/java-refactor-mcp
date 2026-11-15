@@ -61,7 +61,8 @@ final class InlineFunction {
    */
   private record ParamUse(int start, int end, int index, boolean alone) {}
 
-  static Outcome run(SourceProject project, String rel, String name) throws Exception {
+  static Outcome run(SourceProject project, String rel, String name, Call only, boolean keep)
+      throws Exception {
     Qualified q = Qualified.of(name, "Type.method, the class and the static method to inline");
     String typeName = q.type();
     String member = q.member();
@@ -166,6 +167,8 @@ final class InlineFunction {
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
+    // The uses left when only one call is inlined: other calls, and method references.
+    int others = 0;
     for (Path p : parsed.keySet()) {
       CompilationUnit cu = parsed.get(p);
       String fileText = texts.get(p);
@@ -193,7 +196,16 @@ final class InlineFunction {
               return true;
             }
           });
-      if (!refs.isEmpty()) {
+      if (only != null) {
+        others += refs.size();
+        for (MethodInvocation site : List.copyOf(sites)) {
+          if (!(project.relative(p).equals(only.file())
+              && site.getStartPosition() == only.start())) {
+            sites.remove(site);
+            others++;
+          }
+        }
+      } else if (!refs.isEmpty()) {
         throw new Refusal(
             name
                 + " is used as a method reference (Type::name) in "
@@ -266,9 +278,12 @@ final class InlineFunction {
               + String.join(", ", nullable),
           "keep the method");
     }
-    edits
-        .computeIfAbsent(declaringFile, k -> new ArrayList<>())
-        .add(MemberMove.removal(declaringText, m));
+    boolean delete = !keep && others == 0;
+    if (delete) {
+      edits
+          .computeIfAbsent(declaringFile, k -> new ArrayList<>())
+          .add(MemberMove.removal(declaringText, m));
+    }
 
     NameCheck.require(project, texts, edits, NameCheck.meanings(fragments), "inlining " + name);
     Edits.WrittenFiles written =
@@ -280,16 +295,20 @@ final class InlineFunction {
             "inlining " + name,
             "Keep the method, or change its callers first.");
     Stubs.Declared declaredStubs = written.declared();
-    return new Outcome(
-        "inlined "
-            + name
-            + " into "
-            + calls
-            + (calls == 1 ? " call" : " calls")
-            + " and deleted the method in "
-            + rel
-            + written.said(),
-        declaredStubs);
+    String into =
+        only == null
+            ? calls + (calls == 1 ? " call" : " calls")
+            : "1 call at line " + only.line() + " of " + only.file();
+    String kept;
+    if (delete) {
+      kept = " and deleted the method in " + rel;
+    } else if (keep) {
+      kept = "; kept the method (keep_function)" + (only == null ? " in " + rel : "");
+    } else {
+      kept =
+          "; kept the method, which has " + others + (others == 1 ? " other use" : " other uses");
+    }
+    return new Outcome("inlined " + name + " into " + into + kept + written.said(), declaredStubs);
   }
 
   /**
@@ -1153,5 +1172,114 @@ final class InlineFunction {
       out.add(Nodes.source(text, b));
     }
     return out;
+  }
+
+  /** The one call to inline: its file, where it starts, and its line; null for every call. */
+  private record Call(String file, int start, int line) {}
+
+  /**
+   * inline at the call of {@code name} (Type.method, or the method's own name) on {@code line} of
+   * {@code rel}: that call, or with {@code all} every call; the method is deleted when nothing else
+   * uses it, unless {@code keep}. Null when {@code name} is a simple name no call on the line has,
+   * so it names a local variable.
+   */
+  static Outcome atCall(
+      SourceProject project,
+      String rel,
+      int line,
+      String name,
+      Integer column,
+      boolean keep,
+      boolean all)
+      throws Exception {
+    String simple = name.substring(name.lastIndexOf('.') + 1);
+    Opened opened = Opened.of(project, rel);
+    CompilationUnit unit = opened.unit();
+    int lineStart = unit.getPosition(line, 0);
+    List<SimpleName> calls = new ArrayList<>();
+    List<SimpleName> variables = new ArrayList<>();
+    for (SimpleName n : opened.onLine(line, SimpleName.class)) {
+      if (!n.getIdentifier().equals(simple)
+          || (column != null && n.getStartPosition() - lineStart + 1 != column)) {
+        continue;
+      }
+      if (n.getParent() instanceof MethodInvocation c && c.getName() == n) {
+        calls.add(n);
+      } else if (n.resolveBinding() instanceof IVariableBinding) {
+        variables.add(n);
+      }
+    }
+    String where = "line " + line + (column == null ? "" : ", column " + column) + " of " + rel;
+    boolean byMethod = name.contains(".") || all || keep;
+    if (calls.isEmpty() && byMethod) {
+      throw new Refusal(
+          "no call of "
+              + simple
+              + " on "
+              + where
+              + ". Give the line of a call of "
+              + name
+              + ", or name the method as Type.method without line to inline every call.");
+    }
+    // A simple name that a variable on the line also has stays the variable's, as before calls.
+    if (calls.isEmpty() || (!byMethod && !variables.isEmpty())) {
+      return null;
+    }
+    if (calls.size() > 1) {
+      throw opened.several(calls, line, "calls of " + simple);
+    }
+    MethodInvocation site = (MethodInvocation) calls.get(0).getParent();
+    IMethodBinding binding = site.resolveMethodBinding();
+    if (binding == null) {
+      throw new Refusal("the call of " + simple + " on " + where + " does not resolve.");
+    }
+    IMethodBinding method = binding.getMethodDeclaration();
+    Path home = TypeSwitch.fileOf(project, Names.outermost(method.getDeclaringClass()));
+    String type = Names.typeLabel(method.getDeclaringClass());
+    if (home == null) {
+      throw new Refusal(
+          type
+              + "."
+              + simple
+              + " is not declared in the project's sources, so it has no body here.");
+    }
+    if (name.contains(".") && !name.equals(type + "." + simple)) {
+      throw new Refusal(
+          "the call of "
+              + simple
+              + " on "
+              + where
+              + " calls "
+              + type
+              + "."
+              + simple
+              + ", not "
+              + name
+              + ".");
+    }
+    String homeRel = project.relative(home);
+    for (MethodDeclaration d :
+        Nodes.all(Opened.of(project, homeRel).unit(), MethodDeclaration.class)) {
+      IMethodBinding b = d.resolveBinding();
+      if (b != null && b.getKey().equals(method.getKey())) {
+        return run(
+            project,
+            homeRel,
+            type + "." + (overloaded(d) ? Declarations.methodLabel(d) : simple),
+            all ? null : new Call(project.relative(opened.file()), site.getStartPosition(), line),
+            keep);
+      }
+    }
+    throw new Refusal(type + "." + simple + " is not written in " + homeRel + ".");
+  }
+
+  /** Whether another method of {@code d}'s type has its name. */
+  private static boolean overloaded(MethodDeclaration d) {
+    return d.getParent() instanceof AbstractTypeDeclaration t
+        && Nodes.all(t, MethodDeclaration.class).stream()
+            .anyMatch(o ->
+                o != d
+                    && o.getParent() == t
+                    && o.getName().getIdentifier().equals(d.getName().getIdentifier()));
   }
 }
