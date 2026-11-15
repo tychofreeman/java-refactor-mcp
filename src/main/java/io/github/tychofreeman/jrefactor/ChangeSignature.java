@@ -43,32 +43,27 @@ final class ChangeSignature {
   private ChangeSignature() {}
 
   static Outcome run(SourceProject project, Args args) throws Exception {
-    String returnType = args.string("return_type");
-    List<String> added = Args.commaSeparated(args.string("add_throws"));
-    List<String> removed = Args.commaSeparated(args.string("remove_throws"));
-    String callers = args.string("callers") == null ? "propagate" : args.string("callers");
-    List<String> stops = Args.commaSeparated(args.string("stop_at"));
+    Request request = request(args);
     Precondition.require(
         Precondition.that(
-            () -> returnType != null || !added.isEmpty() || !removed.isEmpty(),
+            () ->
+                request.returnType() != null
+                    || !request.added().isEmpty()
+                    || !request.removed().isEmpty(),
             () ->
                 "change_signature needs return_type (the new type), add_throws or remove_throws"
                     + " (exception types)."),
         Precondition.that(
-            () -> List.of("propagate", "catch", "refuse").contains(callers),
-            () -> "callers is propagate, catch or refuse, not " + callers + "."),
+            () -> List.of("propagate", "catch", "refuse").contains(request.callers()),
+            () -> "callers is propagate, catch or refuse, not " + request.callers() + "."),
         Precondition.that(
-            () -> stops.isEmpty() || callers.equals("propagate") && !added.isEmpty(),
+            () ->
+                request.stops().isEmpty()
+                    || request.callers().equals("propagate") && !request.added().isEmpty(),
             () ->
                 "stop_at names where propagating an added exception ends, so it needs"
                     + " add_throws and callers=propagate."));
-    if (returnType != null) {
-      Signatures.parsesAs(
-          "return_type", returnType, "abstract class X { abstract " + returnType + " x(); }");
-    }
-    for (String name : added) {
-      Signatures.parsesAs("add_throws", name, "class X { void x() throws " + name + " {} }");
-    }
+    checkTypes(request);
     MethodFamily family =
         MethodFamily.of(project, args, true, "so its signature cannot change.", false);
     SignatureChange change = new SignatureChange(family);
@@ -77,74 +72,16 @@ final class ChangeSignature {
     List<String> said = new ArrayList<>();
     List<String> chosen = new ArrayList<>(args.list("imports"));
 
-    if (returnType != null) {
-      boolean toVoid = returnType.equals("void");
-      if (!toVoid) {
-        Signatures.checkTypeDecidedUses(family, args, returnType, true);
-      }
-      for (Signatures.Decl d : decls) {
-        Signatures.requireReturnType(d, family);
-        Type old = d.m().getReturnType2();
-        if (Nodes.source(d.file().text(), old).equals(returnType)) {
-          continue;
-        }
-        change.replace(d.file(), old, returnType);
-        if (toVoid && d.m().getBody() != null) {
-          voidReturns(change, d.file(), d.m(), d.m().getBody());
-        }
-      }
-      if (toVoid) {
-        for (Signatures.Lambda l : family.lambdas) {
-          ASTNode body = l.node().getBody();
-          if (body instanceof Block block) {
-            voidReturns(change, l.file(), l.node(), block);
-          } else if (!statement((Expression) body)) {
-            if (!quietAndSafe((Expression) body)) {
-              throw new Refusal(unkept(l.file(), body));
-            }
-            change.replace(l.file(), body, "{}");
-          }
-        }
-      }
-      said.add("return type " + returnType);
+    if (request.returnType() != null) {
+      returnTypeEdits(request, family, args, decls, change, said);
     }
 
     int declarations = decls.size();
-    if (!added.isEmpty() || !removed.isEmpty()) {
-      List<String> missing = new ArrayList<>(removed);
-      for (Signatures.Decl d : decls) {
-        throwsClause(change, d, added, removed, missing);
-      }
-      if (!missing.isEmpty()) {
-        throw new Refusal(
-            family.label
-                + " does not declare throws "
-                + String.join(", ", missing)
-                + ", in it or in an override.");
-      }
-      if (!added.isEmpty()) {
-        said.add("throws " + String.join(", ", added) + " added");
-      }
-      if (!removed.isEmpty()) {
-        said.add("throws " + String.join(", ", removed) + " removed");
-      }
-      if (!added.isEmpty() && !callers.equals("refuse")) {
-        ThrowsCallers handled =
-            ThrowsCallers.handle(
-                project, family, change, decls, added, callers.equals("propagate"), stops, chosen);
-        List<String> gained = new ArrayList<>();
-        for (Signatures.Decl d : handled.decls) {
-          throwsClause(change, d, handled.names.get(d.m()), List.of(), new ArrayList<>());
-          gained.add(Names.methodLabel(d.binding()));
-        }
-        declarations += handled.decls.size();
-        chosen.addAll(handled.imports);
-        if (!gained.isEmpty()) {
-          said.add("its callers now declare it: " + listed(gained));
-        }
-        if (!handled.caught.isEmpty()) {
-          said.add("caught and rethrown unchecked at " + listed(handled.caught));
-        }
+    if (!request.added().isEmpty() || !request.removed().isEmpty()) {
+      throwsEdits(request, decls, change, family, said);
+      if (!request.added().isEmpty() && !request.callers().equals("refuse")) {
+        declarations =
+            callerEdits(project, family, change, decls, request, chosen, declarations, said);
       }
     }
     return change.apply(
@@ -152,19 +89,165 @@ final class ChangeSignature {
         "changed the signature of " + family.label + " (" + String.join("; ", said) + ")",
         chosen,
         "Nothing was changed. "
-            + (removed.isEmpty()
+            + (request.removed().isEmpty()
                 ? ""
                 : "A body that still throws a removed exception must stop first, and a catch of"
                     + " one that can no longer be thrown must go. ")
             + "Calls are not edited"
-            + (added.isEmpty() ? "" : ", but for a new exception (callers)")
+            + (request.added().isEmpty() ? "" : ", but for a new exception (callers)")
             + ": one that uses the result"
-            + (callers.equals("refuse") && !added.isEmpty()
+            + (request.callers().equals("refuse") && !request.added().isEmpty()
                 ? ", or does not handle a new exception,"
                 : "")
             + " changes in the same batch as this step, with check \"end\".",
         declarations);
   }
+
+  /** Refuses a return type or an added exception that does not parse as a type. */
+  private static void checkTypes(Request request) {
+    if (request.returnType() != null) {
+      Signatures.parsesAs(
+          "return_type",
+          request.returnType(),
+          "abstract class X { abstract " + request.returnType() + " x(); }");
+    }
+    for (String name : request.added()) {
+      Signatures.parsesAs("add_throws", name, "class X { void x() throws " + name + " {} }");
+    }
+  }
+
+  /**
+   * Writes the new return type in each declaration, and for void, the returns of bodies and
+   * lambdas; says so in said.
+   */
+  private static void returnTypeEdits(
+      Request request,
+      MethodFamily family,
+      Args args,
+      List<Signatures.Decl> decls,
+      SignatureChange change,
+      List<String> said) {
+    boolean toVoid = request.returnType().equals("void");
+    if (!toVoid) {
+      Signatures.checkTypeDecidedUses(family, args, request.returnType(), true);
+    }
+    for (Signatures.Decl d : decls) {
+      Signatures.requireReturnType(d, family);
+      Type old = d.m().getReturnType2();
+      if (Nodes.source(d.file().text(), old).equals(request.returnType())) {
+        continue;
+      }
+      change.replace(d.file(), old, request.returnType());
+      if (toVoid && d.m().getBody() != null) {
+        voidReturns(change, d.file(), d.m(), d.m().getBody());
+      }
+    }
+    if (toVoid) {
+      for (Signatures.Lambda l : family.lambdas) {
+        ASTNode body = l.node().getBody();
+        if (body instanceof Block block) {
+          voidReturns(change, l.file(), l.node(), block);
+        } else if (!statement((Expression) body)) {
+          if (!quietAndSafe((Expression) body)) {
+            throw new Refusal(unkept(l.file(), body));
+          }
+          change.replace(l.file(), body, "{}");
+        }
+      }
+    }
+    said.add("return type " + request.returnType());
+  }
+
+  /**
+   * Adds and removes the exceptions in each declaration's throws clause, refused when one to remove
+   * is declared nowhere, and says so in said.
+   */
+  private static void throwsEdits(
+      Request request,
+      List<Signatures.Decl> decls,
+      SignatureChange change,
+      MethodFamily family,
+      List<String> said) {
+    List<String> missing = new ArrayList<>(request.removed());
+    for (Signatures.Decl d : decls) {
+      throwsClause(change, d, request.added(), request.removed(), missing);
+    }
+    if (!missing.isEmpty()) {
+      throw new Refusal(
+          family.label
+              + " does not declare throws "
+              + String.join(", ", missing)
+              + ", in it or in an override.");
+    }
+    if (!request.added().isEmpty()) {
+      said.add("throws " + String.join(", ", request.added()) + " added");
+    }
+    if (!request.removed().isEmpty()) {
+      said.add("throws " + String.join(", ", request.removed()) + " removed");
+    }
+  }
+
+  /**
+   * Carries an added exception to the callers as callers asks: each caller that now declares it
+   * gets the throws clause; says so in said, adds the imports chosen, and returns declarations with
+   * the callers counted.
+   */
+  private static int callerEdits(
+      SourceProject project,
+      MethodFamily family,
+      SignatureChange change,
+      List<Signatures.Decl> decls,
+      Request request,
+      List<String> chosen,
+      int declarations,
+      List<String> said)
+      throws Exception {
+    ThrowsCallers handled =
+        ThrowsCallers.handle(
+            project,
+            family,
+            change,
+            decls,
+            request.added(),
+            request.callers().equals("propagate"),
+            request.stops(),
+            chosen);
+    List<String> gained = new ArrayList<>();
+    for (Signatures.Decl d : handled.decls) {
+      throwsClause(change, d, handled.names.get(d.m()), List.of(), new ArrayList<>());
+      gained.add(Names.methodLabel(d.binding()));
+    }
+    declarations += handled.decls.size();
+    chosen.addAll(handled.imports);
+    if (!gained.isEmpty()) {
+      said.add("its callers now declare it: " + listed(gained));
+    }
+    if (!handled.caught.isEmpty()) {
+      said.add("caught and rethrown unchecked at " + listed(handled.caught));
+    }
+    return declarations;
+  }
+
+  /**
+   * What the call asks for: the new return type, the exceptions to add and remove, what callers do
+   * with an added one, and where propagating it stops.
+   */
+  private static Request request(Args args) {
+    String returnType = args.string("return_type");
+    List<String> added = Args.commaSeparated(args.string("add_throws"));
+    List<String> removed = Args.commaSeparated(args.string("remove_throws"));
+    String callers = args.string("callers") == null ? "propagate" : args.string("callers");
+    List<String> stops = Args.commaSeparated(args.string("stop_at"));
+    return new Request(returnType, added, removed, callers, stops);
+  }
+
+  /** A change_signature call's arguments, read once: {@link #request}. */
+  private record Request(
+      String returnType,
+      List<String> added,
+      List<String> removed,
+      String callers,
+      List<String> stops) {}
 
   /** At most eight of {@code items}, then how many more. */
   private static String listed(List<String> items) {

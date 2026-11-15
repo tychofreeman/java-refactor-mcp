@@ -1918,3 +1918,29 @@ again.
   `move_statement` of each check upward (they read `built`, `content` and `around`, locals declared
   after the place they go, and two sit inside other ifs). A refactoring that hoists a guard by
   substituting its locals' initializers would have made it.
+
+## 2026-11-15: change-signature-run (#528, item 5)
+
+- No Java by hand. `inline` of five locals that held a record's accessors (`String returnType =
+  request.returnType();`) reported about 90 exceptional changes, one per use and reason, each
+  "the initializer of returnType may throw (request.returnType())". A record's accessor reads a
+  final field; only a null `request` could throw, and it is assigned once from a method that
+  returns `new Request(...)`. The report buries any real change; it could count an accessor of a
+  local assigned once as not throwing, or say each initializer once.
+- `extract_function` of the throws block before the record took 11 parameters (the five argument
+  values among them). Extracting the argument reading first (several results make a record),
+  then inlining its locals, gave the later extractions one `Request` in their place.
+## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField and MoveMember)
+
+- No Java by hand. Replacing four parameters of `useEdit` with the record that holds them is a
+  composition: `add_parameter` of the record, then `remove_parameter` with `value`
+  `accessors.getter()` per parameter. It needs each call to pass exactly that expression, so the
+  caller's locals (`String getter = accessors.getter();`) had to be inlined first; before that
+  the removal was refused ("passes fieldKey, not accessors.fieldKey()"). `remove_parameter` could
+  accept an argument that is a local whose only value is the expression. The removed values stay
+  as locals at the top of the body, which suits a body that reads them often.
+- `MoveMember.rewrite`'s 10 parameters: `extract_type` of seven, then the same hoist by hand-free
+  edits (no tool moves a loop-invariant construction before the loop). An `extract_function` of
+  the moved text's edits took 10 parameters (the method, both files, both texts, the edits map,
+  the target): undone. The call-site visitor in `run` reads eight locals; no extraction helps
+  until those travel together.

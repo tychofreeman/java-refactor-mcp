@@ -363,6 +363,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Imports.fix` is `render(after, plan(...))` (#522): `plan` finds and chooses (a `Plan` of the
   imports to add and remove), `render` lays them out; a caller that needs only what would change
   calls `plan`. It parses `before` once, with bindings; read names and imports from that unit.
+  An import whose simple name the file used before the edit and not after is removed: a type
+  import, and since #644 (2026-11-15, a default to reopen) a single static import too, so
+  `inline` through `import static p.Keys.erased;` drops it; an on-demand import stays.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
@@ -479,6 +482,13 @@ Each was chosen from options; the record named beside it has the options it beat
   file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
   `MoveType` that needs them takes it, not the fields one by one.
 
+- `encapsulate_field` (`EncapsulateField`) reads the field's facts once into an `Accessors` record
+  (static, final, the getter's and setter's names, its key and type text; #528), which `useEdit`
+  and `accessorText` take; `declaration` finds the field, `makePrivate` writes its modifiers.
+- `move` of a method rewrites each call through `MoveMember.rewrite(site, text, MovedMethod, keep)`:
+  `MovedMethod` (#528) holds the source class's key and name, the target's name, the method's
+  name, whether it is static, and its key, built once in `run`.
+
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call
   (#192, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
@@ -560,7 +570,8 @@ Each was chosen from options; the record named beside it has the options it beat
   by position must handle the varargs arguments before it passes true. `change_type`'s `T...` is
   `Signatures.varargsElement` plus the form, the type and its `...` written as one edit.
 
-- `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
+- `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, its arguments read once
+  into a `Request` (#528; `run` calls `checkTypes`, `returnTypeEdits`, `throwsEdits`, `callerEdits`), on `MethodFamily.of` with
   `references` (a method reference is kept in `family.references`, not refused; `family.sources`
   holds each parsed file, so a referenced method's file is edited once) and
   `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `quietAndSafe` (named `pure` until #475) and
