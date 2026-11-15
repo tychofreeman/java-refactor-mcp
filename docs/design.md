@@ -501,15 +501,14 @@ applies under both checks, and under `"each"` the type check still refuses a ste
 callers go later, with the batch's hint toward `"end"`, over relaxing the per-step type check for
 deletes.
 
-**Decided: which tests `check` runs** (2026-11-14, roadmap #201). The user chose the intent on issue #367: only the tests focused on the changes the batch has made
-so far, however long the run takes. The rule that finds them is this session's default, to
-reopen: (a) the test classes changed, and the test files whose text names a type of a changed main
-file, by the file's name as a word; over (b) the same through bindings, closed over the main types
-that use a changed one (a parse of the project per check, and a change to a widely used type would
-reach most tests), and (c) a list of tests or a pattern given with `run_tests` (a second argument
-for what the rule should find). Alone, the changes are the session's undo history; over the files
-`git` says differ (a change by hand would count, but the tools do not read `git` today). No time
-limit: a hung test hangs the call, as the user's "however long" allows.
+**Decided: which tests `check` runs** (2026-11-14 and 2026-11-15, roadmap #201, the user). Only
+the tests focused on the changes (issue #367): a test is focused when its code uses a changed
+production file, directly (the user's choice of 2026-11-15, over also the tests that reach it
+through other main classes, which for a widely used class runs most of the suite, and over the
+first session's default, a test whose text named the changed file's name as a word). `tests`
+names the tests to run in place of them (the user: yes, over the rule as the only selection).
+The run stops after `timeout` seconds, 30 by default (the user, over no limit). Alone, the
+changes are the session's undo history (the user: ok); over the files `git` says differ.
 
 **Decided (2026-11-15, the user on issue #368, roadmap #500): `inline` of one call, as
 gorefactor's.** What `name` is at `line` says which: a method called there inlines that call, and

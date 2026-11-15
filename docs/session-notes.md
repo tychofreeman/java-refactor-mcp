@@ -453,8 +453,10 @@ Each was chosen from options; the record named beside it has the options it beat
   with the batch's starting errors, to declare stubs as the end check does). A passing step is a
   `Batch.Mark`; a later refusal puts the files back to it and throws `Refusal.Kept`, which
   `Tools.call` commits rather than aborts, and the CLI saves the undo stack after a refusal too.
-  The tests that run are `Check.focused` (a choice of this session, options in `docs/design.md`,
-  Decisions), run by `Session.tests` (`Check.maven`; a test passes a stand-in).
+  The tests that run are `Check.focused` (the test files changed, and those whose code refers by
+  binding to a type of a changed main file: the user's rule of 2026-11-15, `docs/design.md`,
+  Decisions), or those `tests` names, run by `Session.tests` (`Check.maven`, stopped after
+  `timeout` seconds, 30 by default; a test passes a stand-in).
 - `Session.refusedBatch` keeps the last refused batch for `batch` `retry` (2026-11-06); a batch
   that passes clears it. The command line keeps it between runs in its cache directory, beside
   the undo stack and the type count (`Batch.save`, `Batch.load`, #194).

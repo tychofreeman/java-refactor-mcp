@@ -66,15 +66,7 @@ public final class Rename {
               + column
               + ". Give the 1-based column of the name, or leave column out.");
     }
-    Path file = project.root().resolve(relFile).normalize();
-    if (!file.startsWith(project.root())
-        || !Files.isRegularFile(file)
-        || !relFile.endsWith(".java")) {
-      throw new Refusal(
-          "'"
-              + relFile
-              + "' is not a Java file in this project. Pass a path relative to the project root.");
-    }
+    Path file = javaFile(project, relFile);
     Precondition.require(Precondition.identifier(newName, "the new name"));
 
     Query query = Query.of(name);
@@ -134,6 +126,20 @@ public final class Rename {
                 Names.plural(found.occurrences().size(), "occurrence"),
                 Lines.list(lineNumbers(cu, found.occurrences()))),
         stubs);
+  }
+
+  /** The file {@code relFile} names; refused unless it is a Java file in the project. */
+  private static Path javaFile(SourceProject project, String relFile) {
+    Path file = project.root().resolve(relFile).normalize();
+    if (!file.startsWith(project.root())
+        || !Files.isRegularFile(file)
+        || !relFile.endsWith(".java")) {
+      throw new Refusal(
+          "'"
+              + relFile
+              + "' is not a Java file in this project. Pass a path relative to the project root.");
+    }
+    return file;
   }
 
   /** The name {@code name} that starts at {@code line}, {@code column}. */
@@ -1016,5 +1022,43 @@ public final class Rename {
       occurrences += uses.size();
     }
     return new Written(texts, lines, renamedAt, occurrences);
+  }
+
+  /**
+   * Renames the member {@code name} names in {@code relFile}, found without a line: {@code
+   * Type.member}, or {@code Type.method(int)} for one of its overloads, as {@link
+   * Declarations#find} reads it.
+   */
+  public static Outcome run(SourceProject project, String relFile, String name, String newName)
+      throws IOException {
+    if (Qualified.parse(name).type() == null) {
+      throw new Refusal(
+          "rename needs line for "
+              + name
+              + ": the 1-based line of its declaration or any use. Pass line, or name a member as"
+              + " Type.member (Type.method(int) for one of its overloads).");
+    }
+    String source = Files.readString(javaFile(project, relFile));
+    CompilationUnit cu = Jdt.parseSyntax(source);
+    SimpleName at = declaredName(Declarations.find(cu, name, relFile).decl());
+    int start = at.getStartPosition();
+    return run(
+        project,
+        relFile,
+        cu.getLineNumber(start),
+        at.getIdentifier(),
+        cu.getColumnNumber(start) + 1,
+        newName);
+  }
+
+  /** The name {@code d} declares: a method's, a type's, or its first field's. */
+  private static SimpleName declaredName(BodyDeclaration d) {
+    if (d instanceof MethodDeclaration m) {
+      return m.getName();
+    }
+    if (d instanceof FieldDeclaration f) {
+      return ((VariableDeclarationFragment) f.fragments().get(0)).getName();
+    }
+    return ((AbstractTypeDeclaration) d).getName();
   }
 }
