@@ -607,8 +607,8 @@ Each was chosen from options; the record named beside it has the options it beat
   instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
   `samOf` finds a named type's method through `Jdt.probeType` on the superclass.
   `useEdits` takes the subclass's file, key, name, constructors and text as one `StrategySubclass`
-  (#528); its components keep their `sub` prefix, as `rename` of a record component does not reach
-  the accessor calls (friction log).
+  (#528); its components were renamed `key`, `name`, `constructors` and `text` through `rename`
+  once it renamed record components (issue #659).
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits
@@ -775,7 +775,12 @@ Each was chosen from options; the record named beside it has the options it beat
   binding, or by name when the annotation does not resolve; not a name ending in `Override`.
 
 - `rename` of a field, method or type finds and writes its uses in `Rename.renameUses` (#513,
-  2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
+  2026-11-14): a new kind passes its predicate and a per-file check, not another loop.
+  A record component (issue #659, 2026-11-15) is `Rename.renameComponent`: every binding that
+  `componentField` takes to the component's field (the field, the accessor, a canonical or compact
+  constructor's parameter) is a use, and `componentAt` the component's own name, whose binding JDT
+  gives no declaring class. `checkMeanings` takes a `renamedToo` predicate, since the field, a
+  generated accessor and a compact constructor's parameters have no declaring name in the source. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
 
 - `inline` at a call (roadmap #502, issue #368, 2026-11-15) is `InlineFunction.atCall`: the call

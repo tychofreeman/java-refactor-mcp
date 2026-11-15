@@ -418,7 +418,7 @@ final class SubclassToStrategy {
       String text = holding.texts().get(e.getKey());
       List<TextEdit> es = byFile.computeIfAbsent(e.getKey(), k -> new ArrayList<>());
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
-        if (!(n.resolveBinding() instanceof ITypeBinding t) || !t.getKey().equals(sub.subKey())) {
+        if (!(n.resolveBinding() instanceof ITypeBinding t) || !t.getKey().equals(sub.key())) {
           continue;
         }
         int line = e.getValue().getLineNumber(n.getStartPosition());
@@ -434,7 +434,7 @@ final class SubclassToStrategy {
         }
         if (!(n.getParent() instanceof SimpleType st)) {
           throw new Refusal(
-              sub.subName()
+              sub.name()
                   + " is named at "
                   + where
                   + " other than as a type (a static member, a"
@@ -456,7 +456,7 @@ final class SubclassToStrategy {
                                 : null;
         if (kind != null) {
           throw new Refusal(
-              sub.subName()
+              sub.name()
                   + " is used in "
                   + kind
                   + " at "
@@ -471,13 +471,7 @@ final class SubclassToStrategy {
                   cic.getStartPosition(),
                   Nodes.end(cic),
                   construction(
-                      text,
-                      cic,
-                      sub.subConstructors(),
-                      sub.subText(),
-                      baseName,
-                      naming.subFn(),
-                      where)));
+                      text, cic, sub.constructors(), sub.text(), baseName, naming.subFn(), where)));
         } else {
           es.add(new TextEdit(n.getStartPosition(), Nodes.end(n), baseName));
         }

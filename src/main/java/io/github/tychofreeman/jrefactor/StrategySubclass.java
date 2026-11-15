@@ -8,8 +8,4 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
  * file, binding key, name, constructors and text.
  */
 record StrategySubclass(
-    Opened opened,
-    String subKey,
-    String subName,
-    List<MethodDeclaration> subConstructors,
-    String subText) {}
+    Opened opened, String key, String name, List<MethodDeclaration> constructors, String text) {}
