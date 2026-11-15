@@ -1,7 +1,7 @@
 ---
 order: 497
 item: 507
-status: Open
+status: Done
 ---
 
 ## Item
@@ -12,11 +12,11 @@ and the first one, following calls into the project's own methods.
 
 ## Status
 
-Built 2026-11-15 on branch `inspect-side-effects` (`SideEffects`, `Jdt.parseTexts`; goldens
-`inspect_outline_side_effects`, `inspect_outline_side_effects_library`), not merged: on
-commons-lang the outline of a file whose methods call other project files takes 2.6-3.8x as long
-as without side effects (files that call only themselves and the JDK: no change), over the owner's
-limit of about 2x. The owner chooses (the options are in the PR).
+Done 2026-11-15: `SideEffects`, `Jdt.parseTexts`, and the session's cache of each called file's
+events (`Session.sideEffects`, the owner's option (B)); goldens `inspect_outline_side_effects`,
+`inspect_outline_side_effects_library`, and `SideEffectsTest` for the cache. On commons-lang a
+first outline of a file whose methods call other project files takes 2.6-4.8x as long as without
+side effects; a later one, about the same (1.0-1.2x). Numbers in `docs/design.md`.
 
 ## Evidence
 

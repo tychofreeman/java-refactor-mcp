@@ -1,9 +1,11 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -68,6 +70,7 @@ final class SideEffects {
   private final Map<Path, Set<String>> missing = new LinkedHashMap<>();
   private final Map<String, String> known = new HashMap<>();
   private final Set<String> active = new HashSet<>();
+  private final Set<Path> checked = new HashSet<>();
 
   private SideEffects(SourceProject project) {
     this.project = project;
@@ -85,6 +88,9 @@ final class SideEffects {
       s.read.put(Jdt.fileOf(unit), Set.of(ALL));
     }
     Map<MethodDeclaration, String> keys = s.collect(unit, Set.of(ALL));
+    if (Jdt.fileOf(unit) != null && Jdt.sourceOf(unit) != null) {
+      s.remember(Jdt.fileOf(unit), Jdt.sourceOf(unit), Set.of(ALL), keys.values());
+    }
     while (true) {
       s.missing.clear();
       for (String key : keys.values()) {
@@ -157,6 +163,9 @@ final class SideEffects {
   private String callee(Call c) {
     if (active.contains(c.key())) {
       return "calls " + c.name();
+    }
+    if (!bodies.containsKey(c.key())) {
+      cached(c.file());
     }
     if (!bodies.containsKey(c.key())) {
       Set<String> names = c.file() == null ? null : read.get(c.file());
@@ -638,10 +647,11 @@ final class SideEffects {
 
   /**
    * Parses {@code files} again, in one batch, each with the bodies of the methods of the names
-   * given it, and of those of its methods they call by name, and records those methods' events.
-   * Files that cannot be read or parsed are not followed: calls into them count.
+   * given it, and of those of its methods they call by name, and records those methods' events, for
+   * the session too. Files that cannot be read or parsed are not followed: calls into them count.
    */
   private void read(Map<Path, Set<String>> files) {
+    Map<Path, String> originals = new LinkedHashMap<>();
     Map<Path, String> texts = new LinkedHashMap<>();
     files.forEach((file, names) -> {
       Set<String> wanted = read.computeIfAbsent(file, f -> new HashSet<>());
@@ -649,13 +659,22 @@ final class SideEffects {
       try {
         String text = Files.readString(file);
         CompilationUnit syntax = Jdt.parseSyntax(text);
+        originals.put(file, text);
         texts.put(file, trimmed(text, syntax, wanted(syntax, wanted)));
       } catch (IOException e) {
         wanted.add(ALL);
       }
     });
     try {
-      Jdt.parseTexts(project, texts, (file, unit) -> collect(unit, read.get(file)));
+      Jdt.parseTexts(
+          project,
+          texts,
+          (file, unit) ->
+              remember(
+                  file,
+                  originals.get(file),
+                  read.get(file),
+                  collect(unit, read.get(file)).values()));
     } catch (IOException | RuntimeException e) {
       texts.keySet().forEach(file -> read.get(file).add(ALL));
     }
@@ -729,5 +748,63 @@ final class SideEffects {
 
   private static boolean isMethod(List<MethodDeclaration> methods, String name) {
     return methods.stream().anyMatch(m -> m.getName().getIdentifier().equals(name));
+  }
+
+  /**
+   * What the outline read from one file, which the session keeps ({@link Session#sideEffects}): the
+   * hash of the file's text, the names of the methods whose events it holds ({@link #ALL} for every
+   * one), and their events by method key.
+   */
+  static final class Read {
+    private final String hash;
+    private final Set<String> names;
+    private final Map<String, List<Event>> bodies;
+
+    private Read(String hash, Set<String> names, Map<String, List<Event>> bodies) {
+      this.hash = hash;
+      this.names = names;
+      this.bodies = bodies;
+    }
+  }
+
+  /** Keeps for the session the events of the methods {@code keys} read from {@code file}. */
+  private void remember(Path file, String text, Set<String> names, Collection<String> keys) {
+    Map<String, List<Event>> events = new HashMap<>();
+    for (String key : keys) {
+      events.put(key, bodies.get(key));
+    }
+    Read before = project.session().sideEffects.get(file);
+    if (before != null && before.hash.equals(hash(text))) {
+      events.putAll(before.bodies);
+    }
+    project.session().sideEffects.put(file, new Read(hash(text), Set.copyOf(names), events));
+  }
+
+  /**
+   * Takes what the session read from {@code file} before, once a run, when the file's text has not
+   * changed since; drops it when it has.
+   */
+  private void cached(Path file) {
+    if (file == null || !checked.add(file) || read.containsKey(file)) {
+      return;
+    }
+    Read kept = project.session().sideEffects.get(file);
+    if (kept == null) {
+      return;
+    }
+    try {
+      if (kept.hash.equals(hash(Files.readString(file)))) {
+        bodies.putAll(kept.bodies);
+        read.put(file, new HashSet<>(kept.names));
+        return;
+      }
+    } catch (IOException e) {
+      // Read again below, as a file not kept.
+    }
+    project.session().sideEffects.remove(file);
+  }
+
+  private static String hash(String text) {
+    return Hashes.sha256Hex(text.getBytes(StandardCharsets.UTF_8));
   }
 }

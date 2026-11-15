@@ -757,7 +757,11 @@ Each was chosen from options; the record named beside it has the options it beat
   as gorefactor's `Effects.Func` (memoized; a call back into one being summarized counts). A callee's
   file is read again with only the wanted bodies (`trimmed`, `wanted`) and all of a round's files in
   one `Jdt.parseTexts` batch (texts written to a temporary directory, since `createASTs` reads
-  files). `Inspect.bodies` takes the map; `names` passes none (syntax only).
+  files). `Inspect.bodies` takes the map; `names` passes none (syntax only). The session keeps
+  each file's events (`Session.sideEffects`, a `SideEffects.Read`: the text's hash, the names read,
+  the events), checked by hash once a run (`cached`) and dropped by `Journal.put` (the owner's
+  option (B), 2026-11-15, over no cache and over following calls within the file only; numbers in
+  `docs/design.md`). A second outline costs about what it did without side effects.
 
 - `split` (roadmap #205, issue #370, 2026-11-15) is `Split`: it calls `extract_function`,
   `move_parameter` and `extract_type` through `Tools.call` inside its own call (the journal nests,

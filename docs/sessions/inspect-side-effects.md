@@ -45,12 +45,26 @@ Outline time on commons-lang (`Inspect.file`, warm JVM, mean of 10, ms; base = m
 | StringUtils | 7477 | 236 | 645 |
 | time/DurationFormatUtils | 444 | 111 | 415 |
 
+Then the owner chose (B), the session's cache: `SideEffects.Read` in `Session.sideEffects`, one
+batch of seven steps and `create_file` of `SideEffectsTest` (binding parses counted: 2, then 1).
+Mean of 8 on commons-lang, ms (main / first / second outline / in a session after the files
+above it):
+
+| file | main | first | second | session |
+|---|---|---|---|---|
+| StringUtils | 198 | 770 | 220 | 757 |
+| text/WordUtils | 86 | 348 | 102 | 280 |
+| BooleanUtils | 89 | 290 | 98 | 306 |
+| builder/ToStringBuilder | 99 | 321 | 99 | 339 |
+| time/DurationFormatUtils | 108 | 524 | 120 | 203 |
+| CharRange | 48 | 48 | 53 | 53 |
+| math/Fraction | 28 | 21 | 20 | 23 |
+
 ## Assessment
 
-Through the tools. Not merged: the cost is over the owner's limit for files that call other
-project files.
+Through the tools.
 
 ## Follow-ups
 
-- The owner's choice: merge as is, add a per-session cache of callee summaries, or follow calls
-  within the file only (options and numbers in the PR).
+- A file's events keep the bindings they were read with until that file changes (a default to
+  reopen).

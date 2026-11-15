@@ -316,7 +316,9 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   boxed types, `Objects`, `Optional`, reads of collections and maps, streams, a new collection,
   builder or exception, a call on a local of a new object). Lambdas and anonymous classes in the
   body count as part of it; a call runs the method it names (overrides are not followed).
-  Initializers, and the outline of `names`, which parses syntax only, give no side effects.
+  Initializers, and the outline of `names`, which parses syntax only, give no side effects. The
+  session keeps what it read from each called file while the file's text stays the same, so a
+  later outline reads only the files changed since.
 - `file` + `start_line`/`end_line`: those lines; `end_line` defaults to, and is
   clamped to, the end of the file.
 - Refused: a path that is not a `.java` file under the root; a file that does
