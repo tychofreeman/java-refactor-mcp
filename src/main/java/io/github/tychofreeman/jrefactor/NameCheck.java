@@ -30,6 +30,11 @@ import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
  */
 final class NameCheck {
 
+  /**
+   * What {@link #meanings} adds, before its label, for a name of a member type: "member type A.B".
+   */
+  private static final String MEMBER = "member type ";
+
   private NameCheck() {}
 
   /** What each name in {@code fragments} means: its identifier to its declarations' keys. */
@@ -44,6 +49,10 @@ final class NameCheck {
               String key = Bindings.declarationKey(b);
               if (key != null) {
                 out.computeIfAbsent(spaced(n, b), k -> new HashSet<>()).add(key);
+              }
+              if (b instanceof ITypeBinding t && t.isMember()) {
+                out.computeIfAbsent(spaced(n, b), k -> new HashSet<>())
+                    .add(MEMBER + Names.typeLabel(t.getErasure()));
               }
               // Keys of what an anonymous or local class declares hold source positions, which an
               // edit earlier in the file shifts; where the declaration stands does not change.
@@ -107,6 +116,22 @@ final class NameCheck {
               IBinding b = n.resolveBinding();
               String key = Bindings.declarationKey(b);
               Set<String> was = before.get(spaced(n, b));
+              if ((b == null || b.isRecovered()) && memberType(was) != null) {
+                throw new Refusal(
+                    what
+                        + " would leave "
+                        + n.getIdentifier()
+                        + " at line "
+                        + unit.getLineNumber(n.getStartPosition())
+                        + " of "
+                        + rel
+                        + " naming no type: it named the member type "
+                        + memberType(was)
+                        + ", which no import brings in, and the import fix could take another"
+                        + " type of that name. Qualify it ("
+                        + memberType(was)
+                        + ") first.");
+              }
               // A recovered binding is a name the edit's file has not imported yet (the import fix
               // runs after), and a type variable belongs to its class: the gate judges both. A
               // package's name (package p;) is no name a declaration in code can capture.
@@ -222,5 +247,18 @@ final class NameCheck {
       }
     }
     return found;
+  }
+
+  /** The member type {@code was} names ({@code Signatures.Call}), or null. */
+  private static String memberType(Set<String> was) {
+    if (was == null) {
+      return null;
+    }
+    for (String m : was) {
+      if (m.startsWith(MEMBER)) {
+        return m.substring(MEMBER.length());
+      }
+    }
+    return null;
   }
 }

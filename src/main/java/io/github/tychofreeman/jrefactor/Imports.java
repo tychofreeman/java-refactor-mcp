@@ -1,6 +1,9 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
+import java.lang.module.ModuleDescriptor;
+import java.lang.module.ModuleFinder;
+import java.lang.module.ModuleReference;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -9,6 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -485,14 +489,19 @@ final class Imports {
     return new Index(libraries, sources);
   }
 
+  /**
+   * The JDK's classes a project's code can import: those of the packages its modules export to
+   * every module ({@link #exportedPackages}), so that no import fix picks one of its own.
+   */
   private static void jdk(Map<String, List<String>> into) throws IOException {
+    Set<String> exported = exportedPackages();
     FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
     try (Stream<Path> files = Files.walk(jrt.getPath("/modules"))) {
       files.forEach(p -> {
         // /modules/<module>/<package path>/<Name>.class
         if (p.getNameCount() > 3) {
           String cls = className(p.subpath(2, p.getNameCount()).toString());
-          if (cls != null) {
+          if (cls != null && exported.contains(packageOf(cls))) {
             put(into, cls);
           }
         }
@@ -719,6 +728,25 @@ final class Imports {
       ImportDeclaration i = (ImportDeclaration) o;
       if (!i.isStatic() && !i.isOnDemand()) {
         out.add(i.getName().getFullyQualifiedName());
+      }
+    }
+    return out;
+  }
+
+  /**
+   * The packages the JDK's modules export to every module, so to a project's unnamed module,
+   * without {@code sun.*} and {@code com.sun.*}, which are the JDK's own even where a module
+   * exports them.
+   */
+  private static Set<String> exportedPackages() {
+    Set<String> out = new HashSet<>();
+    for (ModuleReference module : ModuleFinder.ofSystem().findAll()) {
+      for (ModuleDescriptor.Exports e : module.descriptor().exports()) {
+        if (!e.isQualified()
+            && !e.source().startsWith("sun.")
+            && !e.source().startsWith("com.sun.")) {
+          out.add(e.source());
+        }
       }
     }
     return out;
