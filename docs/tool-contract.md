@@ -421,6 +421,14 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   has as a field or a method without parameters ("Item already has a method key(). Choose another
   name."), and one a local would capture at a field read ("... would change what line 6 of
   <file> means: it would read the local key declared at line 5. ...").
+  An accessor that implements or overrides a method (issue #674, 2026-11-15, the owner's option
+  (a)) takes that method with it, as `rename` of a method takes its family: the interface's
+  method, every other implementation, and every call and method reference through them. Result:
+  `renamed the record component Point.x to left, and the methods Box.x() and HasX.x() in 4 files:
+  ...`. Refused: a new name another type of the family already has ("Box already has a method
+  left() (line 9). Choose another name."), and an accessor that implements a library method
+  ("Holder.get() implements get in java.util.function.Supplier, which is not the project's, so
+  the record component cannot be renamed.").
 - Result: `renamed total to runningSum in <file>: <n> occurrences, lines a,
   b` for a local (`1 occurrence, line a` for one: a name nothing uses); `renamed the field Item.price to cost in 2 files: 4
   occurrences, a/Cart.java lines 5, 10; a/Item.java lines 4, 7`; `renamed the

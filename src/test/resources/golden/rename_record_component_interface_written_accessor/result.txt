@@ -1,0 +1,1 @@
+renamed the record component Point.x to left, and the methods Box.x() and HasX.x() in 4 files: 8 occurrences, com/example/Box.java line 5; com/example/HasX.java line 4; com/example/Point.java lines 3, 5, 6; com/example/Use.java lines 7, 8
