@@ -45,7 +45,7 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   will change.
 - **Refactorings:** `rename` (any kind of name); `extract_function`,
   `extract_variable` (also as a constant, field or parameter),
-  `inline` (a local variable, or a method's calls); `add_parameter`, `remove_parameter`,
+  `inline` (a local variable, one call of a method, or every call); `add_parameter`, `remove_parameter`,
   `move_parameter`, `add_result`, `change_type`, `extract_type` (a parameter object, or
   extract class); `move` (a nested type to its own file, a type to a package, a method or
   static field to another class, a file),

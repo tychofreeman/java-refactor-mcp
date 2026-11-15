@@ -1,0 +1,1 @@
+inlined Lib.tax into 1 call at line 5 of com/example/Use.java and deleted the method in com/example/Lib.java
