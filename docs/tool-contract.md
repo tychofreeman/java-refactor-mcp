@@ -1738,8 +1738,18 @@ and `type` (the new type as written).
   changes, and a lambda that writes the parameter's type; calls are not edited, so a
   call the new type breaks is refused by the gate with the error. Result: `changed the
   type of qty of Pricing.price(int) to long ...` or `changed the return type of ...`.
-  Refuses: both options or neither with a method; a varargs parameter; a `[]` written
-  after the name; a constructor's return type.
+  Refuses: both options or neither with a method; a `[]` written after the name; a
+  constructor's return type.
+- Varargs (issue #614, 2026-11-15): `type` `T...` makes the last parameter varargs of `T`
+  (`int[] values` becomes `int... values`), and a varargs parameter becomes `T[]`, `T` or
+  another `U...`; calls are not edited, so a call that passed several arguments to what is now
+  `T[]` is refused by the gate. Until then `T...` was refused as not parsing, and a varargs
+  method was refused outright (`MethodFamily.of` takes `varargs` for this; the tools that
+  rewrite calls by position still refuse one). Refused, saying why: `T...` on a parameter that
+  is not last ("only the last parameter can be varargs: values is parameter 1 of 2 of
+  Sums.sum(int[], String). Pass int[], or move it last first with move_parameter."), on a return
+  type ("a return type cannot be varargs: int... is the form of a method's last parameter only.
+  Pass int[] to return an array.") and on a field ("a field cannot be varargs: ...").
 - A change of or to a primitive or boxed type (2026-11-05, the user's rule; `TypeDecidedUses`)
   is refused at a use whose result the type decides: an operand of arithmetic, a shift,
   bitwise or string `+`, a unary operator other than `!`, `++`/`--`, a compound

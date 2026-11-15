@@ -1,0 +1,1 @@
+a return type cannot be varargs

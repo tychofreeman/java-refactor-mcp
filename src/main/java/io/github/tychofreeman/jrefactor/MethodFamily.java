@@ -59,15 +59,17 @@ final class MethodFamily {
   }
 
   static MethodFamily of(SourceProject project, Args args) throws Exception {
-    return of(project, args, false, "so its parameters cannot change.");
+    return of(project, args, false, "so its parameters cannot change.", false);
   }
 
   /**
    * The family of the method {@code args} name. With {@code references}, a method reference is not
    * refused: one that implements the family is kept. {@code consequence} ends the refusal of a
-   * method that overrides a library's.
+   * method that overrides a library's. A varargs method is refused unless {@code varargs}: the
+   * tools that rewrite calls by position do not change one yet.
    */
-  static MethodFamily of(SourceProject project, Args args, boolean references, String consequence)
+  static MethodFamily of(
+      SourceProject project, Args args, boolean references, String consequence, boolean varargs)
       throws Exception {
     String rel = args.required("file");
     Path path = project.javaFile(rel);
@@ -95,7 +97,7 @@ final class MethodFamily {
     if (binding == null) {
       throw new Refusal(named.label() + " does not resolve; fix its compile errors first.");
     }
-    if (binding.isVarargs()) {
+    if (binding.isVarargs() && !varargs) {
       throw new Refusal(named.label() + " has varargs, which these tools do not change yet.");
     }
     MethodFamily family = new MethodFamily(named.label());

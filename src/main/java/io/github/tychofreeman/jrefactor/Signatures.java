@@ -281,22 +281,35 @@ final class Signatures {
 
   /**
    * change_type for a method: with parameter, that parameter's type; with return_type, the return
-   * type; in every declaration of the family, and in a lambda that writes the parameter's type.
-   * Calls are not edited: one the new type breaks is refused by the gate.
+   * type; in every declaration of the family, and in a lambda that writes the parameter's type. A
+   * last parameter's type may be varargs ({@code T...}), and a varargs parameter may become {@code
+   * T[]} or {@code T}. Calls are not edited: one the new type breaks is refused by the gate.
    */
   static Outcome changeType(SourceProject project, Args args) throws Exception {
     String type = args.required("type");
-    parsesAs("type", type, "class X { " + type + " x; }");
+    String element = varargsElement(type);
+    boolean varargs = element != null;
+    String written = varargs ? element : type;
     boolean returns = args.flag("return_type");
     Precondition.require(
         Precondition.that(
             () -> returns != args.has("parameter"),
             () ->
                 "change_type of a method takes parameter (whose type to change) or return_type=true,"
-                    + " not both."));
-    MethodFamily family = MethodFamily.of(project, args);
+                    + " not both."),
+        Precondition.that(
+            () -> !(returns && varargs),
+            () ->
+                "a return type cannot be varargs: "
+                    + type
+                    + " is the form of a method's last parameter only. Pass "
+                    + element
+                    + "[] to return an array."));
+    parsesAs("type", written, "class X { " + written + " x; }");
+    MethodFamily family =
+        MethodFamily.of(project, args, false, "so its parameters cannot change.", true);
     SignatureChange change = new SignatureChange(family);
-    checkTypeDecidedUses(family, args, type, returns);
+    checkTypeDecidedUses(family, args, varargs ? element + "[]" : type, returns);
     if (returns) {
       for (Decl d : family.decls) {
         requireReturnType(d, family);
@@ -317,16 +330,24 @@ final class Signatures {
     }
     String parameter = args.required("parameter");
     int at = family.index(parameter, "parameter", false);
+    Precondition.require(
+        Precondition.that(
+            () -> !varargs || at == family.size - 1,
+            () ->
+                "only the last parameter can be varargs: "
+                    + parameter
+                    + " is parameter "
+                    + (at + 1)
+                    + " of "
+                    + family.size
+                    + " of "
+                    + family.label
+                    + ". Pass "
+                    + element
+                    + "[], or move it last first with move_parameter."));
     for (Decl d : family.decls) {
       SingleVariableDeclaration p = (SingleVariableDeclaration) d.m().parameters().get(at);
       Precondition.require(
-          Precondition.that(
-              () -> !p.isVarargs(),
-              () ->
-                  parameter
-                      + " of "
-                      + family.label
-                      + " is varargs. Change it with replace_declaration."),
           Precondition.that(
               () -> p.extraDimensions().isEmpty(),
               () ->
@@ -334,7 +355,16 @@ final class Signatures {
                       + " of "
                       + family.label
                       + " writes its [] after its name. Write it after the type first."));
-      change.replace(d.file(), p.getType(), type);
+      if (p.isVarargs() == varargs) {
+        change.replace(d.file(), p.getType(), written);
+      } else {
+        // The ... is written between the type and the name: both go, as one edit.
+        change.replaceRange(
+            d.file(),
+            p.getType().getStartPosition(),
+            p.getName().getStartPosition(),
+            written + (varargs ? "... " : " "));
+      }
     }
     for (Lambda l : family.lambdas) {
       if (l.typed()) {
@@ -352,7 +382,7 @@ final class Signatures {
         "changed the type of " + parameter + " of " + family.label + " to " + type,
         "changing the type of " + parameter + " of " + family.label + " to " + type,
         ChangeType.wildcardFix(
-            type,
+            written,
             ((SingleVariableDeclaration) family.target.parameters().get(at)).getType().toString(),
             parameter,
             SignatureChange.FIX),
@@ -1141,5 +1171,11 @@ final class Signatures {
   /** Whether evaluating {@code e} may throw where it stands, by {@link Effects#mayThrow()}. */
   private static boolean mayThrow(Expression e) {
     return !Effects.of(e).mayThrow().isEmpty();
+  }
+
+  /** The element type of a varargs type as written ({@code Path} of {@code Path...}), or null. */
+  static String varargsElement(String type) {
+    String t = type.strip();
+    return t.endsWith("...") ? t.substring(0, t.length() - 3).strip() : null;
   }
 }
