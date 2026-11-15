@@ -112,7 +112,10 @@ final class InlineFunction {
 
     Path declaringFile = file;
     String declaringText = text;
-    Holding holding = Holding.of(project, member, file);
+    // The files that name the method: by its name alone, as a call does not write its parameter
+    // types; a call of another overload is then told apart by its binding.
+    Holding holding = Holding.of(project, q.name(), file);
+
     Map<Path, String> texts = holding.texts();
     Map<Path, CompilationUnit> parsed = holding.units();
 
