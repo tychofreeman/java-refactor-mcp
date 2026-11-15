@@ -8,14 +8,24 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -51,19 +61,19 @@ final class Check {
 
   /** Runs the named test classes of the project at a root. */
   interface Runner {
-    Run run(Path root, List<String> classes) throws IOException;
+    Run run(Path root, List<String> classes, int seconds) throws IOException;
   }
 
   /** The check tool: the project's compile errors, and with run_tests the session's tests. */
   static Outcome run(SourceProject project, Args args) throws Exception {
     Map<TypeCheck.Problem, Integer> errors = TypeCheck.errors(project);
     StringBuilder said = new StringBuilder(errors(errors));
-    if (args.flag("run_tests")) {
+    if (args.flag("run_tests") || !args.list("tests").isEmpty()) {
       Set<Path> changed = new LinkedHashSet<>();
       for (Journal.Entry entry : project.session().done) {
         changed.addAll(entry.after().keySet());
       }
-      said.append("\n").append(tests(project, changed, "this session's changes").text());
+      said.append("\n").append(tests(project, args, changed, "this session's changes").text());
     }
     return Outcome.of(said.toString());
   }
@@ -91,8 +101,8 @@ final class Check {
       }
       said += check.declared().text();
     }
-    if (args.flag("run_tests")) {
-      Tests tests = tests(project, Journal.written(project).keySet(), "the batch's changes");
+    if (args.flag("run_tests") || !args.list("tests").isEmpty()) {
+      Tests tests = tests(project, args, Journal.written(project).keySet(), "the batch's changes");
       if (tests.run() != null && !tests.run().passed()) {
         throw new Refusal(
             tests.text() + "\nFix the code or the test in steps before the check, or check later.");
@@ -105,77 +115,60 @@ final class Check {
   /** The tests a change reached, as a report says them, and their run, if any ran. */
   private record Tests(String text, Run run) {}
 
-  /** Runs the test classes that {@code changed} reaches; {@code what} names the changes. */
-  private static Tests tests(SourceProject project, Collection<Path> changed, String what)
-      throws IOException {
+  /**
+   * Runs the tests {@code args} names, or else the test classes that use the files {@code changed}
+   * ({@code what} names them), for the seconds its {@code timeout} gives, {@link #TIMEOUT} if none.
+   */
+  private static Tests tests(
+      SourceProject project, Args args, Collection<Path> changed, String what) throws IOException {
     Path root = project.root();
     if (!MavenBuild.isMaven(root)) {
       throw new Refusal(
-          "run_tests runs the tests through Maven, and the project has no pom.xml; check without"
-              + " run_tests reports the compile errors.");
+          "check runs the tests through Maven, and the project has no pom.xml; check without"
+              + " run_tests and tests reports the compile errors.");
     }
-    List<String> classes = focused(root, changed);
-    if (classes.isEmpty()) {
-      return new Tests("no test class reaches " + what + ", so no test ran", null);
+    Integer timeout = args.integer("timeout");
+    if (timeout != null && timeout <= 0) {
+      throw new Refusal(
+          "timeout is the seconds the tests may run, more than 0; got " + timeout + ".");
     }
-    Run run = project.session().tests.run(root, classes);
-    String ran = String.join(", ", classes.stream().map(Names::simpleName).toList());
-    if (run.problem() != null) {
-      return new Tests("Maven failed running the tests of " + ran + ":\n" + run.problem(), run);
-    }
-    if (run.failures().isEmpty()) {
+    List<String> named = args.list("tests");
+    List<String> tests = named.isEmpty() ? focused(project, changed) : named;
+    if (tests.isEmpty()) {
       return new Tests(
-          Names.plural(run.tests(), "test") + " of " + ran + " passed (those " + what + " reach)",
+          "no test uses " + what + ", so no test ran; tests names the tests to run", null);
+    }
+    Run run = project.session().tests.run(root, tests, timeout == null ? TIMEOUT : timeout);
+    String ran =
+        String.join(", ", named.isEmpty() ? tests.stream().map(Names::simpleName).toList() : named);
+    String which = named.isEmpty() ? " (those that use " + what + ")" : "";
+    String failed = String.join("\n  ", run.failures().stream().map(Failure::text).toList());
+    if (run.problem() != null) {
+      return new Tests(
+          "the tests of "
+              + ran
+              + which
+              + " "
+              + run.problem()
+              + (failed.isEmpty() ? "" : "\nFailed before then:\n  " + failed),
           run);
     }
-    return new Tests(
-        Names.plural(run.failures().size(), "test")
-            + " of "
-            + run.tests()
-            + " failed, in "
-            + ran
-            + ":\n  "
-            + String.join("\n  ", run.failures().stream().map(Failure::text).toList()),
-        run);
-  }
-
-  /**
-   * The test classes, by qualified name, that {@code changed} reaches: each Java file changed under
-   * {@code src/test/java}, and each file there that names a type a changed main file declares (by
-   * the simple name of its file, a word of the test's text). In the order of their paths.
-   */
-  static List<String> focused(Path root, Collection<Path> changed) throws IOException {
-    Path main = root.resolve("src/main/java");
-    Path test = root.resolve("src/test/java");
-    Set<Path> tests = new LinkedHashSet<>();
-    List<Pattern> names = new ArrayList<>();
-    for (Path file : changed) {
-      String name = file.getFileName().toString();
-      if (!name.endsWith(".java") || name.equals("module-info.java")) {
-        continue;
-      }
-      if (file.startsWith(test) && Files.isRegularFile(file)) {
-        tests.add(file);
-      } else if (file.startsWith(main)) {
-        String type = name.substring(0, name.length() - ".java".length());
-        names.add(Pattern.compile("\\b" + Pattern.quote(type) + "\\b"));
-      }
+    if (!failed.isEmpty()) {
+      return new Tests(
+          Names.plural(run.failures().size(), "test")
+              + " of "
+              + run.tests()
+              + " failed, in "
+              + ran
+              + which
+              + ":\n  "
+              + failed,
+          run);
     }
-    if (!names.isEmpty() && Files.isDirectory(test)) {
-      try (Stream<Path> files = Files.walk(test)) {
-        for (Path file : files.filter(f -> f.toString().endsWith(".java")).sorted().toList()) {
-          String text = Files.readString(file);
-          if (names.stream().anyMatch(n -> n.matcher(text).find())) {
-            tests.add(file);
-          }
-        }
-      }
+    if (run.tests() == 0) {
+      return new Tests("no test of " + ran + " ran; tests takes classes or surefire patterns", run);
     }
-    return tests.stream()
-        .sorted()
-        .map(f -> test.relativize(f).toString())
-        .map(r -> r.substring(0, r.length() - ".java".length()).replace(File.separatorChar, '.'))
-        .toList();
+    return new Tests(Names.plural(run.tests(), "test") + " of " + ran + which + " passed", run);
   }
 
   /** The compile errors as a report says them: how many, then the first few. */
@@ -201,6 +194,9 @@ final class Check {
 
   /** A frame of a stack trace: its class and method, then its file and line. */
   private static final Pattern FRAME = Pattern.compile("at ([\\w.$]+)\\.[\\w$<>]+\\(([^)]*)\\)");
+
+  /** The seconds tests may run when check is given no timeout. */
+  static final int TIMEOUT = 30;
 
   /**
    * The failed tests a surefire report ({@code TEST-*.xml}) lists, and how many tests it ran. A
@@ -258,10 +254,10 @@ final class Check {
   }
 
   /**
-   * Runs {@code classes} through Maven ({@code test -Dtest=...}) in {@code root}, for as long as it
-   * takes, and reads the reports surefire wrote for them.
+   * Runs {@code tests} (classes or surefire patterns) through Maven ({@code test -Dtest=...}) in
+   * {@code root}, stopping it after {@code seconds}, and reads the reports surefire wrote.
    */
-  static Run maven(Path root, List<String> classes) throws IOException {
+  static Run maven(Path root, List<String> tests, int seconds) throws IOException {
     Path log = Files.createTempFile("jrefactor-test", ".log");
     try {
       List<String> command = new ArrayList<>(MavenBuild.maven(root));
@@ -269,7 +265,7 @@ final class Check {
           List.of(
               "-B",
               "test",
-              "-Dtest=" + String.join(",", classes),
+              "-Dtest=" + String.join(",", tests),
               "-Dsurefire.failIfNoSpecifiedTests=false",
               "-DfailIfNoTests=false"));
       FileTime start = FileTime.fromMillis(System.currentTimeMillis() - 1000);
@@ -280,36 +276,134 @@ final class Check {
               .redirectOutput(log.toFile())
               .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
               .start();
+      boolean finished;
       try {
-        process.waitFor();
+        finished = process.waitFor(seconds, TimeUnit.SECONDS);
+        if (!finished) {
+          process.descendants().forEach(ProcessHandle::destroyForcibly);
+          process.destroyForcibly();
+          process.waitFor();
+        }
       } catch (InterruptedException e) {
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
         process.destroyForcibly();
         Thread.currentThread().interrupt();
         throw new IOException("interrupted while Maven ran the tests", e);
       }
-      int tests = 0;
+      int count = 0;
       List<Failure> failures = new ArrayList<>();
       Path reports = root.resolve("target/surefire-reports");
-      for (String name : classes) {
-        Path report = reports.resolve("TEST-" + name + ".xml");
-        if (Files.isRegularFile(report)
-            && Files.getLastModifiedTime(report).compareTo(start) >= 0) {
-          Run one = report(Files.readString(report));
-          tests += one.tests();
-          failures.addAll(one.failures());
+      if (Files.isDirectory(reports)) {
+        try (Stream<Path> files = Files.list(reports)) {
+          for (Path report : files.sorted().toList()) {
+            String name = report.getFileName().toString();
+            if (name.startsWith("TEST-")
+                && name.endsWith(".xml")
+                && Files.getLastModifiedTime(report).compareTo(start) >= 0) {
+              Run one = report(Files.readString(report));
+              count += one.tests();
+              failures.addAll(one.failures());
+            }
+          }
         }
       }
       String problem =
-          process.exitValue() != 0 && failures.isEmpty()
-              ? String.join(" ", command)
-                  + " failed (exit "
-                  + process.exitValue()
-                  + "):\n"
-                  + MavenBuild.tail(log)
-              : null;
-      return new Run(tests, failures, problem);
+          !finished
+              ? "ran past "
+                  + seconds
+                  + " s, and Maven was stopped; pass timeout with more seconds to wait longer"
+              : process.exitValue() != 0 && failures.isEmpty()
+                  ? "could not run: Maven failed (exit "
+                      + process.exitValue()
+                      + "): "
+                      + String.join(" ", command)
+                      + "\n"
+                      + MavenBuild.tail(log)
+                  : null;
+      return new Run(count, failures, problem);
     } finally {
       Files.deleteIfExists(log);
     }
+  }
+
+  /**
+   * The test classes, by qualified name, that use the files {@code changed}: each Java file changed
+   * under {@code src/test/java}, and each file there whose code refers to a type a changed file of
+   * {@code src/main/java} declares, or to a member of one (by binding, so a name in a comment does
+   * not count). In the order of their paths.
+   */
+  static List<String> focused(SourceProject project, Collection<Path> changed) throws IOException {
+    Path main = project.root().resolve("src/main/java");
+    Path test = project.root().resolve("src/test/java");
+    Set<Path> tests = new TreeSet<>();
+    Set<String> types = new HashSet<>();
+    for (Path file : changed) {
+      String name = file.getFileName().toString();
+      if (!name.endsWith(".java") || name.equals("module-info.java")) {
+        continue;
+      }
+      if (file.startsWith(test) && Files.isRegularFile(file)) {
+        tests.add(file);
+      } else if (file.startsWith(main)) {
+        String rel = main.relativize(file).toString();
+        types.add(
+            rel.substring(0, rel.length() - ".java".length()).replace(File.separatorChar, '.'));
+        if (Files.isRegularFile(file)) {
+          CompilationUnit unit = Jdt.parseSyntax(Files.readString(file));
+          String pkg = Names.packageOf(unit);
+          for (Object type : unit.types()) {
+            String simple = ((AbstractTypeDeclaration) type).getName().getIdentifier();
+            types.add(pkg.isEmpty() ? simple : pkg + "." + simple);
+          }
+        }
+      }
+    }
+    if (!types.isEmpty() && Files.isDirectory(test)) {
+      Set<String> simple = types.stream().map(Names::simpleName).collect(Collectors.toSet());
+      Holding holding =
+          Holding.where(
+              project,
+              (file, text) ->
+                  file.startsWith(test)
+                      && !tests.contains(file)
+                      && simple.stream().anyMatch(text::contains));
+      holding
+          .units()
+          .forEach((file, unit) -> {
+            if (uses(unit, types)) {
+              tests.add(file);
+            }
+          });
+    }
+    return tests.stream()
+        .map(f -> test.relativize(f).toString())
+        .map(r -> r.substring(0, r.length() - ".java".length()).replace(File.separatorChar, '.'))
+        .toList();
+  }
+
+  /**
+   * Whether {@code unit} refers to a type whose top-level type is one of {@code types} (qualified
+   * names), or to a method or field of one.
+   */
+  private static boolean uses(CompilationUnit unit, Set<String> types) {
+    for (SimpleName name : Nodes.all(unit, SimpleName.class)) {
+      ITypeBinding owner =
+          switch (name.resolveBinding()) {
+            case ITypeBinding t -> t;
+            case IMethodBinding m -> m.getDeclaringClass();
+            case IVariableBinding v when v.isField() -> v.getDeclaringClass();
+            case null, default -> null;
+          };
+      if (owner != null && owner.isArray()) {
+        owner = owner.getElementType();
+      }
+      if (owner != null
+          && !owner.isPrimitive()
+          && !owner.isTypeVariable()
+          && types.contains(Names.outermost(owner).getQualifiedName())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

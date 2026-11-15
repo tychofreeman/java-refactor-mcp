@@ -2116,15 +2116,22 @@ field, an instance getter or setter that would override a method of the class's 
   errors`, or `N compile errors:` and the first ten, `rel | message (xN)`, then `and M more`.
   Read-only: it writes no source (Maven writes `target/`).
 - `run_tests` runs, through Maven (`./mvnw`, else `mvn`; `test -Dtest=<classes>`), the test
-  classes the changes reach, for as long as the run takes (the user's comment on #367): each
-  changed Java file under `src/test/java`, and each file there whose text names, as a word, the
-  file name of a changed file under `src/main/java`. Alone, the changes are the files of this
+  classes that use the changed files (the user, 2026-11-15): each changed Java file under
+  `src/test/java`, and each file there whose code refers, by binding, to a type declared in a
+  changed file under `src/main/java` or to a member of one (a name in a comment does not count;
+  a use through other main classes does not either). Alone, the changes are the files of this
   session's changes (the undo history, from the command line too); as a batch step, the files the
-  batch wrote so far. A failure is named from surefire's report as `Class.method (File.java:N):
-  message`, its line the first frame in the test's class; Maven failing with no report (a
-  compile error) gives its last lines. `N tests of A, B passed (those ... reach)`, or `no test
-  class reaches ..., so no test ran`.
-- Refused: `run_tests` in a project with no `pom.xml`.
+  batch wrote so far.
+- `tests` (a list of classes or surefire patterns, `CartTest`, `CartTest#totals`) runs those in
+  place of the focused set, and implies `run_tests`. `timeout` (seconds, 30 by default) stops
+  Maven and the processes it started once it passes: `the tests of A, B ran past 30 s, and Maven
+  was stopped; pass timeout with more seconds to wait longer`, with any failures reported before.
+- A failure is named from surefire's reports (every `TEST-*.xml` the run wrote) as `Class.method
+  (File.java:N): message`, its line the first frame in the test's class; Maven failing with no
+  report (a compile error) gives `could not run: Maven failed (exit N): ...` and its last lines.
+  `N tests of A, B (those that use ...) passed`, `no test uses ..., so no test ran; tests names
+  the tests to run`, or `no test of <tests> ran` when the patterns matched none.
+- Refused: tests to run in a project with no `pom.xml`; a `timeout` of 0 or less.
 - As a batch step it is a checkpoint (see `batch`).
 
 ## `undo` (built)
