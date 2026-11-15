@@ -612,6 +612,17 @@ compile), placed as `add_declaration` places a method (gorefactor puts it after 
 literals are numbers, strings, characters and text blocks (Go's `BasicLit`; `true`, `false`,
 `null` and class literals are not constants here, as Go's `true` is a name); each literal is its
 own parameter, also when two of them have the same values in every method, as gorefactor's.
+
+**Decided (2026-11-15, the owner, issue #528 item 3): `Build.Entry` keeps one class, its kind an
+enum `Build.Kind` tested with `==` and switches** (option (C)), over (A) a sealed interface of
+records (Typed, Call, New, Loop, Guard) with what drafting decides in a separate `Decision` value
+that `Draft` carries (the cleanest shape, and the BuildSpec / Draft split follows from it, but every
+place `scope`, `walk`, `types` and `render` sets a decided field is rewritten, with a copy per
+draft) and over (B) a sealed interface of final mutable classes, one per kind (the string tests go
+and dispatch is by pattern, but the decided fields stay mutable and BuildSpec and Draft stay
+tangled). (C) removes the 15 `kind.equals` tests at the least cost and risk; there is no
+BuildSpec/Draft split. `Kind.toString()` is the key the build names it by, so refusals read as
+before.
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

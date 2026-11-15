@@ -744,7 +744,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `build` (#149, 2026-11-13) is `Build`: `Primitives.built` hands it the argument as sent
   (`Args.raw`), the range it replaces and the indentation; `Build.statements` returns the text
   and what it inferred (`Built.said()`, after the tool's usual line). An entry is an `Entry`
-  (`statement()` writes it; a new kind adds a key in `generator` and a case there). The drafts
+  (`statement()` writes it; its kind is a `Build.Kind`, the owner's option (C) of 2026-11-15
+  over sealed records or classes, `docs/design.md`; a new kind adds a constant, whose `toString` is
+  its key, and the switches' cases). The drafts
   are parsed after `Imports.fix`, so a type the build names resolves before it is imported;
   entries are found again by line (`Draft.at`), one statement starting per line. A golden case
   passes the list as `build.json`. A loop's body is decided one draft after its head
