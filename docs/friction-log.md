@@ -1930,6 +1930,20 @@ again.
 - `extract_function` of the throws block before the record took 11 parameters (the five argument
   values among them). Extracting the argument reading first (several results make a record),
   then inlining its locals, gave the later extractions one `Request` in their place.
+## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField and MoveMember)
+
+- No Java by hand. Replacing four parameters of `useEdit` with the record that holds them is a
+  composition: `add_parameter` of the record, then `remove_parameter` with `value`
+  `accessors.getter()` per parameter. It needs each call to pass exactly that expression, so the
+  caller's locals (`String getter = accessors.getter();`) had to be inlined first; before that
+  the removal was refused ("passes fieldKey, not accessors.fieldKey()"). `remove_parameter` could
+  accept an argument that is a local whose only value is the expression. The removed values stay
+  as locals at the top of the body, which suits a body that reads them often.
+- `MoveMember.rewrite`'s 10 parameters: `extract_type` of seven, then the same hoist by hand-free
+  edits (no tool moves a loop-invariant construction before the loop). An `extract_function` of
+  the moved text's edits took 10 parameters (the method, both files, both texts, the edits map,
+  the target): undone. The call-site visitor in `run` reads eight locals; no extraction helps
+  until those travel together.
 
 ## 2026-11-15: move-tools-split-2 (#528, item 6, InlineClass and MoveToPackage)
 

@@ -482,6 +482,13 @@ Each was chosen from options; the record named beside it has the options it beat
   file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
   `MoveType` that needs them takes it, not the fields one by one.
 
+- `encapsulate_field` (`EncapsulateField`) reads the field's facts once into an `Accessors` record
+  (static, final, the getter's and setter's names, its key and type text; #528), which `useEdit`
+  and `accessorText` take; `declaration` finds the field, `makePrivate` writes its modifiers.
+- `move` of a method rewrites each call through `MoveMember.rewrite(site, text, MovedMethod, keep)`:
+  `MovedMethod` (#528) holds the source class's key and name, the target's name, the method's
+  name, whether it is static, and its key, built once in `run`.
+
 - `move` of a member type writes a read of a record's field that crosses the new boundary (a
   nested record's private fields are visible to the whole top-level type) as an accessor call
   (#192, issue #440, `MoveType.accessorCall`), refused when the accessor does more than return
