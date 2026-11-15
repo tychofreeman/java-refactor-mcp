@@ -1,0 +1,47 @@
+com/example/Words.java  (package com.example, 45 lines)
+
+source, method bodies elided (inspect with start_line/end_line, to read one):
+ 1  package com.example;
+ 2
+ 3  import java.util.List;
+ 4
+ 5  class Words {
+ 6    private int seen;
+ 7
+ 8    String join(List<String> words) {
+        … lines 9-13   [7 lines, complexity 2, nesting 1, no side effects]
+14    }
+15
+16    long blanks(List<String> words) {
+17      return words.stream().filter(String::isBlank).count();
+18    }
+        [3 lines, complexity 1, nesting 0, no side effects]
+19
+20    void see(List<String> words) {
+21      words.forEach(w -> seen++);
+22    }
+        [3 lines, complexity 1, nesting 0, side effects: assigns to seen]
+23
+24    double area(Shape shape) {
+25      return Math.abs(shape.area());
+26    }
+        [3 lines, complexity 1, nesting 0, side effects: calls shape.area]
+27
+28    Runnable greeter() {
+29      return () -> System.out.println("hello");
+30    }
+        [3 lines, complexity 1, nesting 0, side effects: calls System.out.println]
+31
+32    int[] copy(int[] from) {
+        … lines 33-35   [5 lines, complexity 1, nesting 0, no side effects]
+36    }
+37
+38    void sort(int[] numbers) {
+39      java.util.Arrays.sort(numbers);
+40    }
+        [3 lines, complexity 1, nesting 0, side effects: calls java.util.Arrays.sort]
+41
+42    interface Shape {
+43      double area();
+44    }
+45  }

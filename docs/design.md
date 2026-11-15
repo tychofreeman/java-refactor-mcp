@@ -541,6 +541,23 @@ is the deepest stack of `if`s, loops and switches (statement or expression), an 
 closures do. Initializers get the facts as methods do. The count in the brackets is the
 declaration's lines, as gorefactor's, over the elided lines it had been.
 
+**Decided (2026-11-15, the owner, issue #369, roadmap #507): side effects in the outline follow
+calls everywhere,** as gorefactor's `analysis.Effects.Func` (option (b)), over (a) syntax only
+inside the body (cheap, but every call would count) and over (c) only for `inspect function`, not
+the outline. Defaults to reopen, taken where Java differs from Go: a call runs the method its
+binding names, overrides not followed (gorefactor's Go calls are static); lambdas and anonymous
+classes in a body count as part of it, wherever they run (gorefactor follows only closures it
+knows run during the call); a local is fresh only when every value given it is a `new` (not a
+factory's result, as gorefactor's ownership analysis finds), and a chain of calls returning their
+receiver's type (`sb.append(a).append(b)`) is on its receiver; in a constructor, writes to the
+object's own fields are its own, but calls on them count; a default constructor, an enum's
+`values`/`valueOf` and a record's accessors have none; initializers get no side effects; the
+library list is `SideEffects.PURE_TYPES`, `PURE_METHODS`, `READS` and `FILLS`. A callee's file is
+parsed with only the bodies of the methods of the names wanted and those they call by name in the
+file (`SideEffects.trimmed`, `wanted`), all of a round's files in one batch (`Jdt.parseTexts`):
+on commons-lang this took the outline of files that call other project files from up to 9x to
+2.6-3.8x the outline without side effects.
+
 **Decided (2026-11-15, the owner's brief, issue #370, roadmap #205; defaults to reopen): `split`
 of a method into phases is gorefactor's kind `phase`, composed of the tools here.** What the first
 phase carries is the locals it declares that the rest reads, as gorefactor's struct holds; the

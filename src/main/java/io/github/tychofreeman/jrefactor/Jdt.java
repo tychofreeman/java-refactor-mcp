@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +14,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -351,5 +354,48 @@ final class Jdt {
     int close = Nodes.end(type) - 1;
     String end = type instanceof EnumDeclaration ? "; " : " ";
     return text.substring(0, close) + end + field + text.substring(close);
+  }
+
+  /**
+   * Parses {@code texts}, each the text a file of {@code project} is to be read as, in one batch
+   * that shares one environment as {@link #parseAll} does, and hands each unit to {@code each}
+   * under its file. The texts are written to a temporary directory for the parse, deleted after it.
+   */
+  static void parseTexts(
+      SourceProject project, Map<Path, String> texts, BiConsumer<Path, CompilationUnit> each)
+      throws IOException {
+    Path dir = Files.createTempDirectory("jrefactor-texts");
+    try {
+      Map<Path, Path> files = new LinkedHashMap<>();
+      for (Map.Entry<Path, String> t : texts.entrySet()) {
+        Path copy = dir.resolve(project.relative(t.getKey())).toAbsolutePath().normalize();
+        Files.createDirectories(copy.getParent());
+        Files.writeString(copy, t.getValue());
+        files.put(copy, t.getKey());
+      }
+      String[] encodings = new String[files.size()];
+      java.util.Arrays.fill(encodings, "UTF-8");
+      parser(project)
+          .createASTs(
+              files.keySet().stream().map(Path::toString).toArray(String[]::new),
+              encodings,
+              new String[0],
+              new FileASTRequestor() {
+                @Override
+                public void acceptAST(String sourceFilePath, CompilationUnit ast) {
+                  Path file = files.get(Path.of(sourceFilePath).toAbsolutePath().normalize());
+                  if (file != null) {
+                    ast.setProperty(FILE, file);
+                    ast.setProperty(SOURCE, texts.get(file));
+                    each.accept(file, ast);
+                  }
+                }
+              },
+              null);
+    } finally {
+      try (Stream<Path> walk = Files.walk(dir)) {
+        walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+      }
+    }
   }
 }

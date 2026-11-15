@@ -750,7 +750,14 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - The outline's facts (roadmap #506, 2026-11-15) are `Inspect.facts` and `Inspect.metrics`;
   `Inspect.bodies` lists every body as a `Body`, `first` 0 for one too short to elide, whose facts
-  `outline` writes after its last line. Side effects are not given yet: the owner chooses (#369).
+  `outline` writes after its last line.
+
+- Side effects in the outline (roadmap #507, 2026-11-15) are `SideEffects.of(project, unit)`:
+  each method's events (`Own` side effects, `Call`s of project methods) in source order, summarized
+  as gorefactor's `Effects.Func` (memoized; a call back into one being summarized counts). A callee's
+  file is read again with only the wanted bodies (`trimmed`, `wanted`) and all of a round's files in
+  one `Jdt.parseTexts` batch (texts written to a temporary directory, since `createASTs` reads
+  files). `Inspect.bodies` takes the map; `names` passes none (syntax only).
 
 - `split` (roadmap #205, issue #370, 2026-11-15) is `Split`: it calls `extract_function`,
   `move_parameter` and `extract_type` through `Tools.call` inside its own call (the journal nests,

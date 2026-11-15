@@ -18,19 +18,19 @@ source, method bodies elided (inspect with start_line/end_line, to read one):
 14    public Shapes() {
 15      areas.add(0.0);
 16    }
-        [3 lines, complexity 1, nesting 0]
+        [3 lines, complexity 1, nesting 0, side effects: calls areas.add]
 17
 18    /** Adds a circle of the given radius. */
 19    public void addCircle(double radius) {
-        … lines 20-21   [4 lines, complexity 1, nesting 0]
+        … lines 20-21   [4 lines, complexity 1, nesting 0, side effects: calls areas.add]
 22    }
 23
 24    public double total() {
-        … lines 25-29   [7 lines, complexity 2, nesting 1]
+        … lines 25-29   [7 lines, complexity 2, nesting 1, no side effects]
 30    }
 31
 32    public int size() { return areas.size(); }
-        [1 line, complexity 1, nesting 0]
+        [1 line, complexity 1, nesting 0, no side effects]
 33
 34    interface Shape {
 35      double area();
@@ -38,7 +38,7 @@ source, method bodies elided (inspect with start_line/end_line, to read one):
 37
 38    record Square(double side) implements Shape {
 39      public double area() {
-        … lines 40-41   [4 lines, complexity 1, nesting 0]
+        … lines 40-41   [4 lines, complexity 1, nesting 0, no side effects]
 42      }
 43    }
 44  }
