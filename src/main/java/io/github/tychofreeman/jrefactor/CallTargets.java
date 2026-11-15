@@ -134,18 +134,25 @@ final class CallTargets {
   }
 
   /**
-   * Where {@code d} stands in the parsed files; for a constructor nothing declares, its type's
-   * place; for a declaration outside them, which the change does not edit, its key. An anonymous
-   * class's constructor is its own each time, and its key holds its supertype: it is not compared.
+   * Where {@code d} stands in the parsed files; for a constructor or a record accessor nothing
+   * declares, its type's place; for a declaration outside them, which the change does not edit, its
+   * key. An anonymous class's constructor is its own each time, and its key holds its supertype: it
+   * is not compared.
    */
   private static String place(IMethodBinding d, Map<String, String> places) {
     if (d.getDeclaringClass().isAnonymous()) {
       return "anonymous";
     }
     String at = places.get(d.getKey());
-    if (at == null && d.isDefaultConstructor()) {
+    if (at == null
+        && (d.isDefaultConstructor()
+            || d.isCanonicalConstructor()
+            || d.isSyntheticRecordMethod())) {
       String type = places.get(d.getDeclaringClass().getTypeDeclaration().getKey());
-      at = type == null ? null : type + " default constructor";
+      at =
+          type == null
+              ? null
+              : type + (d.isConstructor() ? " default constructor" : " " + d.getName());
     }
     return at == null ? d.getKey() : at;
   }

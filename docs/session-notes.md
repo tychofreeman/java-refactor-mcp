@@ -857,6 +857,10 @@ Each was chosen from options; the record named beside it has the options it beat
   the `Holding` parse: `MethodFamily.of` with references kept; each call's and reference's types
   (`types`: return and parameters by qualified name) are read before the write and compared after
   by its kind and number in its file (`ordinals`, one walk per file, #529), since the declarations' edits move offsets.
+  A record or an interface as the class, and a method of a record (#375, 2026-11-15) go the same
+  way: the declaration through `TypeParameters.typeParameters(AbstractTypeDeclaration)`, a record
+  component in `members` through `componentTypes` (component, accessor, canonical constructor,
+  which Java keeps alike), an interface's fields counted static by `staticMember`.
   `change_type` with `type_parameter` (#159) is `TypeParameters.bound`, which `Tools.changeType`
   routes to first: the bound is the text after the `TypeParameter`'s name, replaced in each
   declaration (one for a class, the family's for a method); casts to the parameter are found by
