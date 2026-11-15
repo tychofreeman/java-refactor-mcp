@@ -1,0 +1,10 @@
+com/example/Grade.java  (package com.example, 26 lines)
+
+source, method bodies elided (inspect with start_line/end_line, to read one):
+ 1  package com.example;
+ 2
+ 3  class Grade {
+ 4    String of(int score, boolean late) {
+        … lines 5-24   [22 lines, complexity 11, nesting 3]
+25    }
+26  }

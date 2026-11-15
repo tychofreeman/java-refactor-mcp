@@ -279,9 +279,16 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
 
 - `file`: a header (`<file>  (package <pkg>, <n> lines)`), then every line
   numbered, except that each method, constructor and initializer body with two
-  inner lines or more is replaced by `… lines a-b   [n lines]`. Bodies of
-  methods in nested types are elided the same way. gorefactor also reports each
-  body's complexity, nesting and side effects; not yet here.
+  inner lines or more is replaced by `… lines a-b   [7 lines, complexity 2, nesting 1]`.
+  Bodies of methods in nested types are elided the same way. Since roadmap #506 (issue #369,
+  2026-11-15, gorefactor's format) the brackets give the declaration's lines (its Javadoc left
+  out; they had given the elided lines), the body's cyclomatic complexity and its nesting depth;
+  a body too short to elide gets the same brackets on a line after its last. Complexity is 1 and
+  one for each `if`, `for`, enhanced `for`, `while`, `do`, `catch`, `?:`, `case` other than
+  `default`, and `&&` or `||`; nesting is the deepest stack of `if`s (an `else if` no deeper than
+  its `if`), loops and switches; lambdas and classes in the body count toward both (defaults to
+  reopen, in `docs/design.md`). gorefactor also says whether calling the function has side
+  effects; not yet here (the owner's choice, issue #369).
 - `file` + `start_line`/`end_line`: those lines; `end_line` defaults to, and is
   clamped to, the end of the file.
 - Refused: a path that is not a `.java` file under the root; a file that does
@@ -330,7 +337,7 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   between; one refused reads `target N: <refusal>` in its place, as gorefactor's. Refused:
   `targets` with `file`, `function` or a line range; a target with another key (`targets` of its
   own included) is refused in its place.
-- Not yet: each body's complexity, nesting and side effects.
+- Not yet: each body's side effects.
 
 ## `rename` (built)
 
