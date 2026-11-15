@@ -1,17 +1,11 @@
 package io.github.tychofreeman.jrefactor;
 
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -613,66 +607,6 @@ final class Signatures {
   }
 
   /**
-   * The binding keys of {@code binding}'s family in {@code units}: every declaration it overrides
-   * or that overrides it, transitively. Refuses when one of them overrides a library method:
-   * "{@code Name.compareTo(Name) overrides compareTo in java.lang.Comparable, which is not the
-   * project's, }" then {@code consequence}.
-   */
-  static Set<String> family(
-      SourceProject project,
-      Collection<CompilationUnit> units,
-      IMethodBinding binding,
-      String consequence) {
-    Map<String, Set<String>> links = new HashMap<>();
-    Map<String, IMethodBinding> declared = new HashMap<>();
-    Map<String, IMethodBinding> library = new HashMap<>();
-    for (CompilationUnit unit : units) {
-      unit.accept(
-          new ASTVisitor() {
-            @Override
-            public boolean visit(MethodDeclaration m) {
-              IMethodBinding b = m.resolveBinding();
-              if (b != null) {
-                String k = key(b);
-                declared.put(k, b);
-                for (IMethodBinding over : Hierarchy.overridden(b)) {
-                  String o = key(over);
-                  links.computeIfAbsent(k, x -> new HashSet<>()).add(o);
-                  links.computeIfAbsent(o, x -> new HashSet<>()).add(k);
-                  if (!projects(project, over.getDeclaringClass())) {
-                    library.put(k, over);
-                  }
-                }
-              }
-              return true;
-            }
-          });
-    }
-    Set<String> keys = new TreeSet<>();
-    Deque<String> todo = new ArrayDeque<>(List.of(key(binding)));
-    while (!todo.isEmpty()) {
-      String k = todo.pop();
-      if (keys.add(k)) {
-        todo.addAll(links.getOrDefault(k, Set.of()));
-      }
-    }
-    for (String k : keys) {
-      IMethodBinding over = library.get(k);
-      if (over != null) {
-        throw new Refusal(
-            Names.methodLabel(declared.get(k))
-                + " overrides "
-                + over.getName()
-                + " in "
-                + over.getDeclaringClass().getErasure().getQualifiedName()
-                + ", which is not the project's, "
-                + consequence);
-      }
-    }
-    return keys;
-  }
-
-  /**
    * Whether {@code type} is declared in one of the project's source files: one parsed from source
    * (the parse reads only the project's source roots), as a second top-level class of a file is, or
    * one in the file its name implies.
@@ -682,11 +616,6 @@ final class Signatures {
       return true;
     }
     return project.fileOf(type) != null;
-  }
-
-  /** The key that names {@code b}'s declaration in every file's bindings. */
-  static String key(IMethodBinding b) {
-    return b.getMethodDeclaration().getKey();
   }
 
   /** The offset just after the first "(" following {@code node}. */
@@ -886,41 +815,6 @@ final class Signatures {
     Outcome outcome = change.apply(project, done, imports, fix, -1, doing);
     targets.require(project, doing);
     return outcome;
-  }
-
-  /**
-   * The constructor a construction runs: {@code b} itself, or for an anonymous class ({@code new
-   * T(...) {...}}, an enum constant with a body), whose own constructor {@code b} is, the
-   * constructor of its superclass that the arguments go to: the one with {@code b}'s parameter
-   * types, else the only one that takes as many. Null when there is none.
-   */
-  static IMethodBinding constructed(IMethodBinding b) {
-    if (b == null || !b.getDeclaringClass().isAnonymous()) {
-      return b;
-    }
-    ITypeBinding superclass = b.getDeclaringClass().getSuperclass();
-    if (superclass == null) {
-      return null;
-    }
-    List<IMethodBinding> sameCount = new ArrayList<>();
-    for (IMethodBinding m : superclass.getDeclaredMethods()) {
-      if (!m.isConstructor() || m.getParameterTypes().length != b.getParameterTypes().length) {
-        continue;
-      }
-      sameCount.add(m);
-      boolean same = true;
-      for (int i = 0; i < m.getParameterTypes().length; i++) {
-        same &=
-            m.getParameterTypes()[i]
-                .getErasure()
-                .getKey()
-                .equals(b.getParameterTypes()[i].getErasure().getKey());
-      }
-      if (same) {
-        return m;
-      }
-    }
-    return sameCount.size() == 1 ? sameCount.get(0) : null;
   }
 
   /**

@@ -171,13 +171,13 @@ final class ThrowsCallers {
         boolean reference = n instanceof MethodReference;
         if (n instanceof MethodDeclaration m && m.resolveBinding() != null) {
           declared.put(
-              Signatures.key(m.resolveBinding()),
+              MethodFamily.key(m.resolveBinding()),
               new Signatures.Decl(
                   s, m, m.resolveBinding(), Signatures.open(s.text(), m.getName())));
         }
         if (b != null) {
           (reference ? references : calls)
-              .computeIfAbsent(Signatures.key(b), k -> new ArrayList<>())
+              .computeIfAbsent(MethodFamily.key(b), k -> new ArrayList<>())
               .add(new Site(s, n));
         }
       }
@@ -238,8 +238,8 @@ final class ThrowsCallers {
     Set<String> throwing = new HashSet<>();
     Deque<String> queue = new ArrayDeque<>();
     for (Signatures.Decl d : initial) {
-      if (throwing.add(Signatures.key(d.binding()))) {
-        queue.add(Signatures.key(d.binding()));
+      if (throwing.add(MethodFamily.key(d.binding()))) {
+        queue.add(MethodFamily.key(d.binding()));
       }
     }
     while (!queue.isEmpty()) {
@@ -331,7 +331,7 @@ final class ThrowsCallers {
 
   /** Whether {@code b} throws the exception already, or will. */
   private static boolean allows(IMethodBinding b, Set<String> supers, Set<String> throwing) {
-    if (throwing.contains(Signatures.key(b))) {
+    if (throwing.contains(MethodFamily.key(b))) {
       return true;
     }
     for (ITypeBinding t : b.getExceptionTypes()) {
@@ -364,12 +364,12 @@ final class ThrowsCallers {
    */
   private boolean declare(
       IMethodBinding b, String name, Set<String> throwing, Deque<String> queue) {
-    if (!declared.containsKey(Signatures.key(b))) {
+    if (!declared.containsKey(MethodFamily.key(b))) {
       return false;
     }
     Set<String> keys;
     try {
-      keys = Signatures.family(project, units, b, "");
+      keys = MethodFamily.family(project, units, b, "");
     } catch (Refusal library) {
       return false;
     }
