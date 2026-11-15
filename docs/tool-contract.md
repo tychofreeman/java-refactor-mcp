@@ -1777,7 +1777,10 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   resolves to the same method; 2026-11-05);
   a body that names a static member of its class by its simple name when a call is in another
   class (a use qualified by a type, `Keys.declared(b)`, means the same there and is inlined as
-  written; issue #621). Each
+  written; issue #621). A call through a single static import (`import static p.Keys.erased;`)
+  is inlined too, and the import goes with the method's last use in that file (issue #644: the
+  import fix drops a single static import whose name an edit leaves unused, as it drops a type
+  import; an on-demand `import static p.Keys.*;` stays). Each
   argument the behavior gate (below) refuses in place, or that `checkOrder` finds out
   of order, is bound to a local before the call's statement instead (roadmap #102),
   with every earlier argument that is not fixed, so they run once, in order: the

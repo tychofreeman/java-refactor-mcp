@@ -363,6 +363,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - `Imports.fix` is `render(after, plan(...))` (#522): `plan` finds and chooses (a `Plan` of the
   imports to add and remove), `render` lays them out; a caller that needs only what would change
   calls `plan`. It parses `before` once, with bindings; read names and imports from that unit.
+  An import whose simple name the file used before the edit and not after is removed: a type
+  import, and since #644 (2026-11-15, a default to reopen) a single static import too, so
+  `inline` through `import static p.Keys.erased;` drops it; an on-demand import stays.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
