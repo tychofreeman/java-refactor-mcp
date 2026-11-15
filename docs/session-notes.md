@@ -568,6 +568,12 @@ Each was chosen from options; the record named beside it has the options it beat
   A new rewrite starts from `declarationBefore`, `segments` and `beforeInitializer`, counts with
   `uses`, and lays out through `layout` (#516), one rule for every form but `forEach`.
 
+- `SignatureChange.apply` has one form (roadmap #510, 2026-11-15): `what` for the result, in the
+  past tense ("added int retries to ..."), and `doing` for the gate's refusal, in the present
+  participle ("adding int retries to ...", "would add compile errors, so nothing was changed"),
+  with `fix` (`SignatureChange.FIX` by default) and `declarations` (-1 to count the calls). The
+  shorter overloads that passed `what` as `doing` were inlined away, so a new caller must word both.
+
 - `MethodFamily.of` refuses a varargs method unless its `varargs` argument is true (#614,
   2026-11-15): only `change_type` passes true, since it edits no call; a tool that rewrites calls
   by position must handle the varargs arguments before it passes true. `change_type`'s `T...` is

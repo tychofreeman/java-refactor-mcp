@@ -93,6 +93,11 @@ used to repeat: a change that would add compile errors is refused; a refusal cha
 and says why and what to send instead; edits declare stubs (a constructor stub sets the fields
 its arguments each fit, 2026-11-07), write the constructor of final fields they leave unset in a
 class without one (2026-11-07), and fix imports; lines are 1-based.
+The gate's refusal names the change in the present participle, since nothing was changed:
+"adding int retries to Fetcher.fetch(String) would add compile errors, so nothing was changed"
+(the signature tools since 2026-11-15, roadmap 510: `add_parameter`, `remove_parameter`,
+`move_parameter`, `change_type`, `change_signature`, `extract_type`, `function_to_method`); the
+applied result keeps the past tense ("added int retries to ...").
 A description says what its tool does; the refusals each tool makes are listed in its section
 here, not in its description (the user, 2026-11-06).
 

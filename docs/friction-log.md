@@ -1980,3 +1980,10 @@ again.
   takes six parameters. A refusal built by a method and thrown at the call
   (`throw unconvertible(...)`) would be the shape; `extract_function` could offer it for a block
   that ends in `throw`.
+
+## 2026-11-15: signature-refusal-doing (roadmap 510)
+
+- No Java by hand. `inline` of a local used once as a method argument
+  (`String what = "a" + b; apply(project, what, ...)`) wrote `apply(project, ("a" + b), ...)`: the
+  parentheses an operand needs are not needed by an argument. Four `replace_expression`s took them
+  off (`ChangeSignature`, `ExtractType`, `FunctionToMethod`, `Signatures.removeParameter`).

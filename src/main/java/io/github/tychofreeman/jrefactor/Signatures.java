@@ -115,7 +115,12 @@ final class Signatures {
       change.lambda(l, params);
     }
     return change.apply(
-        project, "added " + type + " " + parameter + " to " + family.label, args.list("imports"));
+        project,
+        "added " + type + " " + parameter + " to " + family.label,
+        args.list("imports"),
+        SignatureChange.FIX,
+        -1,
+        "adding " + type + " " + parameter + " to " + family.label);
   }
 
   /**
@@ -195,7 +200,12 @@ final class Signatures {
       change.lambda(l, params);
     }
     return change.apply(
-        project, "removed " + args.required("parameter") + " from " + family.label, List.of());
+        project,
+        "removed " + args.required("parameter") + " from " + family.label,
+        List.of(),
+        SignatureChange.FIX,
+        -1,
+        "removing " + args.required("parameter") + " from " + family.label);
   }
 
   static Outcome moveParameter(SourceProject project, Args args) throws Exception {
@@ -276,7 +286,14 @@ final class Signatures {
             + (before == null ? " to last" : " before " + before)
             + " in "
             + family.label,
-        List.of());
+        List.of(),
+        SignatureChange.FIX,
+        -1,
+        "moving "
+            + parameter
+            + (before == null ? " to last" : " before " + before)
+            + " in "
+            + family.label);
   }
 
   /**
@@ -776,7 +793,10 @@ final class Signatures {
     return change.apply(
         project,
         "removed " + parameter + " from " + family.label + "; its body reads " + read,
-        List.of());
+        List.of(),
+        SignatureChange.FIX,
+        -1,
+        "removing " + parameter + " from " + family.label + " (its body reading " + read + ")");
   }
 
   /**
@@ -1039,7 +1059,19 @@ final class Signatures {
       change.remove(c.file(), c.arguments(), at);
     }
     Outcome done =
-        change.apply(project, "removed " + parameter + " from " + family.label, List.of());
+        change.apply(
+            project,
+            "removed " + parameter + " from " + family.label,
+            List.of(),
+            SignatureChange.FIX,
+            -1,
+            "removing "
+                + parameter
+                + " from "
+                + family.label
+                + " (its body starting with "
+                + local.substring(0, local.length() - 1)
+                + ")");
     return new Outcome(
         done.text() + "; its body starts with " + local.substring(0, local.length() - 1),
         done.declared());
