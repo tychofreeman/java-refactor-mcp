@@ -2001,6 +2001,15 @@ again.
   (`String what = "a" + b; apply(project, what, ...)`) wrote `apply(project, ("a" + b), ...)`: the
   parentheses an operand needs are not needed by an argument. Four `replace_expression`s took them
   off (`ChangeSignature`, `ExtractType`, `FunctionToMethod`, `Signatures.removeParameter`).
+## 2026-11-15: build-entry-kind (#528, item 3)
+
+- No Java by hand, but no refactoring: a String field that holds one of five keys became an enum
+  through one batch of edits (`add_declaration` of the enum, `replace_text` of the field's type,
+  16 `replace_expression`s of `kind.equals("x")` to `kind == Kind.X`, two `replace_statements`).
+  `change_type` of the field alone would have compiled with every `kind.equals("loop")` still
+  there, now always false, since `equals` takes an Object. A "replace type code with enum"
+  operation (the constants from the literals compared to, each `equals` test rewritten) would
+  have been one step and safe; it composes from no tools here.
 ## 2026-11-15: type-parameters-split (#528, item 5, TypeParameters)
 
 - No Java by hand. `extract_function` of a loop that adds to a counter declared before it
