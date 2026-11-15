@@ -1,0 +1,2 @@
+replaced 1 occurrence in docs/a.md, line 2
+replaced 1 occurrence in docs/b.md, line 2

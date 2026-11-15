@@ -551,6 +551,13 @@ does not have. It is one call of `extract_function`, `move_parameter` (the carri
 since `extract_type` groups adjacent parameters) and `extract_type`, over a new algorithm. Only
 kind `phase` is built: gorefactor's `variable` and `loop` wait for a session that needs them.
 
+**Decided (2026-11-15, the owner's brief, issue #371, roadmap #204; defaults to reopen):** the
+result of `replace_text` with `files` is each file's own result on its own line, over gorefactor's
+one summary line (`replaced 2 occurrences of the text in 2 files`), since the lines changed are
+what a later step needs; `append` with `files` adds to each, as gorefactor's does. `replace_declaration`
+with `line` finds members and types only: a local at the line is refused, over replacing its
+declaration statement, which `replace_statements` does.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

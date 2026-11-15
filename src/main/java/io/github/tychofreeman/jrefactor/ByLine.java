@@ -9,9 +9,13 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 
@@ -142,5 +146,72 @@ final class ByLine {
             + " is not written in "
             + home
             + " (a default constructor): declare it first.");
+  }
+
+  /**
+   * {@code args} for replace_declaration with {@code line}: the file that declares what {@code
+   * name} names on that line of {@code file} (its declaration or a use), and its name there, Type
+   * or Type.member, as {@link Declarations#find} reads it.
+   */
+  static Args declaration(SourceProject project, Args args) throws Exception {
+    String rel = args.required("file");
+    int line = args.integer("line");
+    Integer column = args.integer("column");
+    String name = args.required("name");
+    String bare = name.contains("(") ? name.substring(0, name.indexOf('(')) : name;
+    String simple = bare.substring(bare.lastIndexOf('.') + 1);
+    Opened opened = Opened.of(project, rel);
+    List<SimpleName> named = new ArrayList<>();
+    for (SimpleName n : opened.onLine(line, SimpleName.class)) {
+      if (n.getIdentifier().equals(simple)) {
+        named.add(n);
+      }
+    }
+    String where = "line " + line + " of " + rel;
+    if (named.isEmpty()) {
+      throw new Refusal(
+          "no name " + simple + " on " + where + ". Give the line of its declaration or of a use.");
+    }
+    named = opened.atColumn(named, line, column, simple);
+    Map<String, SimpleName> byKey = new LinkedHashMap<>();
+    for (SimpleName n : named) {
+      IBinding b = n.resolveBinding();
+      byKey.putIfAbsent(b == null ? "" : b.getKey(), n);
+    }
+    if (byKey.size() > 1) {
+      throw opened.several(List.copyOf(byKey.values()), line, "names " + simple);
+    }
+    IBinding b = named.get(0).resolveBinding();
+    ITypeBinding owner;
+    String member;
+    if (b instanceof ITypeBinding t) {
+      owner = t.getTypeDeclaration();
+      member = null;
+    } else if (b instanceof IMethodBinding m) {
+      IMethodBinding declared = m.getMethodDeclaration();
+      owner = declared.getDeclaringClass();
+      long same =
+          java.util.Arrays.stream(owner.getDeclaredMethods())
+              .filter(o -> o.getName().equals(declared.getName()))
+              .count();
+      member = same > 1 ? Names.methodLabel(declared) : declared.getName();
+    } else if (b instanceof IVariableBinding v && v.isField()) {
+      owner = v.getVariableDeclaration().getDeclaringClass();
+      member = v.getName();
+    } else {
+      throw new Refusal(
+          simple
+              + " on "
+              + where
+              + " is a parameter or local variable, not a type or member. Change it with"
+              + " replace_statements or replace_text.");
+    }
+    Path home = TypeSwitch.fileOf(project, Names.outermost(owner));
+    String type = Names.typeLabel(owner);
+    if (home == null) {
+      throw new Refusal(type + " is not declared in the project's sources.");
+    }
+    return args.with("file", project.relative(home).toString())
+        .with("name", member == null ? type : type + "." + member);
   }
 }

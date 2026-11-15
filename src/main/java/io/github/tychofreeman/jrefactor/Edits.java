@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
@@ -171,8 +172,14 @@ final class Edits {
     boolean append = args.flag("append");
     Precondition.require(
         Precondition.that(
-            () -> !append || (old == null && !args.flag("all_occurrences")),
-            () -> "append adds new at the end of the file; leave out old and all_occurrences."),
+            () ->
+                !append
+                    || (old == null
+                        && !args.flag("all_occurrences")
+                        && args.string("function") == null),
+            () ->
+                "append adds new at the end of the file; leave out old, all_occurrences and"
+                    + " function."),
         Precondition.that(
             () -> append || old != null,
             () ->
@@ -190,11 +197,27 @@ final class Edits {
       return append(project, path, rel, text, replacement, args);
     }
 
+    // With function, old is looked for only within that declaration, its Javadoc included.
+    int lo = 0;
+    int hi = text.length();
+    String function = args.string("function");
+    String within = "";
+    if (function != null) {
+      if (!rel.endsWith(".java")) {
+        throw new Refusal("function names a method of a Java file; " + rel + " is not one.");
+      }
+      BodyDeclaration declared = Declarations.find(parses(text, rel), function, rel).decl();
+      lo = declared.getStartPosition();
+      hi = Nodes.end(declared);
+      within = " (within " + function + ")";
+    }
     String match = old;
     String put = replacement;
     String shifted = "";
     List<Integer> at = new ArrayList<>();
-    for (int i = text.indexOf(old); i >= 0; i = text.indexOf(old, i + old.length())) {
+    for (int i = text.indexOf(old, lo);
+        i >= 0 && i + old.length() <= hi;
+        i = text.indexOf(old, i + old.length())) {
       // An old that starts with spaces, found inside a line's indentation, is not exact: the
       // loose match below takes the whole indentation, and new moves with it.
       if (!(old.startsWith(" ") && IndentShift.insideIndent(text, i))) {
@@ -202,11 +225,17 @@ final class Edits {
       }
     }
     if (at.isEmpty()) {
-      List<IndentShift> loose = IndentShift.locate(text, old);
+      List<IndentShift> loose = new ArrayList<>();
+      for (IndentShift s : IndentShift.locate(text, old)) {
+        if (s.start() >= lo && s.end() <= hi) {
+          loose.add(s);
+        }
+      }
       if (loose.isEmpty()) {
         throw new Refusal(
             "old is not in "
                 + rel
+                + within
                 + ", though spacing within lines may differ"
                 + IndentShift.hint(text, old)
                 + ". Copy it from the file (from inspect, without the line numbers).");
@@ -221,6 +250,7 @@ final class Edits {
                 + loose.size()
                 + " times in "
                 + rel
+                + within
                 + " with the spacing within lines ignored ("
                 + Lines.list(lines)
                 + "). Make old longer so it occurs once.");
@@ -249,6 +279,7 @@ final class Edits {
               + at.size()
               + " times in "
               + rel
+              + within
               + " ("
               + Lines.list(lines)
               + "). Make old longer so it occurs once, or set all_occurrences.");
@@ -498,5 +529,28 @@ final class Edits {
       throws Exception {
     String fixed = Imports.fix(project, target, "", text, chosen).text();
     Gate.applyOrRefuse(project, Map.of(target, fixed), "creating " + type, fix);
+  }
+
+  /**
+   * replace_text with files: the same replacement in each file, one after another in one call, each
+   * file's result on its own line; without files, {@link #replaceText}.
+   */
+  static Outcome replaceTexts(SourceProject project, Args args) throws Exception {
+    List<String> files = args.list("files");
+    if (files.isEmpty()) {
+      return replaceText(project, args);
+    }
+    if (args.string("file") != null) {
+      throw new Refusal("give file or files, not both.");
+    }
+    if (args.string("function") != null) {
+      throw new Refusal("function names a method of one file; give file, not files.");
+    }
+
+    List<String> said = new ArrayList<>();
+    for (String file : files) {
+      said.add(replaceText(project, args.with("file", file)).render());
+    }
+    return Outcome.of(String.join("\n", said));
   }
 }

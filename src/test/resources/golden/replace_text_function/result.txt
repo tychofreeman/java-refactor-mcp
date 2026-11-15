@@ -1,0 +1,1 @@
+replaced 2 occurrences in com/example/Calc.java, lines 8, 10
