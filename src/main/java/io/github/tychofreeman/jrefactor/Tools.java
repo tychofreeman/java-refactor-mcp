@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -825,7 +827,11 @@ final class Tools {
               Arg.string(
                   "package",
                   "Optional: move the file's only top-level type to this package instead "
-                      + "(same source root).")),
+                      + "(same source root)."),
+              Arg.string(
+                  "to",
+                  "Optional: a top-level class of the package the nested type moves into, as"
+                      + " its member type.")),
           Kind.REFACTORING,
           Tools::moveType);
 
@@ -922,30 +928,30 @@ final class Tools {
       new Def(
           "move",
           """
-          Move a type, a member or a file, and update every reference to it. What moves follows \
-          from the arguments:
-          - name Outer.Inner: the static nested type to its own file in the package (Shop.Line \
-          becomes Line.java; Shop.Line becomes Line everywhere).
+          Move a type, a member or a file; every reference follows. What moves follows from the \
+          arguments:
+          - name Outer.Inner: the static nested type to its own file (Line.java), or with to into \
+          that class of its package (Shop.Line becomes Order.Line).
           - name Type with package: the file's only top-level type to that package of its source \
           root; imports follow, package-private declarations used across become public.
           - name Type.member with to: a method or a static field to the class to, in this file \
-          or another (to=Tax, or com.example.Tax); an instance method becomes static there with \
-          the instance as its first parameter, receiver, and every call passes it. To its own \
-          class, a method is made static in place.
+          or another (Tax or com.example.Tax); an instance method becomes static there, its \
+          instance the first parameter, receiver, which every call passes. To its own class, a \
+          method is made static in place.
           - no name, to a path: the file or directory, not Java under a source root (copy keeps \
           it; delete=true without to removes it).\
           """,
           List.of(
               Arg.FILE.described(
-                  "The file that declares what moves, or, without name, the file or directory to"
-                      + " move."),
+                  "The file declaring what moves; without name, the file or directory to move."),
               Arg.string(
                   "name",
                   "What moves: Outer.Inner, Type (with package), or Type.member (with to); omit it"
                       + " to move the file itself."),
               Arg.string(
                   "to",
-                  "With Type.member, the class it moves to; without name, the file's new path."),
+                  "The class it moves into (Type.member, Outer.Inner); without name, the file's"
+                      + " new path."),
               Arg.string("package", "With name Type: the package it moves to."),
               Arg.bool("copy", "Without name: copy the file, keeping the original."),
               Arg.bool("delete", "Without name: delete the file instead (no to)."),
@@ -974,7 +980,8 @@ final class Tools {
             "give to (the class a member moves to) or package (where the file's type moves), not"
                 + " both.");
       }
-      target = to != null ? MOVE_MEMBER : MOVE_TYPE;
+      target =
+          to == null || memberType(project, args.required("file"), name) ? MOVE_TYPE : MOVE_MEMBER;
     }
     if (target != MOVE_MEMBER && !args.list("imports").isEmpty()) {
       throw new Refusal(
@@ -1912,6 +1919,10 @@ final class Tools {
       return MoveToPackage.run(
           project, args.required("file"), args.required("name"), args.required("package"));
     }
+    if (args.has("to")) {
+      return NestType.run(
+          project, args.required("file"), args.required("name"), args.required("to"));
+    }
     return MoveType.run(project, args.required("file"), args.required("name"));
   }
 
@@ -2240,5 +2251,15 @@ final class Tools {
         args.list("functions"),
         args.required("name"),
         args.list("parameters"));
+  }
+
+  /** Whether {@code name} (Outer.Inner) names a member type of {@code rel}, by syntax. */
+  private static boolean memberType(SourceProject project, String rel, String name)
+      throws IOException {
+    if (!name.contains(".") || name.contains("(")) {
+      return false;
+    }
+    CompilationUnit unit = Jdt.parseSyntax(Edits.textOf(Map.of(), project.javaFile(rel)));
+    return Declarations.typePath(unit, name.split("\\.")) != null;
   }
 }

@@ -623,6 +623,28 @@ and dispatch is by pattern, but the decided fields stay mutable and BuildSpec an
 tangled). (C) removes the 15 `kind.equals` tests at the least cost and risk; there is no
 BuildSpec/Draft split. `Kind.toString()` is the key the build names it by, so refusals read as
 before.
+
+**Decided (2026-11-15, the owner, roadmap #513, `docs/sessions/member-type-move-sketch.md`):
+`move` of a member type with `to` moves it into that class as its member type, in one call**
+(option (A)), over (B) a composition of two moves through a top-level type (two calls, and an
+intermediate `Call` or `Source` that must type-check between them and whose private-access
+widening the second step cannot undo) and over (C) leaving the records in `Signatures` (no cost,
+but #528 item 2 half done and every later session meets the same refusal). Built in slices; the
+first is a static member type into a top-level class, record or enum of another file of the same
+package (`NestType`, reusing `MoveType`'s qualification, widening, accessor calls and `permits`
+through `MovedType.into`). An inner class is refused (the sketch's recommendation: adding `static`
+is the model's step), and references are written in the qualified form, `Order.Line` outside the
+target and `Line` inside it, over importing the member type: each use keeps its shape and no
+import changes, but where a file imported `Outer.Inner` (a single-type or static import), the
+import is rewritten to `Target.Inner` and the simple uses stay. Defaults to reopen, each the
+smallest: an interface or annotation target is refused (its member types are public, so the
+moved type's `private` or `protected` would have to change); a target in the outer type's own
+file, a member type as target and a target in another package are refused; a `private` moved
+type loses `private` only when something outside the target uses it, and the result says so; the
+target gains the outer file's imports (static ones too) whose simple names the moved type uses;
+a name the moved type would hide where the target, a type nested in it or a subtype writes it
+unqualified is refused (`NestType.hides`), as is a member type or type parameter of that name in
+the target or its supertypes (`clash`).
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

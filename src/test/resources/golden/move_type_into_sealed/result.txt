@@ -1,0 +1,1 @@
+moved Shapes.Circle into p/Figures.java as Figures.Circle, with 1 reference in 1 file: p/Shapes.java line 11; wrote a permits clause on Shapes.Shape, as the move put permitted subtypes in another file

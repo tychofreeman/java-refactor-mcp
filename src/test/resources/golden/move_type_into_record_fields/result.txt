@@ -1,0 +1,1 @@
+moved Helper.Range into p/Sizes.java as Sizes.Range, with 1 reference in 1 file: p/Helper.java line 10; reads of Range.array and Range.length became accessor calls
