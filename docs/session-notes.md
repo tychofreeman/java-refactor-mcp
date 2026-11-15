@@ -560,7 +560,8 @@ Each was chosen from options; the record named beside it has the options it beat
   by position must handle the varargs arguments before it passes true. `change_type`'s `T...` is
   `Signatures.varargsElement` plus the form, the type and its `...` written as one edit.
 
-- `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
+- `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, its arguments read once
+  into a `Request` (#528; `run` calls `checkTypes`, `returnTypeEdits`, `throwsEdits`, `callerEdits`), on `MethodFamily.of` with
   `references` (a method reference is kept in `family.references`, not refused; `family.sources`
   holds each parsed file, so a referenced method's file is edited once) and
   `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `quietAndSafe` (named `pure` until #475) and

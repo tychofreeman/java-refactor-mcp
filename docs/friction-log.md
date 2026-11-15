@@ -1918,3 +1918,15 @@ again.
   `move_statement` of each check upward (they read `built`, `content` and `around`, locals declared
   after the place they go, and two sit inside other ifs). A refactoring that hoists a guard by
   substituting its locals' initializers would have made it.
+
+## 2026-11-15: change-signature-run (#528, item 5)
+
+- No Java by hand. `inline` of five locals that held a record's accessors (`String returnType =
+  request.returnType();`) reported about 90 exceptional changes, one per use and reason, each
+  "the initializer of returnType may throw (request.returnType())". A record's accessor reads a
+  final field; only a null `request` could throw, and it is assigned once from a method that
+  returns `new Request(...)`. The report buries any real change; it could count an accessor of a
+  local assigned once as not throwing, or say each initializer once.
+- `extract_function` of the throws block before the record took 11 parameters (the five argument
+  values among them). Extracting the argument reading first (several results make a record),
+  then inlining its locals, gave the later extractions one `Request` in their place.
