@@ -409,6 +409,15 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   references and Javadoc references; a type with its constructors, imports and
   Javadoc references, and the file of a top-level type (`Plant.java` becomes
   `Herb.java`; one `undo` moves it back). Prose in comments is not changed.
+- A record component (issue #659, 2026-11-15), by `Type.component` or by the line of the
+  component, a field read, an accessor call or reference, or a canonical or compact constructor's
+  parameter: the component, its field and every read of it, its accessor (a written one too) and
+  every call and method reference of it, the canonical or compact constructor's parameter and its
+  uses, and the record's `@param`; another constructor's parameter of that name stays. Result:
+  `renamed the record component Item.subKey to key in 2 files: ...`. Refused: a new name the record
+  has as a field or a method without parameters ("Item already has a method key(). Choose another
+  name."), and one a local would capture at a field read ("... would change what line 6 of
+  <file> means: it would read the local key declared at line 5. ...").
 - Result: `renamed total to runningSum in <file>: <n> occurrences, lines a,
   b` for a local (`1 occurrence, line a` for one: a name nothing uses); `renamed the field Item.price to cost in 2 files: 4
   occurrences, a/Cart.java lines 5, 10; a/Item.java lines 4, 7`; `renamed the

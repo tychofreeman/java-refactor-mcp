@@ -24,10 +24,12 @@ import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.MemberRef;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
@@ -83,6 +85,11 @@ public final class Rename {
       binding = constructor.getDeclaringClass().getTypeDeclaration();
     }
     refuseLibrary(project, binding);
+    IVariableBinding component =
+        componentAt(at) != null ? componentAt(at) : componentField(binding);
+    if (component != null) {
+      return renameComponent(project, component, newName);
+    }
     if (binding instanceof IVariableBinding field && field.isField()) {
       return renameField(project, field, newName);
     }
@@ -443,7 +450,7 @@ public final class Rename {
             null);
 
     Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
-    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName, b -> false);
     return summary(
         "renamed the field " + owner + "." + oldName + " to " + newName,
         written.lines(),
@@ -487,7 +494,7 @@ public final class Rename {
             null);
 
     Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
-    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName, b -> false);
     List<String> names = new ArrayList<>(List.of(Names.methodLabel(method)));
     others.remove(names.get(0));
     names.addAll(others);
@@ -521,14 +528,15 @@ public final class Rename {
    * Refuses, once the rename is written (the refusal puts the files back), when a name it wrote
    * means another declaration than a renamed one, or a name that was already {@code newName} means
    * something else now: a closer, inherited or nested declaration of the new name captured it, or
-   * the renamed one did.
+   * the renamed one did. A binding {@code renamedToo} accepts is a renamed one too.
    */
   private static void checkMeanings(
       SourceProject project,
       Map<Path, List<Integer>> renamedAt,
       Map<Path, Map<Integer, String>> existing,
       String oldName,
-      String newName)
+      String newName,
+      Predicate<IBinding> renamedToo)
       throws IOException {
     Set<Path> files = new TreeSet<>(renamedAt.keySet());
     files.addAll(existing.keySet());
@@ -563,7 +571,7 @@ public final class Rename {
         }
         int b = NameCheck.before(edits, n.getStartPosition());
         boolean wrote = at.contains(b);
-        if ((wrote && !renamed.contains(key))
+        if ((wrote && !renamed.contains(key) && !renamedToo.test(n.resolveBinding()))
             || (!wrote && was.containsKey(b) && !was.get(b).equals(key))) {
           throw new Refusal(
               "renaming "
@@ -641,7 +649,7 @@ public final class Rename {
     if (from != null && existing.containsKey(from)) {
       existing.put(to, existing.remove(from));
     }
-    checkMeanings(project, written.renamedAt(), existing, oldName, newName);
+    checkMeanings(project, written.renamedAt(), existing, oldName, newName, b -> false);
     String what = "renamed the type " + type.getQualifiedName() + " to " + newName;
     if (from != null) {
       what += ", and " + project.relative(from) + " to " + project.relative(to) + ",";
@@ -1040,8 +1048,12 @@ public final class Rename {
     }
     String source = Files.readString(javaFile(project, relFile));
     CompilationUnit cu = Jdt.parseSyntax(source);
+    SimpleName component = componentNamed(cu, name);
     SimpleName at =
-        declaredName(Declarations.find(cu, name, relFile).decl(), Qualified.parse(name).name());
+        component != null
+            ? component
+            : declaredName(
+                Declarations.find(cu, name, relFile).decl(), Qualified.parse(name).name());
     int start = at.getStartPosition();
     return run(
         project,
@@ -1068,5 +1080,185 @@ public final class Rename {
       }
     }
     return ((AbstractTypeDeclaration) d).getName();
+  }
+
+  /**
+   * The field of the record component {@code binding} stands for, or null: the component itself,
+   * its field, its accessor (written or not), or a parameter of the canonical or compact
+   * constructor, whose names Java keeps alike.
+   */
+  private static IVariableBinding componentField(IBinding binding) {
+    ITypeBinding record;
+    String name;
+    if (binding instanceof IVariableBinding v && v.isField()) {
+      record = v.getDeclaringClass();
+      name = v.getName();
+    } else if (binding instanceof IVariableBinding v
+        && v.isParameter()
+        && v.getDeclaringMethod() != null
+        && (v.getDeclaringMethod().isCanonicalConstructor()
+            || v.getDeclaringMethod().isCompactConstructor())) {
+      record = v.getDeclaringMethod().getDeclaringClass();
+      name = v.getName();
+    } else if (binding instanceof IMethodBinding m && m.getParameterTypes().length == 0) {
+      record = m.getDeclaringClass();
+      name = m.getName();
+    } else {
+      return null;
+    }
+    if (record == null || !record.isRecord()) {
+      return null;
+    }
+    for (IVariableBinding f : record.getTypeDeclaration().getDeclaredFields()) {
+      if (f.getName().equals(name) && !java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+        return f;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The name of the record component {@code name} ({@code Item.key}) names in {@code cu}, or null.
+   */
+  private static SimpleName componentNamed(CompilationUnit cu, String name) {
+    Qualified q = Qualified.parse(name);
+    if (q.type() == null
+        || !(Declarations.typePath(cu, q.type().split("\\.")) instanceof RecordDeclaration r)) {
+      return null;
+    }
+    for (Object c : r.recordComponents()) {
+      SimpleName n = ((SingleVariableDeclaration) c).getName();
+      if (n.getIdentifier().equals(q.name())) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Renames a record component: the component, its field and every read of it, its accessor (a
+   * written one too) and every call and reference of it, the canonical or compact constructor's
+   * parameter of that name and its uses, and its {@code @param} in the record's Javadoc. Refuses a
+   * new name the record already has as a component, field or method without parameters.
+   */
+  private static Outcome renameComponent(
+      SourceProject project, IVariableBinding field, String newName) throws IOException {
+    ITypeBinding record = field.getDeclaringClass().getTypeDeclaration();
+    String recordKey = record.getKey();
+    String oldName = field.getName();
+    String owner = Names.typeLabel(record);
+    for (IVariableBinding f : record.getDeclaredFields()) {
+      if (f.getName().equals(newName)) {
+        throw new Refusal(owner + " already has a field " + newName + ". Choose another name.");
+      }
+    }
+    for (IMethodBinding m : record.getDeclaredMethods()) {
+      if (m.getName().equals(newName) && m.getParameterTypes().length == 0) {
+        throw new Refusal(owner + " already has a method " + newName + "(). Choose another name.");
+      }
+    }
+    Predicate<SimpleName> isUse =
+        node -> {
+          if (inRecordJavadoc(node, recordKey)) {
+            return true;
+          }
+          IBinding b = node.resolveBinding();
+          IVariableBinding named = componentAt(node);
+          if (named == null && b != null) {
+            named = componentField(declarationOf(b));
+          }
+          return named instanceof IVariableBinding f
+              && f.getDeclaringClass().getTypeDeclaration().getKey().equals(recordKey)
+              && f.getName().equals(oldName);
+        };
+    Map<Path, Map<Integer, String>> existing = meanings(project, newName);
+    Written written =
+        renameUses(
+            project,
+            Holding.of(project, oldName),
+            oldName,
+            newName,
+            isUse,
+            (f, unit, uses) -> {
+              for (SimpleName use : uses) {
+                // An accessor call is looked up among methods, where no local can capture it.
+                VariableDeclaration local =
+                    use.resolveBinding() instanceof IMethodBinding
+                        ? null
+                        : localInScope(unit, use, newName);
+                if (local != null) {
+                  int at = unit.getLineNumber(use.getStartPosition());
+                  throw new Refusal(
+                      "renaming the record component "
+                          + owner
+                          + "."
+                          + oldName
+                          + " to "
+                          + newName
+                          + " would change what line "
+                          + at
+                          + " of "
+                          + project.relative(f)
+                          + " means: it would read the local "
+                          + newName
+                          + " declared at line "
+                          + unit.getLineNumber(local.getStartPosition())
+                          + ". Choose another name, or rename that local first.");
+                }
+              }
+            },
+            null,
+            null);
+    Stubs.Declared stubs = gate(project, written.texts(), oldName, newName);
+    // The field, the accessor and a compact constructor's parameters have no name of their own to
+    // declare them: each binding of the component counts as renamed.
+    checkMeanings(
+        project,
+        written.renamedAt(),
+        existing,
+        oldName,
+        newName,
+        b ->
+            componentField(declarationOf(b)) instanceof IVariableBinding f
+                && f.getDeclaringClass().getTypeDeclaration().getKey().equals(recordKey)
+                && f.getName().equals(newName));
+    return summary(
+        "renamed the record component " + owner + "." + oldName + " to " + newName,
+        written.lines(),
+        written.occurrences(),
+        stubs);
+  }
+
+  /**
+   * Whether {@code node} is the name of a {@code @param} tag in the Javadoc of the record with key
+   * {@code recordKey}.
+   */
+  private static boolean inRecordJavadoc(SimpleName node, String recordKey) {
+    return node.getParent() instanceof TagElement tag
+        && "@param".equals(tag.getTagName())
+        && !tag.fragments().isEmpty()
+        && tag.fragments().get(0) == node
+        && Nodes.ancestor(node, Javadoc.class) instanceof Javadoc doc
+        && doc.getParent() instanceof RecordDeclaration r
+        && r.resolveBinding() != null
+        && r.resolveBinding().getTypeDeclaration().getKey().equals(recordKey);
+  }
+
+  /**
+   * The field of the record component whose name {@code n} is, in the record's header, or null: JDT
+   * gives the component's own binding no declaring class.
+   */
+  private static IVariableBinding componentAt(SimpleName n) {
+    if (n.getParent() instanceof SingleVariableDeclaration c
+        && c.getName() == n
+        && c.getParent() instanceof RecordDeclaration r
+        && r.resolveBinding() != null) {
+      for (IVariableBinding f : r.resolveBinding().getDeclaredFields()) {
+        if (f.getName().equals(n.getIdentifier())) {
+          return f;
+        }
+      }
+    }
+    return null;
   }
 }
