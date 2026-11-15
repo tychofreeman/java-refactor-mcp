@@ -1995,6 +1995,12 @@ again.
   its own file, then nothing nests a top-level type into a class. A `move` of a member type `to` a
   class would do it.
 
+## 2026-11-15: signature-refusal-doing (roadmap 510)
+
+- No Java by hand. `inline` of a local used once as a method argument
+  (`String what = "a" + b; apply(project, what, ...)`) wrote `apply(project, ("a" + b), ...)`: the
+  parentheses an operand needs are not needed by an argument. Four `replace_expression`s took them
+  off (`ChangeSignature`, `ExtractType`, `FunctionToMethod`, `Signatures.removeParameter`).
 ## 2026-11-15: type-parameters-split (#528, item 5, TypeParameters)
 
 - No Java by hand. `extract_function` of a loop that adds to a counter declared before it

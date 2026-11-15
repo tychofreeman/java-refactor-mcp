@@ -155,7 +155,16 @@ final class FunctionToMethod {
             + ", "
             + selfBinding.getName()
             + " its receiver",
-        args.list("imports"));
+        args.list("imports"),
+        SignatureChange.FIX,
+        -1,
+        "making "
+            + family.label
+            + " an instance method of "
+            + b.getDeclaringClass().getName()
+            + ", "
+            + selfBinding.getName()
+            + " its receiver");
   }
 
   /**

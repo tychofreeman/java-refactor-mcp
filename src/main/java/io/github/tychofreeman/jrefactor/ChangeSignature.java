@@ -100,7 +100,8 @@ final class ChangeSignature {
                 ? ", or does not handle a new exception,"
                 : "")
             + " changes in the same batch as this step, with check \"end\".",
-        declarations);
+        declarations,
+        "changing the signature of " + family.label + " (" + String.join("; ", said) + ")");
   }
 
   /** Refuses a return type or an added exception that does not parse as a type. */
