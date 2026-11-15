@@ -743,6 +743,11 @@ Each was chosen from options; the record named beside it has the options it beat
   every `SimpleName` whose declaration's key matches, classified from its parent (`classify`, and
   `classifyType` for a type's own roles). A new role goes in `Uses.ROLES`, in output order.
 
+- `inspect` `function` is `Inspect.function` over `Inspect.names` with `only` (the one file); a
+  simple name becomes `Type.method` for each type of the file that declares it. `targets` runs
+  `Tools.inspect` once per target (roadmap #505, 2026-11-15). The inspect definition is at its
+  1,700-character limit: a new option needs words taken from the others.
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the

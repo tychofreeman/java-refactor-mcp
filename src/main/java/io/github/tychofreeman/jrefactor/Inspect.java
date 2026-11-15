@@ -195,7 +195,8 @@ public final class Inspect {
    * overload), a field, an enum constant, in full, or a nested type, its bodies elided.
    * "Outer.Inner" names a nested type as a member of Outer.
    */
-  public static String names(SourceProject project, List<String> names) throws IOException {
+  public static String names(SourceProject project, List<String> names, Path only)
+      throws IOException {
     StringBuilder out = new StringBuilder();
     for (String name : names) {
       int dot = name.lastIndexOf('.');
@@ -206,7 +207,8 @@ public final class Inspect {
       int before = out.length();
       for (Path file : project.javaFiles()) {
         String text = Files.readString(file);
-        if (!text.contains(simple)) {
+        if (only != null && !file.toAbsolutePath().normalize().equals(only)
+            || !text.contains(simple)) {
           continue;
         }
         CompilationUnit unit = Jdt.parseSyntax(text);
@@ -428,5 +430,30 @@ public final class Inspect {
             "\nRead code with inspect: file for an outline (start_line and end_line for lines),"
                 + " pattern to find lines, names for declarations by name.")
         .toString();
+  }
+
+  /**
+   * The method {@code name} of {@code file} (gorefactor's {@code function}): Type.method, or the
+   * method's own name in whichever of the file's types declares it, shown as {@link #names} shows a
+   * member, every overload in full.
+   */
+  static String function(SourceProject project, String file, String name) throws IOException {
+    Path path = javaFile(project, file).toAbsolutePath().normalize();
+    if (name.contains(".")) {
+      return names(project, List.of(name), path);
+    }
+    CompilationUnit unit = Jdt.parseSyntax(Files.readString(path));
+    List<String> labels = new ArrayList<>();
+    for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
+      String label = Names.typeLabelAt(m) + "." + name;
+      if (m.getName().getIdentifier().equals(name) && !labels.contains(label)) {
+        labels.add(label);
+      }
+    }
+    if (labels.isEmpty()) {
+      throw new Refusal(
+          "no method " + name + " in " + file + ". inspect the file to see what it declares.");
+    }
+    return names(project, labels, path);
   }
 }

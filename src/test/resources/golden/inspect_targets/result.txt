@@ -1,0 +1,10 @@
+com/example/Cart.java  lines 15-17 (Cart.count):
+15    int count() {
+16      return 1;
+17    }
+
+com/example/Cart.java  lines 3-4 of 18:
+ 3  public class Cart {
+ 4    private int total;
+
+target 3: no method size in com/example/Cart.java. inspect the file to see what it declares.
