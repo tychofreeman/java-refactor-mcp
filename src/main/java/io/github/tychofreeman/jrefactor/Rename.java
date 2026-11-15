@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1157,12 +1158,18 @@ public final class Rename {
         throw new Refusal(owner + " already has a method " + newName + "(). Choose another name.");
       }
     }
+    Holding holding = Holding.of(project, oldName);
+    Set<String> family = accessorFamily(project, holding.units().values(), record, oldName);
+    TreeSet<String> others = new TreeSet<>();
     Predicate<SimpleName> isUse =
         node -> {
           if (inRecordJavadoc(node, recordKey)) {
             return true;
           }
           IBinding b = node.resolveBinding();
+          if (b instanceof IMethodBinding m && family.contains(MethodFamily.key(m))) {
+            return true;
+          }
           IVariableBinding named = componentAt(node);
           if (named == null && b != null) {
             named = componentField(declarationOf(b));
@@ -1175,11 +1182,20 @@ public final class Rename {
     Written written =
         renameUses(
             project,
-            Holding.of(project, oldName),
+            holding,
             oldName,
             newName,
             isUse,
             (f, unit, uses) -> {
+              for (MethodDeclaration m : Nodes.all(unit, MethodDeclaration.class)) {
+                IMethodBinding b = m.resolveBinding();
+                if (b != null && family.contains(MethodFamily.key(b))) {
+                  if (!b.getDeclaringClass().getTypeDeclaration().getKey().equals(recordKey)) {
+                    others.add(Names.methodLabel(b));
+                  }
+                  refuseMethodClash(unit, b, newName);
+                }
+              }
               for (SimpleName use : uses) {
                 // An accessor call is looked up among methods, where no local can capture it.
                 VariableDeclaration local =
@@ -1223,7 +1239,16 @@ public final class Rename {
                 && f.getDeclaringClass().getTypeDeclaration().getKey().equals(recordKey)
                 && f.getName().equals(newName));
     return summary(
-        "renamed the record component " + owner + "." + oldName + " to " + newName,
+        "renamed the record component "
+            + owner
+            + "."
+            + oldName
+            + " to "
+            + newName
+            + (others.isEmpty()
+                ? ""
+                : (others.size() == 1 ? ", and the method " : ", and the methods ")
+                    + Names.listed(List.copyOf(others))),
         written.lines(),
         written.occurrences(),
         stubs);
@@ -1260,5 +1285,38 @@ public final class Rename {
       }
     }
     return null;
+  }
+
+  /**
+   * The keys of the methods the accessor of {@code record}'s component {@code name} implements or
+   * overrides, with their families in {@code units}: every other implementation, renamed with the
+   * component (the owner's choice of 2026-11-15, over refusing). Empty when it overrides none.
+   * Refuses one that a library declares.
+   */
+  private static Set<String> accessorFamily(
+      SourceProject project, Collection<CompilationUnit> units, ITypeBinding record, String name) {
+    Set<String> keys = new TreeSet<>();
+    for (IMethodBinding m : record.getDeclaredMethods()) {
+      if (!m.getName().equals(name) || m.getParameterTypes().length != 0) {
+        continue;
+      }
+      for (IMethodBinding over : Hierarchy.overridden(m)) {
+        if (!Signatures.projects(project, over.getDeclaringClass())) {
+          throw new Refusal(
+              Names.typeLabel(record)
+                  + "."
+                  + name
+                  + "() implements "
+                  + over.getName()
+                  + " in "
+                  + over.getDeclaringClass().getErasure().getQualifiedName()
+                  + ", which is not the project's, so the record component cannot be renamed.");
+        }
+        keys.addAll(
+            MethodFamily.family(
+                project, units, over, "so the record component cannot be renamed."));
+      }
+    }
+    return keys;
   }
 }

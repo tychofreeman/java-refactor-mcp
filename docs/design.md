@@ -645,6 +645,16 @@ target gains the outer file's imports (static ones too) whose simple names the m
 a name the moved type would hide where the target, a type nested in it or a subtype writes it
 unqualified is refused (`NestType.hides`), as is a member type or type parameter of that name in
 the target or its supertypes (`clash`).
+
+**Decided (the owner, 2026-11-15, issue #674): `rename` of a record component whose accessor
+implements or overrides a method renames that method too**, with every other implementation and
+override and every call and method reference through any of them, as `rename` of a method does
+for its family (`Rename.accessorFamily`, `MethodFamily.family` from each method the accessor
+overrides): option (a), over (b), refusing up front and naming the interface method to rename
+first, which was cheaper and renamed nothing the model did not name. A new name another member of
+the family's types already has is refused as `rename` of a method refuses it
+(`refuseMethodClash`); an accessor that implements a library method is refused, since that method
+cannot be renamed. The result names the other methods renamed.
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

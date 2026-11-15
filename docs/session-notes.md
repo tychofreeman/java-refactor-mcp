@@ -793,7 +793,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `componentField` takes to the component's field (the field, the accessor, a canonical or compact
   constructor's parameter) is a use, and `componentAt` the component's own name, whose binding JDT
   gives no declaring class. `checkMeanings` takes a `renamedToo` predicate, since the field, a
-  generated accessor and a compact constructor's parameters have no declaring name in the source. A count in a
+  generated accessor and a compact constructor's parameters have no declaring name in the source.
+  An accessor that overrides a method renames that method's family too (issue #674, 2026-11-15, the
+  owner's option (a) over refusing; `docs/design.md`, Decisions): `Rename.accessorFamily` starts
+  `MethodFamily.family` from each method the accessor overrides, since a generated accessor has no
+  `MethodDeclaration` for the family walk to link from. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
 
 - `inline` at a call (roadmap #502, issue #368, 2026-11-15) is `InlineFunction.atCall`: the call
