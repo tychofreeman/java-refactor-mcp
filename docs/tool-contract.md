@@ -232,11 +232,22 @@ so: `change_type` is for fields. `pull_up`, `push_down`, `add_supertype` and `en
 have no gorefactor counterpart (Go has no nested types or inheritance).
 
 One `inline` (roadmap #122, 2026-11-06, as gorefactor's): published in place of
-`inline_variable` and `inline_function`, which become aliases. With `line` (and `column`), the
-local variable `name` declared or used there; without `line`, `name` as `Type.method`, every
-call of the static method, which is deleted. A bare name without `line` is refused, naming both
-forms. Each route's arguments, results and refusals are its section's below; Java has no
-per-call inline yet. With `field` (roadmap #128, 2026-11-06, gorefactor's `inline_struct`),
+`inline_variable` and `inline_function`, which become aliases. What `name` is at `line` says
+which (roadmap #500, issue #368, 2026-11-15, as gorefactor's `inline`): a method (`Type.method`,
+or its simple name) called on the line inlines that one call, and the method is deleted only when
+nothing else uses it (no other call, no method reference); `keep_function` keeps it even then.
+A local variable declared or used on the line inlines its uses, as before; a simple name that is
+both a call and a variable on the line stays the variable's (pass `Type.method`, or `column`).
+`all_calls` inlines every call of the method found at `line` (or named `Type.method`, `file` its
+declaring file, without `line`) and deletes it; `name` as `Type.method` without `line` still
+means `all_calls`, so older recipes run. Results: `inlined Lib.tax into 1 call at line 9 of
+com/example/Use.java; kept the method, which has 1 other use`, `... and deleted the method in
+com/example/Lib.java`, `...; kept the method (keep_function)`. Refused: `Type.method` (or
+`all_calls`, `keep_function`) with a `line` that calls no method of that name ("no call of tax
+on line 4 of ..."), a call on the line of another type's method than `name` names, a method not
+declared in the project's sources, two calls of the name on the line without `column`. A bare
+name without `line` is refused, naming both forms. Each route's other arguments, results and
+refusals are its section's below. With `field` (roadmap #128, 2026-11-06, gorefactor's `inline_struct`),
 `name` a class and `field` its field holding a project class nothing else uses: that class's
 members take the field's place, `home.x` becomes `x` (`this.x` where a local hides it),
 `home.m()` becomes `m()`, and the class's file is deleted (the inverse of `extract_type`
@@ -1674,8 +1685,9 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   other statements go before that statement ("part of a larger expression" otherwise).
   Refused also: a `return` before the last statement; a body that assigns a parameter;
   a body local whose name the calling member uses.
-- Not built yet: `line` and `column` addressing, `keep_function`,
-  inlining one call at a time.
+- One call at a time, by `line` and `column`, with `keep_function` and `all_calls` (roadmap
+  #500, issue #368): see `inline` above. With one call, a method reference or another call keeps
+  the method rather than refusing; every other rule applies to the one call as to each of all.
 
 ## `change_type` (built)
 

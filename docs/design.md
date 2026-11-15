@@ -511,6 +511,16 @@ for what the rule should find). Alone, the changes are the session's undo histor
 `git` says differ (a change by hand would count, but the tools do not read `git` today). No time
 limit: a hung test hangs the call, as the user's "however long" allows.
 
+**Decided (2026-11-15, the user on issue #368, roadmap #500): `inline` of one call, as
+gorefactor's.** What `name` is at `line` says which: a method called there inlines that call, and
+the method is deleted only when nothing else uses it; `keep_function` keeps it, `all_calls` does
+every call. Over an argument that tells a call from a local. Two defaults of this session, to
+reopen: (a) a simple name that is both a call and a variable on the line stays the variable's (as
+every recipe before this read it), over refusing it as ambiguous; `Type.method` or `column` picks
+the call. (b) "nothing else uses it" is the other calls and method references of the files that
+hold the name, as the every-call route counts them; an override of a supertype's method is deleted
+as that route deletes it.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

@@ -964,25 +964,26 @@ final class Tools {
       new Def(
           "inline",
           """
-          Inline what name names into where it is used, and delete it:
-          - with line, the local variable name declared or used there: its initializer replaces \
-          every use (int subtotal = price * qty; return subtotal + tax; becomes return (price * \
-          qty) + tax;); column when the line has two of that name.
-          - without line, name Type.method: every call of the method becomes its body, the \
-          arguments in place of the parameters (and, for an instance method, the call's receiver \
-          in place of this), and the method is deleted (return a + tax(a) with static double \
-          tax(double x) { return x * 0.2; } becomes return a + (a * 0.2);); an argument whose \
-          effects would run in another order is bound to a local first.
+          Inline what name names where it is used, and delete it when nothing else uses it; what \
+          it is at line says which:
+          - a method called on line: that call becomes the body, arguments for parameters (the \
+          receiver for this): return a + tax(a) with static double tax(double x) { return x * \
+          0.2; } becomes return a + (a * 0.2);. all_calls does every call (without line, name \
+          Type.method); keep_function keeps the method.
+          - a local variable declared or used on line: its initializer replaces every use.
           - with field, name a class (Person) and field its field (home) holding a class only it \
           uses (Address): Address's members take the field's place, home.street becomes street, \
           and Address.java is deleted.\
           """,
           List.of(
               Arg.FILE.described(
-                  "Java file path: the variable's, or the file that" + " declares the method."),
-              Arg.string("name", "The variable, or Type.method for a method.").required(),
-              Arg.integer("line", "For a variable: a 1-based line it is declared or used on."),
+                  "Java file: of the call or the variable; without line, the method's."),
+              Arg.string("name", "The method (Type.method) or the variable.").required(),
+              Arg.integer(
+                  "line", "1-based line of the call, or of the variable's declaration or a use."),
               Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
+              Arg.bool("all_calls", "For a method: every call, then delete it."),
+              Arg.bool("keep_function", "For a method: keep it."),
               Arg.string(
                   "field",
                   "With name a class: its field whose class, used by nothing else, folds into it.")),
@@ -1053,14 +1054,25 @@ final class Tools {
       return InlineClass.run(project, args.required("file"), name, args.string("field"));
     }
     args.required("file");
-    Def target;
-    if (args.integer("line") != null) {
-      target = INLINE_VARIABLE;
+    boolean all = args.flag("all_calls");
+    boolean keep = args.flag("keep_function");
+    Integer line = args.integer("line");
+    if (line != null) {
+      Outcome call =
+          InlineFunction.atCall(
+              project, args.required("file"), line, name, args.integer("column"), keep, all);
+      if (call != null) {
+        return call;
+      }
+      return INLINE_VARIABLE
+          .handler()
+          .run(project, args.routed(INLINE_VARIABLE.name(), INLINE_VARIABLE.arguments()));
     } else if (name.contains(".")) {
       if (args.integer("column") != null) {
-        throw new Refusal("column is for a variable, with line; a method is named Type.method.");
+        throw new Refusal(
+            "column is with line, of a call or a variable; a method is named Type.method.");
       }
-      target = INLINE_FUNCTION;
+      return InlineFunction.run(project, args.required("file"), name, null, keep);
     } else {
       throw new Refusal(
           "give line for the local variable "
@@ -1069,7 +1081,6 @@ final class Tools {
               + name
               + " to inline every call of it.");
     }
-    return target.handler().run(project, args.routed(target.name(), target.arguments()));
   }
 
   static final Def REPLACE_TEXT =
@@ -1729,7 +1740,7 @@ final class Tools {
   }
 
   private static Outcome inlineFunction(SourceProject project, Args args) throws Exception {
-    return InlineFunction.run(project, args.required("file"), args.required("name"));
+    return InlineFunction.run(project, args.required("file"), args.required("name"), null, false);
   }
 
   private static Outcome changeType(SourceProject project, Args args) throws Exception {

@@ -1,0 +1,1 @@
+inlined Lib.tax into 1 call at line 9 of com/example/Use.java; kept the method, which has 1 other use

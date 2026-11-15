@@ -1,0 +1,1 @@
+inlined Lib.tax into 2 calls; kept the method (keep_function) in com/example/Lib.java
