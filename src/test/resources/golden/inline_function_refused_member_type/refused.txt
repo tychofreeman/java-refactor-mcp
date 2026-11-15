@@ -1,0 +1,1 @@
+named the member type Shop.Stack

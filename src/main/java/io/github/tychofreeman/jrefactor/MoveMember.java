@@ -21,6 +21,7 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
@@ -662,6 +663,7 @@ final class MoveMember {
                 return true;
               }
             });
+    qualifyMemberTypes(m, out);
     return out;
   }
 
@@ -967,5 +969,23 @@ final class MoveMember {
             + ", private and called only from it",
         o.declared(),
         o.exceptional());
+  }
+
+  /**
+   * Qualifies each member type of {@code m}'s class, or of a superclass, that {@code m} names by
+   * its simple name ({@code Call} to {@code Signatures.Call}): in the class it moves to, the simple
+   * name would not resolve, or the import fix would take another type of that name.
+   */
+  private static void qualifyMemberTypes(MethodDeclaration m, List<TextEdit> out) {
+    for (SimpleName n : Nodes.all(m, SimpleName.class)) {
+      if (n.resolveBinding() instanceof ITypeBinding t
+          && t.isMember()
+          && reached(t.getDeclaringClass(), m)
+          && !Nodes.qualified(n)
+          && Nodes.ancestor(n, Javadoc.class) == null) {
+        int s = n.getStartPosition();
+        out.add(new TextEdit(s, s, Names.typeLabel(t.getDeclaringClass().getErasure()) + "."));
+      }
+    }
   }
 }

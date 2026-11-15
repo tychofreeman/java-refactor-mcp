@@ -366,6 +366,10 @@ Each was chosen from options; the record named beside it has the options it beat
   An import whose simple name the file used before the edit and not after is removed: a type
   import, and since #644 (2026-11-15, a default to reopen) a single static import too, so
   `inline` through `import static p.Keys.erased;` drops it; an on-demand import stays.
+  The JDK's candidates are the classes of the packages its modules export to every module, less
+  `sun.*` and `com.sun.*` (`Imports.exportedPackages`, by `ModuleFinder.ofSystem()`; issue #667,
+  2026-11-15): `jdk.vm.ci.code.site.Call` had been imported for a moved `Call`. `imports` still
+  takes such a class when the model names it.
 - `Edits.gated` is the one place a single-file edit fixes imports and passes the
   gate; add new single-file edits through it. It fixes imports only for a file
   under a source root. It parses the text first (`Edits.resultParses`, #178): a refactoring's
@@ -830,6 +834,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `extract_method`, `move_type` and `type_switch_to_method` (#223; `EnumSwitch` too) do. It skips qualified names, recovered bindings
   and type variables, and compares a method's name only with methods' (`NameCheck.spaced`, #344:
   `skipped(skipped)` was taken for a capture).
+  A recovered name that meant a member type is refused, not skipped (issue #667, 2026-11-15):
+  `meanings` adds `NameCheck.MEMBER` and the type's label beside its key, since no import brings
+  a member type in and the import fix would take another class of that name. `move` of a method
+  qualifies such names itself (`MoveMember.qualifyMemberTypes`); `inline` still refuses them.
 
 - A tool that adds an instance method to a type asks `Overrides.of` (#466, 2026-11-13) whether it
   would override a supertype's method or be overridden by a project subtype's, by name and erased

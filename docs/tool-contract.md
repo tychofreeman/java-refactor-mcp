@@ -86,6 +86,13 @@ would make count at line 11 of <file> mean the field count of an anonymous class
 not what it meant where it was written: a closer declaration of that name hides it
 there. Rename one of them, or qualify it, first."
 
+A simple name of a member type that the written text leaves resolving to nothing is refused too
+(issue #667, 2026-11-15): no import brings a member type in, and the import fix would take another
+class of that name (`new Stack()` that meant `Shop.Stack` became `java.util.Stack`). "inlining
+Shop.fresh would leave Stack at line 5 of <file> naming no type: it named the member type
+Shop.Stack, which no import brings in, and the import fix could take another type of that name.
+Qualify it (Shop.Stack) first." `move` of a method qualifies such names itself.
+
 ## What every tool shares
 
 The server's MCP `instructions` (`Server.INSTRUCTIONS`, 2026-11-06) say once what descriptions
@@ -1081,11 +1088,15 @@ class Basket in ...`.
 Imports (roadmap #20): `replace_text`, `add_declaration` and `replace_declaration`
 on a `.java` file add an import for each simple type name the edit left
 unresolved when one class has that name (this project's sources, the classpath,
-the JDK; `java.awt`, `javax.swing`, `sun.*`, `com.sun.*`, `jdk.*` only when
+the JDK; `java.awt`, `javax.swing` and `jdk.*` only when
 nothing else has it), in order among the file's imports, and remove single-type
 imports the edit left unused (an import already unused stays). A name with
 several candidates is refused with them; the optional `imports` argument (fully
-qualified names) chooses. An unqualified call to no method is imported
+qualified names) chooses. The JDK's candidates are the classes of the packages its modules
+export to every module, without `sun.*` and `com.sun.*` (issue #667, 2026-11-15): a class of
+`jdk.internal.*`, or of a module that exports nothing to a project's code (`jdk.vm.ci...Call`), is
+never imported; a name only such a class has gets a stub, as one no class has. `imports` still
+takes one. An unqualified call to no method is imported
 statically from the one class the file already imports a static member from
 that has a static method of that name (`assertFalse` beside `import static
 ...Assertions.assertEquals`), before stubs are declared; in a file that imports from JUnit
@@ -2201,7 +2212,9 @@ its package is the file that name implies under a source root, and the class to 
 class has its simple name (issue #482). Arguments:
 `file`, `name` (`Type.method`, or `Type.method(params)` for an overload), `to` (the target class).
 Imports follow in every file; a method moved to another package becomes public, and what its body
-uses that the target cannot reach is the gate's compile error.
+uses that the target cannot reach is the gate's compile error. A member type of its class (or of a
+superclass) that the method names simply is qualified, `Call` to `Signatures.Call` (issue #667,
+2026-11-15): in the target the simple name means nothing, or another class.
 
 A static field (roadmap #109, 2026-11-06): `name` `Shop.MAX` moves its declaration (Javadoc
 and all, widened from private, public across packages) to `to`, after its fields (before its
