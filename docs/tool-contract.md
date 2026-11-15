@@ -304,6 +304,14 @@ gorefactor's `rename`, for Java (roadmap #9, 2026-11-03; it replaced
   pick a meaning: `Counter.count` (a member of Counter, or `Outer.Inner.count`)
   or `local count` (a local variable or parameter). gorefactor's `function` in
   place of `line` is not built.
+- Without `line` (issue #613, 2026-11-15): `name` as `Type.member` (`Type.method(int)` for one
+  overload, `Outer.Inner` for a member type) is found in `file` as `Declarations.find` finds it
+  for the other tools, and renamed from its declaration, so a `batch` need not know the line
+  an earlier step moved it to. `line` stays optional in the schema; a name with no type and no
+  `line` is refused: "rename needs line for total: the 1-based line of its declaration or any
+  use. Pass line, or name a member as Type.member (Type.method(int) for one of its
+  overloads)."; a name of several overloads is refused with each ("A has 2 members named show:
+  show(int), show(String). Name one with its parameter types, as show(String).").
 - What changes: a local or parameter within the method (or initializer, or
   field) that declares it, its `@param` tag included; a field everywhere in
   the project, `{@link T#f}` included; a method with every project

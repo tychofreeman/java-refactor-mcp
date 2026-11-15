@@ -1,0 +1,10 @@
+[
+  {
+    "tool": "move",
+    "args": {"file": "com/example/Price.java", "name": "Price.withTax", "to": "Tax"}
+  },
+  {
+    "tool": "rename",
+    "args": {"file": "com/example/Tax.java", "name": "Tax.withTax", "new_name": "addTax"}
+  }
+]

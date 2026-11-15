@@ -124,15 +124,15 @@ final class Tools {
           every declaration it overrides or that overrides it (an interface method and its \
           implementations); a top-level type takes its file (Plant.java becomes Herb.java); a \
           type parameter is renamed in its class or method, @param <T> included.
-          Identify it by file, line (its declaration or any use) and its current name. When the \
-          name means two things on the line (this.count = count), name the one you mean: \
-          "Counter.count" for the member of Counter, "local count" for the local or parameter, \
-          or pass column.
+          Identify it by file and name, with line (its declaration or any use) unless name is \
+          Type.member (Type.method(int) for one overload). When the name means two \
+          things on the line (this.count = count), name the one you mean: "Counter.count" for \
+          the member of Counter, "local count" for the local or parameter, or pass column.
           Returns the lines changed in each file.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line of the declaration or any use.").required(),
+              Arg.integer("line", "1-based line of the declaration or any use."),
               Arg.string(
                       "name",
                       "The current name; Type.name for a member of Type, or local name for a "
@@ -1702,6 +1702,9 @@ final class Tools {
     String name = args.required("name");
     String newName = args.required("new_name");
     Integer line = args.integer("line");
+    if (line == null) {
+      return Rename.run(project, file, name, newName);
+    }
     return Rename.run(project, file, line, name, args.integer("column"), newName);
   }
 
