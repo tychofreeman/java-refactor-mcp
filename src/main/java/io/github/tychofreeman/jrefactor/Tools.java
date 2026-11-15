@@ -459,6 +459,28 @@ final class Tools {
           Kind.REFACTORING,
           ExtractType::run);
 
+  static final Def SPLIT =
+      new Def(
+          "split",
+          """
+          Split a method into two phases: the statements from line to the end of its body become \
+          the method new_name, called in their place, and the locals the statements before line \
+          compute for them are carried in a new record, type, in its own file. With int litres = \
+          rows * 2; int extra = days > 3 ? 1 : 0; int total = litres * days + extra; return total \
+          * rate; and line the third statement's, new_name charge and type Usage give return \
+          charge(new Usage(litres, extra), days, rate); and int charge(Usage usage, int days, int \
+          rate), which reads usage.litres() and usage.extra(); record Usage(int litres, int \
+          extra).\
+          """,
+          List.of(
+              Arg.string("kind", "phase.").required(),
+              Arg.FILE,
+              Arg.integer("line", "1-based line of the second phase's first statement.").required(),
+              Arg.string("new_name", "The second phase's new method.").required(),
+              Arg.string("type", "The new record of what the first phase computes.").required()),
+          Kind.REFACTORING,
+          Split::run);
+
   static final Def FUNCTION_TO_METHOD =
       new Def(
           "function_to_method",
@@ -1489,6 +1511,7 @@ final class Tools {
           CONVERT_LAMBDA,
           CONVERT_TO_RECORD,
           EXTRACT_TYPE,
+          SPLIT,
           FUNCTION_TO_METHOD,
           REPLACE_EXPRESSION,
           INSERT_STATEMENTS,

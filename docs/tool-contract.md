@@ -1960,6 +1960,26 @@ and other results are not built yet"); a checked exception the body does not cat
 changes the source (`names.add(...)` in a loop over `names`); a text block. The type check
 catches a local read in the body that is not effectively final.
 
+## `split` (built)
+
+gorefactor's `split` with kind `phase` (roadmap #205, issue #370, 2026-11-15): `kind` (`phase`),
+`file`, `line` (the first statement of the second phase, directly in a method's body), `new_name`
+(the second phase's method) and `type` (the record of what the first phase computes). The
+statements from `line` to the end of the body become `new_name`, as `extract_function` makes it
+(private, static when the method is, called in their place); the locals that the statements
+before `line` declare and the rest reads become the components of a new record `type` in its own
+file in the method's package, as `extract_type` groups a method's parameters, in the order the
+rest first reads them; the method's own parameters and fields are passed or read as before. One
+call, one undo.
+
+- Result: `split Bill.price at line 9: the rest is charge(Usage usage, int days, int rate), and
+  Usage (com/example/Usage.java) carries litres, extra`.
+- Refuses: a `kind` other than `phase` (gorefactor's `variable` and `loop` are not built here:
+  "use extract_function and extract_variable"); a line where no statement of a method body
+  starts; a first phase that computes nothing the rest uses ("Use extract_function for the
+  rest"); and whatever `extract_function`, `move_parameter` or `extract_type` refuses on the way,
+  in its words.
+
 ## `subclass_to_strategy` (built)
 
 Arguments: `file` (the subclass's), `name` (the subclass), `method` (the one method it
