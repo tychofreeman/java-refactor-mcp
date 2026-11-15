@@ -1,0 +1,1 @@
+is an inner class (not static)

@@ -9,8 +9,8 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 
 /**
  * The nested type {@code move} takes out of its outer type: its range in the outer file, its
- * package, its name as given (Outer.Inner) and simple, its binding key and its outer type's key and
- * label.
+ * package, its name as given (Outer.Inner) and simple, its binding key, its outer type's key and
+ * label, and the class it moves into (null for its own file).
  */
 record MovedType(
     int start,
@@ -20,7 +20,8 @@ record MovedType(
     String simple,
     String key,
     String outerKey,
-    String outerLabel) {
+    String outerLabel,
+    String into) {
 
   /** Whether {@code offset} of the outer file is inside the moved type. */
   boolean inside(int offset) {
@@ -51,14 +52,18 @@ record MovedType(
   }
 
   /**
-   * {@code b}'s name from its package once this type is top-level: "Outer.Other", "Inner",
-   * "Inner.Nested".
+   * {@code b}'s name from its package once this type has moved: "Outer.Other", "Inner",
+   * "Inner.Nested"; into a class, "Target.Inner".
    */
   String movedName(ITypeBinding b) {
     String q = b.getQualifiedName();
     String rel = pkg.isEmpty() ? q : q.substring(pkg.length() + 1);
-    return rel.equals(name) || rel.startsWith(name + ".")
-        ? simple + rel.substring(name.length())
-        : rel;
+    String at = into == null ? simple : into + "." + simple;
+    return rel.equals(name) || rel.startsWith(name + ".") ? at + rel.substring(name.length()) : rel;
+  }
+
+  /** Where the type stands after the move: "Inner is top-level", "Inner is in Target". */
+  String once() {
+    return simple + (into == null ? " is top-level" : " is in " + into);
   }
 }

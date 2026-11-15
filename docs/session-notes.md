@@ -160,6 +160,11 @@ Each was chosen from options; the record named beside it has the options it beat
   behavior gate and names the change in the result (`MoveStatement.pastTryNote`).
 - `move_type` is its own tool, and widens private members used across the
   boundary rather than refusing.
+- `move` of a member type with `to` (roadmap #513, 2026-11-15, the owner: option (A) of
+  `docs/sessions/member-type-move-sketch.md`, over (B) two moves through a top-level type and (C)
+  leaving `Signatures`' records; `docs/design.md`, Decisions) moves it into that class in one call,
+  built in slices; an inner class is refused, and references are written qualified
+  (`MethodFamily.Decl`), not imported.
 - A failed Maven classpath keeps the server serving and names the cause in
   refusals that say a name cannot be resolved.
 - The ten higher-level tools (option B, 2026-11-04), with the tool-count limit
@@ -486,8 +491,17 @@ Each was chosen from options; the record named beside it has the options it beat
   binding (`findDeclaringNode` by key) in the file its package and name imply.
 
 - `move` of a member type carries what it moves as a `MovedType` (#528): its range in the outer
-  file (`inside(offset)`), package, names and keys, with `label` and `movedName`; a helper of
-  `MoveType` that needs them takes it, not the fields one by one.
+  file (`inside(offset)`), package, names and keys, the class it moves into (`into`, null for its
+  own file), with `label`, `movedName` and `once`; a helper of `MoveType` that needs them takes it,
+  not the fields one by one.
+
+- `move` of a member type with `to` (roadmap #513) is `NestType`: `Tools.move` routes `to` to
+  `move_type` when `name` is a member type of `file` by syntax (`Tools.memberType`), else to the
+  member route. It reuses `MoveType.find`, `qualifyAndWiden`, `permits` and `dropModifier`, writes
+  references with its own walk (`references`: inside the target the simple name, elsewhere
+  `Target.Inner`, imports rewritten), places the type by `MemberMove.addTo`, removes it by
+  `MemberMove.removal`, and writes every file through `Edits.gatedFiles`. Slice 1: same package,
+  a class, record or enum of another file as target.
 
 - `encapsulate_field` (`EncapsulateField`) reads the field's facts once into an `Accessors` record
   (static, final, the getter's and setter's names, its key and type text; #528), which `useEdit`
