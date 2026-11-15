@@ -855,7 +855,9 @@ Each was chosen from options; the record named beside it has the options it beat
   A recovered name that meant a member type is refused, not skipped (issue #667, 2026-11-15):
   `meanings` adds `NameCheck.MEMBER` and the type's label beside its key, since no import brings
   a member type in and the import fix would take another class of that name. `move` of a method
-  qualifies such names itself (`MoveMember.qualifyMemberTypes`); `inline` still refuses them.
+  qualifies such names itself (`MoveMember.qualifyMemberTypes`), and so does `inline` at a call
+  outside the declaring class (issue #673: `InlineFunction.replacementFor`'s `inside`, the same
+  helper on the receiver's edits).
 
 - A tool that adds an instance method to a type asks `Overrides.of` (#466, 2026-11-13) whether it
   would override a supertype's method or be overridden by a project subtype's, by name and erased

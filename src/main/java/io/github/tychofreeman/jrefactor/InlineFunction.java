@@ -258,7 +258,9 @@ final class InlineFunction {
             && !(receiver instanceof ClassInstanceCreation)) {
           nullable.add(Nodes.show(receiver) + " in " + project.relative(p));
         }
-        list.addAll(replacementFor(project, site, inlined, fileText));
+        list.addAll(
+            replacementFor(
+                project, site, inlined, fileText, p.equals(file) && Nodes.within(site, type)));
         calls++;
       }
       edits.computeIfAbsent(p, k -> new ArrayList<>()).addAll(list);
@@ -315,7 +317,11 @@ final class InlineFunction {
    * statement.
    */
   private static List<TextEdit> replacementFor(
-      SourceProject project, MethodInvocation site, InlinedMethod inlined, String siteText) {
+      SourceProject project,
+      MethodInvocation site,
+      InlinedMethod inlined,
+      String siteText,
+      boolean inside) {
     List<Expression> args = typed(site.arguments(), Expression.class);
     checkArguments(
         args, inlined.params(), inlined.useCount(), inlined.name(), inlined.subtypeSafe());
@@ -370,6 +376,11 @@ final class InlineFunction {
             inlined.whole(),
             receiver,
             inlined.name().substring(0, inlined.name().indexOf('.'))));
+    // Outside the declaring class, a member type it names bare would not resolve, or the import fix
+    // could take another type of that name.
+    if (!inside) {
+      MoveMember.qualifyMemberTypes((MethodDeclaration) inlined.whole().getParent(), receiver);
+    }
     if (inlined.value() != null) {
       if (site.getParent() instanceof ExpressionStatement) {
         throw new Refusal(

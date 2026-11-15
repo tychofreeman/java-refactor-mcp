@@ -91,7 +91,10 @@ A simple name of a member type that the written text leaves resolving to nothing
 class of that name (`new Stack()` that meant `Shop.Stack` became `java.util.Stack`). "inlining
 Shop.fresh would leave Stack at line 5 of <file> naming no type: it named the member type
 Shop.Stack, which no import brings in, and the import fix could take another type of that name.
-Qualify it (Shop.Stack) first." `move` of a method qualifies such names itself.
+Qualify it (Shop.Stack) first." `move` of a method qualifies such names itself, and so does
+`inline` of a method at a call outside its declaring class (issue #673, 2026-11-15: `new
+Shop.Stack()`, the outer class imported where the call's file needs it); a call inside the class
+keeps the simple name.
 
 ## What every tool shares
 
