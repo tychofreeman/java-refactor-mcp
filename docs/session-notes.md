@@ -590,6 +590,9 @@ Each was chosen from options; the record named beside it has the options it beat
   `Gate.applyOrRefuse`, the subclass's file as null. `usesInstance` refuses a body that needs the
   instance; `construction` maps `new Sub(args)` through the subclass constructor's `super(...)`;
   `samOf` finds a named type's method through `Jdt.probeType` on the superclass.
+  `useEdits` takes the subclass's file, key, name, constructors and text as one `StrategySubclass`
+  (#528); its components keep their `sub` prefix, as `rename` of a record component does not reach
+  the accessor calls (friction log).
 
 - `convert_loop` (roadmap #138, 2026-11-11) is `ConvertLoop`: an index for or a for over an
   iterator to an enhanced for, and an enhanced for to either; each pair writes its text edits

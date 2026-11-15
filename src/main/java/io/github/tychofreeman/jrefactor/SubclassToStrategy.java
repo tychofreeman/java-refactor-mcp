@@ -258,17 +258,13 @@ final class SubclassToStrategy {
 
     Map<Path, List<TextEdit>> byFile =
         useEdits(
+            project,
             baseFile,
+            baseName,
             edits,
             holding,
-            opened,
-            subKey,
-            project,
-            subName,
-            baseName,
-            subConstructors,
-            subText,
-            naming);
+            naming,
+            new StrategySubclass(opened, subKey, subName, subConstructors, subText));
     List<String> chosen = new ArrayList<>();
     chosen.add(baseType.getQualifiedName());
     for (Object o : subUnit.imports()) {
@@ -405,28 +401,24 @@ final class SubclassToStrategy {
    * name of it the superclass's; refused where it is told from the superclass.
    */
   private static Map<Path, List<TextEdit>> useEdits(
+      SourceProject project,
       Path baseFile,
+      String baseName,
       List<TextEdit> edits,
       Holding holding,
-      Opened opened,
-      String subKey,
-      SourceProject project,
-      String subName,
-      String baseName,
-      List<MethodDeclaration> subConstructors,
-      String subText,
-      Names naming) {
+      Names naming,
+      StrategySubclass sub) {
     // Every use of the subclass.
     Map<Path, List<TextEdit>> byFile = new HashMap<>();
     byFile.put(baseFile, edits);
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-      if (e.getKey().equals(opened.file())) {
+      if (e.getKey().equals(sub.opened().file())) {
         continue;
       }
       String text = holding.texts().get(e.getKey());
       List<TextEdit> es = byFile.computeIfAbsent(e.getKey(), k -> new ArrayList<>());
       for (SimpleName n : Nodes.all(e.getValue(), SimpleName.class)) {
-        if (!(n.resolveBinding() instanceof ITypeBinding t) || !t.getKey().equals(subKey)) {
+        if (!(n.resolveBinding() instanceof ITypeBinding t) || !t.getKey().equals(sub.subKey())) {
           continue;
         }
         int line = e.getValue().getLineNumber(n.getStartPosition());
@@ -442,7 +434,7 @@ final class SubclassToStrategy {
         }
         if (!(n.getParent() instanceof SimpleType st)) {
           throw new Refusal(
-              subName
+              sub.subName()
                   + " is named at "
                   + where
                   + " other than as a type (a static member, a"
@@ -464,7 +456,7 @@ final class SubclassToStrategy {
                                 : null;
         if (kind != null) {
           throw new Refusal(
-              subName
+              sub.subName()
                   + " is used in "
                   + kind
                   + " at "
@@ -479,7 +471,13 @@ final class SubclassToStrategy {
                   cic.getStartPosition(),
                   Nodes.end(cic),
                   construction(
-                      text, cic, subConstructors, subText, baseName, naming.subFn(), where)));
+                      text,
+                      cic,
+                      sub.subConstructors(),
+                      sub.subText(),
+                      baseName,
+                      naming.subFn(),
+                      where)));
         } else {
           es.add(new TextEdit(n.getStartPosition(), Nodes.end(n), baseName));
         }
