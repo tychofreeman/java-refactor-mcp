@@ -1953,3 +1953,12 @@ again.
 - `MoveToPackage.run`'s visitor and per-file loop were left: each reads ten or more of `run`'s
   locals. `extract_function` would take them all as parameters; a record of the move's names would
   have to come first, and no tool gathers locals that are computed in different places into one.
+## 2026-11-15: strategy-context (#528, item 7)
+
+- No Java by hand. `rename` of a record component cannot be done: by `name`
+  (`StrategySubclass.subKey`) it is refused as "has no member subKey. Its members are none"; by
+  `line` the component is renamed but its accessor calls (`sub.subKey()`) are not, so the gate
+  refuses ("The method subKey() is undefined"). The components `extract_type` made from
+  parameters kept the parameters' names (`sub.subKey()`, `sub.subName()`). Tried: by name, by
+  line. A rename of a component should take its accessor and every call of it along, as a
+  record's field and accessor are one name.
