@@ -68,7 +68,7 @@ class ServerTest {
           Map.entry("replace_statements", 2114),
           Map.entry("extract_type", 2048),
           Map.entry("extract_variable", 2029),
-          Map.entry("move", 1976),
+          Map.entry("move", 1964),
           Map.entry("fold", 1897),
           Map.entry("extract_function", 1852),
           Map.entry("batch", 1801),

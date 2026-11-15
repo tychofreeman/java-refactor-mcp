@@ -1,0 +1,1 @@
+moved Shapes.Kind into p/Color.java as Color.Kind, with 2 references in 1 file: p/Shapes.java lines 9, 10; widened Kind to package-private

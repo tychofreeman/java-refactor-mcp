@@ -18,7 +18,7 @@ import org.eclipse.jdt.core.dom.TagElement;
 /** The edits of one signature change, by file, applied together under the gate. */
 final class SignatureChange {
   final MethodFamily family;
-  final Map<Signatures.Source, List<TextEdit>> edits = new LinkedHashMap<>();
+  final Map<MethodFamily.Source, List<TextEdit>> edits = new LinkedHashMap<>();
 
   /** The gate's fix line for a signature change that adds compile errors. */
   static final String FIX =
@@ -29,17 +29,17 @@ final class SignatureChange {
     this.family = family;
   }
 
-  private void add(Signatures.Source file, int start, int end, String text) {
+  private void add(MethodFamily.Source file, int start, int end, String text) {
     edits.computeIfAbsent(file, k -> new ArrayList<>()).add(new TextEdit(start, end, text));
   }
 
   /** Replaces {@code node}'s text in {@code file} with {@code text}. */
-  void replace(Signatures.Source file, ASTNode node, String text) {
+  void replace(MethodFamily.Source file, ASTNode node, String text) {
     add(file, node.getStartPosition(), Nodes.end(node), text);
   }
 
   /** Replaces {@code start}-{@code end} of {@code file} with {@code text}. */
-  void replaceRange(Signatures.Source file, int start, int end, String text) {
+  void replaceRange(MethodFamily.Source file, int start, int end, String text) {
     add(file, start, end, text);
   }
 
@@ -47,7 +47,7 @@ final class SignatureChange {
    * Inserts {@code text} at position {@code at} of {@code list}, whose first element goes at {@code
    * open}; with no list (open below 0), as {@code (text)} at {@code bare}.
    */
-  void insert(Signatures.Source file, List<?> list, int open, int bare, int at, String text) {
+  void insert(MethodFamily.Source file, List<?> list, int open, int bare, int at, String text) {
     if (list.isEmpty() && open < 0) {
       add(file, bare, bare, "(" + text + ")");
       return;
@@ -57,7 +57,7 @@ final class SignatureChange {
   }
 
   /** Removes the element at {@code at} of {@code list} with its comma. */
-  void remove(Signatures.Source file, List<?> list, int at) {
+  void remove(MethodFamily.Source file, List<?> list, int at) {
     ASTNode e = (ASTNode) list.get(at);
     if (list.size() == 1) {
       add(file, e.getStartPosition(), Nodes.end(e), "");
@@ -69,7 +69,7 @@ final class SignatureChange {
   }
 
   /** Writes {@code params} as lambda {@code l}'s parameters, from its start to its arrow. */
-  void lambda(Signatures.Lambda l, List<String> params) {
+  void lambda(MethodFamily.Lambda l, List<String> params) {
     LambdaExpression n = l.node();
     List<?> old = n.parameters();
     int from =
@@ -79,7 +79,7 @@ final class SignatureChange {
   }
 
   /** Puts the elements of {@code list} in {@code order}, keeping the separators in place. */
-  void reorder(Signatures.Source file, List<?> list, List<Integer> order) {
+  void reorder(MethodFamily.Source file, List<?> list, List<Integer> order) {
     for (int k = 0; k < order.size(); k++) {
       if (order.get(k) != k) {
         ASTNode at = (ASTNode) list.get(k);
@@ -90,7 +90,7 @@ final class SignatureChange {
   }
 
   /** Removes the {@code @param} tag of the parameter at {@code at} from {@code d}'s Javadoc. */
-  void removeParamTag(Signatures.Decl d, int at) {
+  void removeParamTag(MethodFamily.Decl d, int at) {
     Javadoc doc = d.m().getJavadoc();
     if (doc == null) {
       return;
@@ -128,8 +128,8 @@ final class SignatureChange {
     Map<Path, String> texts = new LinkedHashMap<>();
     Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
-    for (Map.Entry<Signatures.Source, List<TextEdit>> e : edits.entrySet()) {
-      Signatures.Source s = e.getKey();
+    for (Map.Entry<MethodFamily.Source, List<TextEdit>> e : edits.entrySet()) {
+      MethodFamily.Source s = e.getKey();
       List<TextEdit> list = new ArrayList<>(e.getValue());
       list.sort((a, b) -> a.start() != b.start() ? b.start() - a.start() : b.end() - a.end());
       int limit = Integer.MAX_VALUE;

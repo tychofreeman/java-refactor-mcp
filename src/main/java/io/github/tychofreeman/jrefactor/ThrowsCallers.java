@@ -45,7 +45,7 @@ import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
  */
 final class ThrowsCallers {
   /** The declarations that gain a throws by propagation, and which exceptions each gains. */
-  final List<Signatures.Decl> decls = new ArrayList<>();
+  final List<MethodFamily.Decl> decls = new ArrayList<>();
 
   final Map<MethodDeclaration, List<String>> names = new IdentityHashMap<>();
 
@@ -57,21 +57,21 @@ final class ThrowsCallers {
   /** The stop_at methods a call path did not reach. */
   final Set<String> unreached = new LinkedHashSet<>();
 
-  private record Site(Signatures.Source s, ASTNode node) {}
+  private record Site(MethodFamily.Source s, ASTNode node) {}
 
   /** A catch to write: the exception as written, the unchecked type that wraps it. */
   private record Caught(String name, String wrapper) {}
 
   /** Statements {@code from} to {@code to} of a block, to go in a try with these catches. */
   private static final class Wrap {
-    final Signatures.Source s;
+    final MethodFamily.Source s;
     final Block block;
     int from;
     int to;
     final String var;
     final List<Caught> catches = new ArrayList<>();
 
-    Wrap(Signatures.Source s, Block block, int from, int to, String var) {
+    Wrap(MethodFamily.Source s, Block block, int from, int to, String var) {
       this.s = s;
       this.block = block;
       this.from = from;
@@ -95,12 +95,12 @@ final class ThrowsCallers {
   private final List<String> stops;
   private final Map<String, List<Site>> calls = new HashMap<>();
   private final Map<String, List<Site>> references = new HashMap<>();
-  private final Map<String, Signatures.Decl> declared = new HashMap<>();
+  private final Map<String, MethodFamily.Decl> declared = new HashMap<>();
   private final List<CompilationUnit> units = new ArrayList<>();
   private final Set<MethodDeclaration> first = new HashSet<>();
   private final List<Wrap> wraps = new ArrayList<>();
   private final Map<TryStatement, List<Caught>> clauses = new IdentityHashMap<>();
-  private final Map<TryStatement, Signatures.Source> tries = new IdentityHashMap<>();
+  private final Map<TryStatement, MethodFamily.Source> tries = new IdentityHashMap<>();
 
   private ThrowsCallers(
       SourceProject project,
@@ -125,7 +125,7 @@ final class ThrowsCallers {
       SourceProject project,
       MethodFamily family,
       SignatureChange change,
-      List<Signatures.Decl> initial,
+      List<MethodFamily.Decl> initial,
       List<String> added,
       boolean propagate,
       List<String> stops,
@@ -133,7 +133,7 @@ final class ThrowsCallers {
       throws Exception {
     ThrowsCallers c = new ThrowsCallers(project, family, change, propagate, stops);
     c.index();
-    for (Signatures.Decl d : initial) {
+    for (MethodFamily.Decl d : initial) {
       c.first.add(d.m());
     }
     for (String name : added) {
@@ -162,9 +162,9 @@ final class ThrowsCallers {
     for (Map.Entry<Path, CompilationUnit> e : missing.units().entrySet()) {
       Path f = e.getKey();
       family.sources.put(
-          f, new Signatures.Source(f, project.relative(f), missing.texts().get(f), e.getValue()));
+          f, new MethodFamily.Source(f, project.relative(f), missing.texts().get(f), e.getValue()));
     }
-    for (Signatures.Source s : family.sources.values()) {
+    for (MethodFamily.Source s : family.sources.values()) {
       units.add(s.unit());
       for (ASTNode n : Nodes.all(s.unit(), ASTNode.class)) {
         IMethodBinding b = Calls.binding(n);
@@ -172,7 +172,7 @@ final class ThrowsCallers {
         if (n instanceof MethodDeclaration m && m.resolveBinding() != null) {
           declared.put(
               MethodFamily.key(m.resolveBinding()),
-              new Signatures.Decl(
+              new MethodFamily.Decl(
                   s, m, m.resolveBinding(), Signatures.open(s.text(), m.getName())));
         }
         if (b != null) {
@@ -189,8 +189,8 @@ final class ThrowsCallers {
    * target's file with {@code chosen} as imports.
    */
   private Set<String> supersOf(String name, List<String> chosen) throws Exception {
-    Signatures.Source home = null;
-    for (Signatures.Source s : family.sources.values()) {
+    MethodFamily.Source home = null;
+    for (MethodFamily.Source s : family.sources.values()) {
       if (s.unit() == family.target.getRoot()) {
         home = s;
       }
@@ -234,10 +234,10 @@ final class ThrowsCallers {
   }
 
   /** Follows the calls of the declarations that throw {@code name}, outwards. */
-  private void spread(List<Signatures.Decl> initial, String name, Set<String> supers) {
+  private void spread(List<MethodFamily.Decl> initial, String name, Set<String> supers) {
     Set<String> throwing = new HashSet<>();
     Deque<String> queue = new ArrayDeque<>();
-    for (Signatures.Decl d : initial) {
+    for (MethodFamily.Decl d : initial) {
       if (throwing.add(MethodFamily.key(d.binding()))) {
         queue.add(MethodFamily.key(d.binding()));
       }
@@ -374,7 +374,7 @@ final class ThrowsCallers {
       return false;
     }
     for (String key : keys) {
-      Signatures.Decl d = declared.get(key);
+      MethodFamily.Decl d = declared.get(key);
       if (d == null) {
         continue;
       }
@@ -409,7 +409,7 @@ final class ThrowsCallers {
 
   /** Records a catch of {@code c} around the call at {@code site}. */
   private void catchAt(Site site, ASTNode context, TryStatement inner, Caught c) {
-    Signatures.Source s = site.s();
+    MethodFamily.Source s = site.s();
     String at = where(site);
     if (!caught.contains(at)) {
       caught.add(at);
@@ -504,7 +504,7 @@ final class ThrowsCallers {
   private void write() {
     for (Map.Entry<TryStatement, List<Caught>> e : clauses.entrySet()) {
       TryStatement t = e.getKey();
-      Signatures.Source s = tries.get(t);
+      MethodFamily.Source s = tries.get(t);
       List<?> existing = t.catchClauses();
       int at =
           existing.isEmpty()

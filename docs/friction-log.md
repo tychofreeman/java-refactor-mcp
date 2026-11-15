@@ -2046,3 +2046,10 @@ again.
   narrowed by `function` (`Call c` to `Signatures.Call c`) before the move went through. This
   looks like a bug in `move`, not a missing tool: a method that names a member type of its old
   class should get it qualified, as `MoveType.qualifier` does for a type moved to its own file.
+
+## 2026-11-15: member-type-to and signatures-records (roadmap 513)
+
+- No Java by hand. `move` with `to` of a member type (slice 1, `NestType`) then moved
+  `Signatures`' five records to `MethodFamily` in one batch, the entry of 2026-11-15
+  (signatures-family) answered. A batch section named `"@@m"` in the JSON was refused ("section
+  @@m is not used"); the JSON names it `"@m"`.

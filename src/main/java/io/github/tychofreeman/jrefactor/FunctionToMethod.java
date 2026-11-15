@@ -64,7 +64,7 @@ final class FunctionToMethod {
     SingleVariableDeclaration self = (SingleVariableDeclaration) m.parameters().get(0);
     IVariableBinding selfBinding = self.resolveBinding();
     String name = m.getName().getIdentifier();
-    Signatures.Decl d = family.decls.get(0);
+    MethodFamily.Decl d = family.decls.get(0);
     SignatureChange change = new SignatureChange(family);
     for (Object o : d.m().modifiers()) {
       if (o instanceof Modifier mod && mod.isStatic()) {
@@ -104,7 +104,7 @@ final class FunctionToMethod {
               });
     }
     List<String> nullable = new ArrayList<>();
-    for (Signatures.Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       if (!(c.node() instanceof MethodInvocation mi) || c.arguments().isEmpty()) {
         throw new Refusal(
             "a call of "

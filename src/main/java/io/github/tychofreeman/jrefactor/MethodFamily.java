@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
@@ -41,20 +42,20 @@ import org.eclipse.jdt.core.dom.TypeMethodReference;
 /** The method, every declaration it overrides or that overrides it, and every call of them. */
 final class MethodFamily {
   final String label;
-  final List<Signatures.Decl> decls = new ArrayList<>();
-  final List<Signatures.Call> calls = new ArrayList<>();
+  final List<Decl> decls = new ArrayList<>();
+  final List<Call> calls = new ArrayList<>();
 
   /** The lambdas that implement a member of the family. */
-  final List<Signatures.Lambda> lambdas = new ArrayList<>();
+  final List<Lambda> lambdas = new ArrayList<>();
 
   int size;
   MethodDeclaration target;
 
   /** The files parsed, by path: where a declaration found later is edited. */
-  final Map<Path, Signatures.Source> sources = new LinkedHashMap<>();
+  final Map<Path, Source> sources = new LinkedHashMap<>();
 
   /** With {@link #keepReferences}, the method references that implement a member of the family. */
-  final List<Signatures.Reference> references = new ArrayList<>();
+  final List<Reference> references = new ArrayList<>();
 
   /** Whether a method reference is kept in {@link #references}, not refused. */
   private boolean keepReferences;
@@ -81,13 +82,12 @@ final class MethodFamily {
     // A family member and a call of one have the method's simple name, so a file without that
     // name cannot hold either: only the files with it are parsed.
     Holding holding = Holding.of(project, simpleName(args.required("name")), path);
-    Map<Path, Signatures.Source> sources = new LinkedHashMap<>();
+    Map<Path, Source> sources = new LinkedHashMap<>();
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
       Path f = e.getKey();
-      sources.put(
-          f, new Signatures.Source(f, project.relative(f), holding.texts().get(f), e.getValue()));
+      sources.put(f, new Source(f, project.relative(f), holding.texts().get(f), e.getValue()));
     }
-    Signatures.Source home = sources.get(path);
+    Source home = sources.get(path);
     if (home == null) {
       throw new Refusal(rel + " is not a Java file under a source root.");
     }
@@ -113,12 +113,9 @@ final class MethodFamily {
 
     Set<String> keys =
         MethodFamily.family(
-            project,
-            sources.values().stream().map(Signatures.Source::unit).toList(),
-            binding,
-            consequence);
-    Map<String, Signatures.Decl> declared = new HashMap<>();
-    for (Signatures.Source s : sources.values()) {
+            project, sources.values().stream().map(Source::unit).toList(), binding, consequence);
+    Map<String, Decl> declared = new HashMap<>();
+    for (Source s : sources.values()) {
       s.unit()
           .accept(
               new ASTVisitor() {
@@ -128,19 +125,19 @@ final class MethodFamily {
                   if (b != null && keys.contains(MethodFamily.key(b))) {
                     declared.put(
                         MethodFamily.key(b),
-                        new Signatures.Decl(s, m, b, Signatures.open(s.text(), m.getName())));
+                        new Decl(s, m, b, Signatures.open(s.text(), m.getName())));
                   }
                   return true;
                 }
               });
     }
     for (String k : keys) {
-      Signatures.Decl d = declared.get(k);
+      Decl d = declared.get(k);
       if (d != null) {
         family.decls.add(d);
       }
     }
-    for (Signatures.Source s : sources.values()) {
+    for (Source s : sources.values()) {
       family.findCalls(s, keys);
     }
     boolean functional =
@@ -158,8 +155,7 @@ final class MethodFamily {
                   !sources.containsKey(f) && (t.contains("->") || references && t.contains("::")));
       for (Map.Entry<Path, CompilationUnit> e : lambdas.units().entrySet()) {
         Path f = e.getKey();
-        Signatures.Source s =
-            new Signatures.Source(f, project.relative(f), lambdas.texts().get(f), e.getValue());
+        Source s = new Source(f, project.relative(f), lambdas.texts().get(f), e.getValue());
         family.sources.put(f, s);
         family.findCalls(s, keys);
       }
@@ -177,7 +173,7 @@ final class MethodFamily {
   }
 
   /** Adds the calls in {@code s} of the methods with {@code keys}; refuses method references. */
-  private void findCalls(Signatures.Source s, Set<String> keys) {
+  private void findCalls(Source s, Set<String> keys) {
     String text = s.text();
     s.unit()
         .accept(
@@ -189,9 +185,7 @@ final class MethodFamily {
               @Override
               public boolean visit(MethodInvocation n) {
                 if (ours(n.resolveMethodBinding())) {
-                  calls.add(
-                      new Signatures.Call(
-                          s, n, n.arguments(), Signatures.open(text, n.getName()), -1));
+                  calls.add(new Call(s, n, n.arguments(), Signatures.open(text, n.getName()), -1));
                 }
                 return true;
               }
@@ -199,9 +193,7 @@ final class MethodFamily {
               @Override
               public boolean visit(SuperMethodInvocation n) {
                 if (ours(n.resolveMethodBinding())) {
-                  calls.add(
-                      new Signatures.Call(
-                          s, n, n.arguments(), Signatures.open(text, n.getName()), -1));
+                  calls.add(new Call(s, n, n.arguments(), Signatures.open(text, n.getName()), -1));
                 }
                 return true;
               }
@@ -209,9 +201,7 @@ final class MethodFamily {
               @Override
               public boolean visit(ClassInstanceCreation n) {
                 if (ours(Calls.binding(n))) {
-                  calls.add(
-                      new Signatures.Call(
-                          s, n, n.arguments(), Signatures.open(text, n.getType()), -1));
+                  calls.add(new Call(s, n, n.arguments(), Signatures.open(text, n.getType()), -1));
                 }
                 return true;
               }
@@ -220,7 +210,7 @@ final class MethodFamily {
               public boolean visit(ConstructorInvocation n) {
                 if (ours(n.resolveConstructorBinding())) {
                   calls.add(
-                      new Signatures.Call(
+                      new Call(
                           s, n, n.arguments(), Signatures.after(text, n.getStartPosition()), -1));
                 }
                 return true;
@@ -233,8 +223,7 @@ final class MethodFamily {
                       n.getExpression() == null
                           ? n.getStartPosition()
                           : n.getExpression().getStartPosition() + n.getExpression().getLength();
-                  calls.add(
-                      new Signatures.Call(s, n, n.arguments(), Signatures.after(text, from), -1));
+                  calls.add(new Call(s, n, n.arguments(), Signatures.after(text, from), -1));
                 }
                 return true;
               }
@@ -248,7 +237,7 @@ final class MethodFamily {
                     i++;
                   }
                   boolean parens = i < text.length() && text.charAt(i) == '(';
-                  calls.add(new Signatures.Call(s, n, n.arguments(), parens ? i + 1 : -1, end));
+                  calls.add(new Call(s, n, n.arguments(), parens ? i + 1 : -1, end));
                 }
                 return true;
               }
@@ -257,7 +246,7 @@ final class MethodFamily {
                 if (keepReferences) {
                   ITypeBinding type = n.resolveTypeBinding();
                   if (type != null && ours(type.getFunctionalInterfaceMethod())) {
-                    references.add(new Signatures.Reference(s, n, b));
+                    references.add(new Reference(s, n, b));
                   }
                   return true;
                 }
@@ -278,7 +267,7 @@ final class MethodFamily {
               public boolean visit(LambdaExpression n) {
                 ITypeBinding type = n.resolveTypeBinding();
                 if (type != null && ours(type.getFunctionalInterfaceMethod())) {
-                  lambdas.add(new Signatures.Lambda(s, n));
+                  lambdas.add(new Lambda(s, n));
                 }
                 return true;
               }
@@ -334,7 +323,7 @@ final class MethodFamily {
 
   /** Refuses when a body of the family reads its parameter at {@code at}. */
   void refuseReading(int at) {
-    for (Signatures.Decl d : decls) {
+    for (Decl d : decls) {
       if (d.m().getBody() == null) {
         continue;
       }
@@ -365,7 +354,7 @@ final class MethodFamily {
 
   /** Refuses when a body of the family reads a field named {@code name} without a qualifier. */
   void refuseHiding(String name) {
-    for (Signatures.Decl d : decls) {
+    for (Decl d : decls) {
       if (d.m().getBody() == null) {
         continue;
       }
@@ -511,5 +500,47 @@ final class MethodFamily {
       }
     }
     return sameCount.size() == 1 ? sameCount.get(0) : null;
+  }
+
+  /** A declaration in the family; {@code open} is the offset just after its "(". */
+  record Decl(Source file, MethodDeclaration m, IMethodBinding binding, int open) {}
+
+  /**
+   * A call of the family: its arguments, the offset just after its "(", or -1 for an enum constant
+   * without one, then {@code bare} is where "(...)" goes.
+   */
+  record Call(Source file, ASTNode node, List<?> arguments, int open, int bare) {
+    String where(ASTNode n) {
+      return file.rel() + ", line " + file.line(n);
+    }
+  }
+
+  /** A lambda that implements a family member: one more declaration whose parameters change. */
+  record Lambda(Source file, LambdaExpression node) {
+    /** Each parameter's text, as written: {@code a}, or {@code int a} when they are typed. */
+    List<String> params() {
+      List<String> out = new ArrayList<>();
+      for (Object o : node.parameters()) {
+        ASTNode p = (ASTNode) o;
+        out.add(Nodes.source(file.text(), p));
+      }
+      return out;
+    }
+
+    /** Whether its parameters are written with their types. */
+    boolean typed() {
+      return !node.parameters().isEmpty()
+          && node.parameters().get(0) instanceof SingleVariableDeclaration;
+    }
+  }
+
+  /** A method reference that implements a family member, and the method it refers to. */
+  record Reference(Source file, MethodReference node, IMethodBinding target) {}
+
+  /** A file of the project, read and parsed with bindings. */
+  record Source(Path file, String rel, String text, CompilationUnit unit) {
+    int line(ASTNode node) {
+      return unit.getLineNumber(node.getStartPosition());
+    }
   }
 }
