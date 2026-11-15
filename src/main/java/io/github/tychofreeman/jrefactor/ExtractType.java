@@ -134,7 +134,7 @@ final class ExtractType {
     }
 
     SignatureChange change = new SignatureChange(family);
-    for (Signatures.Decl d : family.decls) {
+    for (MethodFamily.Decl d : family.decls) {
       List<?> params = d.m().parameters();
       change.replaceRange(
           d.file(),
@@ -184,7 +184,7 @@ final class ExtractType {
                 }
               });
     }
-    for (Signatures.Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       List<?> arguments = c.arguments();
       int s = ((ASTNode) arguments.get(first)).getStartPosition();
       int e = Nodes.end(((ASTNode) arguments.get(last)));

@@ -594,9 +594,8 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - The family walk is `MethodFamily`'s (#528): `MethodFamily.family` (the keys of a method's
   family in some units), `MethodFamily.key` and `MethodFamily.constructed`, moved out of
-  `Signatures`. The records `Source`, `Decl`, `Call`, `Lambda` and `Reference` are still
-  `Signatures`' (no tool moves a member type into another class; options for one in
-  `docs/sessions/member-type-move-sketch.md`, roadmap 513, for the owner to choose).
+  `Signatures`, and the records `Source`, `Decl`, `Call`, `Lambda` and `Reference` with them
+  (`MethodFamily.Decl` and so on outside it; moved by `move` with `to`, roadmap 513, 2026-11-15).
 
 - `MethodFamily.of` refuses a varargs method unless its `varargs` argument is true (#614,
   2026-11-15): only `change_type` passes true, since it edits no call; a tool that rewrites calls

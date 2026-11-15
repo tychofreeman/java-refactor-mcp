@@ -157,7 +157,7 @@ final class ParameterValue {
   private static String substituted(
       List<Occurrence> uses,
       String source,
-      Signatures.Call c,
+      MethodFamily.Call c,
       List<TextEdit> more,
       MethodDeclaration casts) {
     List<TextEdit> swaps = new ArrayList<>(more);
@@ -245,7 +245,7 @@ final class ParameterValue {
     /**
      * The value with {@code c}'s arguments in place of the parameters, as {@code c} would write it.
      */
-    String at(Signatures.Call c) {
+    String at(MethodFamily.Call c) {
       return written(c, false);
     }
 
@@ -255,7 +255,7 @@ final class ParameterValue {
      * where its name alone does not reach it; with {@code probe}, by the class's qualified name,
      * which needs no import.
      */
-    String written(Signatures.Call c, boolean probe) {
+    String written(MethodFamily.Call c, boolean probe) {
       List<TextEdit> swaps = new ArrayList<>();
       for (MethodInvocation call : Nodes.all(expression, MethodInvocation.class)) {
         IMethodBinding b = call.resolveMethodBinding();
@@ -302,7 +302,7 @@ final class ParameterValue {
      * The value with {@code c}'s arguments in place of the parameters, each call written as in the
      * method.
      */
-    String inPlace(Signatures.Call c) {
+    String inPlace(MethodFamily.Call c) {
       return substituted(occurrences(expression, method), text, c, List.of(), null);
     }
   }
@@ -313,7 +313,7 @@ final class ParameterValue {
    * field or a constant there. {@code label} names the method in the refusal.
    */
   static InMethod inMethod(
-      SourceProject project, Signatures.Decl d, int at, String value, String label) {
+      SourceProject project, MethodFamily.Decl d, int at, String value, String label) {
     MethodDeclaration m = d.m();
     Signatures.parsesAs("value", value, "class C { Object o = " + value + "; }");
     SingleVariableDeclaration p = (SingleVariableDeclaration) m.parameters().get(at);
@@ -412,7 +412,7 @@ final class ParameterValue {
    * (by binding key; the two come from different parses), a field of the method's object only on a
    * call on {@code this}.
    */
-  static boolean passes(InMethod value, Signatures.Call c, Expression argument) {
+  static boolean passes(InMethod value, MethodFamily.Call c, Expression argument) {
     return new Instance(value.method(), c).safeSubtreeMatch(value.expression(), argument);
   }
 
@@ -426,9 +426,9 @@ final class ParameterValue {
   /** The matcher of {@link #passes}: the pattern is the value, the other side the argument. */
   private static final class Instance extends ASTMatcher {
     final MethodDeclaration method;
-    final Signatures.Call call;
+    final MethodFamily.Call call;
 
-    Instance(MethodDeclaration method, Signatures.Call call) {
+    Instance(MethodDeclaration method, MethodFamily.Call call) {
       super(false);
       this.method = method;
       this.call = call;
@@ -767,7 +767,10 @@ final class ParameterValue {
    * there to another method, or to one it cannot see.
    */
   private static void sameTargets(
-      SourceProject project, InMethod v, Signatures.Call c, Map<Signatures.Call, Refusal> probed) {
+      SourceProject project,
+      InMethod v,
+      MethodFamily.Call c,
+      Map<MethodFamily.Call, Refusal> probed) {
     List<MethodInvocation> calls = Nodes.all(v.expression(), MethodInvocation.class);
     if (calls.isEmpty()) {
       return;
@@ -873,26 +876,26 @@ final class ParameterValue {
    * none for a value without calls. Each file is parsed once, with every call's argument written
    * in.
    */
-  static Map<Signatures.Call, Refusal> probe(
-      SourceProject project, InMethod v, List<Signatures.Call> calls) {
-    Map<Signatures.Call, Refusal> refused = new HashMap<>();
+  static Map<MethodFamily.Call, Refusal> probe(
+      SourceProject project, InMethod v, List<MethodFamily.Call> calls) {
+    Map<MethodFamily.Call, Refusal> refused = new HashMap<>();
     List<MethodInvocation> mine = Nodes.all(v.expression(), MethodInvocation.class);
     if (mine.isEmpty()) {
       return refused;
     }
-    Map<Path, List<Signatures.Call>> byFile = new LinkedHashMap<>();
-    for (Signatures.Call c : calls) {
+    Map<Path, List<MethodFamily.Call>> byFile = new LinkedHashMap<>();
+    for (MethodFamily.Call c : calls) {
       byFile.computeIfAbsent(c.file().file(), f -> new ArrayList<>()).add(c);
     }
-    for (List<Signatures.Call> here : byFile.values()) {
+    for (List<MethodFamily.Call> here : byFile.values()) {
       String text = here.get(0).file().text();
-      List<Signatures.Call> written = new ArrayList<>();
+      List<MethodFamily.Call> written = new ArrayList<>();
       List<int[]> places = new ArrayList<>();
       StringBuilder probed = new StringBuilder();
-      List<Signatures.Call> sorted = new ArrayList<>(here);
+      List<MethodFamily.Call> sorted = new ArrayList<>(here);
       sorted.sort(java.util.Comparator.comparingInt(ParameterValue::probeAt));
       int copied = 0;
-      for (Signatures.Call c : sorted) {
+      for (MethodFamily.Call c : sorted) {
         String probe;
         try {
           probe = v.written(c, true);
@@ -954,7 +957,7 @@ final class ParameterValue {
    * Where {@link #probe} writes {@code c}'s argument: after its last argument, or in its
    * parentheses.
    */
-  private static int probeAt(Signatures.Call c) {
+  private static int probeAt(MethodFamily.Call c) {
     return c.arguments().isEmpty()
         ? c.open()
         : Nodes.end((ASTNode) c.arguments().get(c.arguments().size() - 1));
@@ -968,7 +971,7 @@ final class ParameterValue {
   private static void sameCalls(
       CompilationUnit unit,
       InMethod v,
-      Signatures.Call c,
+      MethodFamily.Call c,
       List<MethodInvocation> calls,
       int from,
       int to) {
@@ -1028,10 +1031,10 @@ final class ParameterValue {
    * {@link #perCall}'s function. {@link #probe} first parses each file once with every call's
    * argument written in; without it, each call is probed in a parse of its own.
    */
-  static final class PerCall implements java.util.function.Function<Signatures.Call, String> {
+  static final class PerCall implements java.util.function.Function<MethodFamily.Call, String> {
     private final SourceProject project;
     private final InMethod v;
-    private Map<Signatures.Call, Refusal> probed;
+    private Map<MethodFamily.Call, Refusal> probed;
 
     PerCall(SourceProject project, InMethod v) {
       this.project = project;
@@ -1039,12 +1042,12 @@ final class ParameterValue {
     }
 
     /** Probes {@code calls} at once ({@link ParameterValue#probe}), each refused in its turn. */
-    void probe(List<Signatures.Call> calls) {
+    void probe(List<MethodFamily.Call> calls) {
       probed = ParameterValue.probe(project, v, calls);
     }
 
     @Override
-    public String apply(Signatures.Call c) {
+    public String apply(MethodFamily.Call c) {
       checkCall(v, c, Direction.TO_CALLS);
       sameTargets(project, v, c, probed);
       return v.at(c);
@@ -1077,7 +1080,7 @@ final class ParameterValue {
    * only in that cast and in where the value stands: at {@code v.at()} among the arguments, which
    * for {@link Direction#TO_CALLS} is still the call's argument there.
    */
-  static void checkCall(InMethod v, Signatures.Call c, Direction d) {
+  static void checkCall(InMethod v, MethodFamily.Call c, Direction d) {
     boolean toCalls = d == Direction.TO_CALLS;
     String text = c.file().text();
     int at = v.at();
@@ -1358,7 +1361,7 @@ final class ParameterValue {
    */
   static void refuseCallsNotPassing(
       MethodFamily family, int at, ParameterValue.InMethod v, String value, String parameter) {
-    for (Signatures.Call c : family.calls) {
+    for (MethodFamily.Call c : family.calls) {
       Expression argument = (Expression) c.arguments().get(at);
       if (!ParameterValue.passes(v, c, argument)) {
         String here = v.inPlace(c);

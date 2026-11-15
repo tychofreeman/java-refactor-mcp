@@ -208,7 +208,7 @@ final class Introduce {
                         + source
                         + " too. Extract it as a variable instead.");
               }
-              Signatures.Decl d =
+              MethodFamily.Decl d =
                   family.decls.stream()
                       .filter(x ->
                           x.file().rel().equals(opened.rel())
