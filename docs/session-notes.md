@@ -671,7 +671,9 @@ Each was chosen from options; the record named beside it has the options it beat
   needs, for both directions: `checkCall` (each call's arguments, both ways), `byParameters` and
   `perCall` (`extract_variable` `as=parameter`:
   each call passes the expression), and `inMethod`, `passes`, `quiet` (`remove_parameter`
-  `value`: the method computes it). `inMethod` parses the declaring file with the value declared
+  `value`: the method computes it), with `remove_parameter` `value`'s refusals (`refuseNoLocal`,
+  `refuseWritingValue`, `refuseConstructorCallRead`, `refuseConstructorValue`,
+  `refuseCallsNotPassing`; moved out of `Signatures.removeWithExpression`, #528). `inMethod` parses the declaring file with the value declared
   where the body starts, under a name no source has, so its names carry the bindings they have
   there; `passes` is an `ASTMatcher` with the call's arguments in place of the parameters, other
   names by binding key. `Fold.Holes` was not reused: it finds what a parameter stands for, where

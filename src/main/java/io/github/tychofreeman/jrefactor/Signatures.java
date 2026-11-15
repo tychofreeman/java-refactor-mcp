@@ -848,92 +848,12 @@ final class Signatures {
     Decl d = family.decls.get(0);
     MethodDeclaration m = d.m();
     SingleVariableDeclaration p = (SingleVariableDeclaration) m.parameters().get(at);
-    if (m.getBody() == null) {
-      throw new Refusal(
-          family.label
-              + " has no body to compute "
-              + value
-              + " in. Remove the parameter without value, or keep it.");
-    }
-    if (p.isVarargs() || p.getExtraDimensions() > 0) {
-      throw new Refusal(
-          parameter
-              + " is declared with ... or with [] after its name, which a local set to "
-              + value
-              + " cannot be. Declare it as an array type first (change_type), or keep it.");
-    }
+    ParameterValue.refuseNoLocal(m, family, value, p, parameter);
     ParameterValue.InMethod v = ParameterValue.inMethod(project, d, at, value, family.label);
-    for (Effects.Effect x : Effects.of(v.expression()).all()) {
-      if (x.deferred() || x.kind() == Effects.Kind.WRITE) {
-        throw new Refusal(
-            "value "
-                + value
-                + " assigns, or holds code that runs later ("
-                + x.node()
-                + "), and may only read and call: "
-                + family.label.substring(0, family.label.indexOf('('))
-                + "'s other parameters, fields, constants and literals, with operators and"
-                + " calls. Keep the parameter.");
-      }
-    }
-    int start = ParameterValue.afterConstructorCall(m);
-    if (start != m.getBody().getStartPosition() + 1) {
-      ASTNode first = (ASTNode) m.getBody().statements().get(0);
-      String call = first instanceof ConstructorInvocation ? "this(...)" : "super(...)";
-      IVariableBinding param = p.resolveBinding();
-      for (SimpleName n : Nodes.all(first, SimpleName.class)) {
-        if (param != null
-            && n.resolveBinding() instanceof IVariableBinding b
-            && b.isEqualTo(param)) {
-          throw new Refusal(
-              family.label
-                  + " passes "
-                  + parameter
-                  + " to "
-                  + call
-                  + ", and a local cannot be declared before that. Change the "
-                  + call
-                  + " call not to read it first, or keep the parameter.");
-        }
-      }
-    }
-    if (m.isConstructor() && v.acts()) {
-      throw new Refusal(
-          value
-              + " would run after the constructor above this one and the field initializers,"
-              + " not before them. Keep the parameter, or compute it in a static method that"
-              + " calls the constructor.");
-    }
-    if (m.isConstructor() && !v.fixed()) {
-      throw new Refusal(
-          value
-              + " reads a field, which the constructor above this one or a field's initializer"
-              + " could change before a local in the body reads it. Keep the parameter.");
-    }
-    for (Call c : family.calls) {
-      Expression argument = (Expression) c.arguments().get(at);
-      if (!ParameterValue.passes(v, c, argument)) {
-        String here = v.inPlace(c);
-        throw new Refusal(
-            "the call at "
-                + c.where(argument)
-                + " passes "
-                + Nodes.source(c.file().text(), argument)
-                + (here.equals(Nodes.source(c.file().text(), argument))
-                    ? ", in which a name means something else than in the method (a member of"
-                        + " another object than the one the method runs on, or another"
-                        + " overload)"
-                    : ", not "
-                        + value
-                        + (here.equals(value) ? "" : " (with that call's arguments: " + here + ")"))
-                + ", so "
-                + parameter
-                + " cannot become "
-                + value
-                + ". Change that call first, or keep the parameter.");
-      }
-      ParameterValue.checkCall(v, c, ParameterValue.Direction.TO_METHOD);
-    }
+    ParameterValue.refuseWritingValue(v, value, family);
+    ParameterValue.refuseConstructorCallRead(m, p, family, parameter);
+    ParameterValue.refuseConstructorValue(m, v, value);
+    ParameterValue.refuseCallsNotPassing(family, at, v, value, parameter);
     if (v.mayThrow()) {
       Exceptional.change(
           project,

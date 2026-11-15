@@ -2035,3 +2035,14 @@ again.
   are computed in different places, which no tool gathers (as move-tools-split-2 and
   type-parameters-split found). `ConvertLoop.run`: see long-methods. A block of `checkExits` that
   holds a `continue` cannot be extracted at all.
+
+## 2026-11-15: remove-expression-refusals (#528, item 2)
+
+- No Java by hand. `move` of a static method out of `Signatures` left its unqualified `Call` (a
+  member type of `Signatures`) as it was, so in `ParameterValue` the name meant nothing and the
+  import fix chose `jdk.vm.ci.code.site.Call` (or the like) for it; the gate refused the batch with
+  "Call cannot be resolved" and "the import jdk.vm cannot be resolved". `move` qualifies the
+  source class's static members the body names, but not its member types. A `replace_text`
+  narrowed by `function` (`Call c` to `Signatures.Call c`) before the move went through. This
+  looks like a bug in `move`, not a missing tool: a method that names a member type of its old
+  class should get it qualified, as `MoveType.qualifier` does for a type moved to its own file.
