@@ -1891,3 +1891,13 @@ retry's step pointed at `@read`, a section of the first run, and was refused as 
 not parse (the text `@read`). Resent the whole batch from a file (`@file`). A retry could keep the
 first run's sections with the refused batch, or the refusal could say that sections must be sent
 again.
+
+## 2026-11-15: statements-choice (#528, item 4)
+
+- No Java by hand, but no refactoring either: gathering four `if (...) throw` checks spread through
+  `replaceStatements` (two nested in other ifs, two after locals they read) into one
+  `Precondition.require` at the top took `insert_statements` of the new statement, with its
+  conditions rewritten on `args`, and `replace_statements` deleting each old check. Tried:
+  `move_statement` of each check upward (they read `built`, `content` and `around`, locals declared
+  after the place they go, and two sit inside other ifs). A refactoring that hoists a guard by
+  substituting its locals' initializers would have made it.
