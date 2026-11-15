@@ -574,6 +574,11 @@ Each was chosen from options; the record named beside it has the options it beat
   with `fix` (`SignatureChange.FIX` by default) and `declarations` (-1 to count the calls). The
   shorter overloads that passed `what` as `doing` were inlined away, so a new caller must word both.
 
+- The family walk is `MethodFamily`'s (#528): `MethodFamily.family` (the keys of a method's
+  family in some units), `MethodFamily.key` and `MethodFamily.constructed`, moved out of
+  `Signatures`. The records `Source`, `Decl`, `Call`, `Lambda` and `Reference` are still
+  `Signatures`' (no tool moves a member type into another class).
+
 - `MethodFamily.of` refuses a varargs method unless its `varargs` argument is true (#614,
   2026-11-15): only `change_type` passes true, since it edits no call; a tool that rewrites calls
   by position must handle the varargs arguments before it passes true. `change_type`'s `T...` is
@@ -586,8 +591,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `SignatureChange.apply` with its own fix text. `voidReturns` rewrites returns by `quietAndSafe` (named `pure` until #475) and
   `statement`; the gate judges calls, bodies that still throw and unreachable catches.
   `ThrowsCallers` is `callers`: every file parsed into `family.sources`, calls and declarations
-  indexed by `Signatures.key`, a queue of the keys that now throw (`spread`), each call either
-  handled already (`catches`, `allows`), declared further (`declare`, by `Signatures.family`) or
+  indexed by `MethodFamily.key`, a queue of the keys that now throw (`spread`), each call either
+  handled already (`catches`, `allows`), declared further (`declare`, by `MethodFamily.family`) or
   caught (`catchAt`); `write` emits the clauses and the tries as inserts, so they do not overlap
   other edits. The exception's supertypes come from `Jdt.probeType` in the target's file.
 - `subclass_to_strategy` (roadmap #136, 2026-11-12) is `SubclassToStrategy`: one `Holding` parse
@@ -612,7 +617,7 @@ Each was chosen from options; the record named beside it has the options it beat
   do-while is guarded by `if (cond)`, refused unless the condition only reads locals.
 
 - A construction with a class body (`new T(...) {...}`, an enum constant with a body) resolves to
-  the anonymous class's own constructor, not `T`'s: ask `Signatures.constructed(binding)` for the
+  the anonymous class's own constructor, not `T`'s: ask `MethodFamily.constructed(binding)` for the
   one the arguments go to (#142, 2026-11-13). `Calls.binding(node)` (#503, 2026-11-14) is the
   method any call node runs, `constructed` applied; `MethodFamily`, `ByLine`, `ThrowsCallers`,
   `CallTargets` and `TypeParameters` use it. `SafeDelete` and `Signatures.addComponent` still

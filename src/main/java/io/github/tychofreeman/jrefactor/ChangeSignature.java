@@ -356,7 +356,7 @@ final class ChangeSignature {
                 file, project.relative(file), text, Jdt.parse(project, file, text));
         family.sources.put(file, s);
       }
-      String key = Signatures.key(target);
+      String key = MethodFamily.key(target);
       for (MethodDeclaration m : Nodes.all(s.unit(), MethodDeclaration.class)) {
         IMethodBinding b = m.resolveBinding();
         boolean known = false;
@@ -366,7 +366,7 @@ final class ChangeSignature {
         for (Signatures.Decl d : out) {
           known |= d.m() == m;
         }
-        if (b != null && Signatures.key(b).equals(key) && !known) {
+        if (b != null && MethodFamily.key(b).equals(key) && !known) {
           out.add(new Signatures.Decl(s, m, b, Signatures.open(s.text(), m.getName())));
         }
       }

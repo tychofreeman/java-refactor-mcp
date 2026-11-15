@@ -1033,12 +1033,12 @@ final class TypeParameters {
     }
     Set<String> keys = new HashSet<>();
     for (Signatures.Decl d : family.decls) {
-      keys.add(Signatures.key(d.binding()));
+      keys.add(MethodFamily.key(d.binding()));
     }
     for (Signatures.Source s : family.sources.values()) {
       for (MethodReference r : Nodes.all(s.unit(), MethodReference.class)) {
         IMethodBinding b = r.resolveMethodBinding();
-        if (b != null && keys.contains(Signatures.key(b.getMethodDeclaration()))) {
+        if (b != null && keys.contains(MethodFamily.key(b.getMethodDeclaration()))) {
           uses.put(r, s);
         }
       }
