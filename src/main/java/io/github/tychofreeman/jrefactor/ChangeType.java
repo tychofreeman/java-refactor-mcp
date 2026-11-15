@@ -24,7 +24,16 @@ final class ChangeType {
     Precondition.require(
         Precondition.that(
             () -> type != null && !type.isBlank(),
-            () -> "change_type needs type, the new type as written, such as long."));
+            () -> "change_type needs type, the new type as written, such as long."),
+        Precondition.that(
+            () -> Signatures.varargsElement(type) == null,
+            () ->
+                "a field cannot be varargs: "
+                    + type
+                    + " is the form of a method's last parameter only. Pass "
+                    + Signatures.varargsElement(type)
+                    + "[] for an array."));
+
     Signatures.parsesAs("type", type, "class X { " + type + " x; }");
     Qualified q = Qualified.of(name, "Type.field, the class and the field whose type to change");
     String typeName = q.type();

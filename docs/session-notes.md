@@ -550,6 +550,11 @@ Each was chosen from options; the record named beside it has the options it beat
   A new rewrite starts from `declarationBefore`, `segments` and `beforeInitializer`, counts with
   `uses`, and lays out through `layout` (#516), one rule for every form but `forEach`.
 
+- `MethodFamily.of` refuses a varargs method unless its `varargs` argument is true (#614,
+  2026-11-15): only `change_type` passes true, since it edits no call; a tool that rewrites calls
+  by position must handle the varargs arguments before it passes true. `change_type`'s `T...` is
+  `Signatures.varargsElement` plus the form, the type and its `...` written as one edit.
+
 - `change_signature` (roadmap #137, 2026-11-12) is `ChangeSignature`, on `MethodFamily.of` with
   `references` (a method reference is kept in `family.references`, not refused; `family.sources`
   holds each parsed file, so a referenced method's file is edited once) and
