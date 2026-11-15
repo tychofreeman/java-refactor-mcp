@@ -233,7 +233,7 @@ have no gorefactor counterpart (Go has no nested types or inheritance).
 
 One `inline` (roadmap #122, 2026-11-06, as gorefactor's): published in place of
 `inline_variable` and `inline_function`, which become aliases. What `name` is at `line` says
-which (roadmap #500, issue #368, 2026-11-15, as gorefactor's `inline`): a method (`Type.method`,
+which (roadmap #502, issue #368, 2026-11-15, as gorefactor's `inline`): a method (`Type.method`,
 or its simple name) called on the line inlines that one call, and the method is deleted only when
 nothing else uses it (no other call, no method reference); `keep_function` keeps it even then.
 A local variable declared or used on the line inlines its uses, as before; a simple name that is
@@ -1694,7 +1694,7 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   Refused also: a `return` before the last statement; a body that assigns a parameter;
   a body local whose name the calling member uses.
 - One call at a time, by `line` and `column`, with `keep_function` and `all_calls` (roadmap
-  #500, issue #368): see `inline` above. With one call, a method reference or another call keeps
+  #502, issue #368): see `inline` above. With one call, a method reference or another call keeps
   the method rather than refusing; every other rule applies to the one call as to each of all.
 
 ## `change_type` (built)

@@ -1,6 +1,6 @@
 # inline of one call
 
-- **Item:** issue #368 (parity with gorefactor's `inline`), roadmap #500
+- **Item:** issue #368 (parity with gorefactor's `inline`), roadmap #502
 - **Date:** 2026-11-15
 - **Branch:** inline-one-call
 

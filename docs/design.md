@@ -510,7 +510,7 @@ names the tests to run in place of them (the user: yes, over the rule as the onl
 The run stops after `timeout` seconds, 30 by default (the user, over no limit). Alone, the
 changes are the session's undo history (the user: ok); over the files `git` says differ.
 
-**Decided (2026-11-15, the user on issue #368, roadmap #500): `inline` of one call, as
+**Decided (2026-11-15, the user on issue #368, roadmap #502): `inline` of one call, as
 gorefactor's.** What `name` is at `line` says which: a method called there inlines that call, and
 the method is deleted only when nothing else uses it; `keep_function` keeps it, `all_calls` does
 every call. Over an argument that tells a call from a local. Two defaults of this session, to

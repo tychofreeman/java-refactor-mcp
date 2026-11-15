@@ -728,7 +728,7 @@ Each was chosen from options; the record named beside it has the options it beat
   2026-11-14): a new kind passes its predicate and a per-file check, not another loop. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
 
-- `inline` at a call (roadmap #500, issue #368, 2026-11-15) is `InlineFunction.atCall`: the call
+- `inline` at a call (roadmap #502, issue #368, 2026-11-15) is `InlineFunction.atCall`: the call
   of `name` on `line` (a simple name a variable on the line also has stays `InlineVariable`'s),
   then `InlineFunction.run` with that one `Call` (the call's file, relative, and its start), which
   skips the other sites and counts them, and method references, as uses that keep the method.
