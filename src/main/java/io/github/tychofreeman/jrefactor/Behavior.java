@@ -145,10 +145,7 @@ final class Behavior {
       ASTNode loop = Effects.loopOf(landing, m.root());
       to = loop != null ? Nodes.end(loop) : landing.getStartPosition();
     }
-    Set<String> writes = new HashSet<>();
-    for (IVariableBinding v : code.written()) {
-      writes.add(v.getKey());
-    }
+    Set<String> writes = writtenKeys(code);
     // A call, a new object, or a write to an array element (which another name may alias, so it
     // has no variable to compare): any of these may change state a read elsewhere sees.
     boolean calls = code.all().stream().anyMatch(e -> !e.deferred() && changesUnknown(e));
@@ -164,42 +161,7 @@ final class Behavior {
       }
       String where = line(e.node());
       if (e.changes()) {
-        if (code.changesNow() && !m.commute()) {
-          throw new Refusal(
-              m.label()
-                  + " calls, assigns or changes a variable, and "
-                  + m.verb()
-                  + " moves it past "
-                  + Nodes.show(e.node())
-                  + " ("
-                  + where
-                  + "), so they would run in another order.");
-        }
-        IVariableBinding written = e.kind() == Effects.Kind.WRITE ? e.variable() : null;
-        for (IVariableBinding read : code.named()) {
-          if (written != null && read.getKey().equals(written.getKey())) {
-            throw new Refusal(
-                read.getName()
-                    + " is read by "
-                    + m.label()
-                    + " and assigned ("
-                    + where
-                    + ") on the other side of where "
-                    + m.verb()
-                    + " puts it, so it would read another value.");
-          }
-        }
-        if (!code.fixed() && changesUnknown(e) && !m.commute()) {
-          throw new Refusal(
-              m.label()
-                  + " reads state that "
-                  + Nodes.show(e.node())
-                  + " ("
-                  + where
-                  + ") could change, and "
-                  + m.verb()
-                  + " moves the read past it.");
-        }
+        refuseCrossedChange(code, m, e, where);
         if (!throwing.isEmpty() && !reported) {
           reported = true;
           Exceptional.change(
@@ -260,6 +222,58 @@ final class Behavior {
                 + m.verb()
                 + " moves the call past that read.");
       }
+    }
+  }
+
+  /** The keys of the variables code writes. */
+  private static Set<String> writtenKeys(Effects code) {
+    Set<String> writes = new HashSet<>();
+    for (IVariableBinding v : code.written()) {
+      writes.add(v.getKey());
+    }
+    return writes;
+  }
+
+  /**
+   * Refuses moving code past e, a change at where: when both change state and do not commute, when
+   * e assigns a variable the code reads, or when e may change state the code reads.
+   */
+  private static void refuseCrossedChange(Effects code, Move m, Effects.Effect e, String where) {
+    if (code.changesNow() && !m.commute()) {
+      throw new Refusal(
+          m.label()
+              + " calls, assigns or changes a variable, and "
+              + m.verb()
+              + " moves it past "
+              + Nodes.show(e.node())
+              + " ("
+              + where
+              + "), so they would run in another order.");
+    }
+    IVariableBinding written = e.kind() == Effects.Kind.WRITE ? e.variable() : null;
+    for (IVariableBinding read : code.named()) {
+      if (written != null && read.getKey().equals(written.getKey())) {
+        throw new Refusal(
+            read.getName()
+                + " is read by "
+                + m.label()
+                + " and assigned ("
+                + where
+                + ") on the other side of where "
+                + m.verb()
+                + " puts it, so it would read another value.");
+      }
+    }
+    if (!code.fixed() && changesUnknown(e) && !m.commute()) {
+      throw new Refusal(
+          m.label()
+              + " reads state that "
+              + Nodes.show(e.node())
+              + " ("
+              + where
+              + ") could change, and "
+              + m.verb()
+              + " moves the read past it.");
     }
   }
 
@@ -324,17 +338,7 @@ final class Behavior {
                     + m.verb()
                     + " would move it above that guard. Keep it there.");
           }
-          Exceptional.change(
-              project,
-              mayThrow(m.label(), throwing)
-                  + ", and "
-                  + m.verb()
-                  + " moves it above "
-                  + exit
-                  + ", which may leave the block early but "
-                  + Guards.UNTESTED
-                  + ": it would now throw where that exit came first",
-              "leave it where it is");
+          reportAboveExit(project, m, throwing, exit);
         }
       } else if (m.code() instanceof Statement own && Effects.leaves(own, true)) {
         if (Effects.of(s).changes()) {
@@ -346,31 +350,59 @@ final class Behavior {
                   + exit
                   + ", which changes state: that would run when it did not, or not when it did.");
         }
-        List<ASTNode> its = Effects.of(s).mayThrow();
-        if (!its.isEmpty() && !earlier) {
-          List<Guards.Operand> operands = Guards.operands(its);
-          if (operands == null || Guards.tests(List.of(m.code()), operands)) {
-            throw new Refusal(
-                mayThrow(exit, its)
-                    + ", and "
-                    + m.label()
-                    + ", which may leave the block early, guards it; "
-                    + m.verb()
-                    + " would move the guard below it.");
-          }
-          Exceptional.change(
-              project,
-              mayThrow(exit, its)
-                  + ", and "
-                  + m.verb()
-                  + " moves "
-                  + m.label()
-                  + ", which may leave the block early but "
-                  + Guards.UNTESTED
-                  + ", below it: it would now throw where that exit came first",
-              "leave it where it is");
-        }
+        checkGuardMovedBelow(s, earlier, m, exit, project);
       }
+    }
+  }
+
+  /**
+   * Reports that the moved code, which may throw, now runs above an exit that does not test what it
+   * throws on.
+   */
+  private static void reportAboveExit(
+      SourceProject project, Move m, List<ASTNode> throwing, String exit) {
+    Exceptional.change(
+        project,
+        mayThrow(m.label(), throwing)
+            + ", and "
+            + m.verb()
+            + " moves it above "
+            + exit
+            + ", which may leave the block early but "
+            + Guards.UNTESTED
+            + ": it would now throw where that exit came first",
+        "leave it where it is");
+  }
+
+  /**
+   * For moved code that may leave the block early, moved below s: refuses when s may throw and the
+   * code guards it, else reports that s would now throw where the exit came first.
+   */
+  private static void checkGuardMovedBelow(
+      Statement s, boolean earlier, Move m, String exit, SourceProject project) {
+    List<ASTNode> its = Effects.of(s).mayThrow();
+    if (!its.isEmpty() && !earlier) {
+      List<Guards.Operand> operands = Guards.operands(its);
+      if (operands == null || Guards.tests(List.of(m.code()), operands)) {
+        throw new Refusal(
+            mayThrow(exit, its)
+                + ", and "
+                + m.label()
+                + ", which may leave the block early, guards it; "
+                + m.verb()
+                + " would move the guard below it.");
+      }
+      Exceptional.change(
+          project,
+          mayThrow(exit, its)
+              + ", and "
+              + m.verb()
+              + " moves "
+              + m.label()
+              + ", which may leave the block early but "
+              + Guards.UNTESTED
+              + ", below it: it would now throw where that exit came first",
+          "leave it where it is");
     }
   }
 

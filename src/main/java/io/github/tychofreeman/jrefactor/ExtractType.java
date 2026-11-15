@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -283,14 +284,7 @@ final class ExtractType {
     List<FieldDeclaration> moved = new ArrayList<>();
     List<String> keys = new ArrayList<>();
     for (String f : chosen) {
-      FieldDeclaration fd = null;
-      for (FieldDeclaration d : owner.getFields()) {
-        for (Object o : d.fragments()) {
-          if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(f)) {
-            fd = d;
-          }
-        }
-      }
+      FieldDeclaration fd = fieldNamed(owner, f);
       FieldDeclaration decl = fd;
       Precondition.require(
           Precondition.that(() -> decl != null, () -> f + " is not a field of " + ownerName + "."),
@@ -315,51 +309,8 @@ final class ExtractType {
       keys.add(frag.resolveBinding().getVariableDeclaration().getKey());
     }
     moved.sort(Comparator.comparingInt(ASTNode::getStartPosition));
-    int ownerStart = owner.getStartPosition();
-    int ownerEnd = ownerStart + owner.getLength();
-    Map<String, Set<Integer>> outside = new TreeMap<>();
-    for (String f : chosen) {
-      Holding holding = Holding.of(project, f, opened.file());
-      for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-        boolean home = e.getKey().equals(opened.file());
-        CompilationUnit u = e.getValue();
-        u.accept(
-            new ASTVisitor() {
-              @Override
-              public boolean visit(SimpleName n) {
-                if (!n.isDeclaration()
-                    && n.resolveBinding() instanceof IVariableBinding v
-                    && keys.contains(v.getVariableDeclaration().getKey())
-                    && (!home
-                        || n.getStartPosition() < ownerStart
-                        || n.getStartPosition() >= ownerEnd)) {
-                  outside
-                      .computeIfAbsent(
-                          n.getIdentifier() + " is used in " + project.relative(e.getKey()),
-                          k -> new TreeSet<>())
-                      .add(u.getLineNumber(n.getStartPosition()));
-                }
-                return true;
-              }
-            });
-      }
-    }
-    if (!outside.isEmpty()) {
-      List<String> each = new ArrayList<>();
-      outside.forEach((where, lines) -> each.add(where + " " + Lines.list(new ArrayList<>(lines))));
-      throw new Refusal(
-          String.join("; ", each)
-              + ", and extract_type moves only fields their class alone uses. Encapsulate them"
-              + " first (encapsulate_field), or leave them out.");
-    }
-    List<String> setByConstructor = new ArrayList<>();
-    for (FieldDeclaration fd : moved) {
-      if (Modifier.isFinal(fd.getModifiers())
-          && ((VariableDeclarationFragment) fd.fragments().get(0)).getInitializer() == null) {
-        setByConstructor.add(
-            ((VariableDeclarationFragment) fd.fragments().get(0)).getName().getIdentifier());
-      }
-    }
+    refuseOutsideUses(owner, chosen, project, opened, keys);
+    List<String> setByConstructor = setByConstructor(moved);
     List<TextEdit> edits = new ArrayList<>();
     List<int[]> rewritten =
         setByConstructor.isEmpty()
@@ -431,15 +382,7 @@ final class ExtractType {
       }
     }
     String pkg = opened.packageHeader();
-    if (!params.isEmpty()) {
-      body.append("\n  ")
-          .append(struct)
-          .append("(")
-          .append(String.join(", ", params))
-          .append(") {\n")
-          .append(String.join("", sets))
-          .append("  }\n");
-    }
+    appendConstructor(params, body, struct, sets);
     String created = pkg + "class " + struct + " {\n" + body + "}\n";
     Edits.newFile(project, target, created, struct, List.of(), "Nothing was changed.");
     Edits.Written written =
@@ -466,6 +409,98 @@ final class ExtractType {
         written.declared());
   }
 
+  /** The declaration of the field f of owner, or null. */
+  private static FieldDeclaration fieldNamed(TypeDeclaration owner, String f) {
+    FieldDeclaration fd = null;
+    for (FieldDeclaration d : owner.getFields()) {
+      for (Object o : d.fragments()) {
+        if (((VariableDeclarationFragment) o).getName().getIdentifier().equals(f)) {
+          fd = d;
+        }
+      }
+    }
+    return fd;
+  }
+
+  /** Refuses fields used outside their class, naming each use's file and lines. */
+  private static void refuseOutsideUses(
+      TypeDeclaration owner,
+      List<String> chosen,
+      SourceProject project,
+      Opened opened,
+      List<String> keys)
+      throws IOException {
+    int ownerStart = owner.getStartPosition();
+    int ownerEnd = ownerStart + owner.getLength();
+    Map<String, Set<Integer>> outside = new TreeMap<>();
+    for (String f : chosen) {
+      Holding holding = Holding.of(project, f, opened.file());
+      for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
+        boolean home = e.getKey().equals(opened.file());
+        CompilationUnit u = e.getValue();
+        u.accept(
+            new ASTVisitor() {
+              @Override
+              public boolean visit(SimpleName n) {
+                if (!n.isDeclaration()
+                    && n.resolveBinding() instanceof IVariableBinding v
+                    && keys.contains(v.getVariableDeclaration().getKey())
+                    && (!home
+                        || n.getStartPosition() < ownerStart
+                        || n.getStartPosition() >= ownerEnd)) {
+                  outside
+                      .computeIfAbsent(
+                          n.getIdentifier() + " is used in " + project.relative(e.getKey()),
+                          k -> new TreeSet<>())
+                      .add(u.getLineNumber(n.getStartPosition()));
+                }
+                return true;
+              }
+            });
+      }
+    }
+    if (!outside.isEmpty()) {
+      List<String> each = new ArrayList<>();
+      outside.forEach((where, lines) -> each.add(where + " " + Lines.list(new ArrayList<>(lines))));
+      throw new Refusal(
+          String.join("; ", each)
+              + ", and extract_type moves only fields their class alone uses. Encapsulate them"
+              + " first (encapsulate_field), or leave them out.");
+    }
+  }
+
+  /**
+   * The moved fields that are final and have no initializer, which the holder's constructors set.
+   */
+  private static List<String> setByConstructor(List<FieldDeclaration> moved) {
+    List<String> setByConstructor = new ArrayList<>();
+    for (FieldDeclaration fd : moved) {
+      if (Modifier.isFinal(fd.getModifiers())
+          && ((VariableDeclarationFragment) fd.fragments().get(0)).getInitializer() == null) {
+        setByConstructor.add(
+            ((VariableDeclarationFragment) fd.fragments().get(0)).getName().getIdentifier());
+      }
+    }
+    return setByConstructor;
+  }
+
+  /**
+   * Appends to body the new class's constructor, taking params and doing sets, when the class has
+   * fields a constructor sets.
+   */
+  private static void appendConstructor(
+      List<String> params, StringBuilder body, String struct, List<String> sets) {
+    if (!params.isEmpty()) {
+      body.append("\n  ")
+          .append(struct)
+          .append("(")
+          .append(String.join(", ", params))
+          .append(") {\n")
+          .append(String.join("", sets))
+          .append("  }\n");
+    }
+  }
+
   /**
    * extract_type with fields on a record: the named components, next to each other, become one
    * component of a new record in a file of its own. Every construction passes the new record in
@@ -487,19 +522,7 @@ final class ExtractType {
             () -> project.relative(target) + " already exists. Choose another name."));
     List<?> all = owner.recordComponents();
     List<Integer> at = new ArrayList<>();
-    for (String f : chosen) {
-      int found = -1;
-      for (int k = 0; k < all.size(); k++) {
-        if (((SingleVariableDeclaration) all.get(k)).getName().getIdentifier().equals(f)) {
-          found = k;
-        }
-      }
-      int index = found;
-      Precondition.require(
-          Precondition.that(
-              () -> index >= 0, () -> f + " is not a component of " + ownerName + "."));
-      at.add(index);
-    }
+    indices(chosen, all, ownerName, at);
     Collections.sort(at);
     int first = at.get(0);
     int last = at.get(at.size() - 1);
@@ -552,24 +575,7 @@ final class ExtractType {
                     + "[...] where it printed "
                     + Names.listed(chosen)
                     + ". Pass value_semantics=true to accept that, or define toString first."));
-    List<String> components = new ArrayList<>();
-    for (int i = first; i <= last; i++) {
-      SingleVariableDeclaration c = (SingleVariableDeclaration) all.get(i);
-      String unusable = unusable(c.resolveBinding().getType());
-      Precondition.require(
-          Precondition.that(
-              () -> !c.isVarargs(),
-              () -> c.getName() + " is varargs, which stays last. Leave it out."),
-          Precondition.that(
-              () -> unusable == null,
-              () ->
-                  "the type of "
-                      + c.getName()
-                      + " "
-                      + unusable
-                      + ", which the new record in its own file cannot name. Leave it out."));
-      components.add(Nodes.source(text, c));
-    }
+    List<String> components = componentTexts(first, last, all, text);
 
     Holding holding =
         Holding.where(
@@ -598,28 +604,8 @@ final class ExtractType {
           here.add(new TextEdit(end, end, ")"));
         }
       }
-      for (MethodInvocation m : Nodes.all(u, MethodInvocation.class)) {
-        IMethodBinding b = m.resolveMethodBinding();
-        if (b != null
-            && b.getDeclaringClass().getErasure().getKey().equals(key)
-            && m.arguments().isEmpty()
-            && chosen.contains(b.getName())) {
-          int s = m.getName().getStartPosition();
-          here.add(new TextEdit(s, s, holder + "()."));
-        }
-      }
-      for (SimpleName n : Nodes.all(u, SimpleName.class)) {
-        if (!n.isDeclaration()
-            && n.resolveBinding() instanceof IVariableBinding v
-            && v.isField()
-            && v.getDeclaringClass() != null
-            && v.getDeclaringClass().getErasure().getKey().equals(key)
-            && chosen.contains(v.getName())) {
-          here.add(
-              new TextEdit(
-                  n.getStartPosition(), Nodes.end(n), holder + "." + n.getIdentifier() + "()"));
-        }
-      }
+      accessorCalls(u, key, chosen, here, holder);
+      fieldReads(u, key, chosen, here, holder);
       for (MethodReference r : Nodes.all(u, MethodReference.class)) {
         IMethodBinding b = r.resolveMethodBinding();
         if (b != null
@@ -689,6 +675,88 @@ final class ExtractType {
             + String.join(", ", files)
             + written.said(),
         declared);
+  }
+
+  /** The index of each chosen component among all, refused for one the record does not have. */
+  private static void indices(
+      List<String> chosen, List<?> all, String ownerName, List<Integer> at) {
+    for (String f : chosen) {
+      int found = -1;
+      for (int k = 0; k < all.size(); k++) {
+        if (((SingleVariableDeclaration) all.get(k)).getName().getIdentifier().equals(f)) {
+          found = k;
+        }
+      }
+      int index = found;
+      Precondition.require(
+          Precondition.that(
+              () -> index >= 0, () -> f + " is not a component of " + ownerName + "."));
+      at.add(index);
+    }
+  }
+
+  /**
+   * The chosen components as written, refused when one is varargs or of a type the new record's
+   * file cannot name.
+   */
+  private static List<String> componentTexts(int first, int last, List<?> all, String text) {
+    List<String> components = new ArrayList<>();
+    for (int i = first; i <= last; i++) {
+      SingleVariableDeclaration c = (SingleVariableDeclaration) all.get(i);
+      String unusable = unusable(c.resolveBinding().getType());
+      Precondition.require(
+          Precondition.that(
+              () -> !c.isVarargs(),
+              () -> c.getName() + " is varargs, which stays last. Leave it out."),
+          Precondition.that(
+              () -> unusable == null,
+              () ->
+                  "the type of "
+                      + c.getName()
+                      + " "
+                      + unusable
+                      + ", which the new record in its own file cannot name. Leave it out."));
+      components.add(Nodes.source(text, c));
+    }
+    return components;
+  }
+
+  /**
+   * Adds to here the edits that call each chosen component's accessor through the holder:
+   * o.street() becomes o.address().street().
+   */
+  private static void accessorCalls(
+      CompilationUnit u, String key, List<String> chosen, List<TextEdit> here, String holder) {
+    for (MethodInvocation m : Nodes.all(u, MethodInvocation.class)) {
+      IMethodBinding b = m.resolveMethodBinding();
+      if (b != null
+          && b.getDeclaringClass().getErasure().getKey().equals(key)
+          && m.arguments().isEmpty()
+          && chosen.contains(b.getName())) {
+        int s = m.getName().getStartPosition();
+        here.add(new TextEdit(s, s, holder + "()."));
+      }
+    }
+  }
+
+  /**
+   * Adds to here the edits that read each chosen component's field through the holder: street
+   * becomes address.street().
+   */
+  private static void fieldReads(
+      CompilationUnit u, String key, List<String> chosen, List<TextEdit> here, String holder) {
+    for (SimpleName n : Nodes.all(u, SimpleName.class)) {
+      if (!n.isDeclaration()
+          && n.resolveBinding() instanceof IVariableBinding v
+          && v.isField()
+          && v.getDeclaringClass() != null
+          && v.getDeclaringClass().getErasure().getKey().equals(key)
+          && chosen.contains(v.getName())) {
+        here.add(
+            new TextEdit(
+                n.getStartPosition(), Nodes.end(n), holder + "." + n.getIdentifier() + "()"));
+      }
+    }
   }
 
   /** Whether an initializer can run when the holder is made: constants and new objects of them. */

@@ -276,16 +276,7 @@ final class EnumSwitch {
         covered = false;
         continue;
       }
-      AnonymousClassDeclaration anon = c.getAnonymousClassDeclaration();
-      if (anon != null) {
-        for (Object d : anon.bodyDeclarations()) {
-          if (d instanceof MethodDeclaration m
-              && m.getName().getIdentifier().equals(name)
-              && m.parameters().isEmpty()) {
-            throw new Refusal(k + " already declares " + name + "().");
-          }
-        }
-      }
+      refuseDeclared(c, name, k);
       String in = Lines.indentOf(eText, c.getStartPosition());
       String method =
           in
@@ -361,6 +352,20 @@ final class EnumSwitch {
             + at.now()
             + written.said(),
         declared);
+  }
+
+  /** Refuses a constant whose body already declares name(). */
+  private static void refuseDeclared(EnumConstantDeclaration c, String name, String k) {
+    AnonymousClassDeclaration anon = c.getAnonymousClassDeclaration();
+    if (anon != null) {
+      for (Object d : anon.bodyDeclarations()) {
+        if (d instanceof MethodDeclaration m
+            && m.getName().getIdentifier().equals(name)
+            && m.parameters().isEmpty()) {
+          throw new Refusal(k + " already declares " + name + "().");
+        }
+      }
+    }
   }
 
   /**

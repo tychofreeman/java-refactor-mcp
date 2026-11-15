@@ -2021,3 +2021,17 @@ again.
   updates several counters, so `extract_function` would return a record of counts and take most
   of the method's state. Gathering the context into a record first has no tool when the values are
   computed in different places (as moved-type-context and move-tools-split-2 found).
+
+## 2026-11-15: item8-rest (#528, item 8, the rest)
+
+- No Java by hand. An `extract_function` that added an import to the file (`IOException`, for the
+  new method's `throws`) moved every later line down one, so the next extraction, planned from the
+  same read, was refused for cutting a statement. The result said "imported java.io.IOException"
+  but not that the lines moved. Extracting bottom up does not protect against an import added at
+  the top; a batch that adjusts later steps' lines for the import would.
+- Skipped: `MoveToPackage.run`'s visitor (it reads 10 or more locals) and `MoveMember.run`'s
+  call-site loop (its visitor reads 8 locals, its per-call loop 9). `extract_function` would take
+  them all as parameters; a record of the move's context would have to come first, and the values
+  are computed in different places, which no tool gathers (as move-tools-split-2 and
+  type-parameters-split found). `ConvertLoop.run`: see long-methods. A block of `checkExits` that
+  holds a `continue` cannot be extracted at all.
