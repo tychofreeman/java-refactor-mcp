@@ -10,10 +10,14 @@ import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 /**
  * The edit primitives (gorefactor's names): an expression, statements, a switch case and an
@@ -167,6 +171,9 @@ final class Primitives {
     int start = Lines.start(text, first.getStartPosition());
     int end = Lines.end(text, Nodes.end(last) - 1);
     Object around = args.raw("surround");
+    if (around != null) {
+      requireNoLaterRead(text, block, first, last, startLine, endLine);
+    }
     String surround = around instanceof Map<?, ?> ? null : args.string("surround");
     String indent = Lines.indentOf(text, first.getStartPosition());
     Build.Built built = built(project, opened, args, start, end, block, indent);
@@ -420,5 +427,54 @@ final class Primitives {
     String outer = Lines.indentOf(opened.text(), block.getStartPosition());
     String step = indent.length() > outer.length() ? indent.substring(outer.length()) : "  ";
     return step;
+  }
+
+  /**
+   * Refuses when the statements of {@code block} from {@code first} to {@code last} declare a local
+   * that a statement after {@code last} reads: surrounding them puts the declaration inside the new
+   * block, where those reads no longer see it, and a stub for the name would compile (#611).
+   */
+  private static void requireNoLaterRead(
+      String text, Block block, Statement first, Statement last, int startLine, int endLine) {
+    List<?> statements = block.statements();
+    int from = statements.indexOf(first);
+    int to = statements.indexOf(last);
+    Map<String, String> declared = new java.util.LinkedHashMap<>();
+    for (Object o : statements.subList(from, to + 1)) {
+      if (o instanceof VariableDeclarationStatement v) {
+        for (Object f : v.fragments()) {
+          IVariableBinding b = ((VariableDeclarationFragment) f).resolveBinding();
+          if (b != null) {
+            declared.put(b.getKey(), b.getName());
+          }
+        }
+      }
+    }
+    for (Object o : statements.subList(to + 1, statements.size())) {
+      for (SimpleName n : Nodes.all((ASTNode) o, SimpleName.class)) {
+        if (n.resolveBinding() instanceof IVariableBinding b && declared.containsKey(b.getKey())) {
+          int line = Lines.number(text, n.getStartPosition());
+          throw new Refusal(
+              "lines "
+                  + startLine
+                  + "-"
+                  + endLine
+                  + " declare "
+                  + b.getName()
+                  + ", and line "
+                  + line
+                  + ", after them, reads "
+                  + b.getName()
+                  + ": surround would put the declaration inside the new block, out of that line's"
+                  + " reach. End the range at line "
+                  + line
+                  + " or later, or declare "
+                  + b.getName()
+                  + " before line "
+                  + startLine
+                  + " and assign it inside the range.");
+        }
+      }
+    }
   }
 }
