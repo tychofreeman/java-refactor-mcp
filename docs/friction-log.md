@@ -1928,3 +1928,8 @@ again.
   the removal was refused ("passes fieldKey, not accessors.fieldKey()"). `remove_parameter` could
   accept an argument that is a local whose only value is the expression. The removed values stay
   as locals at the top of the body, which suits a body that reads them often.
+- `MoveMember.rewrite`'s 10 parameters: `extract_type` of seven, then the same hoist by hand-free
+  edits (no tool moves a loop-invariant construction before the loop). An `extract_function` of
+  the moved text's edits took 10 parameters (the method, both files, both texts, the edits map,
+  the target): undone. The call-site visitor in `run` reads eight locals; no extraction helps
+  until those travel together.
