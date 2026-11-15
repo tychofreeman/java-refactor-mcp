@@ -1650,6 +1650,11 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   it in a variable first"), a body that uses `super`. A receiver that may be null is
   reported as a change to exceptional behavior (it now fails where the body uses it),
   and refused under `preserve_exceptions`.
+- One overload, named `Type.method(int)`: its calls in every file are inlined, and those of the
+  other overloads are left (issue #612, 2026-11-15). The files searched are those that hold the
+  method's name, without its parameter types, which a call does not write; until then no call
+  outside the declaring file was found ("has no calls in the project", or the gate refusing the
+  calls left once the method was deleted).
 - A method of a record inlines as a class's does (issue #439, 2026-11-13); one of an enum is
   still refused, naming the file's classes and interfaces, or saying it declares none.
 - A bare field of the body that a local or parameter of the calling member hides is
