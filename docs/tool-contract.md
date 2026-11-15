@@ -807,8 +807,8 @@ typed `T` yet.
   first (convert_lambda with to anonymous)."); `value` in the return type only ("T would be in
   the return type only, so no call could infer it from its arguments. Name a method whose
   parameters use it."), or nowhere in the signature; a name the family already uses for a type
-  or a type parameter; a call that would infer another type ("would change the types of the call
-  at line 7 of com/example/Use.java: it would infer T as Object, not String. Give it an argument
+  or a type parameter; a call that would infer another type where no type argument can be written
+  (below; "would change the types of the call at line 7 of com/example/Use.java: it would infer T as Object, not String. Give it an argument
   or a target typed with String first, or leave the method as it is."); a method that overrides
   a library's.
 - A record or an interface as the class, and a method of a record (issue #375, 2026-11-15; the
@@ -820,8 +820,17 @@ typed `T` yet.
   one passes `value` (`Source<String> EMPTY = ...`), and one named in `members` is refused as
   static. `CallTargets` knows a record's implicit accessor and canonical constructor by the
   record's place, as it knows a default constructor.
-- Not built yet: writing `Lists.<String>first(...)` at a call that would infer another type
-  (issue #375).
+- A call that would infer another type (issue #375, 2026-11-15) is given `value` as its type
+  argument: `Object o = Lists.first(new ArrayList<>());` becomes
+  `Object o = Lists.<String>first(new ArrayList<>());`, so it keeps the types it had. Java takes a
+  type argument only after a qualifier, so an unqualified call of a static method gets its class
+  (`Lists.<String>first(...)`) and one of an instance method of the class around the call gets
+  `this.<String>head(...)`; `super.<String>m(...)` likewise. The calls are written after the
+  declarations, through the gate again (imports fixed), and every call's types and target are then
+  checked as before. Result: `...; 2 calls infer String, 2 of them given <String> at the call`.
+  Still refused with the inference wording (defaults to reopen): a method reference, a call that
+  already has type arguments, and an unqualified call of an outer class's method (which would need
+  `Outer.this.<String>m(...)`).
 
 ## `type_switch_to_method` (built)
 

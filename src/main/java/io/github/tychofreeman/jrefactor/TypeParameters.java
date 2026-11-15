@@ -30,6 +30,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.NameQualifiedType;
@@ -42,6 +43,7 @@ import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -929,6 +931,26 @@ final class TypeParameters {
     Stubs.Declared stubs = gated.declared();
     Map<Path, CompilationUnit> after =
         Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
+    // A call that now infers another type gets value as its type argument, where Java can take one.
+    Map<Path, List<TextEdit>> explicit = new LinkedHashMap<>();
+    for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
+      Map<String, ASTNode> nodes = byOrdinal(after.get(e.getKey()));
+      for (Map.Entry<String, List<String>> c : e.getValue().entrySet()) {
+        ASTNode n = nodes.get(c.getKey());
+        IMethodBinding b = n == null ? null : Calls.binding(n);
+        TextEdit edit =
+            b == null || c.getValue().get(0).equals(types(b)) ? null : typeArgument(n, b, v.text());
+        if (edit != null) {
+          explicit.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(edit);
+        }
+      }
+    }
+    int typed = explicit.values().stream().mapToInt(List::size).sum();
+    String more = "";
+    if (!explicit.isEmpty()) {
+      more = Edits.gatedFiles(project, new LinkedHashMap<>(), explicit, chosen, what, fix).said();
+      after = Jdt.parseAll(project, new ArrayList<>(family.sources.keySet()));
+    }
     int calls = 0;
     int references = 0;
     for (Map.Entry<Path, Map<String, List<String>>> e : before.entrySet()) {
@@ -991,8 +1013,11 @@ final class TypeParameters {
                     + (references == 1 ? " method reference" : " method references"))
             + (calls + references == 1 ? " infers " : " infer ")
             + v.text()
-            + ", none changed"
-            + gated.said(),
+            + (explicit.isEmpty()
+                ? ", none changed"
+                : ", " + typed + " of them" + " given <" + v.text() + "> at the call")
+            + gated.said()
+            + more,
         stubs);
   }
 
@@ -1378,5 +1403,35 @@ final class TypeParameters {
       }
     }
     return true;
+  }
+
+  /**
+   * The edit that writes {@code <value>} as the type argument of {@code n}, a call of {@code b},
+   * with the qualifier Java requires before one: the class of a static method, {@code this} for a
+   * method of the class around the call. Null where it is not written: a method reference, a call
+   * that has type arguments, a method of an outer class.
+   */
+  private static TextEdit typeArgument(ASTNode n, IMethodBinding b, String value) {
+    String argument = "<" + value + ">";
+    if (n instanceof SuperMethodInvocation s && s.typeArguments().isEmpty()) {
+      int at = s.getName().getStartPosition();
+      return new TextEdit(at, at, argument);
+    }
+    if (!(n instanceof MethodInvocation m) || !m.typeArguments().isEmpty()) {
+      return null;
+    }
+    int at = m.getName().getStartPosition();
+    if (m.getExpression() != null) {
+      return new TextEdit(at, at, argument);
+    }
+    ITypeBinding around = Nodes.typeAround(m);
+    ITypeBinding declaring = b.getDeclaringClass().getErasure();
+    if (Modifier.isStatic(b.getModifiers())) {
+      return new TextEdit(at, at, Extract.typeName(declaring, around) + "." + argument);
+    }
+    if (around != null && Hierarchy.isSubtype(around, declaring)) {
+      return new TextEdit(at, at, "this." + argument);
+    }
+    return null;
   }
 }

@@ -1,1 +1,1 @@
-would change the types of the call at line 7 of com/example/Use.java: it would infer T as Object, not String.
+would change the types of the call at line 15 of com/example/Lists.java: it would infer T as Object, not String.
