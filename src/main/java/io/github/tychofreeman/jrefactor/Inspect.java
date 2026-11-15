@@ -14,13 +14,24 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.DoStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.Initializer;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.SwitchCase;
+import org.eclipse.jdt.core.dom.SwitchExpression;
+import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.WhileStatement;
 
 /** Reads Java source for a model: a file with method bodies elided, or a range of its lines. */
 public final class Inspect {
@@ -33,7 +44,7 @@ public final class Inspect {
     String source = Files.readString(path);
     List<String> lines = source.lines().toList();
     CompilationUnit unit = Jdt.parse(project, path, source);
-    List<int[]> elided = bodies(unit);
+    List<Body> elided = bodies(unit);
 
     int width = String.valueOf(lines.size()).length();
     StringBuilder out = new StringBuilder();
@@ -50,29 +61,39 @@ public final class Inspect {
 
   /**
    * Appends lines {@code from} to {@code to} of {@code lines} to {@code out}, numbered, each elided
-   * range shown as its line span.
+   * body shown as its line span and its facts, and a body too short to elide followed by its facts.
    */
   private static void outline(
-      List<String> lines, List<int[]> elided, StringBuilder out, int width, int from, int to) {
-    int next = 0;
-    while (next < elided.size() && elided.get(next)[0] < from) {
-      next++;
+      List<String> lines, List<Body> bodies, StringBuilder out, int width, int from, int to) {
+    Map<Integer, Body> elided = new TreeMap<>();
+    Map<Integer, Body> after = new TreeMap<>();
+    for (Body b : bodies) {
+      if (b.first() > 0) {
+        elided.put(b.first(), b);
+      } else {
+        after.put(b.end(), b);
+      }
     }
+    String pad = " ".repeat(width + 6);
     for (int line = from; line <= to; line++) {
-      if (next < elided.size() && elided.get(next)[0] == line) {
-        int[] range = elided.get(next++);
-        out.append(" ".repeat(width + 6))
+      Body b = elided.get(line);
+      if (b != null) {
+        out.append(pad)
             .append("… lines ")
-            .append(range[0])
+            .append(b.first())
             .append('-')
-            .append(range[1])
-            .append("   [")
-            .append(range[1] - range[0] + 1)
-            .append(" lines]\n");
-        line = range[1];
+            .append(b.last())
+            .append("   ")
+            .append(b.facts())
+            .append('\n');
+        line = b.last();
         continue;
       }
       appendLine(out, width, line, lines.get(line - 1));
+      Body unelided = after.get(line);
+      if (unelided != null) {
+        out.append(pad).append(unelided.facts()).append('\n');
+      }
     }
   }
 
@@ -318,36 +339,39 @@ public final class Inspect {
   }
 
   /**
-   * The 1-based line ranges strictly inside each body's braces, in order, for bodies with two inner
-   * lines or more. Bodies inside an elided body are not visited.
+   * Each method, constructor and initializer body, in order, with the 1-based lines strictly inside
+   * its braces when they are two or more. Bodies inside another are not visited.
    */
-  private static List<int[]> bodies(CompilationUnit unit) {
-    List<int[]> ranges = new ArrayList<>();
+  private static List<Body> bodies(CompilationUnit unit) {
+    List<Body> out = new ArrayList<>();
     unit.accept(
         new ASTVisitor() {
           @Override
           public boolean visit(MethodDeclaration node) {
-            return add(node.getBody());
+            return add(node, node.getBody());
           }
 
           @Override
           public boolean visit(Initializer node) {
-            return add(node.getBody());
+            return add(node, node.getBody());
           }
 
-          private boolean add(Block body) {
+          private boolean add(BodyDeclaration declaration, Block body) {
             if (body == null) {
               return false;
             }
             int open = unit.getLineNumber(body.getStartPosition());
             int close = unit.getLineNumber((Nodes.end(body) - 1));
+            String facts = facts(unit, declaration, body);
             if (close - open - 1 >= 2) {
-              ranges.add(new int[] {open + 1, close - 1});
+              out.add(new Body(open + 1, close - 1, close, facts));
+            } else {
+              out.add(new Body(0, 0, close, facts));
             }
             return false;
           }
         });
-    return ranges;
+    return out;
   }
 
   /**
@@ -455,5 +479,93 @@ public final class Inspect {
           "no method " + name + " in " + file + ". inspect the file to see what it declares.");
     }
     return names(project, labels, path);
+  }
+
+  /**
+   * A body the outline shows: the lines it elides ({@code first} 0 when it is too short to elide),
+   * the declaration's last line, and its facts.
+   */
+  private record Body(int first, int last, int end, String facts) {}
+
+  /**
+   * "[7 lines, complexity 2, nesting 1]": the lines {@code declaration} takes (its Javadoc left
+   * out) and {@link #metrics} of its body, as gorefactor's outline gives a function's.
+   */
+  private static String facts(CompilationUnit unit, BodyDeclaration declaration, Block body) {
+    int start = declaration.getStartPosition();
+    if (declaration.getJavadoc() != null) {
+      start = Nodes.end(declaration.getJavadoc());
+      String source = Jdt.sourceOf(unit);
+      while (source != null
+          && start < source.length()
+          && Character.isWhitespace(source.charAt(start))) {
+        start++;
+      }
+    }
+    int n = unit.getLineNumber(Nodes.end(declaration) - 1) - unit.getLineNumber(start) + 1;
+    int[] m = metrics(body);
+    return "["
+        + n
+        + (n == 1 ? " line" : " lines")
+        + ", complexity "
+        + m[0]
+        + ", nesting "
+        + m[1]
+        + "]";
+  }
+
+  /**
+   * The cyclomatic complexity of {@code body} (1, and one for each if, loop, catch, ?:, case other
+   * than default, and && or ||) and its deepest nesting of ifs, loops and switches (an else if
+   * nests no deeper than its if). Lambdas and classes in the body count toward it.
+   */
+  static int[] metrics(Block body) {
+    int[] complexity = {1};
+    int[] nesting = {0, 0};
+    body.accept(
+        new ASTVisitor() {
+          @Override
+          public void preVisit(ASTNode n) {
+            if (n instanceof IfStatement
+                || n instanceof ForStatement
+                || n instanceof EnhancedForStatement
+                || n instanceof WhileStatement
+                || n instanceof DoStatement
+                || n instanceof CatchClause
+                || n instanceof ConditionalExpression
+                || n instanceof SwitchCase c && !c.isDefault()) {
+              complexity[0]++;
+            }
+            if (n instanceof InfixExpression i
+                && (i.getOperator() == InfixExpression.Operator.CONDITIONAL_AND
+                    || i.getOperator() == InfixExpression.Operator.CONDITIONAL_OR)) {
+              complexity[0] += 1 + i.extendedOperands().size();
+            }
+            if (nests(n)) {
+              nesting[0]++;
+              nesting[1] = Math.max(nesting[1], nesting[0]);
+            }
+          }
+
+          @Override
+          public void postVisit(ASTNode n) {
+            if (nests(n)) {
+              nesting[0]--;
+            }
+          }
+        });
+    return new int[] {complexity[0], nesting[1]};
+  }
+
+  /** Whether {@code n} is a level of nesting: an if (not an else if), a loop, a switch. */
+  private static boolean nests(ASTNode n) {
+    return n instanceof IfStatement
+            && !(n.getParent() instanceof IfStatement p && p.getElseStatement() == n)
+        || n instanceof ForStatement
+        || n instanceof EnhancedForStatement
+        || n instanceof WhileStatement
+        || n instanceof DoStatement
+        || n instanceof SwitchStatement
+        || n instanceof SwitchExpression;
   }
 }

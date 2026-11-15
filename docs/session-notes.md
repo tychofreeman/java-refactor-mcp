@@ -748,6 +748,10 @@ Each was chosen from options; the record named beside it has the options it beat
   `Tools.inspect` once per target (roadmap #505, 2026-11-15). The inspect definition is at its
   1,700-character limit: a new option needs words taken from the others.
 
+- The outline's facts (roadmap #506, 2026-11-15) are `Inspect.facts` and `Inspect.metrics`;
+  `Inspect.bodies` lists every body as a `Body`, `first` 0 for one too short to elide, whose facts
+  `outline` writes after its last line. Side effects are not given yet: the owner chooses (#369).
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the

@@ -530,6 +530,17 @@ roles (a method reference would read as `read`) and over Java's own vocabulary (
 new: a recipe written against gorefactor's output would not match). An overload is its own block,
 over one block for every overload of the name.
 
+**Decided (2026-11-15, the owner's brief, issue #369, roadmap #506; defaults to reopen): the
+outline's complexity and nesting.** Cyclomatic complexity as gorefactor's (1 and one per branch
+point), with Java's branch points as Checkstyle's `CyclomaticComplexity` counts them: `if`, each
+loop, `catch`, `?:`, each `case` but `default` (one for `case A, B`), each `&&` and `||`; over
+leaving out `catch` and `?:` (Go has neither) and over counting each label of a `case`. Nesting
+is the deepest stack of `if`s, loops and switches (statement or expression), an `else if` at its
+`if`'s depth (gorefactor's AST walk counts it one deeper; Java's checkers do not), over counting
+`try` and `synchronized` too. Lambdas and anonymous classes in a body count toward it, as Go's
+closures do. Initializers get the facts as methods do. The count in the brackets is the
+declaration's lines, as gorefactor's, over the elided lines it had been.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

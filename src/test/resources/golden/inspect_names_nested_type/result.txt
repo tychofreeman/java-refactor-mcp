@@ -3,6 +3,6 @@ com/example/Shop.java  lines 4-11 (Shop.Cart, bodies elided):
  5      private int total;
  6
  7      void add(int price) {
-        … lines 8-9   [2 lines]
+        … lines 8-9   [4 lines, complexity 1, nesting 0]
 10      }
 11    }
