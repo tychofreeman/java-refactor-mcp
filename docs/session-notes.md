@@ -708,6 +708,9 @@ Each was chosen from options; the record named beside it has the options it beat
 - The edit primitives (#91, 2026-11-04) are `Primitives`: `replace_expression`,
   `insert_statements`, `replace_statements`, `add_case`, `add_element`, each an edit
   through `Edits.gated`. `Lines.end` is the offset past the newline.
+  `replace_statements` checks which of `content`, `build` and `surround` it was given in one
+  `Precondition.require` before it reads the file (#528); `built` still checks content and build
+  for the other tools.
 
 - `change_try` (#199, issue #364, 2026-11-13) is `ChangeTry`: the try by `Opened.startingOn`, one
   change as a text edit through `Primitives.gated`. `add_catch` resolves its type by

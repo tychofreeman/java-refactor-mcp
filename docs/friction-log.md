@@ -1909,6 +1909,15 @@ again.
   before the loops and `replace_statements` of the call.
 - `inline` of `int[] firstEnd = facts.firstEnd();` reported an exceptional change ("may throw"):
   a record accessor on a local just assigned from a method the tool cannot prove non-null.
+## 2026-11-15: statements-choice (#528, item 4)
+
+- No Java by hand, but no refactoring either: gathering four `if (...) throw` checks spread through
+  `replaceStatements` (two nested in other ifs, two after locals they read) into one
+  `Precondition.require` at the top took `insert_statements` of the new statement, with its
+  conditions rewritten on `args`, and `replace_statements` deleting each old check. Tried:
+  `move_statement` of each check upward (they read `built`, `content` and `around`, locals declared
+  after the place they go, and two sit inside other ifs). A refactoring that hoists a guard by
+  substituting its locals' initializers would have made it.
 
 ## 2026-11-15: move-tools-split (#528, item 6, EncapsulateField)
 
