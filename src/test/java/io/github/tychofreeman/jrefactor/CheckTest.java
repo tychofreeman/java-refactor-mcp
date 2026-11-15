@@ -40,9 +40,9 @@ class CheckTest {
   }
 
   @Test
-  void theTestsFocusedOnAChangeAreThoseChangedAndThoseNamingAChangedType(@TempDir Path root)
+  void theTestsFocusedOnAChangeAreThoseChangedAndThoseUsingAChangedType(@TempDir Path root)
       throws Exception {
-    project(root);
+    SourceProject project = project(root);
     TestProjects.write(
         root,
         "src/test/java/com/example/NewTest.java",
@@ -50,7 +50,7 @@ class CheckTest {
     assertEquals(
         List.of("com.example.CartTest", "com.example.NewTest"),
         Check.focused(
-            root,
+            project,
             List.of(root.resolve(CART), root.resolve("src/test/java/com/example/NewTest.java"))));
   }
 
@@ -81,7 +81,7 @@ class CheckTest {
     SourceProject project = project(root);
     List<List<String>> ran = new ArrayList<>();
     project.session().tests =
-        (at, classes) -> {
+        (at, classes, seconds) -> {
           ran.add(classes);
           return new Check.Run(1, List.of(), null);
         };
@@ -91,14 +91,15 @@ class CheckTest {
 
     assertEquals(List.of(List.of("com.example.CartTest")), ran);
     assertTrue(said.startsWith("type-checks: no compile errors"), said);
-    assertTrue(said.contains("1 test of CartTest passed"), said);
+    assertTrue(
+        said.contains("1 test of CartTest (those that use this session's changes) passed"), said);
   }
 
   @Test
   void aCheckpointWhoseTestsFailIsRefused(@TempDir Path root) throws Exception {
     SourceProject project = project(root);
     project.session().tests =
-        (at, classes) ->
+        (at, classes, seconds) ->
             new Check.Run(
                 1,
                 List.of(
@@ -120,5 +121,41 @@ class CheckTest {
         refused.getMessage().contains("com.example.CartTest.totals (CartTest.java:4): boom"),
         refused.getMessage());
     assertEquals("package com.example;\n\nclass Cart {}\n", Files.readString(root.resolve(CART)));
+  }
+
+  @Test
+  void aTestIsFocusedWhenItsCodeUsesATypeOfAChangedFile(@TempDir Path root) throws Exception {
+    SourceProject project = project(root);
+    TestProjects.write(
+        root, CART, "package com.example;\n\nclass Cart {\n  record Line(int n) {}\n}\n");
+    TestProjects.write(
+        root,
+        "src/test/java/com/example/LineTest.java",
+        "package com.example;\n\nclass LineTest {\n  Object line = new Cart.Line(1);\n}\n");
+    TestProjects.write(
+        root,
+        "src/test/java/com/example/NoteTest.java",
+        "package com.example;\n\n/** Not about Cart. */\nclass NoteTest {}\n");
+    assertEquals(
+        List.of("com.example.CartTest", "com.example.LineTest"),
+        Check.focused(project, List.of(root.resolve(CART))));
+  }
+
+  @Test
+  void testsNamesTheTestsToRunAndTimeoutHowLongTheyMayTake(@TempDir Path root) throws Exception {
+    SourceProject project = project(root);
+    List<String> ran = new ArrayList<>();
+    project.session().tests =
+        (at, classes, seconds) -> {
+          ran.addAll(classes);
+          ran.add(seconds + " s");
+          return new Check.Run(1, List.of(), null);
+        };
+    Tools.call(
+        Tools.named("check"),
+        project,
+        Map.of("tests", List.of("OtherTest#nothing"), "timeout", 90));
+    Tools.call(Tools.named("check"), project, Map.of("tests", List.of("OtherTest")));
+    assertEquals(List.of("OtherTest#nothing", "90 s", "OtherTest", "30 s"), ran);
   }
 }

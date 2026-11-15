@@ -1433,14 +1433,18 @@ final class Tools {
       new Def(
           "check",
           """
-          Report where the project stands: its compile errors, and with run_tests the tests the \
-          changes reach, run through Maven: the test classes changed, and those that name a type \
-          a changed file declares. Alone, the changes are this session's; failures are named by \
-          test and line. As a step of a batch, {"tool": "check"} is a checkpoint: the code must \
-          type-check there (and with run_tests, the batch's tests pass), and when a later step is \
-          refused, the steps through it are kept.\
+          Report where the project stands: its compile errors, and with run_tests the tests that \
+          use the changed main files, run through Maven: the test classes changed, and those whose \
+          code refers to a type a changed file declares. Alone, the changes are this session's; \
+          failures are named by test and line. tests names the tests to run instead (CartTest, \
+          CartTest#totals); timeout is the seconds they may take (30). As a step of a batch, \
+          {"tool": "check"} is a checkpoint: the code must type-check there (and the tests pass), \
+          and when a later step is refused, the steps through it are kept.\
           """,
-          List.of(Arg.bool("run_tests", "Also run the tests the changes reach.")),
+          List.of(
+              Arg.bool("run_tests", "Also run the tests that use the changed files."),
+              Arg.strings("tests", "Tests to run in place of those: classes or surefire patterns."),
+              Arg.integer("timeout", "Seconds the tests may run before Maven is stopped (30).")),
           Kind.READ,
           (project, args) -> Check.run(project, args));
   static final List<Def> ALL =

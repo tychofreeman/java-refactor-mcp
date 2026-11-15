@@ -10,7 +10,7 @@ A `check` tool: the gate's result for the project, and with `run_tests` the Mave
 
 ## Status
 
-Done (2026-11-14): `Check`. Which tests `run_tests` runs is the user's (#367: those the changes reach); the rule that decides them is a default of this session, with the options it beat in `docs/design.md`, Decisions, to reopen
+Done (2026-11-14): `Check`. Which tests `run_tests` runs is the user's (#367, and 2026-11-15: the tests whose code uses a changed main file, directly; `tests` names others, and `timeout`, 30 s by default, stops the run), with the options it beat in `docs/design.md`, Decisions
 
 ## Evidence
 

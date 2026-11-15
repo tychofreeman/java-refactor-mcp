@@ -1870,3 +1870,15 @@ A batch whose `add_declaration` steps named `Check` before the step that `create
 Moving the `create_file` first (a `retry`) worked. No tool was skipped. The import fix could
 prefer a type a later step of the same batch creates, or never choose a class of a package the
 module system does not export; neither is on the roadmap yet.
+
+## 2026-11-14: deleting a stub overload whose calls would move to the real method (check-focus)
+
+A test called `Check.focused(project, List.of(...))` before the real method existed, so the stub
+was declared as `focused(SourceProject, List<Path>)`; the real one takes a `Collection<Path>`, so
+`add_declaration` added it beside the stub rather than replacing it. `replace_declaration` with
+empty content then refused the stub as used, though every use would bind to the real method once
+it was gone. Tried: the delete alone (refused, the two calls named), and `change_type` of the
+stub's parameter to `Collection<Path>` (would clash with the real one). Done by `replace_text`,
+removing the stub's three lines. Safe delete could count a use as kept when another overload
+takes it after the delete; or `add_declaration` could replace a stub its new method's
+parameters accept.
