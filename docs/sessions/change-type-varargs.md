@@ -1,6 +1,6 @@
 # change_type to and from varargs
 
-- **Item:** issue #614 (friction log), roadmap item 502
+- **Item:** issue #614 (friction log), roadmap item 503
 - **Date:** 2026-11-15
 - **Branch:** change-type-varargs
 
