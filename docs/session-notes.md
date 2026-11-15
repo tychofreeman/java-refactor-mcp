@@ -743,6 +743,10 @@ Each was chosen from options; the record named beside it has the options it beat
   of `name` on `line` (a simple name a variable on the line also has stays `InlineVariable`'s),
   then `InlineFunction.run` with that one `Call` (the call's file, relative, and its start), which
   skips the other sites and counts them, and method references, as uses that keep the method.
+  What `run` reads once of the inlined method (its value or body, prefix, locals, receiver uses,
+  text range, parameter uses and counts, subtype-safety, declaring text) is an `InlinedMethod`
+  (#528), which `replacementFor` takes in place of 14 parameters. `Fold.paramUses` reads the
+  pattern's parameter uses into a `ParamUses` record and `Fold.stable` decides stability.
 
 - `inspect` `uses` (roadmap #504, issue #369, 2026-11-15) is `Uses`: `Holding.of` the name's last
   identifier, the declaration found by type label (or qualified name) in that one parse, then
