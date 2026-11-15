@@ -1,5 +1,6 @@
 package io.github.tychofreeman.jrefactor;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -122,6 +123,21 @@ final class SignatureChange {
   Outcome apply(
       SourceProject project, String what, List<String> chosen, String fix, int declarations)
       throws Exception {
+    return apply(project, what, chosen, fix, declarations, what);
+  }
+
+  /**
+   * As {@link #apply(SourceProject, String, List, String, int)}, with {@code doing} ("changing the
+   * type of ...") in place of {@code what} in a refusal, which changes nothing.
+   */
+  Outcome apply(
+      SourceProject project,
+      String what,
+      List<String> chosen,
+      String fix,
+      int declarations,
+      String doing)
+      throws IOException {
     Map<Path, String> texts = new LinkedHashMap<>();
     Map<Path, List<TextEdit>> byFile = new LinkedHashMap<>();
     Set<String> files = new TreeSet<>();
@@ -147,7 +163,7 @@ final class SignatureChange {
       byFile.put(s.file(), list);
       files.add(s.rel());
     }
-    Edits.WrittenFiles written = Edits.gatedFiles(project, texts, byFile, chosen, what, fix);
+    Edits.WrittenFiles written = Edits.gatedFiles(project, texts, byFile, chosen, doing, fix);
     Stubs.Declared stubs = written.declared();
     int d = declarations < 0 ? family.decls.size() : declarations;
     int c = family.calls.size();
