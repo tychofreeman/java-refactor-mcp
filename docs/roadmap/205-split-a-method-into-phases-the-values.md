@@ -1,7 +1,7 @@
 ---
 order: 198
 item: 205
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open, low priority until the friction log shows a hand split (deferred 2026-11-06, row 128)
+Done 2026-11-15 (the owner asked for it with the parity items): `split` with kind `phase`, `Split`, composed of `extract_function`, `move_parameter` and `extract_type`; the record goes in its own file (a default, `docs/design.md`). gorefactor's kinds `variable` and `loop` are not built
 
 ## Evidence
 

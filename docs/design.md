@@ -541,6 +541,16 @@ is the deepest stack of `if`s, loops and switches (statement or expression), an 
 closures do. Initializers get the facts as methods do. The count in the brackets is the
 declaration's lines, as gorefactor's, over the elided lines it had been.
 
+**Decided (2026-11-15, the owner's brief, issue #370, roadmap #205; defaults to reopen): `split`
+of a method into phases is gorefactor's kind `phase`, composed of the tools here.** What the first
+phase carries is the locals it declares that the rest reads, as gorefactor's struct holds; the
+method's parameters stay parameters. The record goes in its own file, as `extract_type` puts a
+parameter object and as gorefactor's struct is a package-level type, over a record nested after
+the new method (as `extract_function` declares `BothResult`), which needs code `extract_type`
+does not have. It is one call of `extract_function`, `move_parameter` (the carried values first,
+since `extract_type` groups adjacent parameters) and `extract_type`, over a new algorithm. Only
+kind `phase` is built: gorefactor's `variable` and `loop` wait for a session that needs them.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

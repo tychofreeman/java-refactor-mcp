@@ -59,7 +59,8 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   and an enhanced for, a for and a while, a while and a do-while, either way),
   `subclass_to_strategy` (a subclass that overrides one method as a function
   its superclass holds), `change_signature` (a method's return type and
-  `throws`, in every override, lambda and method-referenced method).
+  `throws`, in every override, lambda and method-referenced method), `split` (a method in
+  two phases, what the first computes for the second carried in a record).
 - **Edits**, which change behavior on purpose and are still type-checked
   and undoable: `create_file`, `add_declaration`,
   `replace_declaration` (empty content is a safe delete),

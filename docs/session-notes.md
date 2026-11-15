@@ -752,6 +752,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `Inspect.bodies` lists every body as a `Body`, `first` 0 for one too short to elide, whose facts
   `outline` writes after its last line. Side effects are not given yet: the owner chooses (#369).
 
+- `split` (roadmap #205, issue #370, 2026-11-15) is `Split`: it calls `extract_function`,
+  `move_parameter` and `extract_type` through `Tools.call` inside its own call (the journal nests,
+  as a batch's steps do), so one undo reverts all three; a later step's refusal rolls back the
+  earlier ones.
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the

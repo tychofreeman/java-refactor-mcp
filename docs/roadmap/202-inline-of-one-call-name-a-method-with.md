@@ -1,7 +1,7 @@
 ---
 order: 195
 item: 202
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open; how `name` with `line` is told from a local (by what it resolves to, or an argument such as `all_calls`) is a contract choice for the user
+Done 2026-11-15 as #502 (a row added beside this one by mistake): the user chose gorefactor's rule, what `name` is at `line` says which, with `all_calls` and `keep_function`
 
 ## Evidence
 

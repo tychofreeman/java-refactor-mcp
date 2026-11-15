@@ -1,7 +1,7 @@
 ---
 order: 193
 item: 200
-status: Open
+status: Partly done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open, `uses` first
+Partly done 2026-11-15: `uses` (#504), `function` and `targets` (#505), each body's lines, complexity and nesting (#506); each body's side effects wait for the owner's choice (issue #369). Those rows were added beside this one by mistake; this row is the item
 
 ## Evidence
 
