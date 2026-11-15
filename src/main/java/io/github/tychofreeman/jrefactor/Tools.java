@@ -87,17 +87,18 @@ final class Tools {
       new Def(
           "inspect",
           """
-          Read Java code with line numbers. Use it before a refactoring to get exact lines.
-          - no arguments: the source roots, their packages and files with line counts.
-          - file: the file with method, constructor and initializer bodies elided: declarations, \
-          fields, signatures and comments in full, and in place of each body of two lines or more \
-          the lines it takes.
-          - file + start_line/end_line: those lines (end_line defaults to the end of the file).
-          - pattern (a Java regular expression), with file or without: the lines that match, \
-          numbered, file by file over the project's Java files (at most 100): where a name is \
-          used, which line to edit. Use it rather than grep.
-          - names, alone: declarations by name, wherever they are: ["Fold"] the class with its \
-          bodies elided, ["Fold.leave", "Cart.total"] each method's overloads or field in full.\
+          Read Java code with line numbers, before a refactoring, for exact lines.
+          - no arguments: the source roots, packages and files with line counts.
+          - file: the file with each body of two lines or more elided to the lines it takes.
+          - file + start_line/end_line: those lines.
+          - pattern (a Java regular expression), with file or without: the matching lines, file \
+          by file (at most 100). Use it rather than grep.
+          - names: declarations by name, anywhere: ["Fold"] the class, bodies elided; \
+          ["Cart.total"] each overload, or a field, in full.
+          - uses: every use of a type, field or method, by binding, under what it does with it \
+          (switch on it, compared, asserted, written, passed as an interface, called, read; for a \
+          type also casts, new, type cases): ["Plant.species"] gives "compared (1): \
+          garden/Bed.java:85 p.species == null".\
           """,
           List.of(
               Arg.string(
@@ -108,9 +109,11 @@ final class Tools {
                   "pattern", "Optional: show the lines that match this Java regular expression."),
               Arg.strings(
                   "names",
-                  "Optional, alone: read declarations by name, anywhere in the project: Type (its"
-                      + " outline) or Type.member (each overload of a method, a field, a nested"
-                      + " type).")),
+                  "Optional, alone: Type (its outline) or Type.member (each overload, a field, a"
+                      + " nested type), anywhere."),
+              Arg.strings(
+                  "uses",
+                  "Optional, alone: Type or Type.member, each use listed by what it does.")),
           Kind.READ,
           Tools::inspect);
 
@@ -1680,6 +1683,19 @@ final class Tools {
     Integer start = args.integer("start_line");
     Integer end = args.integer("end_line");
     List<String> names = args.list("names");
+    List<String> uses = args.list("uses");
+    if (!uses.isEmpty()) {
+      if (!names.isEmpty()
+          || pattern != null
+          || start != null
+          || end != null
+          || args.string("file") != null) {
+        throw new Refusal(
+            "give uses alone: each is found in the project by its name, without file, names,"
+                + " pattern, start_line or end_line.");
+      }
+      return Outcome.of(Uses.of(project, uses));
+    }
     if (!names.isEmpty()) {
       if (pattern != null || start != null || end != null || args.string("file") != null) {
         throw new Refusal(

@@ -1,0 +1,33 @@
+Plant.species (field of com.example.Plant, String): 5 uses
+switch on it (1):
+  com/example/Bed.java:11  switch (p.species): "fern", default
+compared (1):
+  com/example/Bed.java:8  p.species == "cactus"
+written (2):
+  com/example/Bed.java:18  p.species = "rose"
+  com/example/Plant.java:8  this.species = species
+passed as an interface (1):
+  com/example/Bed.java:17  names.add(p.species)
+
+Plant.water (method of com.example.Plant, int water(int)): 4 uses
+called (3):
+  com/example/Bed.java:20  q.water(2)
+  com/example/Bed.java:23  ((Plant) o).water(1)
+  com/example/Bed.java:26  r.water(3)
+a method reference (1):
+  com/example/Bed.java:24  made::water
+
+Plant (class com.example.Plant): 6 uses
+asserted (1):
+  com/example/Bed.java:19  o instanceof Plant q
+a type switch case (1):
+  com/example/Bed.java:26  switch (o): case Plant r
+converted to (1):
+  com/example/Bed.java:23  (Plant) o
+made by new (1):
+  com/example/Bed.java:22  new Plant("fern")
+read (2):
+  com/example/Bed.java:7  int score(Plant p, Object o, List<CharSequence> names)
+  com/example/Bed.java:22  Plant made = new Plant("fern");
+
+Plant.nothing: no declaration of that name in the project

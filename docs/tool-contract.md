@@ -302,7 +302,25 @@ Text, in gorefactor's format (decided 2026-11-02: copied, not measured).
   Refused: no type of that name ("Name a type as Type or Outer.Inner"), a type with no
   such member ("inspect it by name to see what it declares"), and `names` with
   `file`, `pattern` or a line range.
-- Not yet: gorefactor's no-argument overview, `function`, `targets` and `uses`.
+- `uses` (roadmap #504, issue #369, 2026-11-15, gorefactor's argument and format), alone: for
+  each name (`Type`, `Outer.Inner`, `pkg.Type`, `Type.member`, `Type.method(int)` for one
+  overload), every use in the project found by binding (the files that hold its simple name,
+  parsed together), under what the use does with it, in this order: `switch on it`, `compared`
+  (`==`, `!=`, or `equals` with it on either side), `asserted` (`instanceof`, or a cast of it),
+  `a type switch case`, `converted to` (a cast to the type), `made by new`, `written`
+  (assignment, `++`, `--`), `passed as an interface` (an argument for a parameter of an interface
+  type), `called`, `a method reference`, `read` (with the first line of its statement or
+  declaration). The header is `Plant.species (field of com.example.Plant, String): 5 uses`
+  (`method of ..., int water(int)`, `class com.example.Plant`, `enum constant of ...`), or `no
+  uses`; each use `  <file>:<line>  <code>`, sorted by file and line; blocks are separated by a
+  blank line, one per overload when a method has several. A name nothing declares reads
+  `Plant.nothing: no declaration of that name in the project`; one declared in several packages,
+  `declared in a/X.java (package a), ...; name it more fully`. Javadoc, imports and the package
+  line are not uses. Refused: `uses` with `file`, `names`, `pattern` or a line range ("give uses
+  alone"). The roles Java adds or renames against Go's (a default to reopen, `docs/design.md`):
+  `made by new` for Go's `made by a literal`, `a method reference`, and `asserted` taking
+  `instanceof` and casts, Go's type assertion.
+- Not yet: `function`, `targets`, and each body's complexity, nesting and side effects.
 
 ## `rename` (built)
 
