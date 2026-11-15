@@ -982,10 +982,11 @@ final class MoveMember {
 
   /**
    * Qualifies each member type of {@code m}'s class, or of a superclass, that {@code m} names by
-   * its simple name ({@code Call} to {@code Signatures.Call}): in the class it moves to, the simple
-   * name would not resolve, or the import fix would take another type of that name.
+   * its simple name ({@code Call} to {@code Signatures.Call}): in the class it moves to, or where
+   * inline writes its body, the simple name would not resolve, or the import fix would take another
+   * type of that name.
    */
-  private static void qualifyMemberTypes(MethodDeclaration m, List<TextEdit> out) {
+  static void qualifyMemberTypes(MethodDeclaration m, List<TextEdit> out) {
     for (SimpleName n : Nodes.all(m, SimpleName.class)) {
       if (n.resolveBinding() instanceof ITypeBinding t
           && t.isMember()
