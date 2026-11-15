@@ -1,0 +1,1 @@
+A declares a, b in one statement. Change one of them with replace_text

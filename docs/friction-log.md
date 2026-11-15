@@ -1891,3 +1891,21 @@ retry's step pointed at `@read`, a section of the first run, and was refused as 
 not parse (the text `@read`). Resent the whole batch from a file (`@file`). A retry could keep the
 first run's sections with the refused batch, or the refusal could say that sections must be sent
 again.
+
+## 2026-11-15: param-records (#528, item 1)
+
+- No Java by hand. The review asked for "a record per parameter" in place of `InlineFunction`'s
+  `useCount[]` and `subtypeSafe[]` and `Fold`'s `uses[]`, `firstEnd[]`, `lastStart[]`, `stable[]`
+  (an array of records for parallel arrays). No tool or short sequence does that: `extract_type`
+  groups parameters or fields, not array elements; `extract_function` of the filling loop returns
+  the arrays in a record (`Fold.ParamUses`), still parallel. What was reached: `replacementFor`'s
+  14 values in one `InlinedMethod` (`move_parameter`, `extract_type`) and `Fold.run`'s two loops
+  as methods; the arrays stay. A "zip parallel arrays into records" operation would be needed.
+- `move_parameter` of `siteText` before `value` was refused: the arguments `m.getBody()` and
+  `instance ? thisUses : List.of()` "may both have side effects" (a getter and a conditional of
+  locals). Moving it last, past plain locals, worked.
+- `extract_type` wrote `new InlinedMethod(...)` into the call inside two loops; no tool hoists an
+  invariant expression out of a loop (as in moved-type-context): `insert_statements` of the local
+  before the loops and `replace_statements` of the call.
+- `inline` of `int[] firstEnd = facts.firstEnd();` reported an exceptional change ("may throw"):
+  a record accessor on a local just assigned from a method the tool cannot prove non-null.

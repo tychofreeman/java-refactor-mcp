@@ -1040,7 +1040,8 @@ public final class Rename {
     }
     String source = Files.readString(javaFile(project, relFile));
     CompilationUnit cu = Jdt.parseSyntax(source);
-    SimpleName at = declaredName(Declarations.find(cu, name, relFile).decl());
+    SimpleName at =
+        declaredName(Declarations.find(cu, name, relFile).decl(), Qualified.parse(name).name());
     int start = at.getStartPosition();
     return run(
         project,
@@ -1051,13 +1052,20 @@ public final class Rename {
         newName);
   }
 
-  /** The name {@code d} declares: a method's, a type's, or its first field's. */
-  private static SimpleName declaredName(BodyDeclaration d) {
+  /**
+   * The name {@code d} declares: a method's, a type's, or its field {@code member}, one of several.
+   */
+  private static SimpleName declaredName(BodyDeclaration d, String member) {
     if (d instanceof MethodDeclaration m) {
       return m.getName();
     }
     if (d instanceof FieldDeclaration f) {
-      return ((VariableDeclarationFragment) f.fragments().get(0)).getName();
+      for (Object o : f.fragments()) {
+        SimpleName n = ((VariableDeclarationFragment) o).getName();
+        if (n.getIdentifier().equals(member)) {
+          return n;
+        }
+      }
     }
     return ((AbstractTypeDeclaration) d).getName();
   }

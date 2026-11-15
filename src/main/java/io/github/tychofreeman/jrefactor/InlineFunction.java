@@ -59,7 +59,7 @@ final class InlineFunction {
    * whole argument, return value, initializer or right-hand side), so its argument needs no
    * parentheses there.
    */
-  private record ParamUse(int start, int end, int index, boolean alone) {}
+  record ParamUse(int start, int end, int index, boolean alone) {}
 
   static Outcome run(SourceProject project, String rel, String name, Call only, boolean keep)
       throws Exception {
@@ -164,6 +164,22 @@ final class InlineFunction {
     List<String> nullable = new ArrayList<>();
     // What the moved text means where it is written: the body, and each call's arguments.
     List<ASTNode> fragments = new ArrayList<>(List.of(m.getBody()));
+    InlinedMethod inlined =
+        new InlinedMethod(
+            value,
+            m.getBody(),
+            prefix,
+            bodyLocals,
+            instance ? thisUses : List.of(),
+            instance ? implicit : List.of(),
+            bodyStart,
+            bodyEnd,
+            uses,
+            useCount,
+            params,
+            name,
+            declaringText,
+            subtypeSafe);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -242,25 +258,7 @@ final class InlineFunction {
             && !(receiver instanceof ClassInstanceCreation)) {
           nullable.add(Nodes.show(receiver) + " in " + project.relative(p));
         }
-        list.addAll(
-            replacementFor(
-                project,
-                site,
-                value,
-                m.getBody(),
-                prefix,
-                bodyLocals,
-                instance ? thisUses : List.of(),
-                instance ? implicit : List.of(),
-                bodyStart,
-                bodyEnd,
-                uses,
-                useCount,
-                params,
-                fileText,
-                name,
-                declaringText,
-                subtypeSafe));
+        list.addAll(replacementFor(project, site, inlined, fileText));
         calls++;
       }
       edits.computeIfAbsent(p, k -> new ArrayList<>()).addAll(list);
@@ -317,39 +315,28 @@ final class InlineFunction {
    * statement.
    */
   private static List<TextEdit> replacementFor(
-      SourceProject project,
-      MethodInvocation site,
-      Expression value,
-      Block whole,
-      List<Statement> prefix,
-      Set<String> bodyLocals,
-      List<ASTNode> thisUses,
-      List<SimpleName> implicit,
-      int bodyStart,
-      int bodyEnd,
-      List<ParamUse> uses,
-      int[] useCount,
-      List<SingleVariableDeclaration> params,
-      String siteText,
-      String name,
-      String declaringText,
-      boolean[] subtypeSafe) {
+      SourceProject project, MethodInvocation site, InlinedMethod inlined, String siteText) {
     List<Expression> args = typed(site.arguments(), Expression.class);
-    checkArguments(args, params, useCount, name, subtypeSafe);
+    checkArguments(
+        args, inlined.params(), inlined.useCount(), inlined.name(), inlined.subtypeSafe());
     // Each argument ran just before the body; inlined in place, it runs at its parameter's uses.
     // One the gate refuses there is bound to a local before the call's statement instead.
     boolean[] bind = new boolean[args.size()];
     Refusal inPlace = null;
     for (int i = 0; i < args.size(); i++) {
       List<ASTNode> at = new ArrayList<>();
-      for (ParamUse u : uses) {
+      for (ParamUse u : inlined.uses()) {
         if (u.index() == i) {
-          at.add(NodeFinder.perform(whole.getRoot(), u.start(), u.end() - u.start()));
+          at.add(NodeFinder.perform(inlined.whole().getRoot(), u.start(), u.end() - u.start()));
         }
       }
       Behavior.Move move =
           new Behavior.Move(
-              args.get(i), whole, at, label(args, params, i, siteText), "inlining " + name);
+              args.get(i),
+              inlined.whole(),
+              at,
+              label(args, inlined.params(), i, siteText),
+              "inlining " + inlined.name());
       Refusal r = Exceptional.trial(project, () -> Behavior.flow(project, move));
       if (r != null) {
         bind[i] = true;
@@ -357,73 +344,119 @@ final class InlineFunction {
       }
     }
     try {
-      checkOrder(args, uses, params, name);
+      checkOrder(args, inlined.uses(), inlined.params(), inlined.name());
     } catch (Refusal r) {
       inPlace = inPlace != null ? inPlace : r;
       Arrays.fill(bind, true);
     }
-    String[] local = bindings(project, site, whole, args, params, bind, siteText, name, inPlace);
-    checkLocals(site, bodyLocals, name);
+    String[] local =
+        bindings(
+            project,
+            site,
+            inlined.whole(),
+            args,
+            inlined.params(),
+            bind,
+            siteText,
+            inlined.name(),
+            inPlace);
+    checkLocals(site, inlined.bodyLocals(), inlined.name());
     List<TextEdit> receiver =
-        new ArrayList<>(receiverEdits(site, thisUses, implicit, siteText, name));
-    receiver.addAll(shadowEdits(site, whole, receiver, name.substring(0, name.indexOf('.'))));
-    if (value != null) {
+        new ArrayList<>(
+            receiverEdits(site, inlined.thisUses(), inlined.implicit(), siteText, inlined.name()));
+    receiver.addAll(
+        shadowEdits(
+            site,
+            inlined.whole(),
+            receiver,
+            inlined.name().substring(0, inlined.name().indexOf('.'))));
+    if (inlined.value() != null) {
       if (site.getParent() instanceof ExpressionStatement) {
         throw new Refusal(
-            name
+            inlined.name()
                 + " returns a value, and a call of it is a statement. Use its result, or keep the"
                 + " method.");
       }
       String replaced =
-          substituted(declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver);
+          substituted(
+              inlined.declaringText(),
+              inlined.bodyStart(),
+              inlined.bodyEnd(),
+              inlined.uses(),
+              args,
+              local,
+              siteText,
+              receiver);
       // A call that is all of an initializer, a return or an assignment's value needs none.
       boolean entire =
           site.getParent() instanceof VariableDeclarationFragment
               || site.getParent() instanceof ReturnStatement
               || (site.getParent() instanceof Assignment a && a.getRightHandSide() == site);
-      if (!entire && InlineVariable.needsParentheses(value)) {
+      if (!entire && InlineVariable.needsParentheses(inlined.value())) {
         replaced = "(" + replaced + ")";
       }
       TextEdit call = new TextEdit(site.getStartPosition(), Nodes.end(site), replaced);
-      if (prefix.isEmpty() && !any(local)) {
+      if (inlined.prefix().isEmpty() && !any(local)) {
         return List.of(call);
       }
-      Statement statement = prefix.isEmpty() ? blockStatement(site) : wholeStatement(site, name);
+      Statement statement =
+          inlined.prefix().isEmpty() ? blockStatement(site) : wholeStatement(site, inlined.name());
       int at = statement.getStartPosition();
       String declared =
-          declarations(args, params, local, siteText, Lines.indentOf(siteText, at), useCount);
-      if (prefix.isEmpty()) {
+          declarations(
+              args,
+              inlined.params(),
+              local,
+              siteText,
+              Lines.indentOf(siteText, at),
+              inlined.useCount());
+      if (inlined.prefix().isEmpty()) {
         return List.of(new TextEdit(at, at, declared), call);
       }
-      int from = prefix.get(0).getStartPosition();
-      Statement end = prefix.get(prefix.size() - 1);
+      int from = inlined.prefix().get(0).getStartPosition();
+      Statement end = inlined.prefix().get(inlined.prefix().size() - 1);
       String before =
           reindent(
               substituted(
-                  declaringText, from, Nodes.end(end), uses, args, local, siteText, receiver),
-              Lines.indentOf(declaringText, from),
+                  inlined.declaringText(),
+                  from,
+                  Nodes.end(end),
+                  inlined.uses(),
+                  args,
+                  local,
+                  siteText,
+                  receiver),
+              Lines.indentOf(inlined.declaringText(), from),
               Lines.indentOf(siteText, statement.getStartPosition()),
-              textBlocks(whole, declaringText));
+              textBlocks(inlined.whole(), inlined.declaringText()));
       return List.of(
           new TextEdit(at, at, declared + before + "\n" + Lines.indentOf(siteText, at)), call);
     }
     if (!(site.getParent() instanceof ExpressionStatement stmt)) {
-      throw new Refusal(name + " returns nothing, so a call of it can only be a statement.");
+      throw new Refusal(
+          inlined.name() + " returns nothing, so a call of it can only be a statement.");
     }
     String replaced =
         declarations(
                 args,
-                params,
+                inlined.params(),
                 local,
                 siteText,
                 Lines.indentOf(siteText, stmt.getStartPosition()),
-                useCount)
+                inlined.useCount())
             + reindent(
                 substituted(
-                    declaringText, bodyStart, bodyEnd, uses, args, local, siteText, receiver),
-                Lines.indentOf(declaringText, bodyStart),
+                    inlined.declaringText(),
+                    inlined.bodyStart(),
+                    inlined.bodyEnd(),
+                    inlined.uses(),
+                    args,
+                    local,
+                    siteText,
+                    receiver),
+                Lines.indentOf(inlined.declaringText(), inlined.bodyStart()),
                 Lines.indentOf(siteText, stmt.getStartPosition()),
-                textBlocks(whole, declaringText));
+                textBlocks(inlined.whole(), inlined.declaringText()));
     return List.of(new TextEdit(stmt.getStartPosition(), Nodes.end(stmt), replaced));
   }
 
