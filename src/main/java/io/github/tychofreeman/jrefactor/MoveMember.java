@@ -40,8 +40,9 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
  * method becomes static in the target and takes the source instance as its first parameter, named
  * receiver; every call in the project passes the instance. A private method is widened to package
  * access, since the target is a different class. Refused: an override, or a method another class
- * overrides; a constructor, a generic class, an anonymous or local class in the body, super, a call
- * of itself, a method reference to it, and a call from another class without an instance.
+ * overrides; a constructor, a generic class, an anonymous or local class in an instance method,
+ * super, a call of itself, a method reference to it, and a call from another class without an
+ * instance.
  */
 final class MoveMember {
 
@@ -494,19 +495,27 @@ final class MoveMember {
 
   /** The refusals about the body: what its names would mean in the target. */
   private static void checkBody(MethodDeclaration m, IMethodBinding method, String name) {
-    // A static method has no receiver: its own name and its calls of itself move as they are.
+    // A static method has no receiver: its own name, its calls of itself and the this of an
+    // anonymous
+    // or local class in it move as they are.
     boolean instance = !Modifier.isStatic(method.getModifiers());
     m.getBody()
         .accept(
             new ASTVisitor() {
               @Override
               public boolean visit(AnonymousClassDeclaration node) {
-                throw anonymous(name);
+                if (instance) {
+                  throw anonymous(name);
+                }
+                return true;
               }
 
               @Override
               public boolean visit(TypeDeclarationStatement node) {
-                throw anonymous(name);
+                if (instance) {
+                  throw anonymous(name);
+                }
+                return true;
               }
 
               @Override
