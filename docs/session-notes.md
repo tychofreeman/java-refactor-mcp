@@ -738,6 +738,11 @@ Each was chosen from options; the record named beside it has the options it beat
   then `InlineFunction.run` with that one `Call` (the call's file, relative, and its start), which
   skips the other sites and counts them, and method references, as uses that keep the method.
 
+- `inspect` `uses` (roadmap #504, issue #369, 2026-11-15) is `Uses`: `Holding.of` the name's last
+  identifier, the declaration found by type label (or qualified name) in that one parse, then
+  every `SimpleName` whose declaration's key matches, classified from its parent (`classify`, and
+  `classifyType` for a type's own roles). A new role goes in `Uses.ROLES`, in output order.
+
 - `NameCheck` (#77, 2026-11-04) is the general check that moved code keeps its
   meaning, by binding key per identifier, before the edit is written. A new tool that
   moves code should call it (`meanings` of the source fragments, `require` with the

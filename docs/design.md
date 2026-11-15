@@ -520,6 +520,16 @@ the call. (b) "nothing else uses it" is the other calls and method references of
 hold the name, as the every-call route counts them; an override of a supertype's method is deleted
 as that route deletes it.
 
+**Decided (2026-11-15, the owner's brief, issue #369, roadmap #504; a default to reopen): `inspect`
+`uses` keeps gorefactor's roles and their order, with Java's analogues.** Go's type assertion is
+`asserted` here for `instanceof` and a cast of the value; a cast to the type is `converted to`, as
+Go's conversion; `new T(...)` is `made by new` (Go's `made by a literal`); `a method reference`
+is added before `read`, since `Type::m` blocks `inline` and is neither a call nor a read; `compared`
+takes `equals` with the value on either side as well as `==` and `!=`. Over keeping only Go's ten
+roles (a method reference would read as `read`) and over Java's own vocabulary (cast, instanceof,
+new: a recipe written against gorefactor's output would not match). An overload is its own block,
+over one block for every overload of the name.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

@@ -42,7 +42,7 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
 ## The tools
 
 - **Read:** `inspect`, a file without method bodies, then the ranges you
-  will change.
+  will change; `uses` lists every use of a type or member, by what it does with it.
 - **Refactorings:** `rename` (any kind of name); `extract_function`,
   `extract_variable` (also as a constant, field or parameter),
   `inline` (a local variable, one call of a method, or every call); `add_parameter`, `remove_parameter`,
