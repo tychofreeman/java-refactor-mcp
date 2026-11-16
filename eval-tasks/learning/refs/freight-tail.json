@@ -1,7 +1,5 @@
 {"steps":[
-{"tool":"remove_parameter","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.last","parameter":"n","value":"4"}},
-{"tool":"add_parameter","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.last","parameter":"truck","type":"Truck","value":"this","before":"s"}},
-{"tool":"function_to_method","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.last"}},
-{"tool":"rename","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.last","new_name":"tail"}},
-{"tool":"replace_text","args":{"file":"src/main/java/freight/Truck.java","old":"private String tail(String s)","new":"String tail(String s)"}}
+{"tool":"add_declaration","args":{"file":"src/main/java/freight/Truck.java","content":"/** The last 4 characters of code, the part a driver sees. */\nString tail(String code) {\n  return last(code, 4);\n}"}},
+{"tool":"fold","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.tail"}},
+{"tool":"inline","args":{"file":"src/main/java/freight/Truck.java","name":"Truck.last","all_calls":true}}
 ]}
