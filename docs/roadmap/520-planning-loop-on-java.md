@@ -1,7 +1,7 @@
 ---
 order: 510
 item: 520
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ The planning loop on Java: gorefactor's `eval-tasks/learning/loop.py` (a model p
 
 ## Status
 
-Open (2026-11-15, the user): the fixture is built. `eval-tasks/testdata/freight` (about 400 lines in four packages, its own tests), `eval-tasks/derivations-freight.json` (`freight-tail`, `freight-routes`), hidden tests in `eval-tasks/testdata/freight-tail` and `freight-routes`, and a reference batch for each in `eval-tasks/learning/refs/`, validated: each hidden test fails on the fixture and passes after `bin/jrefactor -C <copy> batch @<ref>`. Left: the loop's language switch (the build of the tool, `./mvnw -q -o test` as the check, `.java` in its patterns), and the runs.
+Done (2026-11-16): `loop.py -lang java -server <this checkout>` (go-refactor-mcp #665) runs the fixture's two tasks. Sonnet, 8 attempts a task: 16/16 for $1.34 with the tools, 15/16 for $4.02 by hand; routes costs 4x by hand, tail about the same, as on Go (`docs/sessions/loop-java-switch.md`, gorefactor's cost-history 29). Left for another item: a larger Java module.
 
 ## Evidence
 
