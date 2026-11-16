@@ -58,21 +58,7 @@ class ServerTest {
    * does, and drop it once it fits the limit.
    */
   static final Map<String, Integer> DEFINITION_OVER =
-      Map.ofEntries(
-          Map.entry("add_parameter", 3374),
-          Map.entry("change_signature", 2596),
-          Map.entry("insert_statements", 2518),
-          Map.entry("remove_parameter", 2349),
-          Map.entry("change_type", 2257),
-          Map.entry("type_switch_to_method", 2154),
-          Map.entry("replace_statements", 2114),
-          Map.entry("extract_type", 2048),
-          Map.entry("extract_variable", 2029),
-          Map.entry("fold", 1897),
-          Map.entry("extract_function", 1852),
-          Map.entry("batch", 1801),
-          Map.entry("add_declaration", 1776),
-          Map.entry("inline", 1760));
+      Map.ofEntries(Map.entry("add_parameter", 3338));
 
   @BeforeEach
   void start() throws IOException {

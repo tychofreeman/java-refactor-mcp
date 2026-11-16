@@ -18,18 +18,15 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
 
   /** The names to import where a simple name is ambiguous. */
   static final Arg IMPORTS =
-      strings(
-          "imports", "Optional: fully qualified names to import where a simple name is ambiguous.");
+      strings("imports", "Optional: fully qualified names to import for ambiguous simple names.");
 
   /** A method by line, in place of name, for the signature tools ({@link ByLine}). */
   static final Arg METHOD_LINE =
-      integer(
-          "line",
-          "Instead of name: a 1-based line of file with the method's declaration or a call of it.");
+      integer("line", "Instead of name: a line of file declaring or calling the method.");
 
   /** With {@link #METHOD_LINE}, the call's column. */
   static final Arg METHOD_COLUMN =
-      integer("column", "Optional 1-based column of the call, when the line calls two methods.");
+      integer("column", "Optional: the call's column, when the line calls two methods.");
 
   /** In place of content, on the statement edits: what to write, by name ({@link Build}). */
   static final Arg BUILD =
@@ -38,7 +35,7 @@ record Arg(String name, ObjectNode schema, boolean mandatory) {
           """
           {
             "type": "array",
-            "description": "In place of content: the statements to write, in order. Each entry is a statement as typed, or an object: {call, args, into, type} for a call, {new, args, into, type} for a construction, {loop, name, form, type, body} for a loop whose body is a list of entries, {guard, exit, value, message} for if (condition) and an exit (return, continue, break or throw), {guard_null, exit, value, message} for the same when what it names is null (exit require: Objects.requireNonNull).",
+            "description": "In place of content: entries to write, in order, as insert_statements shows; a loop also takes name and type, a guard message.",
             "items": {
               "anyOf": [
                 {"type": "string"},

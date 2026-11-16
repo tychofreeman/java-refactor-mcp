@@ -159,36 +159,28 @@ final class Tools {
           Name an expression: a declaration is inserted just before its statement and the name \
           is used in its place. Extracting price * qty as subtotal in return price * qty + tax \
           gives int subtotal = price * qty; return subtotal + tax;.
-          Identify the expression by file, the line it starts on and its exact source text. When \
-          the text occurs twice on that line, pass column, the 1-based column where it starts.
-          as=constant, field or parameter makes it a constant or field of the type, or a new \
-          parameter of the method, instead of a local; as a parameter, each call passes it with \
-          its own arguments in their place (qty / 10 becomes bonus, and total(n + 1, 3) passes \
-          (n + 1) / 10).\
+          as=constant, field or parameter makes it a private static final constant or private \
+          final field of the type, or a new parameter of the method, instead of a local; as a \
+          parameter, each call passes it with its own arguments in their place (qty / 10 becomes \
+          bonus, and total(n + 1, 3) passes (n + 1) / 10).\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line on which the expression starts.").required(),
-              Arg.string("expression", "Exact source text of the expression, e.g. price * qty.")
-                  .required(),
+              Arg.integer("line", "Line the expression starts on.").required(),
+              Arg.string("expression", "Its exact source text, e.g. price * qty.").required(),
               Arg.string("name", "Name for the new variable.").required(),
               Arg.integer(
-                  "column",
-                  "Optional 1-based column where the expression starts, only when its "
-                      + "text occurs twice on the line."),
+                  "column", "Optional: its column, when its text occurs twice on the line."),
               Arg.oneOf(
                   "as",
-                  "Optional: a private static final constant or private final field of "
-                      + "the type, or a new parameter of the method (calls pass the "
-                      + "expression), instead of a local. The expression must be literals and "
-                      + "constants (as a parameter, also the method's parameters and calls on them).",
+                  "Optional: what to make it instead of a local.",
                   "constant",
                   "field",
                   "parameter"),
               Arg.bool(
                   "all_occurrences",
-                  "Optional, with as=parameter: every occurrence of the expression in the method "
-                      + "becomes the parameter, not only this one.")),
+                  "Optional, with as=parameter: every occurrence in the method becomes "
+                      + "the parameter.")),
           Kind.REFACTORING,
           Tools::extractVariable);
 
@@ -238,39 +230,23 @@ final class Tools {
       new Def(
           "change_type",
           """
-          Change the declared type of a field, so that its uses must still compile: the field \
-          Price.total of type int becomes long. Identify the field as Type.field, a top-level \
-          class of the file.
-          A method's parameter (parameter) or return type (return_type=true) changes in it and \
-          every override and implementation, and in lambdas that write the parameter's type; \
-          calls are not edited. The method may be found by line in place of name, as \
-          add_parameter finds it.
-          With type_parameter (T) and name a class or a method, type is T's bound: static <T> T \
-          max(List<T> xs) becomes static <T extends Comparable<T>> T max(List<T> xs) with type \
-          Comparable<T>, in the method and every override; type Object removes the bound. Uses \
-          are not edited.\
+          Change a field's type: name Price.total and type long make int total long total.
+          With parameter or return_type=true, a method's type changes in it, its overrides and \
+          implementations, and lambdas that write it: void put(int qty) becomes void put(long \
+          qty).
+          With type_parameter (T), type is T's bound in the class or method and every override: \
+          <T> T max(List<T> xs) becomes <T extends Comparable<T>> T max(List<T> xs) with type \
+          Comparable<T>; Object removes it. Calls and uses are not edited.\
           """,
           List.of(
-              Arg.FILE.described("Java file path; the file that declares " + "the field."),
-              Arg.string(
-                  "name",
-                  "Type.field, the field whose type to change; or Type.method (with "
-                      + "parameter types for an overload) with parameter or return_type; or the"
-                      + " class or method with type_parameter."),
+              Arg.FILE.described("Java file that declares it."),
+              Arg.string("name", "Type.field, Type.method or a class."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
-              Arg.string("type", "The new type as written, such as long or List<String>.")
-                  .required(),
-              Arg.string(
-                  "parameter",
-                  "Optional: change this parameter's type in the method and every " + "override."),
-              Arg.bool(
-                  "return_type",
-                  "Optional: change the method's return type, in it and every override."),
-              Arg.string(
-                  "type_parameter",
-                  "Instead of a field, parameter or return type: the type parameter of name whose"
-                      + " bound becomes type."),
+              Arg.string("type", "The new type as written, or the bound.").required(),
+              Arg.string("parameter", "Optional: the parameter whose type changes."),
+              Arg.bool("return_type", "Optional: true to change the return type."),
+              Arg.string("type_parameter", "Optional: a type parameter of name."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           Tools::changeType);
@@ -279,41 +255,22 @@ final class Tools {
       new Def(
           "change_signature",
           """
-          Change a method's return type or the exceptions it declares, in it, in every override \
-          and implementation, and in each method a method reference implements it with: \
-          return_type=void and add_throws=IOException turn boolean apply(Rename r) into void \
-          apply(Rename r) throws IOException. For void, return x; becomes return; and a lambda \
-          r -> true becomes r -> {}, a returned call kept as a statement. remove_throws drops \
-          an exception from each throws clause. A new checked exception is carried to the \
-          callers: each calling method declares it too, and its callers after it, up to a \
-          method named by stop_at or one that cannot declare it (run() of a Runnable), where \
-          the call is caught and rethrown unchecked, in a new try or as one more catch of the \
-          try it is in. Calls are not edited otherwise: change one that uses the result in the \
-          same batch. The method may be found by line in place of name, as add_parameter \
-          finds it.\
+          Change a method's return type or declared exceptions, in every override and \
+          implementation too: return_type=void and add_throws=IOException turn boolean \
+          apply(Rename r) into void apply(Rename r) throws IOException. Each caller declares a \
+          new checked exception, up to stop_at or a method that cannot (Runnable.run()), where \
+          it is caught and rethrown unchecked. Other calls are not edited.\
           """,
           List.of(
-              Arg.FILE.described("Java file path; the file that declares the method."),
-              Arg.string(
-                  "name", "Type.method (with parameter types for an overload), e.g. Move.apply."),
+              Arg.FILE.described("Java file that declares it."),
+              Arg.string("name", "Type.method, or with parameter types."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
-              Arg.string("return_type", "Optional: the new return type as written, or void."),
-              Arg.string(
-                  "add_throws", "Optional: exception types to declare, separated by commas."),
-              Arg.string(
-                  "remove_throws",
-                  "Optional: exception types to stop declaring, separated by commas."),
-              Arg.string(
-                  "callers",
-                  "Optional, with add_throws: propagate (the default: each calling method"
-                      + " declares the exception too, up the chain), catch (each call is caught"
-                      + " and rethrown unchecked) or refuse (a call that does not handle it is"
-                      + " refused)."),
-              Arg.string(
-                  "stop_at",
-                  "Optional, with callers=propagate: Type.method names, separated by commas,"
-                      + " where propagating ends in a catch."),
+              Arg.string("return_type", "Optional: the new return type."),
+              Arg.string("add_throws", "Optional: exception types to declare, comma-separated."),
+              Arg.string("remove_throws", "Optional: exception types to stop declaring."),
+              Arg.string("callers", "Optional: propagate (default), catch or refuse."),
+              Arg.string("stop_at", "Optional: methods where propagating ends."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           (project, args) -> ChangeSignature.run(project, ByLine.named(project, args)));
@@ -428,35 +385,26 @@ final class Tools {
       new Def(
           "extract_type",
           """
-          Group members of a method, class or record into a new type in its own file, every use \
-          following; what is grouped follows from what name is.
-          - A method's parameters: name Shipping.cost, members [width, \
-          height], new_type Size, as size: cost(int weight, int width, int height) becomes \
-          cost(int weight, Size size), its body reads size.width(), and calls pass new Size(3, 4).
-          - A class's fields: name Person, members [street, city], new_type Address, as home: the \
-          fields move into a class Address that Person holds in home, and uses become home.street.
-          - A record's components: name Order, members [street, city], new_type Address, as \
-          address: new Order(id, s, c) becomes new Order(id, new Address(s, c)), and o.street() \
-          becomes o.address().street(); value_semantics=true accepts the changed toString.\
+          Group members into a new type in its own file, every use following; what name is says \
+          which:
+          - A method's parameters: name Shipping.cost, members [width, height], new_type Size, \
+          as size: cost(int weight, int width, int height) becomes cost(int weight, Size size), \
+          its body reads size.width(), and calls pass new Size(3, 4).
+          - A class's fields: name Person, members [street, city], new_type Address, as home: \
+          Person holds the fields in a new class Address as home, and uses become home.street.
+          - A record's components (name Order, as address): new Order(id, s, c) becomes new \
+          Order(id, new Address(s, c)), and o.street() becomes o.address().street().\
           """,
           List.of(
-              Arg.FILE.described(
-                  "Java file that declares the method, class or record, relative to the project"
-                      + " root."),
+              Arg.FILE.described("Java file that declares it."),
               Arg.string(
-                      "name",
-                      "The method (Type.member, with (parameter types) for an overload), or a"
-                          + " top-level class or record of file.")
+                      "name", "A method (Type.member, or with parameter types), class or record.")
                   .required(),
-              Arg.strings(
-                      "members",
-                      "What to group: the method's parameters or the record's components (next to"
-                          + " each other), or the class's fields.")
+              Arg.strings("members", "Names to group; parameters or components adjacent.")
                   .required(),
               Arg.string("new_type", "The new type's name.").required(),
-              Arg.string("as", "The name of the parameter, field or component that holds it.")
-                  .required(),
-              Arg.bool("value_semantics", "For a record: accept its changed generated toString."),
+              Arg.string("as", "The holder's name.").required(),
+              Arg.bool("value_semantics", "For a record: accept the changed toString."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           ExtractType::run);
@@ -536,28 +484,23 @@ final class Tools {
       new Def(
           "insert_statements",
           """
-          Insert statements before or after the statement that starts on a line (directly in a \
-          block). content is the statements, at any indentation; they are indented as \
-          that statement is.
-          With build in place of content, the statements are written from names and their types \
-          are read from the code: [{"call": "pricing.priceOf", "args": ["order", "customer"], \
-          "into": "price"}] writes Money price = pricing.priceOf(order, customer); (into a \
-          variable that is there assigns it, into return returns it), {"new": "ArrayList", \
-          "into": "open", "type": "List<Order>"} writes List<Order> open = new ArrayList<>(); \
-          and a string entry is a statement as typed. {"loop": "orders", "body": [...]} writes \
-          for (Order order : orders) { ... } (a Map walks its entrySet(), form index counts), \
-          the body's entries using the loop's variable. {"guard": "quantity <= 0", "exit": \
-          "throw", "value": "IllegalArgumentException", "message": "\\"bad\\""} writes if \
-          (quantity <= 0) { throw new IllegalArgumentException("bad"); }, and {"guard_null": \
-          "order", "exit": "require"} writes Objects.requireNonNull(order); (exits: return with \
-          value when the method returns one, continue, break, throw with the exception's type). \
-          The result names each type it wrote.\
+          Insert statements after (or before) the statement on line.
+          With build, entries are written from names, types read from the code: {"call": \
+          "prices.of", "args": ["order"], "into": "price"} writes Money price = \
+          prices.of(order); (into a declared variable assigns, into return returns); {"new": \
+          "ArrayList", "into": "open", "type": "List<Order>"} writes List<Order> open = new \
+          ArrayList<>(); {"loop": "orders", "body": [...]} writes for (Order order : orders) { \
+          ... } (form index counts); {"guard": "qty <= 0", "exit": "throw", "value": \
+          "IllegalArgumentException"} writes if (qty <= 0) { throw new \
+          IllegalArgumentException(); } (or return, continue, break); {"guard_null": "o", \
+          "exit": "require"} writes Objects.requireNonNull(o);. A string is a statement as \
+          typed.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line a statement starts on.").required(),
-              Arg.oneOf("where", "Before or after it (default after).", "before", "after"),
-              Arg.string("content", "The statements."),
+              Arg.integer("line", "Line a statement starts on.").required(),
+              Arg.oneOf("where", "Default after.", "before", "after"),
+              Arg.string("content", "The statements, at any indentation."),
               Arg.BUILD,
               Arg.IMPORTS),
           Kind.EDIT,
@@ -567,26 +510,26 @@ final class Tools {
       new Def(
           "replace_statements",
           """
-          Replace whole statements of one block, from the one starting on start_line to the one \
-          ending on end_line, with content (statements, re-indented); empty content deletes them.
-          With surround in place of content (try, if (ready), for (Item i : items), while (more), \
-          synchronized (lock)), the statements go inside that block; a try catches and rethrows \
-          the checked exceptions they throw. surround {"loop": "orders"} writes the loop's head \
-          from names, as build's loop does: for (Order order : orders) { ... }.
+          Replace whole statements of one block, start_line to end_line, with content \
+          (statements, re-indented); empty content deletes them.
+          With surround in place of content (try, if (ready), for (Item i : items), synchronized \
+          (lock)), the statements go inside that block; a try catches and rethrows the checked \
+          exceptions they throw. surround {"loop": "orders"} writes the loop's head from names, \
+          as build's loop does: for (Order order : orders) { ... }.
           With build in place of content, the new statements are written from names, as \
           insert_statements does.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("start_line", "1-based line the first statement starts on.").required(),
-              Arg.integer("end_line", "1-based line the last statement ends on.").required(),
-              Arg.string("content", "The new statements; empty to delete."),
+              Arg.integer("start_line", "Line the first statement starts on.").required(),
+              Arg.integer("end_line", "Line the last statement ends on.").required(),
+              Arg.string("content", "The new statements."),
               Arg.BUILD,
               Arg.json(
                   "surround",
                   """
                   {
-                    "description": "In place of content: the head of a block to put them in (try, if (cond), ...), or a loop object as build takes, without body: {loop, name, form, type}.",
+                    "description": "In place of content: a block's head, or a loop object of build without body.",
                     "anyOf": [
                       {"type": "string"},
                       {"type": "object"}
@@ -994,7 +937,7 @@ final class Tools {
           - a method called on line: that call becomes the body, arguments for parameters (the \
           receiver for this): return a + tax(a) with static double tax(double x) { return x * \
           0.2; } becomes return a + (a * 0.2);. all_calls does every call (without line, name \
-          Type.method); keep_function keeps the method.
+          Type.method).
           - a local variable declared or used on line: its initializer replaces every use.
           - with field, name a class (Person) and field its field (home) holding a class only it \
           uses (Address): Address's members take the field's place, home.street becomes street, \
@@ -1004,14 +947,11 @@ final class Tools {
               Arg.FILE.described(
                   "Java file: of the call or the variable; without line, the method's."),
               Arg.string("name", "The method (Type.method) or the variable.").required(),
-              Arg.integer(
-                  "line", "1-based line of the call, or of the variable's declaration or a use."),
-              Arg.integer("column", "Optional 1-based column of the name, when the line has two."),
+              Arg.integer("line", "Line of the call, or of the variable's declaration or a use."),
+              Arg.integer("column", "Optional: the name's column, when the line has two."),
               Arg.bool("all_calls", "For a method: every call, then delete it."),
               Arg.bool("keep_function", "For a method: keep it."),
-              Arg.string(
-                  "field",
-                  "With name a class: its field whose class, used by nothing else, folds into it.")),
+              Arg.string("field", "With name a class: the field whose class to fold in.")),
           Kind.REFACTORING,
           Tools::inline);
 
@@ -1039,34 +979,25 @@ final class Tools {
       new Def(
           "type_switch_to_method",
           """
-          Turn a switch over a value's type into a method on each type: with line the switch \
-          expression starts on and name area, return switch (s) { case Circle c -> Math.PI * \
-          c.r() * c.r(); case Square q -> q.side() * q.side(); } becomes return s.area();, the \
-          interface or abstract class Shape declares double area();, and Circle and Square each \
-          get @Override public double area() returning their case's expression, the pattern \
-          variable as the receiver (c.r() becomes r()).
+          Turn a switch over a value's type into a method on each type: with name area, return \
+          switch (s) { case Circle c -> Math.PI * c.r() * c.r(); case Square q -> q.side() * \
+          q.side(); } becomes return s.area();, Shape declares double area();, and Circle and \
+          Square each override it with their case's expression, the pattern variable as the \
+          receiver (c.r() becomes r()).
           A switch statement of arrow cases, or an if chain of s instanceof T v, makes a void \
           method of each case's statements; a default (or final else) becomes Shape's own \
-          implementation (a default method of an interface).
-          Over an enum of the project, a switch expression whose cases each give a constant (or \
-          null) becomes a field: with name label, case RED -> "r"; case GREEN, BLUE -> "cool"; \
-          gives RED("r"), GREEN("cool"), BLUE("cool"), a field set by the enum's constructor and \
-          read by label(), and the switch becomes c.label(); a default gives the value of every \
-          constant no case names. Otherwise each constant a case names overrides the method with \
-          its case's body, in the constant's own body (RED { @Override public String label() \
-          {...} }), the switch's value as this, and the enum declares it abstract, or with the \
-          default's body; as=method or as=field chooses. A case's block in a switch expression \
-          becomes the method's body, each yield of the switch a return.\
+          implementation. A case's block becomes the method's body, each yield a return.
+          Over an enum, cases that each give a constant become a field: with name label, case \
+          RED -> "r"; case GREEN, BLUE -> "cool"; gives RED("r"), GREEN("cool"), BLUE("cool"), \
+          read by label(), and the switch becomes c.label(). Otherwise, or with as=method, each \
+          constant a case names overrides label() in its own body with its case's body, this as \
+          the switch's value (RED { @Override public String label() {...} }).\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("line", "1-based line the switch, or the first if, starts on.")
-                  .required(),
+              Arg.integer("line", "Line the switch, or the first if, starts on.").required(),
               Arg.string("name", "The new method's name.").required(),
-              Arg.string(
-                  "as",
-                  "Optional, over an enum: field or method; default a field when every case gives"
-                      + " a constant.")),
+              Arg.string("as", "Optional, over an enum: field or method.")),
           Kind.REFACTORING,
           TypeSwitch::run);
 
@@ -1139,20 +1070,17 @@ final class Tools {
       new Def(
           "add_declaration",
           """
-          Add members (methods, fields, constructors, nested types) to a type (the file's only \
-          top-level one unless type names it): fields after its fields, constructors after its \
-          constructors or fields, the rest at its end; content is the members at any \
-          indentation. A member with a stub's signature replaces the stub, and a constructor \
+          Add members (methods, fields, constructors, nested types) to a type, the file's only \
+          top-level one unless type names it, each placed by its kind; content is the members at \
+          any indentation. A member with a stub's signature replaces the stub, and a constructor \
           replaces one of its parameter types that only assigns fields.
           In place of content: test_for (Cart.total) writes a red test of that method; implement \
-          (* for every abstract method left, or a supertype's method such as toString) writes \
-          stubs, or overrides that call super; constructor (field names, in order) writes a \
-          constructor that assigns them.\
+          writes stubs of abstract methods, or overrides that call super; constructor (field \
+          names, in order) writes a constructor that assigns them.\
           """,
           List.of(
               Arg.FILE,
-              Arg.string(
-                  "content", "Java member declarations (or test_for or implement in their place)."),
+              Arg.string("content", "The members."),
               Arg.string(
                   "implement",
                   "In place of content: * for every abstract method the supertypes leave, or a"
@@ -1262,34 +1190,25 @@ final class Tools {
       new Def(
           "remove_parameter",
           """
-          Remove a parameter no body reads, with its @param tag, and its argument at every call \
-          in the project: removing retries, void send(String to, int retries) becomes \
-          void send(String to), and send(addr, 3) becomes send(addr). Every declaration it \
-          overrides or that overrides it changes too, and every lambda that implements it. Use \
-          it last when taking a feature out: \
-          first change the bodies so they no longer read it.
-          name finds the method as replace_declaration does, or line as add_parameter's does. A \
-          dropped argument must have no side effects (a name, a literal, this, a field). With \
-          value, a parameter every call passes the same field or literal for is removed though \
-          the body reads it: void report(PrintStream out, String r) called as report(out, r) \
-          becomes void report(String r), its body reading the field out. value may also be an \
-          expression of the other parameters, which every call passes with its own arguments in \
-          their place: with value width * height, boolean fits(int width, int height, int area) \
-          called as fits(w, h + 1, w * (h + 1)) becomes boolean fits(int width, int height), \
-          called as fits(w, h + 1), its body starting with int area = width * height;.\
+          Remove a parameter no body reads, with its @param tag, and its argument at every call: \
+          removing retries, void send(String to, int retries) becomes void send(String to), and \
+          send(addr, 3) becomes send(addr). Overrides, overridden declarations and implementing \
+          lambdas change too.
+          With value, what every call passes for it, the body may read it: a field or literal \
+          (value out: report(PrintStream out, String r), called report(out, r), becomes \
+          report(String r), reading the field out), or an expression of the other parameters, \
+          fields and calls, each call's own arguments in their place (value width * height: \
+          fits(int width, int height, int area), called fits(w, h + 1, w * (h + 1)), becomes \
+          fits(int width, int height), called fits(w, h + 1), its body starting int area = width \
+          * height;).\
           """,
           List.of(
-              Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
+              Arg.FILE.described("Java file that declares it."),
+              Arg.string("name", "Type.member, or with (parameter types) for an overload."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
               Arg.string("parameter", "The parameter to remove.").required(),
-              Arg.string(
-                  "value",
-                  "Optional: what every call passes for it, a field (out, this.out, Config.OUT)"
-                      + " or a literal, which the body then reads, or an expression of the"
-                      + " other parameters, fields, constants and literals, calls too (width * height, order.customer()),"
-                      + " which the body then starts by computing.")),
+              Arg.string("value", "Optional: what every call passes for it.")),
           Kind.REFACTORING,
           (project, args) -> Signatures.removeParameter(project, ByLine.named(project, args)));
 
@@ -1319,24 +1238,22 @@ final class Tools {
       new Def(
           "extract_function",
           """
-          Move whole statements into a new method, private by default, declared after the one they are in, \
-          and call it in their place: lines 9-12 of print, which sum values into total, become \
-          int total = sum(values); and a method int sum(List<Integer> values). Behavior is \
-          unchanged.
-          start_line and end_line (inclusive, as inspect numbers them) cover whole statements \
-          of one block; comments and blank lines may be in the range. The locals they use \
-          become parameters; the one they set or declare that later code uses is returned, \
-          and several are returned in a record named after the method (sum and count as \
-          TotalsResult, taken out after the call: int sum = totalsResult.sum();). \
-          The method is static when the enclosing one is, and declares the checked exceptions \
-          the statements throw. doc becomes its Javadoc. visibility makes it package, protected \
-          or public; then it may override a supertype's method of its name and parameter types, \
-          as a template method's step, and is marked @Override.\
+          Move whole statements into a new method, private by default, and call it in their \
+          place: lines 9-12 of print, which sum values into total, become int total = \
+          sum(values); and a method int sum(List<Integer> values).
+          start_line and end_line (inclusive) cover whole statements of one block; comments and \
+          blank lines may be in the range. The locals they use become parameters; the one they \
+          set or declare that later code uses is returned, and several are returned in a record \
+          named after the method (sum and count as TotalsResult, taken out after the call: int \
+          sum = totalsResult.sum();). The method is static when the enclosing one is, and \
+          declares the checked exceptions the statements throw. Not private, it may override a \
+          supertype's method of its name and parameter types, as a template method's step, and \
+          is marked @Override.\
           """,
           List.of(
               Arg.FILE,
-              Arg.integer("start_line", "First line of the statements (1-based).").required(),
-              Arg.integer("end_line", "Last line of the statements (inclusive).").required(),
+              Arg.integer("start_line", "First line of the statements.").required(),
+              Arg.integer("end_line", "Last line of the statements.").required(),
               Arg.string("name", "The new method's name.").required(),
               Arg.string("doc", "Optional: its Javadoc text, without /** */."),
               Arg.string(
@@ -1359,19 +1276,19 @@ final class Tools {
       new Def(
           "batch",
           """
-          Run several refactorings and edits in order as one change, planned from one read. Each \
-          step is {"tool": ..., "args": {...}, "id": optional}: a tool (rename, or as the client \
-          names it, mcp__jrefactor__rename) and the arguments it takes alone.
+          Run several refactorings and edits in order as one change. Each step is {"tool": ..., \
+          "args": {...}, "id": optional}: a tool (rename, or mcp__jrefactor__rename) and the \
+          arguments it takes alone.
           Give line numbers as in the code you read before the batch: the batch moves them past \
           earlier steps. A line an earlier step rewrote cannot be given by number; name a line \
           an earlier step changed instead: "$prev.start", "$prev.end", "$2.end", "$id.start+1".
-          The steps apply together or not at all. check \
-          "end" type-checks once, after the last step, so edits may pass through code that does \
-          not compile yet (a signature, then its callers). One undo reverts the whole batch.
+          The steps apply together or not at all. check "end" type-checks once, after the last \
+          step, so edits may pass through code that does not compile yet (a signature, then its \
+          callers). One undo reverts the whole batch.
           After a refusal, retry: true resends that batch with only the steps that change: \
           {"step": 3, "args": {...}} replaces step 3 (its tool too, if the step names one), \
-          {"after": 2, "tool": ..., "args": {...}} adds a step after step 2, {"remove": 2} \
-          drops step 2: remove and after together move a step.\
+          {"after": 2, "tool": ..., "args": {...}} adds a step after step 2, {"remove": 2} drops \
+          step 2: remove and after together move a step.\
           """,
           List.of(
               Arg.json(
@@ -1411,10 +1328,7 @@ final class Tools {
                   "Type-check after each step (default), or once at the end.",
                   "each",
                   "end"),
-              Arg.bool(
-                  "retry",
-                  "Resend the last refused batch with only these steps changed: step N replaces"
-                      + " step N, after N adds one after it, remove N drops it.")),
+              Arg.bool("retry", "Resend the last refused batch with only these steps changed.")),
           Kind.CONTROL,
           (project, args) -> Batch.run(project, args));
 
@@ -1424,26 +1338,23 @@ final class Tools {
           """
           Replace code that does what an existing method does with calls of it: every match of \
           the method's body in the project, its parameters standing for any expressions of their \
-          types, becomes a call. The method stays. An instance method's body matches code in the \
-          instance members of its class and subclasses, where this is the same object, and becomes \
-          total(...) there. extract_function makes a method from \
-          one place; fold reuses one, written or extracted, everywhere else. Two methods with \
-          the same body merge as a batch: fold the one to keep, then inline the other.
+          types, becomes a call. The method stays. An instance method's body matches code in \
+          instance members of its class and subclasses, where this is the same object, and \
+          becomes total(...) there. extract_function makes a method from one place; fold reuses \
+          one everywhere else. To merge two methods with one body, fold the one to keep, then \
+          inline the other.
           What a body matches: one return's expression matches expressions (x * 1.2 becomes \
           withTax(x) for static double withTax(double a) { return a * 1.2; }); a void method's \
           statements match the same statements in any block, a local it declares standing for a \
-          local the code declares and does not use after them. Every other name must mean what it \
-          means in the body. So near-duplicates become calls: write the method with the \
-          differences as parameters, then fold it.
-          With line (and in), only the matches that start on that line are folded. A match the \
-          call would not reproduce is left, and the result says why.\
+          local the code declares and does not use after them. Other names must mean what they \
+          mean in the body. So near-duplicates become calls: write the method with the \
+          differences as parameters, then fold it.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
-              Arg.string("name", "Type.method: the method whose body to fold.").required(),
+              Arg.string("name", "The method, as Type.method.").required(),
               Arg.integer(
-                  "line",
-                  "Optional: fold only the matches that start on this line (of in, or of file)."),
+                  "line", "Optional: only the matches starting on this line (of in, or of file)."),
               Arg.string("in", "Optional, with line: the file whose line it is, if not file.")),
           Kind.REFACTORING,
           Tools::fold);
