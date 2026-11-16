@@ -1007,7 +1007,12 @@ Each was chosen from options; the record named beside it has the options it beat
   `eval-tasks/learning/refs/`. Validate one on a copy: `bin/jrefactor -C <copy> batch @<ref>`,
   copy the task's `tests` directory over it, `./mvnw -q -o test`. `Shipment`'s public fields are
   on purpose: the routes task needs uses spread over packages. The loop itself is gorefactor's
-  `eval-tasks/learning/loop.py`, Go-only until its language switch is built.
+  `eval-tasks/learning/loop.py`; since go-refactor-mcp #665 (2026-11-16) it runs this server with
+  `-lang java -server <this checkout> -tasks <this checkout>/eval-tasks/derivations-freight.json`,
+  from gorefactor's checkout, with `JAVA_HOME` at JDK 21. `-full-tools` takes this server's
+  published names (`extract_variable`, `replace_declaration`: gorefactor's `introduce_parameter`
+  and `remove_dead_code` are aliases here, which the loop's index does not list). First runs:
+  `docs/sessions/loop-java-switch.md`.
 - The generator task set is `eval-tasks/depot.json` (2026-11-13, `docs/sessions/generator-tasks.md`,
   issue #376): three tasks of statements inside existing methods (a loop over a map field, a call
   chain, a parameter every call derives), each doable in one tool call.
