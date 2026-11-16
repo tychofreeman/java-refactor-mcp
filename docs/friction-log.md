@@ -2070,3 +2070,11 @@ again.
   objects (`a.road = b.road;`): roadmap 521. `inline` refuses a method that returns early:
   roadmap 522. No tool changes a member's visibility: `replace_text` of the modifier made
   `tail` package-private.
+
+## 2026-11-16: add-parameter-trim (roadmap 523)
+
+- No Java by hand. A line of a JSON text block in a `replace_declaration` section was written
+  at column 0, and fixing it took three `replace_text` calls: `replace_text` moves `new` by its
+  first line's indentation and keeps each later line's offset from it, so a line of `new` at
+  the first line's indentation landed where the old line was, not where the block's lines are.
+  Writing `new` with the later lines indented as they should sit relative to the first fixed it.

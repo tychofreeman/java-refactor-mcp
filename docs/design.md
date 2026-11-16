@@ -655,6 +655,14 @@ first, which was cheaper and renamed nothing the model did not name. A new name 
 the family's types already has is refused as `rename` of a method refuses it
 (`refuseMethodClash`); an accessor that implements a library method is refused, since that method
 cannot be renamed. The result names the other methods renamed.
+**Decided (the owner, 2026-11-16, roadmap 523): `add_parameter` stays over the 1,700-character
+definition limit, trimmed to 2,396 with every route's example kept** (plain, record, enum, a type
+parameter on a class and on a method), its `DEFINITION_OVER` entry lowered to match. Over (b),
+splitting the type parameter route into a tool of its own (its arguments `type_parameter` and
+`members` would go with it), which adds a tool to choose among; and over (c), leaving it at 3,338.
+It cannot fit as one tool: its 13 arguments' schema alone is 897 characters, so with no example
+at all it is 1,902.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

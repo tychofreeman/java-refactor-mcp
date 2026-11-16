@@ -58,7 +58,7 @@ class ServerTest {
    * does, and drop it once it fits the limit.
    */
   static final Map<String, Integer> DEFINITION_OVER =
-      Map.ofEntries(Map.entry("add_parameter", 3338));
+      Map.ofEntries(Map.entry("add_parameter", 2396));
 
   @BeforeEach
   void start() throws IOException {
