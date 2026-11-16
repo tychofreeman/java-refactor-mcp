@@ -984,7 +984,9 @@ Each was chosen from options; the record named beside it has the options it beat
   seven behavior changes that type-checked (`docs/sessions/stress-new-tools.md`),
   and one more in `fold` (#186). Add them as cases of `ProbeTest`
   (`src/test/resources/probes/<case>`: `in/p/Main.java` printing what it did,
-  `args.properties`, `probe.properties` with `expect` applied, refused or changed);
+  `args.properties`, `probe.properties` with `expect` applied, refused or changed; a refused
+  probe also gives `refused`, a fragment its refusal must contain, since 2026-11-16: two probes had
+  passed on a refusal of their arguments, `value=2` read as a number and an overloaded `name`);
   they run with every build.
   The refusals that followed are conservative, and compare first uses only.
 - A/B runs use gorefactor's harness from its checkout, started with JDK 21 first
