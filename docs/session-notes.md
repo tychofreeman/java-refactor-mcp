@@ -261,8 +261,9 @@ Each was chosen from options; the record named beside it has the options it beat
   over it then are listed in `DEFINITION_OVER` at their size, a ratchet (lower the number when
   one shrinks), over one looser limit and over trimming them all first
   (`docs/sessions/descriptions-length-review.md`). Since 2026-11-16 (roadmap 523) only
-  `add_parameter` is over: its 13 arguments' schema leaves no room for its five routes'
-  examples, and the choice is the owner's. An argument's text that repeats the description goes
+  `add_parameter` is over, at 2,396 with all five routes' examples, by design (the owner, over
+  splitting the type parameter route out and over leaving it at 3,338; `docs/design.md`,
+  Decisions): its 13 arguments' schema alone is 897 characters. An argument's text that repeats the description goes
   first when a definition must shrink; the shared `Arg` constants (`METHOD_LINE`, `IMPORTS`,
   `BUILD`, ...) count in every tool that takes them.
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and

@@ -1129,56 +1129,40 @@ final class Tools {
       new Def(
           "add_parameter",
           """
-          Add a parameter to a method or constructor, and pass the same value for it at every \
-          call in the project: with parameter retries, type int and value 3, void send(String to) \
-          becomes void send(String to, int retries), and send(addr) becomes send(addr, 3). Every \
-          declaration it overrides or that overrides it changes too, and every lambda that \
-          implements it ((a, b) -> a becomes (a, b, retries) -> a). The body does not use it \
-          yet, so behavior is unchanged; add it, then change the body.
-          name finds the method as replace_declaration does (Type.member, member, m(int, String) \
-          for an overload; a constructor by its type's name); or line, in place of name: its \
-          declaration, or a call of it in any file. value is a Java expression every call can \
-          see, with no side effects.
+          Add a parameter to a method or constructor, and pass the same value at every call: \
+          with parameter retries, type int and value 3, void send(String to) becomes void \
+          send(String to, int retries), and send(addr) becomes send(addr, 3); overrides and \
+          implementing lambdas too ((a, b) -> a becomes (a, b, retries) -> a). The body does not \
+          use it yet.
           name may also be:
-          - a record (Line): it gets a component, and every new Line(...) passes value.
-          - an enum (Color): it gets a private final field with an accessor; each constant passes \
-          its entry of values, else value (values {"RED": "\\"#f00\\""} gives RED("#f00")).
-          - a class or method, with type_parameter (T, or T extends Comparable<T>) in place of \
-          parameter and type: class Box becomes class Box<T> and Box b = new Box(x) becomes \
-          Box<String> b = new Box<>(x), value being the type argument each use passes; members \
-          names the members whose declared types become T. For a method, static String \
-          first(List<String> xs) becomes static <T> T first(List<T> xs).\
+          - a record (Line): a new component, which every new Line(...) passes.
+          - an enum (Color): a final field with an accessor; values {"RED": "\\"#f00\\""} gives \
+          RED("#f00"), the rest pass value.
+          - a class or method, with type_parameter (T extends Comparable<T>): class Box becomes \
+          class Box<T> and Box b = new Box(x) becomes Box<String> b = new Box<>(x), value \
+          String; static String first(List<String> xs) becomes static <T> T first(List<T> xs).\
           """,
           List.of(
-              Arg.FILE.described("Java file that declares the method."),
+              Arg.FILE.described("Java file that declares it."),
               Arg.string("name", "Type.member, member, or with (parameter types) for an overload."),
               Arg.METHOD_LINE,
               Arg.METHOD_COLUMN,
-              Arg.string("parameter", "The new parameter's name; needed unless type_parameter."),
-              Arg.string("type", "Its Java type; needed unless type_parameter."),
-              Arg.string(
-                  "type_parameter",
-                  "Instead of parameter and type: a type parameter as written, with its bound,"
-                      + " for the class or method name names."),
+              Arg.string("parameter", "The new parameter's name."),
+              Arg.string("type", "Its type."),
+              Arg.string("type_parameter", "In place of parameter and type: T or T extends Bound."),
               Arg.strings(
-                  "members",
-                  "With type_parameter: the fields, methods and constructors (value, get,"
-                      + " Box(String)) whose declared types become it where they name value;"
-                      + " their bodies are not changed."),
+                  "members", "With type_parameter: members whose declared types become it."),
               Arg.string(
                   "value",
-                  "The Java expression each call passes; with type_parameter, the type"
-                      + " argument each use passes."),
+                  "The expression each call passes; with type_parameter, the type argument."),
               Arg.json(
                   "values",
                   """
-                  {"type": "object", "description": "For an enum: constant name to the Java \
-                  expression it passes; the other constants pass value.", \
+                  {"type": "object", "description": "For an enum: constant to the expression \
+                  it passes.", \
                   "additionalProperties": {"type": "string"}}\
                   """),
-              Arg.string(
-                  "before",
-                  "Optional: the parameter, or type parameter, to put it before; default last."),
+              Arg.string("before", "Optional: the parameter to put it before; default last."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           (project, args) ->
