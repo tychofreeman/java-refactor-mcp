@@ -1,1 +1,1 @@
-x is not final
+x is not final, and a record's components are

@@ -1,1 +1,1 @@
-NaN
+Its negation is not the opposite operator when a value is NaN

@@ -1,1 +1,1 @@
-uses log
+uses log (line 12), a member of the instance, and a function has no instance

@@ -1,1 +1,1 @@
-continue
+which goes to its condition; in a while (true) it would skip the condition

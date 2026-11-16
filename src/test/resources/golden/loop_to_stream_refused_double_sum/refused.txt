@@ -1,1 +1,1 @@
-floating-point
+total is a floating-point sum, which a stream may add in another order

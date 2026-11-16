@@ -1,1 +1,1 @@
-casts only to
+this tool casts only to a primitive or an unparameterized java.lang type

@@ -1,1 +1,1 @@
-uses k
+the case of Square uses k, which on Square would not be there

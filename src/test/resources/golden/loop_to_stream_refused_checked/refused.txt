@@ -1,1 +1,1 @@
-IOException
+which a lambda passed to forEach, filter or map cannot throw

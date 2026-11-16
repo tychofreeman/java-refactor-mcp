@@ -1,1 +1,1 @@
-would run once
+as a parameter it would run once, at each call, where the method ran it 2 times

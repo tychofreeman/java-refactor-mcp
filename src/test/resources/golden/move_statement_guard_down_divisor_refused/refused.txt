@@ -1,1 +1,1 @@
-guards it
+may throw (total / count), and the statement at line 5, which may leave the block early, guards it

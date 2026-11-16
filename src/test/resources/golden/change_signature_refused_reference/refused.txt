@@ -1,1 +1,1 @@
-convert_lambda
+as a method reference, where it can be neither declared nor caught

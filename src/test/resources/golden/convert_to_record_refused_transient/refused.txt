@@ -1,1 +1,1 @@
-y is transient
+y is transient, and a record serializes every component

@@ -1,1 +1,1 @@
-not both
+give to (the class a member moves to) or package (where the file's type moves), not both

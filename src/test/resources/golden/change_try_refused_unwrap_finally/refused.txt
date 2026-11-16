@@ -1,1 +1,1 @@
-remove_finally
+the try's finally would no longer run
