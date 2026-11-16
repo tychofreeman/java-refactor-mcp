@@ -2053,3 +2053,20 @@ again.
   `Signatures`' five records to `MethodFamily` in one batch, the entry of 2026-11-15
   (signatures-family) answered. A batch section named `"@@m"` in the JSON was refused ("section
   @@m is not used"); the JSON names it `"@m"`.
+
+## 2026-11-15: loop-freight-fixture (roadmap 520)
+
+- No Java by hand: the fixture, its tests and the hidden tests were written with `create_file`
+  in batches (`-C eval-tasks/testdata/freight`).
+- `create_file` of `src/main/java/freight/Shipment.java` in a project that had only a `pom.xml`
+  was refused: "content declares package freight, but ... is in package src.main.java.freight".
+  With no source directory yet, the project's root is the source root. `mkdir -p src/main/java
+  src/test/java` first, then it applied. A Maven project could take `src/main/java` as its root
+  before the directory exists.
+- `batch` with `retry: true` and no steps is refused ("batch needs steps"), so a batch refused
+  for a reason outside its steps (the directories above) cannot be resent as it was; one short
+  step was sent again unchanged.
+- `encapsulate_field` refuses a statement that reads and writes the field, also for two
+  objects (`a.road = b.road;`): roadmap 521. `inline` refuses a method that returns early:
+  roadmap 522. No tool changes a member's visibility: `replace_text` of the modifier made
+  `tail` package-private.

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "freight-tail",
+    "dir": "testdata/freight",
+    "tests": "testdata/freight-tail",
+    "check": "./mvnw -q -o test",
+    "prompt": "Truck's private static method last(String, int) is only ever called with 4. Replace it with an instance method String tail(String code) of Truck, not private, that keeps the last 4 characters of code, the part a driver sees, and remove last. What Truck's methods return and ship must not change."
+  },
+  {
+    "name": "freight-routes",
+    "dir": "testdata/freight",
+    "tests": "testdata/freight-routes",
+    "check": "./mvnw -q -o test",
+    "prompt": "Replace the fields road and rail of freight.Shipment with one field public final Map<String, String> routes, keyed by route: \"road\" for the road depot code and \"rail\" for the rail yard code. A new Shipment has an empty, mutable map. Everything that used the two fields, in every package, must work as before."
+  }
+]
