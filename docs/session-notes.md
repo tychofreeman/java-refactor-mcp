@@ -260,7 +260,11 @@ Each was chosen from options; the record named beside it has the options it beat
   each tool's JSON, as `tools/list` sends it, to 1,700 characters, gorefactor's limit; the tools
   over it then are listed in `DEFINITION_OVER` at their size, a ratchet (lower the number when
   one shrinks), over one looser limit and over trimming them all first
-  (`docs/sessions/descriptions-length-review.md`).
+  (`docs/sessions/descriptions-length-review.md`). Since 2026-11-16 (roadmap 523) only
+  `add_parameter` is over: its 13 arguments' schema leaves no room for its five routes'
+  examples, and the choice is the owner's. An argument's text that repeats the description goes
+  first when a definition must shrink; the shared `Arg` constants (`METHOD_LINE`, `IMPORTS`,
+  `BUILD`, ...) count in every tool that takes them.
 - `pull_up` onto an abstract declaration (#320, 2026-11-10): the supertype stays abstract, and
   the result says when nothing else in it is (the issue's "or offers to"), over making it
   concrete there: a class made concrete can then be instantiated, which the model did not ask for.
