@@ -31,4 +31,5 @@ record InlinedMethod(
     List<SingleVariableDeclaration> params,
     String name,
     String declaringText,
-    boolean[] subtypeSafe, boolean early) {}
+    boolean[] subtypeSafe,
+    boolean early) {}

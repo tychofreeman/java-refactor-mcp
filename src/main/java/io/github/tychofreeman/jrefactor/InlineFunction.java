@@ -184,7 +184,8 @@ final class InlineFunction {
             params,
             name,
             declaringText,
-            subtypeSafe, early);
+            subtypeSafe,
+            early);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -1338,8 +1339,8 @@ final class InlineFunction {
   /**
    * The edit for one call of a method that returns a value before its last statement: the body
    * takes the place of the return statement the call is all of, its returns the caller's. Refused
-   * for a call anywhere else, and for a caller that returns another type, where the values the
-   * body returns would be converted differently.
+   * for a call anywhere else, and for a caller that returns another type, where the values the body
+   * returns would be converted differently.
    */
   private static TextEdit earlyReturn(
       MethodInvocation site,
