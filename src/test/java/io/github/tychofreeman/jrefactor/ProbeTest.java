@@ -2,6 +2,8 @@ package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,7 +33,9 @@ import org.junit.jupiter.api.TestFactory;
  * <p>A case has {@code in/} (a project whose {@code p.Main} prints what it did), {@code
  * args.properties} (the call, as a golden case's, with {@code <arg>.txt} files) and {@code
  * probe.properties}, whose {@code expect} is {@code applied} (the output must be the same), {@code
- * refused}, or {@code changed} (an edit meant to change it, which shows the probe sees a change).
+ * refused} (with {@code refused}, a fragment the refusal must contain, so that a refusal for
+ * another reason, a wrong argument among them, fails the probe), or {@code changed} (an edit meant
+ * to change it, which shows the probe sees a change).
  *
  * <p>{@code -Djrefactor.probe=<names>} runs only the cases named, as {@code jrefactor.golden} does
  * for {@code GoldenTest}.
@@ -54,7 +58,8 @@ class ProbeTest {
     GoldenTest.deleteTree(WORK.resolve(name));
     TestProjects.copyTree(caseDir.resolve("in"), work);
     Properties args = properties(caseDir.resolve("args.properties"));
-    String expect = properties(caseDir.resolve("probe.properties")).getProperty("expect");
+    Properties probe = properties(caseDir.resolve("probe.properties"));
+    String expect = probe.getProperty("expect");
     String before = run(work, WORK.resolve(name).resolve("before"));
     SourceProject project = SourceProject.of(work);
     String outcome;
@@ -62,6 +67,12 @@ class ProbeTest {
       outcome = GoldenTest.call(args.getProperty("tool"), project, args, caseDir).render();
     } catch (Refusal r) {
       assertEquals(expect, "refused", () -> "refused: " + r.getMessage());
+      String fragment = probe.getProperty("refused");
+      assertNotNull(
+          fragment, "a refused probe names a fragment of its refusal: refused=<fragment>");
+      assertTrue(
+          r.getMessage().contains(fragment),
+          () -> "expected refusal containing '" + fragment + "', got: " + r.getMessage());
       return;
     }
     String after = run(work, WORK.resolve(name).resolve("after"));
