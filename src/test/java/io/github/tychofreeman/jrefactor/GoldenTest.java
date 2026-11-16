@@ -1,6 +1,7 @@
 package io.github.tychofreeman.jrefactor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -67,6 +68,9 @@ class GoldenTest {
     Path refused = caseDir.resolve("refused.txt");
     Path result = caseDir.resolve("result.txt");
     if (Files.exists(refused)) {
+      assertFalse(
+          Files.isDirectory(caseDir.resolve("out")),
+          "a refused case leaves the project as it was, so out/ would never be read: remove it");
       String expected = Files.readString(refused).strip();
       Refusal refusal = assertThrows(Refusal.class, () -> call(tool, project, args, caseDir));
       assertTrue(
