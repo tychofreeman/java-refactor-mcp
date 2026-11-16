@@ -1895,8 +1895,16 @@ declares the method) and `name` (`Type.method`), and inlines every call.
   the string keeps its value; #477, 2026-11-13); a method ending in its one `return expr`
   must be called as all of an initializer, a `return` or an assignment's value, and its
   other statements go before that statement ("part of a larger expression" otherwise).
-  Refused also: a `return` before the last statement; a body that assigns a parameter;
-  a body local whose name the calling member uses.
+  Refused also: a void method's `return` before the last statement; a body that assigns a
+  parameter; a body local whose name the calling member uses.
+- A body that returns a value before its last statement (roadmap #522, 2026-11-15): a call that
+  is all of a return statement, directly in a block, becomes the body's statements, their
+  returns the caller's: `return last(code, 4);` becomes `if (code.length() <= 4) { return code; }
+  return code.substring(code.length() - 4);`. Refused: a call anywhere else ("is inlined only
+  where it is all of a return statement"), and a call in a lambda or in a method that returns
+  another type than the inlined one ("returns another type"), where the returned values would
+  be converted differently (`return 'A';` of an `int` method, inlined into a method returning
+  `Object`, would box a `Character`).
 - One call at a time, by `line` and `column`, with `keep_function` and `all_calls` (roadmap
   #502, issue #368): see `inline` above. With one call, a method reference or another call keeps
   the method rather than refusing; every other rule applies to the one call as to each of all.

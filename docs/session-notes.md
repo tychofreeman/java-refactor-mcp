@@ -800,6 +800,12 @@ Each was chosen from options; the record named beside it has the options it beat
   `MethodDeclaration` for the family walk to link from. A count in a
   result is `Names.plural` (`1 occurrence`); the other plural copies are #511's.
 
+- `inline` of a method that returns a value before its last statement (roadmap #522, 2026-11-15)
+  is `InlineFunction.earlyReturn`: `InlinedMethod.early` is set in `run`, and each call must be
+  all of a return statement in a block, in a method (not a lambda) that returns the inlined
+  method's own type; the body, by the void path's `declarations` and `substituted`, replaces the
+  statement. An assignment's value and a void method's early return are still refused.
+
 - `inline` at a call (roadmap #502, issue #368, 2026-11-15) is `InlineFunction.atCall`: the call
   of `name` on `line` (a simple name a variable on the line also has stays `InlineVariable`'s),
   then `InlineFunction.run` with that one `Call` (the call's file, relative, and its start), which

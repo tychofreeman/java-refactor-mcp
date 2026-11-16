@@ -96,11 +96,16 @@ final class InlineFunction {
         statements.isEmpty() ? List.of() : statements.subList(0, statements.size() - 1);
     Expression value = null;
     Statement body;
+    // A body that returns a value before its last statement goes in place of a return statement.
+    boolean early = false;
     if (last instanceof ReturnStatement r && r.getExpression() != null && returns == 1) {
       value = r.getExpression();
       body = r;
     } else if (last != null && returns == 0) {
       body = last;
+    } else if (last != null && !"void".equals(method.getReturnType().getName())) {
+      body = last;
+      early = true;
     } else {
       throw new Refusal(
           name
@@ -179,7 +184,7 @@ final class InlineFunction {
             params,
             name,
             declaringText,
-            subtypeSafe);
+            subtypeSafe, early);
 
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
     int calls = 0;
@@ -380,6 +385,9 @@ final class InlineFunction {
     // could take another type of that name.
     if (!inside) {
       MoveMember.qualifyMemberTypes((MethodDeclaration) inlined.whole().getParent(), receiver);
+    }
+    if (inlined.early()) {
+      return List.of(earlyReturn(site, inlined, args, local, siteText, receiver));
     }
     if (inlined.value() != null) {
       if (site.getParent() instanceof ExpressionStatement) {
@@ -1325,5 +1333,61 @@ final class InlineFunction {
                 o != d
                     && o.getParent() == t
                     && o.getName().getIdentifier().equals(d.getName().getIdentifier()));
+  }
+
+  /**
+   * The edit for one call of a method that returns a value before its last statement: the body
+   * takes the place of the return statement the call is all of, its returns the caller's. Refused
+   * for a call anywhere else, and for a caller that returns another type, where the values the
+   * body returns would be converted differently.
+   */
+  private static TextEdit earlyReturn(
+      MethodInvocation site,
+      InlinedMethod inlined,
+      List<Expression> args,
+      String[] local,
+      String siteText,
+      List<TextEdit> receiver) {
+    String at = " The call at line " + Lines.number(siteText, site.getStartPosition());
+    if (!(site.getParent() instanceof ReturnStatement stmt && stmt.getParent() instanceof Block)) {
+      throw new Refusal(
+          inlined.name()
+              + " returns before its last statement, so a call of it is inlined only where it is all"
+              + " of a return statement (return m(..);), directly in a block."
+              + at
+              + " is not: put it in a variable and return that, or keep the method.");
+    }
+    MethodDeclaration caller = Nodes.ancestor(site, MethodDeclaration.class);
+    LambdaExpression lambda = Nodes.ancestor(site, LambdaExpression.class);
+    IMethodBinding called = site.resolveMethodBinding();
+    if (caller == null
+        || caller.resolveBinding() == null
+        || (lambda != null && Nodes.within(lambda, caller))
+        || !caller.resolveBinding().getReturnType().isEqualTo(called.getReturnType())) {
+      throw new Refusal(
+          inlined.name()
+              + " returns before its last statement, so its returns would become those of the code"
+              + " around the call."
+              + at
+              + " is in a lambda, or in a method that returns another type, where the values would"
+              + " be converted differently. Keep the method.");
+    }
+    String indent = Lines.indentOf(siteText, stmt.getStartPosition());
+    String replaced =
+        declarations(args, inlined.params(), local, siteText, indent, inlined.useCount())
+            + reindent(
+                substituted(
+                    inlined.declaringText(),
+                    inlined.bodyStart(),
+                    inlined.bodyEnd(),
+                    inlined.uses(),
+                    args,
+                    local,
+                    siteText,
+                    receiver),
+                Lines.indentOf(inlined.declaringText(), inlined.bodyStart()),
+                indent,
+                textBlocks(inlined.whole(), inlined.declaringText()));
+    return new TextEdit(stmt.getStartPosition(), Nodes.end(stmt), replaced);
   }
 }

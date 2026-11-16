@@ -1,7 +1,7 @@
 ---
 order: 512
 item: 522
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open
+Done (2026-11-15) for a call that is all of a return statement (`InlineFunction.earlyReturn`; goldens `inline_function_early_return*`, probe `inline_function_early_return`): the body takes the statement's place. Refused for a caller that returns another type or a call in a lambda. Not built, for want of evidence: a call that is an assignment's value, and a void method that returns early. The `freight-tail` reference is add `tail`, `fold`, `inline`, as gorefactor's.
 
 ## Evidence
 
