@@ -2313,13 +2313,15 @@ A read becomes the getter call (`x` to `getX()`, `p.x` to `p.getX()`); a plain a
 or `++`/`--` that is a statement of its own becomes the setter of the getter combined: `x += k + 1;`
 to `setX(getX() + (k + 1));`, `p.x++;` to `p.setX(p.getX() + 1);`. The getter runs before the
 right-hand side, as the field's value is saved before it in Java (probe
-`encapsulate_field_compound_order`). A final field gets a getter only. Result: `encapsulated Type.field in file
+`encapsulate_field_compound_order`). A plain assignment whose right side reads the field (roadmap
+#521, 2026-11-15) is the setter around it, each read there the getter: `a.x = b.x;` to
+`a.setX(b.getX());`, `x = x + 1;` to `setX(getX() + 1);` (probe `encapsulate_field_read_and_write`).
+A final field gets a getter only. Result: `encapsulated Type.field in file
 with getX and setX; N uses rewritten in K files`.
 
 Refusals: a name that is not a field, a declaration of several fields, a final field that is written, a
 write inside an expression (`int was = x++;`), a compound write through a receiver that is not a
-name or `this` (`next().x += 1`, which would run twice), a plain assignment that also reads the
-field, an instance getter or setter that would override a method of the class's supertypes
+name or `this` (`next().x += 1`, which would run twice), an instance getter or setter that would override a method of the class's supertypes
 ("the getter getName() would override Base.getName()") or be overridden by a subtype's (issue
 #466; a static field's accessors are not checked), and the gate's "would add compile errors".
 
