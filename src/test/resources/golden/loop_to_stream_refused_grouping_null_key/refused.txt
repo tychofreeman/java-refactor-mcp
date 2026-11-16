@@ -1,1 +1,1 @@
-null key
+a null key from order.customer() now throws a NullPointerException in groupingBy

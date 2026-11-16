@@ -1,1 +1,1 @@
-content line 5
+does not parse as members of a type

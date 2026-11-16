@@ -1,1 +1,1 @@
-does not parse
+com/example/B.java does not parse

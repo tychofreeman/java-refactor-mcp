@@ -1,1 +1,1 @@
-same batch
+Calls are not edited: one that uses the result changes in the same batch

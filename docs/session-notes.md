@@ -948,6 +948,8 @@ Each was chosen from options; the record named beside it has the options it beat
   text)`, `maven(root, editing)` for a Maven-layout project, `copyTree`.
 - Every golden write case is undone by `undo` and must return to `in/`, and the
   cached type count must equal `TypeCheck.uncached`.
+- A golden `refused.txt` is a phrase of the refusal that names the rule, at least 15
+  characters (`GoldenTest` refuses shorter, 2026-11-16): `would add` matched any gate refusal.
 - One golden case, or a few (#195, 2026-11-13): `flock /tmp/jr-heavy.lock ./mvnw -q -o test
   -Dtest=GoldenTest -Djrefactor.golden=add_case,rename_*` (directory names or globs with `*` and
   `?`, comma-separated; `Cases.select`); a probe likewise with `-Dtest=ProbeTest

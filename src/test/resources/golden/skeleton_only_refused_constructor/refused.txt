@@ -1,1 +1,1 @@
-constructor
+is what add_declaration with constructor writes

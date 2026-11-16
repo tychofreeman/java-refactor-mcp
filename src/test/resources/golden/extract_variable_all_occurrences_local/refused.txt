@@ -1,1 +1,1 @@
-as=parameter
+all_occurrences is built for as=parameter

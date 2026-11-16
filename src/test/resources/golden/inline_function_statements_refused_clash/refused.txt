@@ -1,1 +1,1 @@
-declares sum
+which the member that calls it also names, so inlined the two would clash

@@ -1,1 +1,1 @@
-break
+loop_to_stream takes a break only under a condition

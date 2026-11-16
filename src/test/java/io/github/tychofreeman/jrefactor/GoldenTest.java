@@ -30,7 +30,7 @@ import org.junit.jupiter.api.TestFactory;
  * default {@code rename}, and its arguments; {@code <arg>.txt} files give arguments with several
  * lines), and {@code out/} (the project after; without it, the project must be unchanged), {@code
  * result.txt} (the text the tool returns), or {@code refused.txt} (a fragment the refusal must
- * contain; the project must be unchanged).
+ * contain, at least 15 characters so that it names the rule; the project must be unchanged).
  *
  * <p>{@code -Djrefactor.golden=<names>} runs only the cases named: comma-separated directory names
  * or globs ({@code *}, {@code ?}), with {@code -Dtest=GoldenTest}. A name that matches no case
@@ -72,6 +72,12 @@ class GoldenTest {
           Files.isDirectory(caseDir.resolve("out")),
           "a refused case leaves the project as it was, so out/ would never be read: remove it");
       String expected = Files.readString(refused).strip();
+      assertTrue(
+          expected.length() >= 15,
+          () ->
+              "refused.txt is \""
+                  + expected
+                  + "\", too short to tell this refusal from another: give a phrase of it");
       Refusal refusal = assertThrows(Refusal.class, () -> call(tool, project, args, caseDir));
       assertTrue(
           refusal.getMessage().contains(expected),

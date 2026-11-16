@@ -1,1 +1,1 @@
-implement
+is what add_declaration with implement writes

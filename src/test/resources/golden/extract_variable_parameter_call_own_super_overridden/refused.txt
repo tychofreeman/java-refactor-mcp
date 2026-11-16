@@ -1,1 +1,1 @@
-super.rate
+super.rate runs the rate above Kiosk, where priceOf ran the object's own rate

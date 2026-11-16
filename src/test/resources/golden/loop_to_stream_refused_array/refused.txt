@@ -1,1 +1,1 @@
-array
+walks an array, names, and loop_to_stream takes a collection for now

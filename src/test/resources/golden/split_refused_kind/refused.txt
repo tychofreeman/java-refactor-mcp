@@ -1,1 +1,1 @@
-kind phase
+kind loop is not built here; split takes kind phase

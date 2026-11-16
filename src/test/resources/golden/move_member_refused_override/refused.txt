@@ -1,1 +1,1 @@
-overrides
+Price.toString overrides a method of a supertype

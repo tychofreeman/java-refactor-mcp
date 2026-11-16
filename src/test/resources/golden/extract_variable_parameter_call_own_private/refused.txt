@@ -1,1 +1,1 @@
-Widen rate
+which does not compile there: The method rate(Order) from the type Pricing is not visible
