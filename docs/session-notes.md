@@ -990,6 +990,13 @@ Each was chosen from options; the record named beside it has the options it beat
 - The merged list (one `move`, one `inline`, `extract_function`) was A/B-checked on 2026-11-06
   (`docs/sessions/ab-merged-tools.md`): every run passed, cost as the baselines; the mcp arm alone
   was run, as the manual arm does not see the tool list.
+- The planning loop's Java fixture (roadmap #520, 2026-11-15) is `eval-tasks/testdata/freight` with
+  `eval-tasks/derivations-freight.json` (`freight-tail`, `freight-routes`: two of gorefactor's
+  freight tasks, hand-written, about 400 lines) and a reference batch a task in
+  `eval-tasks/learning/refs/`. Validate one on a copy: `bin/jrefactor -C <copy> batch @<ref>`,
+  copy the task's `tests` directory over it, `./mvnw -q -o test`. `Shipment`'s public fields are
+  on purpose: the routes task needs uses spread over packages. The loop itself is gorefactor's
+  `eval-tasks/learning/loop.py`, Go-only until its language switch is built.
 - The generator task set is `eval-tasks/depot.json` (2026-11-13, `docs/sessions/generator-tasks.md`,
   issue #376): three tasks of statements inside existing methods (a loop over a map field, a call
   chain, a parameter every call derives), each doable in one tool call.

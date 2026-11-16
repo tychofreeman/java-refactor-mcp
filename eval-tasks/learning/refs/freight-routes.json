@@ -1,0 +1,16 @@
+{"check":"end","steps":[
+{"tool": "add_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "content": "/** Pickup codes by route: \"road\" for the road depot, \"rail\" for the rail yard. */\npublic final Map<String, String> routes = new HashMap<>();"}},
+{"tool": "replace_text", "args": {"file": "src/main/java/freight/Shipment.java", "old": "s.road = road;\n    s.rail = rail;", "new": "s.routes.putAll(routes);"}},
+{"tool": "extract_variable", "args": {"file": "src/main/java/depots/Depots.java", "line": 41, "expression": "b.road", "name": "otherRoad"}},
+{"tool": "extract_variable", "args": {"file": "src/main/java/depots/Depots.java", "line": 44, "expression": "b.rail", "name": "otherRail"}},
+{"tool": "extract_variable", "args": {"file": "src/main/java/depots/Depots.java", "line": 56, "expression": "s.road", "column": 16, "name": "road"}},
+{"tool": "extract_variable", "args": {"file": "src/main/java/depots/Depots.java", "line": 59, "expression": "s.rail", "column": 16, "name": "rail"}},
+{"tool": "encapsulate_field", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.road"}},
+{"tool": "encapsulate_field", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.rail"}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.getRoad", "content": "public String getRoad() {\n  return routes.get(\"road\");\n}"}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.setRoad", "content": "public void setRoad(String road) {\n  if (road == null) {\n    routes.remove(\"road\");\n  } else {\n    routes.put(\"road\", road);\n  }\n}"}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.getRail", "content": "public String getRail() {\n  return routes.get(\"rail\");\n}"}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.setRail", "content": "public void setRail(String rail) {\n  if (rail == null) {\n    routes.remove(\"rail\");\n  } else {\n    routes.put(\"rail\", rail);\n  }\n}"}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.road", "content": ""}},
+{"tool": "replace_declaration", "args": {"file": "src/main/java/freight/Shipment.java", "name": "Shipment.rail", "content": ""}}
+]}
