@@ -1,7 +1,7 @@
 ---
 order: 511
 item: 521
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open
+Done (2026-11-15): the setter call is written around the right side, so each read in it gets its own getter edit (`EncapsulateField.useEdit`; golden and probe `encapsulate_field_read_and_write`). The `freight-routes` reference is 9 steps, from 14.
 
 ## Evidence
 
