@@ -250,8 +250,9 @@ Each was chosen from options; the record named beside it has the options it beat
   Question 1 is option (a): the fixes and pins of increments 1 to 3, then slice 2 (a field on an
   enum, `add_parameter` with `values`), then slice 3 (`type_switch_to_method` on an enum), over
   all three slices now and over only the fixes. Slice 1 (constants to an enum, increments 9 to 11)
-  and increment 12 (old-style switches) are not built: they wait for a friction entry or a task
-  that needs them. Every other open question of the sketch: its Recommended option.
+  and increment 12 (old-style switches) waited for evidence until the user asked for both open
+  issues on 2026-11-17 (#373, #374). Every other open question of the sketch: its Recommended
+  option.
 - Generators (2026-11-13, the user chose each sketch's recommended option; `docs/design.md`,
   "Generators"): one `build` argument on the edit tools over new tools, a refusal under
   `JREFACTOR_SKELETON_ONLY` as the way it is found, explicit types never `var`, a loop shell
@@ -653,6 +654,12 @@ Each was chosen from options; the record named beside it has the options it beat
   `Edits.gated`. `values` is an object argument (`Arg.json`, read by `Args.strings`).
   `EnumField.field` is the edit without `Args` (a values map in, the text edits and the members
   out), which slice 3 writes through.
+
+- `type_switch_to_method` over an enum of old-style cases (issue #374, roadmap 527, 2026-11-17) is
+  `ColonSwitch`, entered first in `EnumSwitch.run`: it rewrites the switch statement as `return
+  switch (...) { arrows };` in the file's text, parses that (`Jdt.parse` with the text), and hands
+  `EnumSwitch` an `Opened` of it, so the rest reads arrow cases only. `EnumSwitch` therefore takes
+  the enum's declaration from `opened.unit()` when the enum is in the switch's file, not from disk.
 
 - `type_switch_to_method` over an enum (#151, 2026-11-13) is `EnumSwitch`, entered from
   `TypeSwitch.run` before the type-pattern cases are read: the field form takes the case values'

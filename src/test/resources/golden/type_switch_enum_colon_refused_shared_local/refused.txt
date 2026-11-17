@@ -1,0 +1,1 @@
+s is declared in the case of RED and used in the case of default

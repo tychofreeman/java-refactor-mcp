@@ -1,0 +1,1 @@
+declared String label() on Color, overridden in RED, GREEN, BLUE; the code at line 5 of com/example/Paint.java is now c.label(); its old-style cases were read as arrow cases, each return as the case's value; the statements after the switch, which no constant reached, are removed
