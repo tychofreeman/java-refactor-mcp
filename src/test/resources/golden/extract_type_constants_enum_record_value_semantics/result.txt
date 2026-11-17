@@ -1,0 +1,1 @@
+made OPEN, SHIPPED and CLOSED of Order the enum OrderState (com/example/OrderState.java); retyped Line.state; changed com/example/Line.java

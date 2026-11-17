@@ -758,6 +758,54 @@ not published; the text below uses them where it was written with them.
   Result: `moved street and city of Order into Address (com/example/Address.java),
   held in address; changed com/example/Order.java, ...`.
 
+### Constants to an enum
+
+Issue #373, roadmap 528, 2026-11-17 (the enum sketch's slice 1, increments 9 to 11, each open
+question its Recommended option): when `members` name `static final` fields of the class or
+interface `name` (`ConstantsToEnum`, entered first in `ExtractType.run`), they become the
+constants of the enum `new_type`, in a new file beside the class, public when the class is, in
+declaration order with their Javadoc; their declarations are deleted. `as` is not taken; the
+other shapes still require it. New arguments: `accessor` (optional) and `value_semantics` (as
+before, now also for this shape).
+
+The constants are all `int` or all `String`, each with a literal value, no two equal. Holders are
+found from every use of a constant, by binding, in every file of the project: a variable, a
+parameter (its whole method family), a method result (its family) or, with `value_semantics`, a
+record component joins when a constant or a holder is copied into it (initializer, `=`, argument,
+`return`), compared with it (`==`, `!=`, `equals`, `Objects.equals`), or switched on with
+constants as labels. Each holder is retyped from `int` or `String` to the enum (`var` stays).
+Allowed uses keep their text: copies, those comparisons, `?:` and parentheses, a switch (labels
+written bare: `case OPEN:`, `default` kept), a call whose value is discarded. A literal equal to
+one constant's value, copied into, compared with or a case label of a holder, becomes that
+constant (`state = 0` is `state = OrderState.OPEN`), and the result lists each. A single static
+import of a constant is removed. An `int` field with no initializer gets `= E.ZERO` when a constant
+is 0.
+
+Every other use sees the old value and is refused by name and line ("state is an operand of string
++ at line 11 of com/example/Order.java, where OrderState would not mean the value it holds now.
+Pass accessor (such as code) to keep the value there as state.code(), or change that use first."):
+string `+`, arithmetic, ordering, a library call (`println`, `List.add`, `Map.get`), an array
+index, a method of the value. With `accessor` (`code`), the enum gets a `private final` field of
+the old type, a constructor and the accessor `code()`, each constant passes its value
+(`OPEN(0)`), and each such use reads `state.code()`; the result counts them. With a `String`
+holder that may be null (a `null` reaches it, or it is a parameter of a public or interface
+method), the accessor call is reported through `Exceptional.change`, refused under
+`preserve_exceptions`.
+
+Refused, each naming what to do: a member that is not a static final constant of `name`; two
+types, a non-literal value, or two constants with one value ("OPEN and NEW are both 0"); a value
+that may be none of the constants coming into a holder ("line 11 of com/example/Order.java assigns
+row.get("state") to state, which may be a value that none of OPEN, SHIPPED and CLOSED has. Convert
+it first in a method that returns one of the constants for each value ..."); a holder declared
+other than `int` or `String` (`long`, `Integer`, a type variable: "Change its type first
+(change_type)"); `++`, `--` and compound assignments; an `int` field that starts as 0 when no
+constant is 0; a lambda's or catch's or enhanced for's variable, a lambda or method reference
+implementing a holder method, a varargs parameter, a family member overriding a library method;
+a use in an annotation; a field that is annotated or of a `Serializable` class, or a record
+component, without `value_semantics=true`; a record that declares a constructor or the accessor;
+a declaration of several variables of which only some become holders; a case label that is not
+one of the constants or a literal equal to one.
+
 ## `add_parameter` on a record
 
 Roadmap #129, 2026-11-06 (gorefactor's `add_field`; the user chose this over a tool): with `name`

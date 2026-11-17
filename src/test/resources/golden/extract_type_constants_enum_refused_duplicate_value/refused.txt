@@ -1,0 +1,1 @@
+OPEN and NEW are both 0

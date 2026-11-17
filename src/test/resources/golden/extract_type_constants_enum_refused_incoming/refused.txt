@@ -1,0 +1,1 @@
+line 11 of com/example/Order.java assigns row.get("state") to state, which may be a value that none of OPEN, SHIPPED and CLOSED has

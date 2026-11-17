@@ -655,6 +655,14 @@ Each was chosen from options; the record named beside it has the options it beat
   `EnumField.field` is the edit without `Args` (a values map in, the text edits and the members
   out), which slice 3 writes through.
 
+- `extract_type` of `static final` constants (issue #373, roadmap 528, 2026-11-17) is
+  `ConstantsToEnum`, entered from `ExtractType.run` before the other shapes (`as` is required at
+  run time by those, not by the schema). One parse of every project file; `index` keys variables,
+  methods, reads and calls; `value` judges a use of something that will be the enum (by its parent,
+  an allow list), `join` makes what must give a value a holder (`hold`, `holdParameter`,
+  `holdMethod`, `component`), `seen` refuses or, with `accessor`, wraps. A new allowed use goes in
+  `value`'s switch; anything not listed there is `seen`.
+
 - `type_switch_to_method` over an enum of old-style cases (issue #374, roadmap 527, 2026-11-17) is
   `ColonSwitch`, entered first in `EnumSwitch.run`: it rewrites the switch statement as `return
   switch (...) { arrows };` in the file's text, parses that (`Jdt.parse` with the text), and hands
