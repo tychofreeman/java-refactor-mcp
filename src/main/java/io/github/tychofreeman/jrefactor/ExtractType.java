@@ -62,6 +62,10 @@ final class ExtractType {
   static Outcome run(SourceProject project, Args args) throws Exception {
     String name = args.required("name");
     Opened opened = Opened.of(project, args.required("file"));
+    if (ConstantsToEnum.applies(opened, name, args.list("members"))) {
+      return ConstantsToEnum.run(project, args, opened);
+    }
+    args.required("as");
     for (Object t : opened.unit().types()) {
       if (((AbstractTypeDeclaration) t).getName().getIdentifier().equals(name)) {
         return fields(project, args.renamed(Map.of("members", "fields", "as", "field")), opened);

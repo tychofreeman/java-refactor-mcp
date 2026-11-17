@@ -385,26 +385,25 @@ final class Tools {
       new Def(
           "extract_type",
           """
-          Group members into a new type in its own file, every use following; what name is says \
-          which:
+          Group members into a new type in its own file, uses following; name says which:
           - A method's parameters: name Shipping.cost, members [width, height], new_type Size, \
-          as size: cost(int weight, int width, int height) becomes cost(int weight, Size size), \
-          its body reads size.width(), and calls pass new Size(3, 4).
-          - A class's fields: name Person, members [street, city], new_type Address, as home: \
-          Person holds the fields in a new class Address as home, and uses become home.street.
-          - A record's components (name Order, as address): new Order(id, s, c) becomes new \
-          Order(id, new Address(s, c)), and o.street() becomes o.address().street().\
+          as size: cost(int w, int width, int height) becomes cost(int w, Size size), reading \
+          size.width(); calls pass new Size(3, 4).
+          - A class's fields (name Person, as home): Person holds a new Address home; uses \
+          become home.street.
+          - A record's components (as address): new Order(id, s, c) becomes new Order(id, new \
+          Address(s, c)), o.street() o.address().street().
+          - static final int or String constants (members [OPEN, CLOSED], new_type State, no \
+          as): an enum; their holders become State.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares it."),
-              Arg.string(
-                      "name", "A method (Type.member, or with parameter types), class or record.")
-                  .required(),
-              Arg.strings("members", "Names to group; parameters or components adjacent.")
-                  .required(),
+              Arg.string("name", "A method (Type.member), class or record.").required(),
+              Arg.strings("members", "Names to group.").required(),
               Arg.string("new_type", "The new type's name.").required(),
-              Arg.string("as", "The holder's name.").required(),
-              Arg.bool("value_semantics", "For a record: accept the changed toString."),
+              Arg.string("as", "The holder's name."),
+              Arg.string("accessor", "Constants: the old value's accessor."),
+              Arg.bool("value_semantics", "Record: accept the changed toString."),
               Arg.IMPORTS),
           Kind.REFACTORING,
           ExtractType::run);

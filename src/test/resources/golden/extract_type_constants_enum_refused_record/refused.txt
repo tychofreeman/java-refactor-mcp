@@ -1,0 +1,1 @@
+Line is a record, whose generated toString and hashCode would change with state's type. Pass value_semantics=true

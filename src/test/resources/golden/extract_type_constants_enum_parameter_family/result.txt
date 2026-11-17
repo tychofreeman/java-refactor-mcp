@@ -1,0 +1,1 @@
+made OPEN, SHIPPED and CLOSED of Order the enum OrderState (com/example/OrderState.java); retyped parameter state of Handler.handle(int) and parameter state of Printer.handle(int); changed com/example/Handler.java and com/example/ui/Printer.java; com/example/ui/Printer.java: imported com.example.OrderState; removed import com.example.Order
