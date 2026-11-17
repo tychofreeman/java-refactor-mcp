@@ -1036,6 +1036,31 @@ extract_function it to name it as a method here." (It had said "which is not an 
 abstract class of the project to declare size on.") An enum outside the project keeps its own
 wording.
 
+Issue #374, 2026-11-17 (the enum sketch's increment 12, question 7 option (a)): over an enum, a
+switch statement of old-style cases (`case RED: return "r";`) is read as the switch expression it
+means, `return switch (c) { case RED -> "r"; ... };` (`ColonSwitch`), and then converted as one:
+the field form when every group is one `return` of a constant, else the method form, a group's
+statements its body. Labels with no statement between them share a case (`case GREEN: case BLUE:`);
+a `default` that shares its group with constants is the default. The switch becomes `return
+c.label();`. Without a `default` every constant must have a case, and the statements after the
+switch in its block, which no constant reaches, are removed (the result says so). The result ends
+"its old-style cases were read as arrow cases, each return as the case's value". Refused, each
+naming the case:
+
+- a group that can finish (falls through to the next case or past the switch): "the case of RED
+  can finish without a return or throw, running on into the next case or past the switch; each
+  case must end in return with a value or throw to move into Color."
+- a `break` or `continue` that leaves the group, or a `return;` without a value: "the case of RED
+  has break;, which leaves the switch; ..."
+- constants with no case and no `default`: "BLUE has no case and runs the code after the switch,
+  which cannot move into Color. Add a default case that does what that code does (add_case), then
+  call again."
+- a local declared in one group and used in another: "s is declared in the case of RED and used in
+  the case of default; as arrow cases each would have its own s. Declare it in each case that uses
+  it, then call again."
+
+A switch of old-style cases over a type that is not an enum is still refused, as before.
+
 ## Merging duplicate methods (a composition)
 
 Roadmap #126, 2026-11-06: gorefactor's `merge_duplicate_function` is, here, a batch of `fold`

@@ -54,7 +54,8 @@ final class EnumSwitch {
       ITypeBinding e,
       Path eFile,
       String name,
-      int line) {
+      int line,
+      String note) {
 
     /** The call the switch becomes. */
     String call() {
@@ -75,7 +76,7 @@ final class EnumSwitch {
 
     /** The end of the result: where the switch was, and what it is now. */
     String now() {
-      return "; the code at line " + line + " of " + opened.rel() + " is now " + call();
+      return "; the code at line " + line + " of " + opened.rel() + " is now " + call() + note;
     }
 
     /**
@@ -115,6 +116,14 @@ final class EnumSwitch {
     if (as != null && !as.equals("field") && !as.equals("method")) {
       throw new Refusal("as is field or method, not " + as + ".");
     }
+    String note = "";
+    if (node instanceof SwitchStatement s && ColonSwitch.colon(s)) {
+      ColonSwitch.Read read = ColonSwitch.arrows(project, opened, s, e);
+      opened = read.opened();
+      node = read.node();
+      selector = read.node().getExpression();
+      note = read.note();
+    }
     boolean value = node instanceof SwitchExpression;
     ITypeBinding result = node instanceof SwitchExpression sw ? sw.resolveTypeBinding() : null;
     if (value && result == null) {
@@ -146,12 +155,14 @@ final class EnumSwitch {
         field = false;
       }
     }
-    At at = new At(project, opened, node, selector, e, eFile, name, line);
+    At at = new At(project, opened, node, selector, e, eFile, name, line, note);
     Map<Path, String> texts = new LinkedHashMap<>();
     texts.put(opened.file(), opened.text());
     texts.putIfAbsent(eFile, Files.readString(eFile));
-    Map<Path, CompilationUnit> parsed = Jdt.parseAll(project, new ArrayList<>(texts.keySet()));
-    EnumDeclaration target = declaration(parsed.get(eFile), e);
+    // The switch's own parse when the enum is in its file: its text may be the rewritten one.
+    CompilationUnit eUnit =
+        eFile.equals(opened.file()) ? opened.unit() : Jdt.parse(project, eFile, texts.get(eFile));
+    EnumDeclaration target = declaration(eUnit, e);
     return field
         ? field(at, texts, target, arms, Extract.typeName(result))
         : method(at, texts, target, arms, value ? Extract.typeName(result) : "void", v, value);

@@ -2,7 +2,7 @@
 
 Status: chosen. The owner took the Recommended option of every open question on 2026-11-13
 (question 1 option (a): increments 1 to 3, then slices 2 and 3; slice 1 and increment 12 wait for
-evidence). Increments are built one PR each; the roadmap in `docs/design.md` says which are done.
+evidence; both were asked for on 2026-11-17, issues #373 and #374). Increments are built one PR each; the roadmap in `docs/design.md` says which are done.
 Written 2026-11-13 against `main` at 63c9cde. "Checked by a run" below means one call through
 `Cli` on a copy of that commit with a scratch project; "by reading" means the source only.
 

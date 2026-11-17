@@ -1,0 +1,1 @@
+BLUE has no case and runs the code after the switch

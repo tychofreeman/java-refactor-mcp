@@ -1,0 +1,1 @@
+the case of RED can finish without a return or throw, running on into the next case
