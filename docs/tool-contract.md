@@ -14,6 +14,11 @@ check each point against `tychofreeman/go-refactor-mcp` (README "Status" and
 - **Do dependent work in one call.** `batch` runs several steps as one unit and
   rolls back as a whole.
 - **1-based lines.** Columns are 1-based. Paths are relative to the project root.
+- **Paths stay in the project.** A path that leaves the root, by its text or through a symbolic
+  link (a link to a file or directory outside it, or a link that points nowhere yet, read by its
+  text), is refused: "<path> leads out of the project through a symbolic link, so it is not read or
+  changed" (roadmap 530, 2026-11-19, gorefactor's #660 and its issue #640). A link from one file
+  of the project to another is followed.
 
 ## Exceptional behavior (`preserve_exceptions`, every refactoring)
 
