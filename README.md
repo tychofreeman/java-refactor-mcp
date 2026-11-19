@@ -152,7 +152,9 @@ tools to extract the validation in OrderService into its own method"*. Run
   fresh model with that routine gave the concept a feature extends one home
   before adding it on two of three shapes, at 10-60% more a session
   ([cost-history, section 35](https://github.com/tychofreeman/go-refactor-mcp/blob/main/docs/cost-history.md));
-  it has not been run on Java yet. Then write the failing test and make it
+  on this repo's shop tasks it changed nothing, as the earlier wording
+  already got one home there, and cost 15% more
+  ([the record](docs/sessions/ab-design-routine.md)). Then write the failing test and make it
   pass with the edit tools. Models extend the code that is there unless told
   to reshape it first. A test written with `create_file` (`test_for`) or
   `add_declaration` gets stubs for what it calls, so it fails on its

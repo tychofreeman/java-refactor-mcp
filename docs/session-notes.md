@@ -55,7 +55,11 @@ fact here becomes wrong, fix or remove it in the same PR.
   gorefactor's change here): step 1 is gorefactor's design routine, the easy
   change, the places today and the refactorings written down before the first
   edit, which its cost-history 35 measured on Go; this repo's CLAUDE.md has it
-  as step 1 of "How we work" too. Keep the README's evidence sentence and tool list
+  as step 1 of "How we work" too. Its first Java run (2026-11-19,
+  `docs/sessions/ab-design-routine.md`, shop tasks, 24 runs) showed no gain there: the old
+  step 1 already reached one home for the duplicated code, and the routine cost 15% more. The
+  shop tasks lack the shapes it helped on in Go (lending-magazine, freight-air); a Java port of
+  those is the test. Keep the README's evidence sentence and tool list
   current with `docs/design.md` and `Tools.ALL`.
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log
