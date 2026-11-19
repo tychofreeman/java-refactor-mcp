@@ -1323,21 +1323,20 @@ final class Tools {
           the method's body in the project, its parameters standing for any expressions of their \
           types, becomes a call. The method stays. An instance method's body matches code in \
           instance members of its class and subclasses, where this is the same object, and \
-          becomes total(...) there. extract_function makes a method from one place; fold reuses \
-          one everywhere else. To merge two methods with one body, fold the one to keep, then \
-          inline the other.
+          becomes total(...) there. To merge two methods of one body, fold one, inline the other.
           What a body matches: one return's expression matches expressions (x * 1.2 becomes \
           withTax(x) for static double withTax(double a) { return a * 1.2; }); a void method's \
           statements match the same statements in any block, a local it declares standing for a \
-          local the code declares and does not use after them. Other names must mean what they \
-          mean in the body. So near-duplicates become calls: write the method with the \
-          differences as parameters, then fold it.\
+          local the code declares and does not use after them; statements ending in return x \
+          match them and the return (return f(...);), or code going on after them \
+          (T x = f(...);). Other names must mean what they mean in the body. So near-duplicates \
+          become calls: write the method with the differences as parameters, then fold it.\
           """,
           List.of(
               Arg.FILE.described("Java file that declares the method."),
               Arg.string("name", "The method, as Type.method.").required(),
               Arg.integer(
-                  "line", "Optional: only the matches starting on this line (of in, or of file)."),
+                  "line", "Optional: only matches starting on this line (of in, else file)."),
               Arg.string("in", "Optional, with line: the file whose line it is, if not file.")),
           Kind.REFACTORING,
           Tools::fold);

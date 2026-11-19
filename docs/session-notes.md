@@ -497,6 +497,14 @@ Each was chosen from options; the record named beside it has the options it beat
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
 
+- `fold` of a method that returns after statements (roadmap 529, 2026-11-19, gorefactor's #694,
+  #695, TypeScript's #698) is a `Fold.Ending`: `RETURN` runs end in the body's return (`return
+  f(...);`), `CARRY` runs are the statements before `return x` with code after (`T x = f(...);`,
+  only when `x` is a local of its own statement and the body has no other return), matched after
+  the `RETURN` runs of a block and skipped where one covers them (`covered`). `leave` checks the
+  method's return type against what the copy returns from (`returnsFrom`) or the local's type.
+  Go's error form (#696) has no Java counterpart.
+
 - `inline` with `field` is `InlineClass`; its checks and edits are `fieldNamed`, `homeDeclaration`,
   `refuseClashes`, `useEdits` and `body` (#528).
 

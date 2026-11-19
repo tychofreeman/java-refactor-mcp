@@ -1,7 +1,7 @@
 ---
 order: 519
 item: 529
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open (2026-11-19)
+Done (2026-11-19): a copy ending in the same return becomes `return f(args);`, early returns included; a copy that goes on after the statements before `return x` becomes `T x = f(args);` (`Fold.Ending`).
 
 ## Evidence
 
