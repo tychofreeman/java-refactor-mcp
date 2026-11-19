@@ -367,6 +367,9 @@ Each was chosen from options; the record named beside it has the options it beat
   where a tool must write one; 2 is the one fallback), `reindent` to a new common indentation,
   `restep` for a member moved between files (each step becomes the target's) and `member` for the
   indentation of a type's members. Not a new helper in a tool, and not a written `"  "`.
+- A path a tool is given goes through `SourceProject.file`, which refuses one that leaves the root
+  by its text or a symbolic link (`SourceProject.outside`, `requireInside`; roadmap 530,
+  2026-11-19); `Journal.put` refuses the same, so a path built elsewhere cannot write outside.
 - `Journal.put` and `Journal.restore` are the one writer of project files; the
   journal also keeps a file's mode (`Journal.mode`, `copyMode`), so undo puts back
   an executable file executable. Both take the project: a deletion removes the directories it

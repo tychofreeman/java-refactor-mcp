@@ -137,14 +137,57 @@ public record SourceProject(
     return all.stream().sorted().toList();
   }
 
-  /** The path of {@code rel} under the root; refused if it leaves the root. */
+  /**
+   * The path of {@code rel} under the root; refused if it leaves the root, by its text or a link.
+   */
   public Path file(String rel) {
     Path path = root.resolve(rel).normalize();
     if (!path.startsWith(root) || path.equals(root)) {
       throw new Refusal(
           "file must be a path relative to the project root " + root + "; got " + rel + ".");
     }
+    requireInside(path);
     return path;
+  }
+
+  /** Refuses {@code path} when a symbolic link carries it out of the root ({@link #outside}). */
+  void requireInside(Path path) {
+    if (outside(path)) {
+      throw new Refusal(
+          relative(path)
+              + " leads out of the project through a symbolic link, so it is not read or changed."
+              + " Name a file inside the project root "
+              + root
+              + ".");
+    }
+  }
+
+  /**
+   * Whether symbolic links carry {@code path} out of the root: the path, or for one that does not
+   * exist yet the nearest directory above it that does, resolved through its links, is not under
+   * the root resolved the same way. A link that points nowhere is followed by its text.
+   */
+  boolean outside(Path path) {
+    try {
+      Path p = path.toAbsolutePath().normalize();
+      for (int hops = 0; Files.isSymbolicLink(p); hops++) {
+        if (hops == 40) {
+          return true;
+        }
+        p = p.resolveSibling(Files.readSymbolicLink(p)).normalize();
+      }
+      Path existing = p;
+      while (existing != null && !Files.exists(existing)) {
+        existing = existing.getParent();
+      }
+      if (existing == null) {
+        return true;
+      }
+      Path real = existing.toRealPath().resolve(existing.relativize(p)).normalize();
+      return !real.startsWith(root.toRealPath());
+    } catch (IOException e) {
+      return true;
+    }
   }
 
   /** The package a {@code .java} file at {@code path} must declare, or null if no root holds it. */
