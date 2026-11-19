@@ -2078,3 +2078,12 @@ again.
   first line's indentation and keeps each later line's offset from it, so a line of `new` at
   the first line's indentation landed where the old line was, not where the block's lines are.
   Writing `new` with the later lines indented as they should sit relative to the first fixed it.
+
+## 2026-11-19: replace-expression-everywhere (roadmap 531)
+
+- No Java of the project by hand. A `batch` step of `create_file` with content `"@pattern"` was
+  refused as not parsing: `@@name` sections are the CLI's; through MCP the text goes inline.
+- `bin/session-report` counted no large write, though `create_file` of `ExpressionPattern` wrote
+  428 lines inside a `batch`: it does not look inside a batch's steps (gorefactor's
+  `refactor-tokens` had the same gap, its #676 record). Record:
+  `docs/sessions/replace-expression-everywhere.md`.

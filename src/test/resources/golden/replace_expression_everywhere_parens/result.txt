@@ -1,0 +1,1 @@
+replaced 3 occurrences of $l.size(): com/example/Sizes.java lines 8, 12, 13

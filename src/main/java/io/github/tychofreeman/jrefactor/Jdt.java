@@ -22,6 +22,7 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FileASTRequestor;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -397,5 +398,14 @@ final class Jdt {
         walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
       }
     }
+  }
+
+  /** {@code text} parsed as one expression, syntax only, or null when it is not one. */
+  static Expression parseExpression(String text) {
+    ASTNode n = syntaxParser(ASTParser.K_EXPRESSION, text).createAST(null);
+    return n instanceof Expression e
+            && (e.getFlags() & (ASTNode.MALFORMED | ASTNode.RECOVERED)) == 0
+        ? e
+        : null;
   }
 }
