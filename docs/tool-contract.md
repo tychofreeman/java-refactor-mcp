@@ -1322,6 +1322,21 @@ in the same turn only if it is sent after it.
     build is one call or construction ... A loop is a statement: send it as build of
     insert_statements or replace_statements"); `into` ("takes no into: the code around it uses
     the value"); and the call entry's refusals (the wrong number of arguments).
+    `everywhere` and `$name` holes (roadmap 531, 2026-11-19, gorefactor's #676): a `$name` in
+    `expression` stands for any expression (the same text where one hole is used twice). The
+    match at `line` (outermost first, `column` to choose) is the anchor, found by shape and
+    identifiers; it fixes each hole's type (its erasure) and what each other name means (by
+    binding key, a local or parameter by its type). Without `everywhere` only the anchor is
+    replaced; with it, every expression of the project, tests included, that matches with the
+    same meanings and hole types, outermost only. `new` gets each hole's source, unwrapped where
+    nothing around it needs parentheses and parenthesized where it is not primary and something
+    does; `new` itself is parenthesized the same way where it lands. Imports `new` needs are
+    added per file. Result: `replaced 3 occurrences of $s.road(): <file> lines 5, 9; <file> line
+    7` and the imports. Refused: `new` using a hole other than once, in another order than
+    `expression`, or a hole `expression` lacks ("new uses $a 2 times: each hole goes in new
+    once"); `expression` or `new` not one expression; `build` with either; no match on `line`;
+    with `everywhere`, a hole whose anchor has no type. A match inside the method `new` calls is
+    replaced too (which makes it call itself): name the lines without `everywhere` there.
   - `insert_statements`: `file`, `line` (a statement directly in a block),
     `where` (`before` or `after`, default after), `content`, re-indented to that
     statement. Result: `inserted 1 line after the statement at line 5 of <file>`.

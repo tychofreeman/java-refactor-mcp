@@ -500,6 +500,13 @@ Each was chosen from options; the record named beside it has the options it beat
   run at once undid each other. It exits when stdin ends only after it is quiet,
   since the SDK drops requests it has read but not run.
 
+- `replace_expression` with `everywhere` or a `$name` hole (roadmap 531, 2026-11-19, gorefactor's
+  #676) is `ExpressionPattern`, routed from `Primitives.replaceExpression` before the
+  single-occurrence path: the pattern parsed by `Jdt.parseExpression` (syntax only), anchored
+  by shape at `line` (`Holes` with no `Anchor`), then matched across `Holding` by binding
+  (`Holes` with the anchor's `Anchor`); `written` places each hole's source, `bare` and
+  `primary` deciding parentheses. gorefactor's batch anchoring by text (#690) is not here yet.
+
 - `fold` of a method that returns after statements (roadmap 529, 2026-11-19, gorefactor's #694,
   #695, TypeScript's #698) is a `Fold.Ending`: `RETURN` runs end in the body's return (`return
   f(...);`), `CARRY` runs are the statements before `return x` with code after (`T x = f(...);`,

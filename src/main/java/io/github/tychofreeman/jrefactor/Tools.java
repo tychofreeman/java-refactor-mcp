@@ -458,12 +458,16 @@ final class Tools {
           and its exact source text (column when the text occurs twice on the line), as \
           extract_variable does. With build in place of new, the call or construction is written \
           from names: {"call": "discounts.apply", "args": ["price", "customer"]} writes \
-          discounts.apply(price, customer), {"new": "ArrayList"} writes new ArrayList<>().\
+          discounts.apply(price, customer), {"new": "ArrayList"} writes new ArrayList<>().
+          A $name in expression stands for any expression, which new places: $s.road() to \
+          Routes.of($s, "road"). everywhere=true replaces each expression of the project that \
+          matches the one at line: names meaning the same, holes of the same types.\
           """,
           List.of(
               Arg.FILE,
               Arg.integer("line", "1-based line the expression starts on.").required(),
               Arg.string("expression", "Its exact source text.").required(),
+              Arg.bool("everywhere", "Every match in the project, not only at line."),
               Arg.integer(
                   "column", "Optional 1-based column, when the text occurs twice on the line."),
               Arg.string("new", "The expression to put in its place."),

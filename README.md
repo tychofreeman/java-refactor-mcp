@@ -70,7 +70,9 @@ $0.129 without it; but a model chose it only when a refusal asked for it. See
   or a finally added or removed, or the try unwrapped), `replace_text`. `insert_statements`,
   `replace_statements` and `replace_expression` also take `build`: calls,
   constructions, loops and guards written from names, their types read from
-  the code.
+  the code. `replace_expression` with `everywhere` replaces every expression of
+  the project that matches the one at a line, `$name` holes standing for any
+  expression (`$s.road()` to `Routes.of($s, "road")`): a typed `sed -i`.
 - **Plumbing:** `batch`, `check` (the compile errors, and with `run_tests` the tests the
   changes reach; in a batch, a checkpoint) and `undo`.
 

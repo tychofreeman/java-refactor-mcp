@@ -39,6 +39,9 @@ final class Primitives {
               : "replace_expression needs new, or build.");
     }
     Opened opened = Opened.of(project, rel);
+    if (args.flag("everywhere") || ExpressionPattern.hasHoles(expression)) {
+      return ExpressionPattern.run(project, args, opened);
+    }
     String text = opened.text();
     CompilationUnit unit = opened.unit();
     lineStart(unit, line, rel);
