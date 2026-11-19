@@ -37,15 +37,19 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 /**
  * fold: code that does what an existing method does becomes a call of it (of an instance method, in
  * the instance members of its class and subclasses, unless the project overrides it). The body is
- * the pattern: one return's expression matches expressions, and a void method's statements match
- * runs of statements in any block. Its parameters stand for any expressions of their types, a local
- * it declares for a local the match declares, and every other name must mean what it means in the
- * body. The method stays. A match the call would not reproduce (its arguments run in another order
- * or another number of times, or moved past what the behavior gate refuses) is left, with why.
+ * the pattern: one return's expression matches expressions, a void method's statements match runs
+ * of statements in any block, and statements ending in a return match runs ending in the same
+ * return or, when it returns a local, runs of the statements before it ({@link Ending}). Its
+ * parameters stand for any expressions of their types, a local it declares for a local the match
+ * declares, and every other name must mean what it means in the body. The method stays. A match the
+ * call would not reproduce (its arguments run in another order or another number of times, or moved
+ * past what the behavior gate refuses) is left, with why.
  */
 final class Fold {
 
@@ -62,7 +66,22 @@ final class Fold {
       Expression[] args,
       Set<String> locals,
       Block block,
-      int after) {}
+      int after,
+      Ending ending,
+      VariableDeclarationFragment declared) {}
+
+  /**
+   * How a match ends, and so what the call is written as: an expression is the call; void
+   * statements are the call's statement; statements that end in the method's return are {@code
+   * return f(...);}; and statements that go on after them declare the local the method returns
+   * ({@code declared}), {@code T x = f(...);}.
+   */
+  private enum Ending {
+    EXPRESSION,
+    VOID,
+    RETURN,
+    CARRY
+  }
 
   static Outcome run(SourceProject project, String rel, String name, Integer line, String in)
       throws Exception {
@@ -106,16 +125,27 @@ final class Fold {
     boolean returns = !"void".equals(mb.getReturnType().getName());
     List<ASTNode> pattern = new ArrayList<>();
     List<?> body = m.getBody().statements();
+    Ending ending = returns ? Ending.RETURN : Ending.VOID;
+    String carried = null;
     if (returns) {
-      if (body.size() != 1
-          || !(body.get(0) instanceof ReturnStatement r)
+      if (body.size() == 1
+          && body.get(0) instanceof ReturnStatement r
+          && r.getExpression() != null) {
+        ending = Ending.EXPRESSION;
+        pattern.add(r.getExpression());
+      } else if (body.isEmpty()
+          || !(body.get(body.size() - 1) instanceof ReturnStatement r)
           || r.getExpression() == null) {
         throw new Refusal(
             name
-                + " returns a value from statements: fold matches a method that is one return, or"
-                + " a void method's statements. Extract the expression into one first.");
+                + " does not end in a return of its value, so no run of statements ends as it"
+                + " does. Make its last statement the return first.");
+      } else {
+        for (Object o : body) {
+          pattern.add((ASTNode) o);
+        }
+        carried = carried(m);
       }
-      pattern.add(r.getExpression());
     } else {
       if (body.isEmpty() || !Nodes.all(m.getBody(), ReturnStatement.class).isEmpty()) {
         throw new Refusal(
@@ -150,7 +180,8 @@ final class Fold {
                 + ", which no expression can stand for.");
       }
     }
-    if (returns && params.contains(Bindings.declarationKey(identifier(pattern.get(0))))) {
+    if (ending == Ending.EXPRESSION
+        && params.contains(Bindings.declarationKey(identifier(pattern.get(0))))) {
       throw new Refusal(name + " returns its parameter, which every expression would match.");
     }
 
@@ -159,7 +190,7 @@ final class Fold {
     boolean[] stable = stable(params, pattern, facts.firstEnd(), facts.lastStart());
     List<Candidate> found = new ArrayList<>();
     for (Map.Entry<Path, CompilationUnit> e : holding.units().entrySet()) {
-      collect(e.getKey(), e.getValue(), m, pattern, params, bodyLocals, returns, found);
+      collect(e.getKey(), e.getValue(), m, pattern, params, bodyLocals, ending, carried, found);
     }
     Path lineFile = in == null ? file : project.javaFile(in);
     Map<Path, List<TextEdit>> edits = new LinkedHashMap<>();
@@ -199,13 +230,20 @@ final class Fold {
               ? ""
               : Extract.typeName(mb.getDeclaringClass().getErasure(), Nodes.typeAround(c.root()))
                   + ".";
+      String called = qualifier + methodName + "(" + String.join(", ", argTexts) + ")";
       String replacement =
-          qualifier
-              + methodName
-              + "("
-              + String.join(", ", argTexts)
-              + ")"
-              + (returns || c.block() == null ? "" : ";");
+          switch (c.ending()) {
+            case EXPRESSION -> called;
+            case VOID -> called + ";";
+            case RETURN -> "return " + called + ";";
+            case CARRY ->
+                text.substring(
+                        c.declared().getParent().getStartPosition(),
+                        Nodes.end(c.declared().getName()))
+                    + " = "
+                    + called
+                    + ";";
+          };
       edits
           .computeIfAbsent(c.file(), k -> new ArrayList<>())
           .add(new TextEdit(c.start(), c.end(), replacement));
@@ -346,7 +384,8 @@ final class Fold {
       List<ASTNode> pattern,
       List<String> params,
       Set<String> bodyLocals,
-      boolean returns,
+      Ending ending,
+      String carried,
       List<Candidate> found) {
     String mKey = Bindings.declarationKey(m.resolveBinding());
     unit.accept(
@@ -363,7 +402,9 @@ final class Fold {
 
           @Override
           public boolean preVisit2(ASTNode n) {
-            if (returns && n instanceof Expression x && n.getClass() == pattern.get(0).getClass()) {
+            if (ending == Ending.EXPRESSION
+                && n instanceof Expression x
+                && n.getClass() == pattern.get(0).getClass()) {
               Holes h = new Holes(params, bodyLocals);
               if (pattern.get(0).subtreeMatch(h, x) && !Nodes.written(x)) {
                 found.add(
@@ -377,15 +418,29 @@ final class Fold {
                         h.args,
                         Set.of(),
                         null,
-                        0));
+                        0,
+                        Ending.EXPRESSION,
+                        null));
                 return false;
               }
             }
-            if (!returns && n instanceof Block b) {
-              matchRuns(file, unit, b, pattern, params, bodyLocals, found);
+            if (ending != Ending.EXPRESSION && n instanceof Block b) {
+              matchRuns(file, unit, b, pattern, params, bodyLocals, ending, null, found);
+              if (carried != null) {
+                matchRuns(
+                    file,
+                    unit,
+                    b,
+                    pattern.subList(0, pattern.size() - 1),
+                    params,
+                    bodyLocals,
+                    Ending.CARRY,
+                    carried,
+                    found);
+              }
             }
             // A lambda's expression body is a statement too: s -> err.println(s).
-            if (!returns
+            if (ending == Ending.VOID
                 && pattern.size() == 1
                 && pattern.get(0) instanceof ExpressionStatement only
                 && n instanceof LambdaExpression l
@@ -403,7 +458,9 @@ final class Fold {
                         h.args,
                         Set.of(),
                         null,
-                        0));
+                        0,
+                        Ending.EXPRESSION,
+                        null));
               }
             }
             return true;
@@ -411,7 +468,11 @@ final class Fold {
         });
   }
 
-  /** The runs of {@code b}'s statements that match the pattern's statements. */
+  /**
+   * The runs of {@code b}'s statements that match the pattern's statements, each ending as {@code
+   * ending} says. A carried run must declare the counterpart of the body's local {@code carried},
+   * and is not one a run ending in the return covers already.
+   */
   private static void matchRuns(
       Path file,
       CompilationUnit unit,
@@ -419,6 +480,8 @@ final class Fold {
       List<ASTNode> pattern,
       List<String> params,
       Set<String> bodyLocals,
+      Ending ending,
+      String carried,
       List<Candidate> found) {
     List<?> s = b.statements();
     int k = pattern.size();
@@ -428,8 +491,12 @@ final class Fold {
       for (int j = 0; j < k && all; j++) {
         all = pattern.get(j).subtreeMatch(h, s.get(i + j));
       }
-      if (all) {
-        Statement firstStmt = (Statement) s.get(i);
+      Statement firstStmt = (Statement) s.get(i);
+      VariableDeclarationFragment declared =
+          all && ending == Ending.CARRY
+              ? declaring(s.subList(i, i + k), h.mapped.get(carried))
+              : null;
+      if (all && (ending != Ending.CARRY || declared != null && !covered(found, firstStmt))) {
         Statement last = (Statement) s.get(i + k - 1);
         found.add(
             new Candidate(
@@ -442,10 +509,68 @@ final class Fold {
                 h.args,
                 Set.copyOf(h.mapped.values()),
                 b,
-                i + k));
+                i + k,
+                ending,
+                declared));
         i += k - 1;
       }
     }
+  }
+
+  /**
+   * The key of the local {@code m}'s body declares in a statement of its own and returns last, when
+   * that is its only return: a copy that goes on after the other statements takes it from a call.
+   * Otherwise null.
+   */
+  private static String carried(MethodDeclaration m) {
+    List<?> body = m.getBody().statements();
+    ReturnStatement last = (ReturnStatement) body.get(body.size() - 1);
+    for (ReturnStatement r : Nodes.all(m.getBody(), ReturnStatement.class)) {
+      if (r != last && returnsFrom(r) == m) {
+        return null;
+      }
+    }
+    if (!(last.getExpression() instanceof SimpleName v)
+        || !(v.resolveBinding() instanceof IVariableBinding b)) {
+      return null;
+    }
+    String key = Bindings.declarationKey(b);
+    return declaring(body, key) == null ? null : key;
+  }
+
+  /** The one fragment of a statement of {@code statements} that declares {@code key}, or null. */
+  private static VariableDeclarationFragment declaring(List<?> statements, String key) {
+    for (Object o : statements) {
+      if (key != null
+          && o instanceof VariableDeclarationStatement d
+          && d.fragments().size() == 1
+          && d.fragments().get(0) instanceof VariableDeclarationFragment f
+          && key.equals(Bindings.declarationKey(f.resolveBinding()))) {
+        return f;
+      }
+    }
+    return null;
+  }
+
+  /** Whether {@code s} starts inside a match {@code found} has in its file already. */
+  private static boolean covered(List<Candidate> found, Statement s) {
+    for (Candidate c : found) {
+      if (c.unit() == s.getRoot()
+          && c.start() <= s.getStartPosition()
+          && s.getStartPosition() < c.end()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** The method or lambda a return at {@code n} would return from, or null. */
+  private static ASTNode returnsFrom(ASTNode n) {
+    ASTNode p = n.getParent();
+    while (p != null && !(p instanceof MethodDeclaration) && !(p instanceof LambdaExpression)) {
+      p = p.getParent();
+    }
+    return p;
   }
 
   /** Why a call cannot replace {@code c}, or null when it can. */
@@ -468,6 +593,32 @@ final class Fold {
     }
     if (Modifier.isPrivate(m.getModifiers()) && !sameTopLevel(c.root(), mb.getDeclaringClass())) {
       return call + " is private, and this code is in another class";
+    }
+    if (c.ending() == Ending.RETURN || c.ending() == Ending.CARRY) {
+      ITypeBinding into;
+      String who;
+      if (c.ending() == Ending.CARRY) {
+        into = c.declared().resolveBinding().getType();
+        who = c.declared().getName().getIdentifier() + " holds";
+      } else if (returnsFrom(c.landing()) instanceof MethodDeclaration d) {
+        into = d.resolveBinding() == null ? null : d.resolveBinding().getReturnType();
+        who = d.getName().getIdentifier() + " returns";
+      } else {
+        IMethodBinding l =
+            returnsFrom(c.landing()) instanceof LambdaExpression e
+                ? e.resolveMethodBinding()
+                : null;
+        into = l == null ? null : l.getReturnType();
+        who = "the lambda returns";
+      }
+      if (into == null || !mb.getReturnType().isAssignmentCompatible(into)) {
+        return "a call returns "
+            + mb.getReturnType().getName()
+            + ", which "
+            + who
+            + " as "
+            + (into == null ? "another type" : into.getName());
+      }
     }
     for (int i = 0; i < params.size(); i++) {
       Expression a = c.args()[i];
@@ -541,7 +692,10 @@ final class Fold {
       List<?> s = c.block().statements();
       for (int i = c.after(); i < s.size(); i++) {
         for (SimpleName n : Nodes.all((ASTNode) s.get(i), SimpleName.class)) {
-          if (c.locals().contains(Bindings.declarationKey(n.resolveBinding()))) {
+          String key = Bindings.declarationKey(n.resolveBinding());
+          if (c.locals().contains(key)
+              && (c.declared() == null
+                  || !key.equals(Bindings.declarationKey(c.declared().resolveBinding())))) {
             return n.getIdentifier() + " is declared by the code and used after it";
           }
         }

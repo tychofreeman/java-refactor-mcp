@@ -1848,6 +1848,16 @@ of `in`, or of `file`). The method stays.
   expression of their type (a reference type takes a subtype); a local the body declares
   stands for a local the code declares, which must not be used after the run; every other
   name must resolve to the same declaration, by binding key, so overloads match exactly.
+- A body of statements that ends in `return e;` (roadmap 529, 2026-11-19, gorefactor's #694,
+  #695 and TypeScript's #698) matches a run of the same statements and return, early returns
+  included, which becomes `return f(args);`. When its last statement returns a local it declares
+  in a statement of its own, and it has no other return, a run of the statements before the
+  return, followed by more code, also matches: the call's value goes to the code's local, `T x =
+  f(args);`, and the code after may use it (no other local of the run). A run that ends in the
+  return is matched first. Left when the method or lambda the copy returns from, or the local, does
+  not take the method's return type ("a call returns Object, which g returns as String"). Goldens
+  `fold_returns_statements`, `fold_returns_carry_on`, `fold_returns_left_type`; probes
+  `fold_returns_early`, `fold_returns_carry_on`.
 - In a `String.format` of the body, a plain `%s` whose argument is a parameter matches
   constant text in the code's format, and the parameter is given that text as a literal:
   `"%s: %s", room, what` matches `"%s: temp", room`, and the call passes `"temp"`.
@@ -1871,8 +1881,9 @@ of `in`, or of `file`). The method stays.
 - Result: `folded N matches of T.m into calls: <file> lines a, b; left K: <file> line L
   (reason), ...`. The call is unqualified in the method's own class, `T.m(...)` elsewhere,
   with an import when needed.
-- Refuses: a method that is not static or has no body, varargs, a body that is not one
-  return or a void method's statements (or returns early), a parameter the body does not
+- Refuses: a method that is not static or has no body, varargs, a body returning a value that
+  does not end in a `return e;` ("does not end in a return of its value"), a void method's
+  statements that return early, a parameter the body does not
   use, a body that assigns a parameter or returns one, and no match a call can replace
   (with the reasons of those left).
 
