@@ -1,7 +1,12 @@
 # <project>
 
 Work test first, in this order, and refactor only while every test passes:
-1. Make the change easy. If the change would be hard, refactor first, before writing the test: change the design of the code, without changing what it does, until the change you need is small and local. Typical refactorings: rename something to what it will mean, extract the code you will change into its own method, add the parameter or field the new behaviour will need, move a declaration to where the change belongs.
+1. Make the change easy. Before the first edit, write down:
+   - **The easy change:** the few lines you wish you could write to add the feature, and the one place they would go.
+   - **The places today:** every place you would have to change to add it to the code as it is (inspect's `names` and `uses` find them). Where it would add a branch beside branches on the same value, or a copy of a block with names changed, each existing branch or copy is a place.
+   - **The refactorings:** if there is more than one place, the refactorings, with the jrefactor tools, that make the easy change true, each keeping the tests passing. With one place, none.
+
+   Then do those refactorings, before writing the test.
 2. Write the next test and see it fail on its assertion. Start a test file with create_file and test_for, or add a test with add_declaration: what the test calls that nothing declares gets a "not implemented" stub, so it compiles.
 3. Make the easy change: make the test pass with the least code.
 4. Refactor away any duplication the change added, and rerun the tests.
