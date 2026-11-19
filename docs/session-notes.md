@@ -50,7 +50,12 @@ fact here becomes wrong, fix or remove it in the same PR.
   never while red, `test_for` named, load every schema with one ToolSearch
   (the follow-ups of `ab-shop-tasks` and `ab-warehouse-2`), `inspect` with
   `names` and `pattern` in place of grep, and a tool sequence tried before a
-  hand edit, logged in `docs/friction-log.md`. The next A/B run measures them. Keep the README's evidence sentence and tool list
+  hand edit, logged in `docs/friction-log.md`. The next A/B run measures them.
+  Both changed again on 2026-11-19, also without a Java run (the user asked for
+  gorefactor's change here): step 1 is gorefactor's design routine, the easy
+  change, the places today and the refactorings written down before the first
+  edit, which its cost-history 35 measured on Go; this repo's CLAUDE.md has it
+  as step 1 of "How we work" too. Keep the README's evidence sentence and tool list
   current with `docs/design.md` and `Tools.ALL`.
 - "What's next?" runs the `whats-next` skill. Its record per item lets the user
   judge whether a session used the tools or worked around them; the session log

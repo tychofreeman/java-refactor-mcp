@@ -142,12 +142,19 @@ tools to extract the validation in OrderService into its own method"*. Run
 
 `examples/CLAUDE.md` asks for four things:
 
-- **Make the change easy, then make the easy change, test first.** Refactor
-  first, while the tests pass (rename to what a thing will mean, extract
-  what you will change, add the parameter the change needs), until the
-  change is small and local; then write the failing test and make it pass
-  with the edit tools. Models extend the code that is there unless told to
-  reshape it first. A test written with `create_file` (`test_for`) or
+- **Make the change easy, then make the easy change, test first.** "Easy"
+  alone did not move a model, which finds almost any change easy, so the
+  example asks for three things before the first edit: the easy change (the
+  lines it wishes it could write, and the one place they would go), the
+  places the feature would touch in the code as it is (each existing branch
+  or copy it would extend counting), and, when there is more than one, the
+  refactorings that make the easy change true. In gorefactor's runs on Go, a
+  fresh model with that routine gave the concept a feature extends one home
+  before adding it on two of three shapes, at 10-60% more a session
+  ([cost-history, section 35](https://github.com/tychofreeman/go-refactor-mcp/blob/main/docs/cost-history.md));
+  it has not been run on Java yet. Then write the failing test and make it
+  pass with the edit tools. Models extend the code that is there unless told
+  to reshape it first. A test written with `create_file` (`test_for`) or
   `add_declaration` gets stubs for what it calls, so it fails on its
   assertion, not on compiling.
 - **Read through `inspect`, not Read or `cat`.** Every result stays in the
