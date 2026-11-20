@@ -1,0 +1,1 @@
+folded 1 match of Names.push into calls: shop/Names.java line 5. Its body, operator + held, is small enough to match code that only looks like it: check each place, and to keep only one, undo and fold with line.

@@ -1,0 +1,1 @@
+folded 2 matches of Labels.empty into calls: shop/Labels.java lines 5, 6. Its body, "", is small enough to match code that only looks like it: check each place, and to keep only one, undo and fold with line.

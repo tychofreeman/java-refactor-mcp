@@ -1863,6 +1863,11 @@ with two overloads and none named, it is refused with each one's name, #486, whe
 the first), `line` and `in` (optional: fold only the matches that start on that line
 of `in`, or of `file`). The method stays.
 
+Without `line`, every match in the project is folded. When the body is a lone literal or one
+operator over the parameters only (roadmap 533, issue #697), the result adds: `Its body, <body>, is
+small enough to match code that only looks like it: check each place, and to keep only one, undo
+and fold with line.`
+
 - The body is the pattern: one `return e;` matches expressions; a void method's
   statements match the same run of statements in any block, and a void method of one
   expression statement also matches a lambda's expression body (`s -> err.println(s)` becomes
