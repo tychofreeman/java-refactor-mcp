@@ -2087,3 +2087,15 @@ again.
   428 lines inside a `batch`: it does not look inside a batch's steps (gorefactor's
   `refactor-tokens` had the same gap, its #676 record). Record:
   `docs/sessions/replace-expression-everywhere.md`.
+
+## 2026-11-20: fold-accumulates (roadmap 534)
+
+- No Java by hand. Merging `main` into the branch conflicted in `Fold.java` (both sides added
+  members at the end of the class), and no tool could resolve it: `replace_text` and a `batch` of
+  them refuse a file that does not parse, which a file with conflict markers never does. A git
+  union merge (`merge=union` in `.git/info/attributes`, `git checkout -m`) dropped the lines both
+  sides shared (a closing brace and the next Javadoc's opening), and the result could not be
+  repaired either. Done instead: the merge again with main's `Fold.java` (`git checkout --theirs`),
+  then this branch's own nine-step batch sent again. A tool that resolves a conflict region
+  (`ours`, `theirs`, `both`), or `replace_text` accepting a file that does not parse when its
+  result does, would have made it one call.

@@ -514,6 +514,11 @@ Each was chosen from options; the record named beside it has the options it beat
   `docs/design.md`, Decisions). The body's text is read before the write: `Nodes.show` after
   `Edits.gatedFiles` read shifted offsets.
 
+- `fold` of a method that updates one parameter and returns it (roadmap 534, issue #699) is
+  `Fold.Ending.ACCUMULATE`: `Fold.accumulated` finds the parameter, the pattern is the statements
+  without the return, and `leave` asks `accumulates` (the argument a local, no other argument
+  reading it after the body's first update, by `Accumulation.readAfterWrite`).
+
 - `fold` of a method that returns after statements (roadmap 529, 2026-11-19, gorefactor's #694,
   #695, TypeScript's #698) is a `Fold.Ending`: `RETURN` runs end in the body's return (`return
   f(...);`), `CARRY` runs are the statements before `return x` with code after (`T x = f(...);`,
