@@ -1,7 +1,7 @@
 ---
 order: 522
 item: 532
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open (issue #698, filed 2026-11-20)
+Done (2026-11-20, issue #698): `Nodes.parenthesized`, in `ExtractVariable` and both places in `Introduce` (as a field or constant, and as a parameter).
 
 ## Evidence
 

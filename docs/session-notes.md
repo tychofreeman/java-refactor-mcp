@@ -355,6 +355,8 @@ Each was chosen from options; the record named beside it has the options it beat
   `Nodes.ancestor(n, Type.class)` (above `n`), `Nodes.ancestorOrSelf`, `Nodes.enclosing` (null past
   a lambda or an anonymous class), `Nodes.typeAround(n)` (the binding of the named or anonymous
   class whose body holds `n`), and `Nodes.unparenthesized(e)` (#508), not a new parent loop.
+- A name that takes an expression's place replaces the parentheses around it too:
+  `Nodes.parenthesized(e)` is the outermost (#532, issue #698; `extract_variable` and its `as`).
 - Whether a name has a qualifier before it (`a.n`, `e.n()`, `super.n`, a qualified type's `a.N`,
   `e::n`, `T::n`, `super::n`) is `Nodes.qualified(SimpleName)`, by its place in its parent (#505,
   2026-11-14): `NameCheck`, `InlineFunction`, `MoveType`, `MoveMember` and `SubclassToStrategy` had

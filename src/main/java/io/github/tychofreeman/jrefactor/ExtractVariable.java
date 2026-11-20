@@ -89,7 +89,8 @@ final class ExtractVariable {
     } else {
       edits.add(new TextEdit(stmtStart, stmtStart, decl + " "));
     }
-    edits.add(new TextEdit(e.getStartPosition(), Nodes.end(e), name));
+    Expression place = Nodes.parenthesized(e);
+    edits.add(new TextEdit(place.getStartPosition(), Nodes.end(place), name));
     Behavior.check(
         project,
         new Behavior.Move(e, statement, List.of(statement), source, "extracting " + source),

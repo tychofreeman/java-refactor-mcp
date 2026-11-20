@@ -1762,6 +1762,8 @@ arguments.
   (its exact source text), `name`, and `column` (1-based, only when the text
   occurs twice on that line).
 - Result: `extracted <expression> as <name>, declared at line N of <file>`.
+- The name takes the place of the parentheses around the expression too (`(a + b) * 2` gives
+  `sum * 2`), with `as` as well (roadmap 532, issue #698).
 - Checked by the behavior gate (`Behavior`, roadmap #96): refuses an expression
   with an effect that would run in another order (an effect earlier in its
   statement) or at another time (out of a `?:` branch, right of `&&`/`||`, a
