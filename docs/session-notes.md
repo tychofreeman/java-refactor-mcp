@@ -1199,7 +1199,11 @@ Each was chosen from options; the record named beside it has the options it beat
 
 - The sandbox Maven proxy fix is in `CLAUDE.md`; the port once went stale
   mid-session, so regenerate `~/.m2/settings.xml` before every Maven run.
-- Maven Central answered 429 (rate limit) once; the rerun passed.
+- Maven Central answered 429 (rate limit) once, and on 2026-11-19 four CI runs failed on a 404 for
+  `maven-resources-plugin` 3.5.0, which Central holds. CI runs Maven through `bin/ci-mvn`, which
+  runs it again (three runs in all, `-U` after the first) when the log says an artifact could not
+  be resolved; the resolver retries 429 and 503 itself, not a 404. Call it for a new Maven step in
+  `ci.yml`, not `./mvnw`.
 - The Maven Wrapper was the user's choice over apt, a tarball or Docker, when
   their machine had no Maven. That machine had only JRE packages, which fails as
   "release version 21 not supported"; the fix is `openjdk-21-jdk-headless`. Its
