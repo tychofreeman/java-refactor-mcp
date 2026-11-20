@@ -18,6 +18,8 @@ import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.BooleanLiteral;
+import org.eclipse.jdt.core.dom.CharacterLiteral;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
@@ -25,10 +27,15 @@ import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.NullLiteral;
+import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.PostfixExpression;
+import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -36,6 +43,7 @@ import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.TextBlock;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -264,6 +272,14 @@ final class Fold {
         edits,
         NameCheck.meanings(moved),
         "folding into calls of " + call);
+    // Read before the write: the body's offsets are those of the text the match ran on.
+    String small =
+        line == null && ending == Ending.EXPRESSION && tiny((Expression) pattern.get(0), params)
+            ? ". Its body, "
+                + Nodes.source(holding.texts().get(file), pattern.get(0))
+                + ", is small enough to match code that only looks like it: check each place,"
+                + " and to keep only one, undo and fold with line."
+            : "";
     Edits.WrittenFiles written =
         Edits.gatedFiles(
             project,
@@ -289,7 +305,8 @@ final class Fold {
             + " into calls: "
             + String.join("; ", where)
             + (left.isEmpty() ? "" : "; left " + left.size() + ": " + String.join(", ", left))
-            + written.said(),
+            + written.said()
+            + small,
         declared);
   }
 
@@ -1029,5 +1046,44 @@ final class Fold {
       }
     }
     return "this code is in no class";
+  }
+
+  /**
+   * Whether {@code e} is a lone literal, or one operator over the method's parameters ({@code
+   * params}, by key) only: a body this small also matches code that only looks like it. A literal
+   * among operands ({@code amount * 1.2}) or another name makes it specific enough.
+   */
+  private static boolean tiny(Expression e, List<String> params) {
+    e = Nodes.unparenthesized(e);
+    List<Expression> operands = new ArrayList<>();
+    if (e instanceof PrefixExpression p) {
+      operands.add(p.getOperand());
+    } else if (e instanceof PostfixExpression p) {
+      operands.add(p.getOperand());
+    } else if (e instanceof InfixExpression i) {
+      operands.add(i.getLeftOperand());
+      operands.add(i.getRightOperand());
+      for (Object o : i.extendedOperands()) {
+        operands.add((Expression) o);
+      }
+    } else {
+      return literal(e);
+    }
+    return operands.stream()
+        .map(Nodes::unparenthesized)
+        .allMatch(x ->
+            x instanceof SimpleName n
+                && n.resolveBinding() instanceof IVariableBinding v
+                && params.contains(Bindings.declarationKey(v)));
+  }
+
+  /** Whether {@code e} is a literal. */
+  private static boolean literal(Expression e) {
+    return e instanceof NumberLiteral
+        || e instanceof StringLiteral
+        || e instanceof TextBlock
+        || e instanceof CharacterLiteral
+        || e instanceof BooleanLiteral
+        || e instanceof NullLiteral;
   }
 }

@@ -663,6 +663,15 @@ splitting the type parameter route into a tool of its own (its arguments `type_p
 It cannot fit as one tool: its 13 arguments' schema alone is 897 characters, so with no example
 at all it is 1,902.
 
+**Decided (the owner, 2026-11-20, issue #697, roadmap 533): `fold` without `line` folds every match
+in the project, and a body too small to name an intent says so in its result**: a lone literal, or
+one operator over the method's parameters only (`return "";`, `return operator + held;`), adds "Its
+body, ..., is small enough to match code that only looks like it: check each place, and to keep
+only one, undo and fold with line." (`Fold.tiny`). Over requiring `line` for such a body (the
+first recommendation, which broke "no `line` means everywhere"), over folding only in the method's
+own file without `line`, and over closing the issue as by design. A literal among the operands
+(`amount * 1.2`, `"[" + o + "]"`) or any other name makes a body specific enough: no warning.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a
