@@ -1,0 +1,21 @@
+#!/bin/bash
+# Runs ./mvnw with the given arguments for CI, again (up to three runs in all) when it failed to
+# resolve an artifact: Maven Central at times answers 404 for an artifact it holds, which the
+# resolver does not retry (it retries 429 and 503 itself, here five times). A later run passes
+# -U, since the resolver otherwise keeps the not-found result in the local repository. Any other
+# failure ends at once with Maven's status.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+retries=(-Daether.transport.http.retryHandler.count=5)
+for run in 1 2 3; do
+  ./mvnw "${retries[@]}" "$@" 2>&1 | tee "$log"
+  status=${PIPESTATUS[0]}
+  [ "$status" -eq 0 ] && exit 0
+  grep -qE 'could not be resolved|Could not (find|transfer|resolve) artifact|Failed to (read artifact descriptor|collect dependencies)' "$log" || exit "$status"
+  [ "$run" -eq 3 ] && exit "$status"
+  echo "::warning::Maven could not resolve an artifact (run $run of 3); trying again in $((run * 20)) s"
+  sleep $((run * 20))
+  retries=(-U -Daether.transport.http.retryHandler.count=5)
+done

@@ -12,6 +12,8 @@ on:
 permissions:
   contents: read
 
+# Maven runs through bin/ci-mvn, which runs it again when Maven Central fails to serve an artifact.
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -98,7 +100,7 @@ jobs:
 
       # Compiles with -Xlint:all -Werror and runs the golden tests.
       - name: Maven verify (wrapper)
-        run: ./mvnw -B verify
+        run: bin/ci-mvn -B verify
 
   lint:
     name: Lint (formatting)
@@ -117,7 +119,7 @@ jobs:
 
       # Fails if any Java file differs from google-java-format output. Fix locally with: ./mvnw spotless:apply
       - name: Check formatting
-        run: ./mvnw -B spotless:check
+        run: bin/ci-mvn -B spotless:check
 
   # A change to the roadmap alone runs only RoadmapTest, which fails when two items share a
   # number; with code, the build runs it.
@@ -137,7 +139,7 @@ jobs:
           cache: maven
 
       - name: RoadmapTest
-        run: ./mvnw -B test -Dtest=RoadmapTest
+        run: bin/ci-mvn -B test -Dtest=RoadmapTest
 
   # Every push to main that changes code and passes the jobs above is released: the commit is
   # tagged with the next version after the latest tag, and a GitHub release made with notes from
@@ -199,7 +201,7 @@ jobs:
 
       - name: Build the jar
         if: steps.version.outputs.tag != ''
-        run: ./mvnw -B -DskipTests -Drelease.version=${{ steps.version.outputs.tag }} package
+        run: bin/ci-mvn -B -DskipTests -Drelease.version=${{ steps.version.outputs.tag }} package
 
       - name: Release
         if: steps.version.outputs.tag != ''
