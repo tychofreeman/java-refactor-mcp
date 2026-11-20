@@ -450,6 +450,10 @@ Each was chosen from options; the record named beside it has the options it beat
   leaving a guard or a catching try is refused there; entering one is reported. Which guard
   keeps a division or a dereference is `Guards` (#173): `operands` (null for anything else that
   may throw, which any guard keeps), `left` (the conditions a move leaves), `tests`.
+- Whether calls can write an instance field is `FieldWrites.mayWrite` (roadmap 535, issue #700, the
+  owner's choice of 2026-11-20): `Behavior.checkCrossed` asks it for a field read the moved code's
+  calls cross. It follows project bodies by `Holding` per method name and compares keys; a new
+  library method known not to call back goes in `FieldWrites.STORES`.
 - A refactoring reports or refuses a change to exceptional behavior through
   `Exceptional.change`, or keeps it and reports through `Exceptional.report`.
   Every `Kind.REFACTORING` `Def` has `preserve_exceptions` from its constructor.

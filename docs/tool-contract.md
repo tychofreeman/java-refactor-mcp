@@ -1762,6 +1762,11 @@ arguments.
   (its exact source text), `name`, and `column` (1-based, only when the text
   occurs twice on that line).
 - Result: `extracted <expression> as <name>, declared at line N of <file>`.
+- A call moved past a read of an instance field (`calculator.keys += pending.pop().text`) is
+  refused only when the project code the call runs may write that field (roadmap 535, issue #700,
+  `FieldWrites`): its body and the project methods it calls, overrides included, followed up to 50
+  methods; a library call given a project object or a lambda, an abstract method, a project
+  constructor, or a static field read counts as may. Before, any call refused it.
 - The name takes the place of the parentheses around the expression too (`(a + b) * 2` gives
   `sum * 2`), with `as` as well (roadmap 532, issue #698).
 - Checked by the behavior gate (`Behavior`, roadmap #96): refuses an expression
