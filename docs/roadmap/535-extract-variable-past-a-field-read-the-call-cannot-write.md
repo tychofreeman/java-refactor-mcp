@@ -1,7 +1,7 @@
 ---
 order: 525
 item: 535
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open (issue #700, filed 2026-11-20)
+Done (2026-11-20, issue #700): `FieldWrites`, asked by `Behavior.checkCrossed`; the owner chose to follow project calls (`docs/design.md`, Decisions).
 
 ## Evidence
 

@@ -672,6 +672,16 @@ first recommendation, which broke "no `line` means everywhere"), over folding on
 own file without `line`, and over closing the issue as by design. A literal among the operands
 (`amount * 1.2`, `"[" + o + "]"`) or any other name makes a body specific enough: no warning.
 
+**Decided (the owner, 2026-11-20, issue #700, roadmap 535): the behavior gate lets a call cross a
+read of an instance field when no project code the call runs writes that field** (`FieldWrites`,
+asked by `Behavior.checkCrossed`): the call's body and the project methods it calls, with each
+project override a virtual call could run, up to 50 bodies; a library method counts as writing
+nothing only when it cannot call back into project code (no lambda or project object among its
+arguments and receiver, but for storing methods such as `pop` and `add` on a list, deque or
+iterator), and the implicit calls of a body (a string's `+` of an object, a for over a non-list
+iterable, try-with-resources) count as unknown. Over (b), the called method's own body only, which
+misses one level of delegation, and over (c), keeping the refusal for every call.
+
 ## Constructive transformations (2026-11-05)
 
 The thesis widened (the user, 2026-11-05): not only that refactoring lets a model think at a

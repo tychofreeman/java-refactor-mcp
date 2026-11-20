@@ -2,6 +2,7 @@ package io.github.tychofreeman.jrefactor;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,14 @@ final class Behavior {
     // A call, a new object, or a write to an array element (which another name may alias, so it
     // has no variable to compare): any of these may change state a read elsewhere sees.
     boolean calls = code.all().stream().anyMatch(e -> !e.deferred() && changesUnknown(e));
+    // A field read is crossed safely when no code the calls and constructions run writes it.
+    List<ASTNode> invoked =
+        code.all().stream()
+            .filter(e ->
+                !e.deferred() && (e.kind() == Effects.Kind.CALL || e.kind() == Effects.Kind.CREATE))
+            .map(Effects.Effect::node)
+            .toList();
+    Map<String, Boolean> fieldWritten = new HashMap<>();
     boolean reported = false;
     for (Effects.Effect e : Effects.of(m.root()).all()) {
       if (e.deferred()
@@ -211,7 +220,10 @@ final class Behavior {
           && (e.kind() == Effects.Kind.ELEMENT
               || (e.kind() == Effects.Kind.NAME
                   && e.variable() != null
-                  && e.variable().isField()))) {
+                  && e.variable().isField()
+                  && fieldWritten.computeIfAbsent(
+                      Bindings.declarationKey(e.variable()),
+                      k -> FieldWrites.mayWrite(project, invoked, e.variable()))))) {
         throw new Refusal(
             m.label()
                 + " calls code or writes an array element that could change "
