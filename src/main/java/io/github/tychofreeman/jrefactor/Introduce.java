@@ -92,7 +92,8 @@ final class Introduce {
     String text = opened.text();
     List<TextEdit> edits =
         new ArrayList<>(MemberMove.addTo(text, owner, decl, Placement.Rank.FIELD));
-    edits.add(new TextEdit(e.getStartPosition(), Nodes.end(e), name));
+    Expression place = Nodes.parenthesized(e);
+    edits.add(new TextEdit(place.getStartPosition(), Nodes.end(place), name));
     String after = TextEdit.apply(text, edits, 0);
     Edits.Written written =
         Edits.gated(
@@ -216,7 +217,8 @@ final class Introduce {
                       .findFirst()
                       .orElseThrow();
               for (Expression x : found) {
-                change.replaceRange(d.file(), x.getStartPosition(), Nodes.end(x), name);
+                Expression whole = Nodes.parenthesized(x);
+                change.replaceRange(d.file(), whole.getStartPosition(), Nodes.end(whole), name);
               }
               if (v.acts()) {
                 Exceptional.change(

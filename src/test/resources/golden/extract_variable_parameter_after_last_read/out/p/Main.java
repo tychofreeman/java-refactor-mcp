@@ -4,7 +4,7 @@ class Main {
   static int step;
 
   static int run(int q, int k, int r) {
-    return (k) * 10 + r;
+    return k * 10 + r;
   }
 
   static int tick() {

@@ -85,10 +85,7 @@ final class Nodes {
    * parentheses ({@code (x)++}).
    */
   static boolean written(Expression x) {
-    ASTNode at = x;
-    while (at.getParent() instanceof ParenthesizedExpression paren) {
-      at = paren;
-    }
+    ASTNode at = parenthesized(x);
     ASTNode p = at.getParent();
     return (p instanceof Assignment a && a.getLeftHandSide() == at)
         || (p instanceof PostfixExpression)
@@ -225,5 +222,13 @@ final class Nodes {
         || where == ExpressionMethodReference.NAME_PROPERTY
         || where == TypeMethodReference.NAME_PROPERTY
         || where == SuperMethodReference.NAME_PROPERTY;
+  }
+
+  /** The outermost parentheses around {@code e} ({@code ((e))}), or {@code e} when it has none. */
+  static Expression parenthesized(Expression e) {
+    while (e.getParent() instanceof ParenthesizedExpression paren) {
+      e = paren;
+    }
+    return e;
   }
 }

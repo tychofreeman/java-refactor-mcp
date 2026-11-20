@@ -3,7 +3,7 @@ package com.example;
 class Price {
   int total(int qty, int unit, int bonus) {
     int base = qty * unit + bonus;
-    return base - (bonus) * 2 + qty / 100;
+    return base - bonus * 2 + qty / 100;
   }
 
   int use(int n) {
