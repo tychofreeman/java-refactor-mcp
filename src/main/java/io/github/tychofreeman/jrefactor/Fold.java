@@ -81,14 +81,16 @@ final class Fold {
   /**
    * How a match ends, and so what the call is written as: an expression is the call; void
    * statements are the call's statement; statements that end in the method's return are {@code
-   * return f(...);}; and statements that go on after them declare the local the method returns
-   * ({@code declared}), {@code T x = f(...);}.
+   * return f(...);}; statements that go on after them declare the local the method returns ({@code
+   * declared}), {@code T x = f(...);}; and statements that update a local as the body updates the
+   * parameter it returns assign the call back to it, {@code x = f(x, ...);}.
    */
   private enum Ending {
     EXPRESSION,
     VOID,
     RETURN,
-    CARRY
+    CARRY,
+    ACCUMULATE
   }
 
   static Outcome run(SourceProject project, String rel, String name, Integer line, String in)
@@ -163,7 +165,15 @@ final class Fold {
         pattern.add((ASTNode) o);
       }
     }
+    int accumulated = returns ? accumulated(m, params) : -1;
+    if (accumulated >= 0) {
+      ending = Ending.ACCUMULATE;
+      pattern.remove(pattern.size() - 1);
+      carried = null;
+    }
     ParamUses facts = paramUses(params, pattern);
+    Accumulation accumulation =
+        accumulated < 0 ? null : accumulation(params, pattern, accumulated, facts.lastStart());
     int[] uses = facts.uses();
     List<Integer> order = facts.order();
     Set<String> bodyLocals = facts.bodyLocals();
@@ -180,7 +190,8 @@ final class Fold {
       }
     }
     for (IVariableBinding w : Effects.of(m.getBody()).written()) {
-      if (params.contains(Bindings.declarationKey(w))) {
+      int written = params.indexOf(Bindings.declarationKey(w));
+      if (written >= 0 && written != accumulated) {
         throw new Refusal(
             name
                 + " assigns its parameter "
@@ -216,7 +227,8 @@ final class Fold {
           Exceptional.trial(
               project,
               () -> {
-                String why = leave(project, c, m, params, order, uses, stable, text, call);
+                String why =
+                    leave(project, c, m, params, order, uses, stable, accumulation, text, call);
                 if (why != null) {
                   throw new Refusal(why);
                 }
@@ -251,6 +263,7 @@ final class Fold {
                     + " = "
                     + called
                     + ";";
+            case ACCUMULATE -> source(c.args()[accumulated], text) + " = " + called + ";";
           };
       edits
           .computeIfAbsent(c.file(), k -> new ArrayList<>())
@@ -599,6 +612,7 @@ final class Fold {
       List<Integer> order,
       int[] uses,
       boolean[] stable,
+      Accumulation accumulation,
       String text,
       String call) {
     IMethodBinding mb = m.resolveBinding();
@@ -610,6 +624,12 @@ final class Fold {
     }
     if (Modifier.isPrivate(m.getModifiers()) && !sameTopLevel(c.root(), mb.getDeclaringClass())) {
       return call + " is private, and this code is in another class";
+    }
+    if (c.ending() == Ending.ACCUMULATE) {
+      String why = accumulates(c, mb, accumulation, text);
+      if (why != null) {
+        return why;
+      }
     }
     if (c.ending() == Ending.RETURN || c.ending() == Ending.CARRY) {
       ITypeBinding into;
@@ -643,7 +663,11 @@ final class Fold {
       if (!fits(a, p)) {
         return "the argument " + source(a, text) + " is not a " + p.getName();
       }
-      if (uses[i] > 1 && !Effects.of(a).fixed() && (Effects.of(a).changes() || !stable[i])) {
+      boolean updated = accumulation != null && i == accumulation.index();
+      if (!updated
+          && uses[i] > 1
+          && !Effects.of(a).fixed()
+          && (Effects.of(a).changes() || !stable[i])) {
         return "the code evaluates "
             + source(a, text)
             + " "
@@ -1085,5 +1109,108 @@ final class Fold {
         || e instanceof CharacterLiteral
         || e instanceof BooleanLiteral
         || e instanceof NullLiteral;
+  }
+
+  /**
+   * The parameter an accumulating body updates and returns ({@code index}), and for each parameter
+   * whether the body reads it after it first writes that one: an argument there that reads the
+   * code's local would read it once, before the code's updates.
+   */
+  private record Accumulation(int index, boolean[] readAfterWrite) {}
+
+  /**
+   * The index of the one parameter {@code m}'s body assigns, when the body is statements that end
+   * in its only return, {@code return p;} of that parameter: a run of those statements that updates
+   * a local as the body updates {@code p} becomes {@code x = f(x, ...);}. Otherwise -1.
+   */
+  private static int accumulated(MethodDeclaration m, List<String> params) {
+    List<?> body = m.getBody().statements();
+    if (body.size() < 2
+        || !(body.get(body.size() - 1) instanceof ReturnStatement last)
+        || !(last.getExpression() instanceof SimpleName n)) {
+      return -1;
+    }
+    int i = params.indexOf(Bindings.declarationKey(n.resolveBinding()));
+    if (i < 0) {
+      return -1;
+    }
+    for (ReturnStatement r : Nodes.all(m.getBody(), ReturnStatement.class)) {
+      if (r != last && returnsFrom(r) == m) {
+        return -1;
+      }
+    }
+    boolean writesIt = false;
+    for (IVariableBinding w : Effects.of(m.getBody()).written()) {
+      int j = params.indexOf(Bindings.declarationKey(w));
+      if (j >= 0 && j != i) {
+        return -1;
+      }
+      writesIt |= j == i;
+    }
+    return writesIt ? i : -1;
+  }
+
+  /**
+   * Which parameters {@code pattern} reads after it first writes parameter {@code index}, by {@code
+   * lastStart}, the start of each one's last read.
+   */
+  private static Accumulation accumulation(
+      List<String> params, List<ASTNode> pattern, int index, int[] lastStart) {
+    int firstWrite = Integer.MAX_VALUE;
+    for (ASTNode p : pattern) {
+      for (Effects.Effect e : Effects.of(p).all()) {
+        if (e.kind() == Effects.Kind.WRITE
+            && !e.deferred()
+            && e.variable() != null
+            && params.get(index).equals(Bindings.declarationKey(e.variable()))) {
+          firstWrite = Math.min(firstWrite, e.end());
+        }
+      }
+    }
+    boolean[] after = new boolean[params.size()];
+    for (int j = 0; j < params.size(); j++) {
+      after[j] = lastStart[j] > firstWrite;
+    }
+    return new Accumulation(index, after);
+  }
+
+  /**
+   * Why an accumulating match {@code c} cannot become {@code x = f(x, ...);}, or null: the updated
+   * code must be a local whose type takes what the method returns, and no other argument the body
+   * reads after its first update may read that local.
+   */
+  private static String accumulates(Candidate c, IMethodBinding mb, Accumulation acc, String text) {
+    Expression a = c.args()[acc.index()];
+    if (!(a instanceof SimpleName x)
+        || !(x.resolveBinding() instanceof IVariableBinding v)
+        || v.isField()) {
+      return "the code updates "
+          + source(a, text)
+          + ", which is not a local the call's result can be assigned back to";
+    }
+    String key = Bindings.declarationKey(v);
+    for (int i = 0; i < c.args().length; i++) {
+      if (i == acc.index() || !acc.readAfterWrite()[i]) {
+        continue;
+      }
+      for (SimpleName n : Nodes.all(c.args()[i], SimpleName.class)) {
+        if (key.equals(Bindings.declarationKey(n.resolveBinding()))) {
+          return "the argument "
+              + source(c.args()[i], text)
+              + " reads "
+              + x.getIdentifier()
+              + ", which the code updates before it, and a call would read it once, first";
+        }
+      }
+    }
+    if (!mb.getReturnType().isAssignmentCompatible(v.getType())) {
+      return "a call returns "
+          + mb.getReturnType().getName()
+          + ", which "
+          + x.getIdentifier()
+          + " holds as "
+          + v.getType().getName();
+    }
+    return null;
   }
 }

@@ -1,7 +1,7 @@
 ---
 order: 524
 item: 534
-status: Open
+status: Done
 ---
 
 ## Item
@@ -10,7 +10,7 @@ status: Open
 
 ## Status
 
-Open (issue #699, filed 2026-11-20)
+Done (2026-11-20, issue #699): `Fold.Ending.ACCUMULATE`.
 
 ## Evidence
 

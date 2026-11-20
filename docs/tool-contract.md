@@ -1875,6 +1875,14 @@ and fold with line.`
   expression of their type (a reference type takes a subtype); a local the body declares
   stands for a local the code declares, which must not be used after the run; every other
   name must resolve to the same declaration, by binding key, so overloads match exactly.
+- A body of statements that updates one parameter and ends in `return p;` of it (roadmap 534,
+  issue #699: what `extract_function` writes for a statement that updates a local, `rpn += text;
+  return rpn;`) matches a run of the same statements updating a local or parameter `x` as the body
+  updates `p`, which becomes `x = f(x, ...);`. Left with a reason: `x` a field or any other
+  expression ("which is not a local the call's result can be assigned back to"), another argument
+  that reads `x` where the body reads it after its first update ("which the code updates before
+  it, and a call would read it once, first"), and a return type `x` cannot hold. A body that
+  assigns any other parameter is still refused.
 - A body of statements that ends in `return e;` (roadmap 529, 2026-11-19, gorefactor's #694,
   #695 and TypeScript's #698) matches a run of the same statements and return, early returns
   included, which becomes `return f(args);`. When its last statement returns a local it declares
